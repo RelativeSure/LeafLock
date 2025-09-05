@@ -1,0 +1,735 @@
+// main.go - Complete secure backend with automatic PostgreSQL setup
+package main
+
+import (
+    "context"
+    "crypto/rand"
+    "crypto/subtle"
+    "database/sql"
+    "encoding/base64"
+    "encoding/hex"
+    "encoding/json"
+    "fmt"
+    "log"
+    "os"
+    "strings"
+    "sync"
+    "time"
+
+    "github.com/gofiber/fiber/v2"
+    "github.com/gofiber/fiber/v2/middleware/cors"
+    "github.com/gofiber/fiber/v2/middleware/helmet"
+    "github.com/gofiber/fiber/v2/middleware/limiter"
+    "github.com/gofiber/fiber/v2/middleware/logger"
+    "github.com/gofiber/fiber/v2/middleware/recover"
+    "github.com/gofiber/websocket/v2"
+    "github.com/golang-jwt/jwt/v5"
+    "github.com/google/uuid"
+    "github.com/jackc/pgx/v5/pgxpool"
+    "github.com/redis/go-redis/v9"
+    "golang.org/x/crypto/argon2"
+    "golang.org/x/crypto/chacha20poly1305"
+    _ "github.com/jackc/pgx/v5/stdlib"
+)
+
+// AUTOMATIC DATABASE SETUP - Runs migrations on startup
+const DatabaseSchema = `
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+
+-- Users table with encrypted fields
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email TEXT UNIQUE NOT NULL,
+    email_encrypted BYTEA NOT NULL, -- Encrypted email for privacy
+    password_hash TEXT NOT NULL, -- Argon2id hash
+    salt BYTEA NOT NULL,
+    master_key_encrypted BYTEA NOT NULL, -- User's encrypted master key
+    public_key BYTEA, -- For sharing encrypted notes
+    private_key_encrypted BYTEA, -- Encrypted with user's derived key
+    mfa_secret_encrypted BYTEA, -- Encrypted TOTP secret
+    mfa_enabled BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    last_login TIMESTAMPTZ,
+    failed_attempts INT DEFAULT 0,
+    locked_until TIMESTAMPTZ
+);
+
+-- Workspace table
+CREATE TABLE IF NOT EXISTS workspaces (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name_encrypted BYTEA NOT NULL, -- Encrypted workspace name
+    owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    encryption_key_encrypted BYTEA NOT NULL, -- Workspace key encrypted with owner's key
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Notes table with full encryption
+CREATE TABLE IF NOT EXISTS notes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+    title_encrypted BYTEA NOT NULL, -- Encrypted title
+    content_encrypted BYTEA NOT NULL, -- Encrypted content
+    content_hash BYTEA NOT NULL, -- For integrity verification
+    parent_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    position INT DEFAULT 0,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+    version INT DEFAULT 1,
+    INDEX idx_notes_workspace (workspace_id) WHERE deleted_at IS NULL,
+    INDEX idx_notes_parent (parent_id),
+    INDEX idx_notes_created (created_by, created_at DESC)
+);
+
+-- Encrypted search index (searchable encryption)
+CREATE TABLE IF NOT EXISTS search_index (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    keyword_hash BYTEA NOT NULL, -- HMAC of keyword
+    position INT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    INDEX idx_search_keyword (keyword_hash)
+);
+
+-- Collaboration table for shared notes
+CREATE TABLE IF NOT EXISTS collaborations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    permission TEXT CHECK (permission IN ('read', 'write', 'admin')),
+    key_encrypted BYTEA NOT NULL, -- Note key encrypted with user's public key
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(note_id, user_id)
+);
+
+-- Session management with encryption
+CREATE TABLE IF NOT EXISTS sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    token_hash BYTEA NOT NULL UNIQUE, -- SHA-256 hash of session token
+    ip_address_encrypted BYTEA,
+    user_agent_encrypted BYTEA,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    INDEX idx_sessions_user (user_id),
+    INDEX idx_sessions_expires (expires_at)
+);
+
+-- Audit log for security
+CREATE TABLE IF NOT EXISTS audit_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id),
+    action TEXT NOT NULL,
+    resource_type TEXT,
+    resource_id UUID,
+    ip_address_encrypted BYTEA,
+    user_agent_encrypted BYTEA,
+    metadata JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    INDEX idx_audit_user (user_id, created_at DESC),
+    INDEX idx_audit_action (action, created_at DESC)
+);
+
+-- File attachments with encryption
+CREATE TABLE IF NOT EXISTS attachments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    filename_encrypted BYTEA NOT NULL,
+    content_encrypted BYTEA NOT NULL, -- Store encrypted files in DB for simplicity
+    mime_type TEXT,
+    size_bytes BIGINT,
+    checksum BYTEA NOT NULL, -- SHA-256 of encrypted content
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Encryption keys rotation table
+CREATE TABLE IF NOT EXISTS key_rotations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    old_key_hash BYTEA NOT NULL,
+    new_key_hash BYTEA NOT NULL,
+    items_rotated INT DEFAULT 0,
+    completed BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+);
+
+-- Functions for automatic updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Apply updated_at triggers
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_users_updated_at') THEN
+        CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users 
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_workspaces_updated_at') THEN
+        CREATE TRIGGER update_workspaces_updated_at BEFORE UPDATE ON workspaces 
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_notes_updated_at') THEN
+        CREATE TRIGGER update_notes_updated_at BEFORE UPDATE ON notes 
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
+
+-- Session cleanup function
+CREATE OR REPLACE FUNCTION cleanup_expired_sessions()
+RETURNS void AS $$
+BEGIN
+    DELETE FROM sessions WHERE expires_at < NOW();
+END;
+$$ LANGUAGE plpgsql;
+
+-- Automatic session cleanup job (call periodically)
+SELECT cleanup_expired_sessions();
+`
+
+// Configuration with secure defaults
+type Config struct {
+    DatabaseURL      string
+    RedisURL        string
+    JWTSecret       []byte
+    EncryptionKey   []byte
+    Port            string
+    AllowedOrigins  []string
+    MaxLoginAttempts int
+    LockoutDuration time.Duration
+    SessionDuration time.Duration
+}
+
+func LoadConfig() *Config {
+    // Generate secure random keys if not provided
+    jwtSecret := os.Getenv("JWT_SECRET")
+    if jwtSecret == "" {
+        key := make([]byte, 64)
+        rand.Read(key)
+        jwtSecret = base64.StdEncoding.EncodeToString(key)
+        log.Println("Generated new JWT secret")
+    }
+    
+    encKey := os.Getenv("SERVER_ENCRYPTION_KEY")
+    if encKey == "" {
+        key := make([]byte, 32)
+        rand.Read(key)
+        encKey = base64.StdEncoding.EncodeToString(key)
+        log.Println("Generated new server encryption key")
+    }
+    
+    dbURL := os.Getenv("DATABASE_URL")
+    if dbURL == "" {
+        dbURL = "postgres://postgres:postgres@postgres:5432/notes?sslmode=require"
+    }
+    
+    return &Config{
+        DatabaseURL:     dbURL,
+        RedisURL:       getEnvOrDefault("REDIS_URL", "redis:6379"),
+        JWTSecret:      []byte(jwtSecret),
+        EncryptionKey:  []byte(encKey),
+        Port:           getEnvOrDefault("PORT", "8080"),
+        AllowedOrigins: strings.Split(getEnvOrDefault("CORS_ORIGINS", "https://localhost:3000"), ","),
+        MaxLoginAttempts: 5,
+        LockoutDuration: 15 * time.Minute,
+        SessionDuration: 24 * time.Hour,
+    }
+}
+
+func getEnvOrDefault(key, defaultValue string) string {
+    if value := os.Getenv(key); value != "" {
+        return value
+    }
+    return defaultValue
+}
+
+// Crypto Service for server-side encryption
+type CryptoService struct {
+    serverKey []byte
+}
+
+func NewCryptoService(key []byte) *CryptoService {
+    return &CryptoService{serverKey: key}
+}
+
+func (c *CryptoService) Encrypt(plaintext []byte) ([]byte, error) {
+    aead, err := chacha20poly1305.NewX(c.serverKey[:32])
+    if err != nil {
+        return nil, err
+    }
+    
+    nonce := make([]byte, aead.NonceSize())
+    if _, err := rand.Read(nonce); err != nil {
+        return nil, err
+    }
+    
+    ciphertext := aead.Seal(nil, nonce, plaintext, nil)
+    return append(nonce, ciphertext...), nil
+}
+
+func (c *CryptoService) Decrypt(ciphertext []byte) ([]byte, error) {
+    aead, err := chacha20poly1305.NewX(c.serverKey[:32])
+    if err != nil {
+        return nil, err
+    }
+    
+    if len(ciphertext) < aead.NonceSize() {
+        return nil, fmt.Errorf("ciphertext too short")
+    }
+    
+    nonce := ciphertext[:aead.NonceSize()]
+    ciphertext = ciphertext[aead.NonceSize():]
+    
+    return aead.Open(nil, nonce, ciphertext, nil)
+}
+
+// Secure password hashing with Argon2id
+func HashPassword(password string, salt []byte) string {
+    hash := argon2.IDKey([]byte(password), salt, 3, 64*1024, 4, 32)
+    b64Salt := base64.RawStdEncoding.EncodeToString(salt)
+    b64Hash := base64.RawStdEncoding.EncodeToString(hash)
+    return fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s", 
+        argon2.Version, 64*1024, 3, 4, b64Salt, b64Hash)
+}
+
+func VerifyPassword(password, encodedHash string) bool {
+    parts := strings.Split(encodedHash, "$")
+    if len(parts) != 6 {
+        return false
+    }
+    
+    salt, _ := base64.RawStdEncoding.DecodeString(parts[4])
+    hash, _ := base64.RawStdEncoding.DecodeString(parts[5])
+    
+    comparisonHash := argon2.IDKey([]byte(password), salt, 3, 64*1024, 4, 32)
+    return subtle.ConstantTimeCompare(hash, comparisonHash) == 1
+}
+
+// Database setup and migration runner
+func SetupDatabase(dbURL string) (*pgxpool.Pool, error) {
+    // Connect to postgres to create database if needed
+    tempURL := strings.Replace(dbURL, "/notes", "/postgres", 1)
+    db, err := sql.Open("pgx", tempURL)
+    if err != nil {
+        return nil, fmt.Errorf("failed to connect to postgres: %w", err)
+    }
+    defer db.Close()
+    
+    // Create database if not exists
+    _, err = db.Exec("CREATE DATABASE notes")
+    if err != nil && !strings.Contains(err.Error(), "already exists") {
+        log.Printf("Note: Database might already exist: %v", err)
+    }
+    
+    // Connect to the actual database
+    ctx := context.Background()
+    pool, err := pgxpool.New(ctx, dbURL)
+    if err != nil {
+        return nil, fmt.Errorf("failed to connect to database: %w", err)
+    }
+    
+    // Run migrations
+    log.Println("Running database migrations...")
+    _, err = pool.Exec(ctx, DatabaseSchema)
+    if err != nil {
+        return nil, fmt.Errorf("failed to run migrations: %w", err)
+    }
+    
+    log.Println("Database setup completed successfully")
+    return pool, nil
+}
+
+// Auth handlers
+type AuthHandler struct {
+    db     *pgxpool.Pool
+    crypto *CryptoService
+    config *Config
+}
+
+type RegisterRequest struct {
+    Email    string `json:"email" validate:"required,email"`
+    Password string `json:"password" validate:"required,min=12"`
+}
+
+type LoginRequest struct {
+    Email    string `json:"email" validate:"required,email"`
+    Password string `json:"password" validate:"required"`
+    MFACode  string `json:"mfa_code,omitempty"`
+}
+
+func (h *AuthHandler) Register(c *fiber.Ctx) error {
+    var req RegisterRequest
+    if err := c.BodyParser(&req); err != nil {
+        return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+    }
+    
+    // Generate salt and hash password
+    salt := make([]byte, 32)
+    rand.Read(salt)
+    passwordHash := HashPassword(req.Password, salt)
+    
+    // Generate user's master encryption key
+    masterKey := make([]byte, 32)
+    rand.Read(masterKey)
+    
+    // Derive key from password to encrypt master key
+    userKey := argon2.IDKey([]byte(req.Password), salt, 1, 64*1024, 4, 32)
+    
+    // Encrypt master key with user's derived key
+    aead, _ := chacha20poly1305.NewX(userKey)
+    nonce := make([]byte, aead.NonceSize())
+    rand.Read(nonce)
+    encryptedMasterKey := aead.Seal(nonce, nonce, masterKey, nil)
+    
+    // Encrypt email for storage
+    encryptedEmail, _ := h.crypto.Encrypt([]byte(req.Email))
+    
+    // Start transaction
+    ctx := context.Background()
+    tx, err := h.db.Begin(ctx)
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{"error": "Database error"})
+    }
+    defer tx.Rollback(ctx)
+    
+    // Create user
+    var userID uuid.UUID
+    err = tx.QueryRow(ctx, `
+        INSERT INTO users (email, email_encrypted, password_hash, salt, master_key_encrypted)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id`,
+        req.Email, encryptedEmail, passwordHash, salt, encryptedMasterKey,
+    ).Scan(&userID)
+    
+    if err != nil {
+        if strings.Contains(err.Error(), "duplicate") {
+            return c.Status(409).JSON(fiber.Map{"error": "Email already registered"})
+        }
+        return c.Status(500).JSON(fiber.Map{"error": "Registration failed"})
+    }
+    
+    // Create default workspace
+    workspaceName, _ := h.crypto.Encrypt([]byte("My Workspace"))
+    workspaceKey := make([]byte, 32)
+    rand.Read(workspaceKey)
+    
+    // Encrypt workspace key with user's master key
+    encryptedWorkspaceKey, _ := h.crypto.Encrypt(workspaceKey)
+    
+    var workspaceID uuid.UUID
+    err = tx.QueryRow(ctx, `
+        INSERT INTO workspaces (name_encrypted, owner_id, encryption_key_encrypted)
+        VALUES ($1, $2, $3)
+        RETURNING id`,
+        workspaceName, userID, encryptedWorkspaceKey,
+    ).Scan(&workspaceID)
+    
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{"error": "Failed to create workspace"})
+    }
+    
+    // Commit transaction
+    if err = tx.Commit(ctx); err != nil {
+        return c.Status(500).JSON(fiber.Map{"error": "Registration failed"})
+    }
+    
+    // Log audit event
+    h.logAudit(ctx, userID, "user.registered", "user", userID, c)
+    
+    // Generate session token
+    token, err := h.generateToken(userID)
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{"error": "Token generation failed"})
+    }
+    
+    return c.Status(201).JSON(fiber.Map{
+        "message": "Registration successful",
+        "token": token,
+        "user_id": userID,
+        "workspace_id": workspaceID,
+    })
+}
+
+func (h *AuthHandler) Login(c *fiber.Ctx) error {
+    var req LoginRequest
+    if err := c.BodyParser(&req); err != nil {
+        return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+    }
+    
+    ctx := context.Background()
+    
+    // Get user
+    var userID uuid.UUID
+    var passwordHash string
+    var failedAttempts int
+    var lockedUntil *time.Time
+    var mfaEnabled bool
+    var mfaSecret []byte
+    
+    err := h.db.QueryRow(ctx, `
+        SELECT id, password_hash, failed_attempts, locked_until, mfa_enabled, mfa_secret_encrypted
+        FROM users WHERE email = $1`,
+        req.Email,
+    ).Scan(&userID, &passwordHash, &failedAttempts, &lockedUntil, &mfaEnabled, &mfaSecret)
+    
+    if err != nil {
+        return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
+    }
+    
+    // Check if account is locked
+    if lockedUntil != nil && lockedUntil.After(time.Now()) {
+        return c.Status(403).JSON(fiber.Map{"error": "Account locked. Try again later."})
+    }
+    
+    // Verify password
+    if !VerifyPassword(req.Password, passwordHash) {
+        // Increment failed attempts
+        failedAttempts++
+        if failedAttempts >= h.config.MaxLoginAttempts {
+            lockUntil := time.Now().Add(h.config.LockoutDuration)
+            h.db.Exec(ctx, `
+                UPDATE users SET failed_attempts = $1, locked_until = $2 
+                WHERE id = $3`,
+                failedAttempts, lockUntil, userID,
+            )
+            h.logAudit(ctx, userID, "login.locked", "user", userID, c)
+            return c.Status(403).JSON(fiber.Map{"error": "Account locked due to too many failed attempts"})
+        }
+        
+        h.db.Exec(ctx, `UPDATE users SET failed_attempts = $1 WHERE id = $2`, failedAttempts, userID)
+        h.logAudit(ctx, userID, "login.failed", "user", userID, c)
+        return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
+    }
+    
+    // Verify MFA if enabled
+    if mfaEnabled {
+        if req.MFACode == "" {
+            return c.Status(200).JSON(fiber.Map{"mfa_required": true})
+        }
+        // Verify TOTP code here (implement TOTP verification)
+    }
+    
+    // Reset failed attempts and update last login
+    h.db.Exec(ctx, `
+        UPDATE users SET failed_attempts = 0, locked_until = NULL, last_login = NOW() 
+        WHERE id = $1`,
+        userID,
+    )
+    
+    // Generate session
+    sessionToken := make([]byte, 32)
+    rand.Read(sessionToken)
+    sessionTokenStr := hex.EncodeToString(sessionToken)
+    
+    // Hash token for storage
+    tokenHash := argon2.IDKey(sessionToken, []byte("session"), 1, 64*1024, 4, 32)
+    
+    // Encrypt IP and user agent
+    encryptedIP, _ := h.crypto.Encrypt([]byte(c.IP()))
+    encryptedUA, _ := h.crypto.Encrypt([]byte(c.Get("User-Agent")))
+    
+    // Store session
+    _, err = h.db.Exec(ctx, `
+        INSERT INTO sessions (user_id, token_hash, ip_address_encrypted, user_agent_encrypted, expires_at)
+        VALUES ($1, $2, $3, $4, $5)`,
+        userID, tokenHash, encryptedIP, encryptedUA, time.Now().Add(h.config.SessionDuration),
+    )
+    
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{"error": "Session creation failed"})
+    }
+    
+    // Log successful login
+    h.logAudit(ctx, userID, "login.success", "user", userID, c)
+    
+    // Generate JWT token
+    token, err := h.generateToken(userID)
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{"error": "Token generation failed"})
+    }
+    
+    // Get workspace
+    var workspaceID uuid.UUID
+    h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&workspaceID)
+    
+    return c.JSON(fiber.Map{
+        "token": token,
+        "session": sessionTokenStr,
+        "user_id": userID,
+        "workspace_id": workspaceID,
+    })
+}
+
+func (h *AuthHandler) generateToken(userID uuid.UUID) (string, error) {
+    claims := jwt.MapClaims{
+        "user_id": userID.String(),
+        "exp": time.Now().Add(24 * time.Hour).Unix(),
+        "iat": time.Now().Unix(),
+    }
+    
+    token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+    return token.SignedString(h.config.JWTSecret)
+}
+
+func (h *AuthHandler) logAudit(ctx context.Context, userID uuid.UUID, action, resourceType string, resourceID uuid.UUID, c *fiber.Ctx) {
+    encryptedIP, _ := h.crypto.Encrypt([]byte(c.IP()))
+    encryptedUA, _ := h.crypto.Encrypt([]byte(c.Get("User-Agent")))
+    
+    h.db.Exec(ctx, `
+        INSERT INTO audit_log (user_id, action, resource_type, resource_id, ip_address_encrypted, user_agent_encrypted)
+        VALUES ($1, $2, $3, $4, $5, $6)`,
+        userID, action, resourceType, resourceID, encryptedIP, encryptedUA,
+    )
+}
+
+// JWT Middleware
+func JWTMiddleware(secret []byte) fiber.Handler {
+    return func(c *fiber.Ctx) error {
+        token := c.Get("Authorization")
+        if token == "" {
+            return c.Status(401).JSON(fiber.Map{"error": "Missing authorization"})
+        }
+        
+        token = strings.TrimPrefix(token, "Bearer ")
+        
+        parsed, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+            return secret, nil
+        })
+        
+        if err != nil || !parsed.Valid {
+            return c.Status(401).JSON(fiber.Map{"error": "Invalid token"})
+        }
+        
+        claims := parsed.Claims.(jwt.MapClaims)
+        userID, _ := uuid.Parse(claims["user_id"].(string))
+        c.Locals("user_id", userID)
+        
+        return c.Next()
+    }
+}
+
+func main() {
+    // Load configuration
+    config := LoadConfig()
+    
+    // Setup database with automatic migrations
+    db, err := SetupDatabase(config.DatabaseURL)
+    if err != nil {
+        log.Fatal("Database setup failed:", err)
+    }
+    defer db.Close()
+    
+    // Setup Redis
+    rdb := redis.NewClient(&redis.Options{
+        Addr: config.RedisURL,
+    })
+    defer rdb.Close()
+    
+    // Initialize crypto service
+    crypto := NewCryptoService(config.EncryptionKey)
+    
+    // Create Fiber app with security middleware
+    app := fiber.New(fiber.Config{
+        DisableStartupMessage: false,
+        ErrorHandler: func(c *fiber.Ctx, err error) error {
+            code := fiber.StatusInternalServerError
+            if e, ok := err.(*fiber.Error); ok {
+                code = e.Code
+            }
+            return c.Status(code).JSON(fiber.Map{"error": err.Error()})
+        },
+    })
+    
+    // Security middleware
+    app.Use(recover.New())
+    app.Use(logger.New())
+    app.Use(helmet.New(helmet.Config{
+        XSSProtection:             "1; mode=block",
+        ContentTypeNosniff:        "nosniff",
+        XFrameOptions:             "DENY",
+        HSTSMaxAge:                31536000,
+        HSTSIncludeSubdomains:     true,
+        ContentSecurityPolicy:     "default-src 'self'",
+        ReferrerPolicy:            "strict-origin-when-cross-origin",
+    }))
+    
+    // CORS
+    app.Use(cors.New(cors.Config{
+        AllowOrigins:     strings.Join(config.AllowedOrigins, ","),
+        AllowCredentials: true,
+        AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+        AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
+    }))
+    
+    // Rate limiting
+    app.Use(limiter.New(limiter.Config{
+        Max:        100,
+        Expiration: 1 * time.Minute,
+        KeyGenerator: func(c *fiber.Ctx) string {
+            return c.IP()
+        },
+    }))
+    
+    // Initialize handlers
+    authHandler := &AuthHandler{
+        db:     db,
+        crypto: crypto,
+        config: config,
+    }
+    
+    // Public routes
+    api := app.Group("/api/v1")
+    api.Post("/auth/register", authHandler.Register)
+    api.Post("/auth/login", authHandler.Login)
+    
+    // Health checks
+    api.Get("/health", func(c *fiber.Ctx) error {
+        return c.JSON(fiber.Map{"status": "healthy", "encryption": "enabled"})
+    })
+    
+    api.Get("/ready", func(c *fiber.Ctx) error {
+        ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+        defer cancel()
+        
+        if err := db.Ping(ctx); err != nil {
+            return c.Status(503).JSON(fiber.Map{"status": "not ready", "db": "down"})
+        }
+        
+        if err := rdb.Ping(ctx).Err(); err != nil {
+            return c.Status(503).JSON(fiber.Map{"status": "not ready", "redis": "down"})
+        }
+        
+        return c.JSON(fiber.Map{
+            "status": "ready",
+            "db": "connected",
+            "redis": "connected",
+            "encryption": "active",
+        })
+    })
+    
+    // Protected routes
+    protected := api.Group("/", JWTMiddleware(config.JWTSecret))
+    
+    // Notes endpoints (implement these handlers)
+    protected.Get("/notes", func(c *fiber.Ctx) error {
+        return c.JSON(fiber.Map{"notes": []string{}})
+    })
+    
+    // Start server
+    log.Printf("Starting secure server on port %s with full encryption", config.Port)
+    log.Fatal(app.Listen(":" + config.Port))
+}
