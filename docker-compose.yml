@@ -1,0 +1,177 @@
+# docker-compose.yml - Complete secure notes app with automatic setup
+version: '3.8'
+
+services:
+  # PostgreSQL with automatic SSL setup
+  postgres:
+    image: postgres:15-alpine
+    container_name: secure-notes-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}
+      POSTGRES_DB: notes
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    command:
+      - postgres
+      - -c
+      - ssl=on
+      - -c
+      - ssl_cert_file=/var/lib/postgresql/server.crt
+      - -c
+      - ssl_key_file=/var/lib/postgresql/server.key
+      - -c
+      - shared_preload_libraries=pgcrypto
+      - -c
+      - max_connections=100
+      - -c
+      - shared_buffers=256MB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-ssl.sh:/docker-entrypoint-initdb.d/00-init-ssl.sh:ro
+    networks:
+      - secure-notes-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis for session management
+  redis:
+    image: redis:7-alpine
+    container_name: secure-notes-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-ChangeThisRedisPassword123!}
+    volumes:
+      - redis_data:/data
+    networks:
+      - secure-notes-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: secure-notes-backend
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}@postgres:5432/notes?sslmode=require
+      REDIS_URL: redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-ChangeThisRedisPassword123!}
+      JWT_SECRET: ${JWT_SECRET:-ChangeThisToRandom64CharStringForProductionUsePlease!}
+      SERVER_ENCRYPTION_KEY: ${SERVER_ENCRYPTION_KEY:-ChangeThisToRandom32CharString!}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost,https://localhost}
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - secure-notes-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+    container_name: secure-notes-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - secure-notes-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Nginx reverse proxy (optional - for production-like setup)
+  nginx:
+    image: nginx:alpine
+    container_name: secure-notes-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - secure-notes-network
+    restart: unless-stopped
+
+  # Initialization service - runs once to set everything up
+  init:
+    image: alpine:latest
+    container_name: secure-notes-init
+    command: |
+      sh -c "
+        echo '🔐 Initializing Secure Notes...'
+        apk add --no-cache openssl
+        
+        # Generate SSL certificates if they don't exist
+        if [ ! -f /ssl/server.key ]; then
+          echo '📜 Generating SSL certificates...'
+          openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+            -keyout /ssl/server.key \
+            -out /ssl/server.crt \
+            -subj '/C=US/ST=State/L=City/O=SecureNotes/CN=localhost'
+          echo '✅ SSL certificates generated'
+        fi
+        
+        # Generate secure random secrets if not provided
+        if [ -z '$JWT_SECRET' ] || [ '$JWT_SECRET' = 'ChangeThisToRandom64CharStringForProductionUsePlease!' ]; then
+          echo '⚠️  WARNING: Using default JWT_SECRET. Please set a secure value in .env file!'
+        fi
+        
+        echo '✅ Initialization complete!'
+      "
+    volumes:
+      - ./ssl:/ssl
+    networks:
+      - secure-notes-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  secure-notes-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+
+# === .env.example - Environment variables template ===
+# Copy this to .env and update with secure values
+#
+# POSTGRES_PASSWORD=GenerateSecurePasswordHere123!
+# REDIS_PASSWORD=GenerateSecureRedisPasswordHere123!
+# JWT_SECRET=GenerateRandom64CharacterStringHereForJWTSigning!
+# SERVER_ENCRYPTION_KEY=GenerateRandom32CharStringHere!
+# CORS_ORIGINS=http://localhost:3000,http://localhost
+# VITE_API_URL=http://localhost:8080
