@@ -1,0 +1,215 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "secure-notes.fullname" . }}-backend-netpol
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "secure-notes.backend.labels" . | nindent 4 }}
+  annotations:
+    {{- include "secure-notes.annotations" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "secure-notes.backend.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    {{- if .Values.networkPolicy.ingress.enabled }}
+    # Allow traffic from frontend
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "secure-notes.frontend.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.backend.containerPort }}
+    # Allow traffic from ingress controller
+    {{- range .Values.networkPolicy.ingress.from }}
+    - from:
+        {{- if .namespaceSelector }}
+        - namespaceSelector:
+            {{- toYaml .namespaceSelector | nindent 12 }}
+        {{- end }}
+        {{- if .podSelector }}
+        - podSelector:
+            {{- toYaml .podSelector | nindent 12 }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: {{ $.Values.backend.containerPort }}
+    {{- end }}
+    {{- end }}
+  egress:
+    {{- if .Values.networkPolicy.egress.enabled }}
+    # Allow DNS resolution
+    {{- range .Values.networkPolicy.egress.to }}
+    {{- if .namespaceSelector }}
+    - to:
+        - namespaceSelector:
+            {{- toYaml .namespaceSelector | nindent 12 }}
+      {{- if .ports }}
+      ports:
+        {{- range .ports }}
+        - protocol: {{ .protocol }}
+          port: {{ .port }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- if .podSelector }}
+    - to:
+        - podSelector:
+            {{- toYaml .podSelector | nindent 12 }}
+      {{- if .ports }}
+      ports:
+        {{- range .ports }}
+        - protocol: {{ .protocol }}
+          port: {{ .port }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- if .Values.postgresql.enabled }}
+    # Allow connection to PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.postgresql.primary.service.ports.postgresql | default 5432 }}
+    {{- end }}
+    {{- if .Values.redis.enabled }}
+    # Allow connection to Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.redis.master.service.ports.redis | default 6379 }}
+    {{- end }}
+    {{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "secure-notes.fullname" . }}-frontend-netpol
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "secure-notes.frontend.labels" . | nindent 4 }}
+  annotations:
+    {{- include "secure-notes.annotations" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "secure-notes.frontend.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    {{- if .Values.networkPolicy.ingress.enabled }}
+    # Allow traffic from ingress controller
+    {{- range .Values.networkPolicy.ingress.from }}
+    - from:
+        {{- if .namespaceSelector }}
+        - namespaceSelector:
+            {{- toYaml .namespaceSelector | nindent 12 }}
+        {{- end }}
+        {{- if .podSelector }}
+        - podSelector:
+            {{- toYaml .podSelector | nindent 12 }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: {{ $.Values.frontend.containerPort }}
+    {{- end }}
+    {{- end }}
+  egress:
+    {{- if .Values.networkPolicy.egress.enabled }}
+    # Allow DNS resolution
+    {{- range .Values.networkPolicy.egress.to }}
+    {{- if .namespaceSelector }}
+    - to:
+        - namespaceSelector:
+            {{- toYaml .namespaceSelector | nindent 12 }}
+      {{- if .ports }}
+      ports:
+        {{- range .ports }}
+        - protocol: {{ .protocol }}
+          port: {{ .port }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+    # Allow connection to backend
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "secure-notes.backend.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.backend.containerPort }}
+    {{- end }}
+---
+{{- if .Values.postgresql.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "secure-notes.fullname" . }}-postgresql-netpol
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "secure-notes.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+  annotations:
+    {{- include "secure-notes.annotations" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgresql
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow connections from backend only
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "secure-notes.backend.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.postgresql.primary.service.ports.postgresql | default 5432 }}
+{{- end }}
+---
+{{- if .Values.redis.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "secure-notes.fullname" . }}-redis-netpol
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "secure-notes.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cache
+  annotations:
+    {{- include "secure-notes.annotations" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow connections from backend only
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "secure-notes.backend.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.redis.master.service.ports.redis | default 6379 }}
+{{- end }}
+{{- end }}

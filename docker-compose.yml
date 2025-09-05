@@ -1,5 +1,4 @@
 # docker-compose.yml - Complete secure notes app with automatic setup
-version: '3.8'
 
 services:
   # PostgreSQL with automatic SSL setup
@@ -14,20 +13,23 @@ services:
     command:
       - postgres
       - -c
-      - ssl=on
-      - -c
-      - ssl_cert_file=/var/lib/postgresql/server.crt
-      - -c
-      - ssl_key_file=/var/lib/postgresql/server.key
-      - -c
       - shared_preload_libraries=pgcrypto
       - -c
       - max_connections=100
       - -c
       - shared_buffers=256MB
+      - -c
+      - effective_cache_size=512MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - checkpoint_completion_target=0.7
+      - -c
+      - wal_buffers=16MB
+      - -c
+      - default_statistics_target=100
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-ssl.sh:/docker-entrypoint-initdb.d/00-init-ssl.sh:ro
     networks:
       - secure-notes-network
     healthcheck:
@@ -60,7 +62,7 @@ services:
       dockerfile: Dockerfile
     container_name: secure-notes-backend
     environment:
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}@postgres:5432/notes?sslmode=require
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}@postgres:5432/notes?sslmode=disable
       REDIS_URL: redis:6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-ChangeThisRedisPassword123!}
       JWT_SECRET: ${JWT_SECRET:-ChangeThisToRandom64CharStringForProductionUsePlease!}
@@ -122,36 +124,6 @@ services:
       - secure-notes-network
     restart: unless-stopped
 
-  # Initialization service - runs once to set everything up
-  init:
-    image: alpine:latest
-    container_name: secure-notes-init
-    command: |
-      sh -c "
-        echo '🔐 Initializing Secure Notes...'
-        apk add --no-cache openssl
-        
-        # Generate SSL certificates if they don't exist
-        if [ ! -f /ssl/server.key ]; then
-          echo '📜 Generating SSL certificates...'
-          openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-            -keyout /ssl/server.key \
-            -out /ssl/server.crt \
-            -subj '/C=US/ST=State/L=City/O=SecureNotes/CN=localhost'
-          echo '✅ SSL certificates generated'
-        fi
-        
-        # Generate secure random secrets if not provided
-        if [ -z '$JWT_SECRET' ] || [ '$JWT_SECRET' = 'ChangeThisToRandom64CharStringForProductionUsePlease!' ]; then
-          echo '⚠️  WARNING: Using default JWT_SECRET. Please set a secure value in .env file!'
-        fi
-        
-        echo '✅ Initialization complete!'
-      "
-    volumes:
-      - ./ssl:/ssl
-    networks:
-      - secure-notes-network
 
 volumes:
   postgres_data:

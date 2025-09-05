@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import * as sodium from 'libsodium-wrappers';
 
-// Initialize libsodium
-await sodium.ready;
-
 // Secure Crypto Service for E2E Encryption
 class CryptoService {
   constructor() {
     this.masterKey = null;
     this.derivedKey = null;
+    this.sodiumReady = false;
+    this.initSodium();
+  }
+
+  async initSodium() {
+    await sodium.ready;
+    this.sodiumReady = true;
   }
 
   async deriveKeyFromPassword(password, salt) {
@@ -39,6 +43,7 @@ class CryptoService {
   }
 
   async encryptData(plaintext) {
+    if (!this.sodiumReady) await this.initSodium();
     if (!this.masterKey) throw new Error('No encryption key set');
     
     const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
@@ -54,6 +59,7 @@ class CryptoService {
   }
 
   async decryptData(encryptedData) {
+    if (!this.sodiumReady) await this.initSodium();
     if (!this.masterKey) throw new Error('No decryption key set');
     
     const combined = sodium.from_base64(encryptedData, sodium.base64_variants.ORIGINAL);
@@ -64,7 +70,8 @@ class CryptoService {
     return sodium.to_string(decrypted);
   }
 
-  generateSalt() {
+  async generateSalt() {
+    if (!this.sodiumReady) await this.initSodium();
     return sodium.randombytes_buf(sodium.crypto_pwhash_SALTBYTES);
   }
 
@@ -171,7 +178,8 @@ class SecureAPI {
   }
 
   async getNotes() {
-    const notes = await this.request('/notes');
+    const response = await this.request('/notes');
+    const notes = response.notes || response || [];
     
     // Decrypt notes
     const decryptedNotes = await Promise.all(
@@ -188,6 +196,26 @@ class SecureAPI {
     );
     
     return decryptedNotes.filter(note => note !== null);
+  }
+
+  async updateNote(noteId, title, content) {
+    // Encrypt note content before sending
+    const encryptedTitle = await cryptoService.encryptData(title);
+    const encryptedContent = await cryptoService.encryptData(JSON.stringify(content));
+    
+    return this.request(`/notes/${noteId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        title_encrypted: encryptedTitle,
+        content_encrypted: encryptedContent
+      })
+    });
+  }
+
+  async deleteNote(noteId) {
+    return this.request(`/notes/${noteId}`, {
+      method: 'DELETE'
+    });
   }
 }
 
@@ -265,7 +293,7 @@ export default function SecureNotesApp() {
           const response = await api.register(email, password);
           
           // Derive encryption key from password
-          const salt = sodium.from_base64(response.salt || sodium.to_base64(cryptoService.generateSalt()));
+          const salt = response.salt ? sodium.from_base64(response.salt) : await cryptoService.generateSalt();
           const key = await cryptoService.deriveKeyFromPassword(password, salt);
           await cryptoService.setMasterKey(key);
           
@@ -280,8 +308,8 @@ export default function SecureNotesApp() {
             return;
           }
           
-          // Derive encryption key from password
-          const salt = sodium.from_base64(response.salt || sodium.to_base64(cryptoService.generateSalt()));
+          // Derive encryption key from password (we'll store this in localStorage for this demo)
+          const salt = response.salt ? sodium.from_base64(response.salt) : await cryptoService.generateSalt();
           const key = await cryptoService.deriveKeyFromPassword(password, salt);
           await cryptoService.setMasterKey(key);
           

@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "secure-notes.configMapName" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "secure-notes.labels" . | nindent 4 }}
+  annotations:
+    {{- include "secure-notes.annotations" . | nindent 4 }}
+data:
+  # Backend configuration
+  MAX_LOGIN_ATTEMPTS: {{ .Values.config.backend.maxLoginAttempts | quote }}
+  LOCKOUT_DURATION: {{ .Values.config.backend.lockoutDuration | quote }}
+  SESSION_DURATION: {{ .Values.config.backend.sessionDuration | quote }}
+  CORS_ORIGINS: {{ .Values.config.backend.corsOrigins | quote }}
+  
+  # Frontend configuration (if needed for nginx config)
+  NGINX_CONFIG: |
+    server {
+        listen 80;
+        server_name _;
+        
+        # Security headers
+        add_header X-Frame-Options "DENY" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        
+        # Root directory
+        root /usr/share/nginx/html;
+        index index.html;
+        
+        # Handle client-side routing
+        location / {
+            try_files $uri $uri/ /index.html;
+            
+            # Cache static assets
+            location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+                expires 1y;
+                add_header Cache-Control "public, immutable";
+            }
+        }
+        
+        # Proxy API requests to backend
+        location /api/ {
+            proxy_pass http://{{ include "secure-notes.backend.serviceName" . }}:{{ .Values.backend.service.port }}/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_cache_bypass $http_upgrade;
+            
+            # Security headers for API
+            add_header X-Frame-Options "DENY" always;
+            add_header X-Content-Type-Options "nosniff" always;
+        }
+        
+        # Health check endpoint
+        location /health {
+            access_log off;
+            return 200 "healthy\n";
+            add_header Content-Type text/plain;
+        }
+        
+        # Deny access to hidden files
+        location ~ /\. {
+            deny all;
+        }
+        
+        # Gzip compression
+        gzip on;
+        gzip_vary on;
+        gzip_min_length 1024;
+        gzip_proxied any;
+        gzip_comp_level 6;
+        gzip_types
+            text/plain
+            text/css
+            text/xml
+            text/javascript
+            application/json
+            application/javascript
+            application/xml+rss
+            application/atom+xml
+            image/svg+xml;
+    }
