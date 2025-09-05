@@ -207,6 +207,7 @@ SELECT cleanup_expired_sessions();
 type Config struct {
 	DatabaseURL      string
 	RedisURL         string
+	RedisPassword    string
 	JWTSecret        []byte
 	EncryptionKey    []byte
 	Port             string
@@ -236,12 +237,13 @@ func LoadConfig() *Config {
 
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgres://postgres:postgres@postgres:5432/notes?sslmode=require"
+		dbURL = "postgres://postgres:postgres@localhost:5432/notes?sslmode=disable"
 	}
 
 	return &Config{
 		DatabaseURL:      dbURL,
-		RedisURL:         getEnvOrDefault("REDIS_URL", "redis:6379"),
+		RedisURL:         getEnvOrDefault("REDIS_URL", "localhost:6379"),
+		RedisPassword:    os.Getenv("REDIS_PASSWORD"),
 		JWTSecret:        []byte(jwtSecret),
 		EncryptionKey:    []byte(encKey),
 		Port:             getEnvOrDefault("PORT", "8080"),
@@ -598,6 +600,223 @@ func (h *AuthHandler) logAudit(ctx context.Context, userID uuid.UUID, action, re
 	)
 }
 
+// Notes Handler
+type NotesHandler struct {
+	db     *pgxpool.Pool
+	crypto *CryptoService
+}
+
+type CreateNoteRequest struct {
+	TitleEncrypted   string `json:"title_encrypted" validate:"required"`
+	ContentEncrypted string `json:"content_encrypted" validate:"required"`
+}
+
+type UpdateNoteRequest struct {
+	TitleEncrypted   string `json:"title_encrypted" validate:"required"`
+	ContentEncrypted string `json:"content_encrypted" validate:"required"`
+}
+
+func (h *NotesHandler) GetNotes(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	ctx := context.Background()
+
+	// Get user's default workspace
+	var workspaceID uuid.UUID
+	err := h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&workspaceID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to get workspace"})
+	}
+
+	// Get notes from workspace
+	rows, err := h.db.Query(ctx, `
+		SELECT id, title_encrypted, content_encrypted, created_at, updated_at
+		FROM notes 
+		WHERE workspace_id = $1 AND deleted_at IS NULL
+		ORDER BY updated_at DESC`,
+		workspaceID)
+	
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch notes"})
+	}
+	defer rows.Close()
+
+	var notes []fiber.Map
+	for rows.Next() {
+		var id uuid.UUID
+		var titleEnc, contentEnc []byte
+		var createdAt, updatedAt time.Time
+
+		if err := rows.Scan(&id, &titleEnc, &contentEnc, &createdAt, &updatedAt); err != nil {
+			continue
+		}
+
+		notes = append(notes, fiber.Map{
+			"id":                id,
+			"title_encrypted":   base64.StdEncoding.EncodeToString(titleEnc),
+			"content_encrypted": base64.StdEncoding.EncodeToString(contentEnc),
+			"created_at":        createdAt,
+			"updated_at":        updatedAt,
+		})
+	}
+
+	return c.JSON(fiber.Map{"notes": notes})
+}
+
+func (h *NotesHandler) GetNote(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	ctx := context.Background()
+	var id uuid.UUID
+	var titleEnc, contentEnc []byte
+	var createdAt, updatedAt time.Time
+
+	err = h.db.QueryRow(ctx, `
+		SELECT n.id, n.title_encrypted, n.content_encrypted, n.created_at, n.updated_at
+		FROM notes n
+		JOIN workspaces w ON n.workspace_id = w.id
+		WHERE n.id = $1 AND w.owner_id = $2 AND n.deleted_at IS NULL`,
+		noteID, userID).Scan(&id, &titleEnc, &contentEnc, &createdAt, &updatedAt)
+
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+	}
+
+	return c.JSON(fiber.Map{
+		"id":                id,
+		"title_encrypted":   base64.StdEncoding.EncodeToString(titleEnc),
+		"content_encrypted": base64.StdEncoding.EncodeToString(contentEnc),
+		"created_at":        createdAt,
+		"updated_at":        updatedAt,
+	})
+}
+
+func (h *NotesHandler) CreateNote(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	var req CreateNoteRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	ctx := context.Background()
+
+	// Get user's default workspace
+	var workspaceID uuid.UUID
+	err := h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&workspaceID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to get workspace"})
+	}
+
+	// Decode encrypted data
+	titleEnc, err := base64.StdEncoding.DecodeString(req.TitleEncrypted)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid title encryption"})
+	}
+
+	contentEnc, err := base64.StdEncoding.DecodeString(req.ContentEncrypted)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid content encryption"})
+	}
+
+	// Create content hash for integrity
+	contentHash := argon2.IDKey(contentEnc, []byte("integrity"), 1, 64*1024, 4, 32)
+
+	// Create note
+	var noteID uuid.UUID
+	err = h.db.QueryRow(ctx, `
+		INSERT INTO notes (workspace_id, title_encrypted, content_encrypted, content_hash, created_by)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id`,
+		workspaceID, titleEnc, contentEnc, contentHash, userID).Scan(&noteID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create note"})
+	}
+
+	return c.Status(201).JSON(fiber.Map{
+		"id":      noteID,
+		"message": "Note created successfully",
+	})
+}
+
+func (h *NotesHandler) UpdateNote(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	var req UpdateNoteRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	ctx := context.Background()
+
+	// Decode encrypted data
+	titleEnc, err := base64.StdEncoding.DecodeString(req.TitleEncrypted)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid title encryption"})
+	}
+
+	contentEnc, err := base64.StdEncoding.DecodeString(req.ContentEncrypted)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid content encryption"})
+	}
+
+	// Create content hash for integrity
+	contentHash := argon2.IDKey(contentEnc, []byte("integrity"), 1, 64*1024, 4, 32)
+
+	// Update note
+	result, err := h.db.Exec(ctx, `
+		UPDATE notes 
+		SET title_encrypted = $1, content_encrypted = $2, content_hash = $3, updated_at = NOW()
+		FROM workspaces w
+		WHERE notes.id = $4 AND notes.workspace_id = w.id AND w.owner_id = $5 AND notes.deleted_at IS NULL`,
+		titleEnc, contentEnc, contentHash, noteID, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to update note"})
+	}
+
+	if result.RowsAffected() == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Note updated successfully"})
+}
+
+func (h *NotesHandler) DeleteNote(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	ctx := context.Background()
+
+	// Soft delete the note
+	result, err := h.db.Exec(ctx, `
+		UPDATE notes 
+		SET deleted_at = NOW()
+		FROM workspaces w
+		WHERE notes.id = $1 AND notes.workspace_id = w.id AND w.owner_id = $2 AND notes.deleted_at IS NULL`,
+		noteID, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete note"})
+	}
+
+	if result.RowsAffected() == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Note deleted successfully"})
+}
+
 // JWT Middleware
 func JWTMiddleware(secret []byte) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -637,7 +856,9 @@ func main() {
 
 	// Setup Redis
 	rdb := redis.NewClient(&redis.Options{
-		Addr: config.RedisURL,
+		Addr:     config.RedisURL,
+		Password: config.RedisPassword,
+		DB:       0, // use default DB
 	})
 	defer rdb.Close()
 
@@ -725,10 +946,18 @@ func main() {
 	// Protected routes
 	protected := api.Group("/", JWTMiddleware(config.JWTSecret))
 
-	// Notes endpoints (implement these handlers)
-	protected.Get("/notes", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"notes": []string{}})
-	})
+	// Notes handlers
+	notesHandler := &NotesHandler{
+		db:     db,
+		crypto: crypto,
+	}
+
+	// Notes endpoints
+	protected.Get("/notes", notesHandler.GetNotes)
+	protected.Get("/notes/:id", notesHandler.GetNote)
+	protected.Post("/notes", notesHandler.CreateNote)
+	protected.Put("/notes/:id", notesHandler.UpdateNote)
+	protected.Delete("/notes/:id", notesHandler.DeleteNote)
 
 	// Start server
 	log.Printf("Starting secure server on port %s with full encryption", config.Port)

@@ -1,0 +1,23 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "secure-notes.frontend.serviceName" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "secure-notes.frontend.labels" . | nindent 4 }}
+  annotations:
+    {{- include "secure-notes.annotations" . | nindent 4 }}
+    {{- if .Values.frontend.service.annotations }}
+    {{- toYaml .Values.frontend.service.annotations | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ .Values.frontend.service.type }}
+  ports:
+    - port: {{ .Values.frontend.service.port }}
+      targetPort: {{ .Values.frontend.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "secure-notes.frontend.selectorLabels" . | nindent 4 }}
+{{- end }}
