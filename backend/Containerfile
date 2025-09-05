@@ -1,0 +1,44 @@
+# Containerfile for Podman - More secure than Dockerfile
+FROM docker.io/golang:1.23-alpine AS builder
+
+# Security: Create non-root user at build time
+RUN adduser -D -u 10001 -g 10001 appuser
+
+# Install certificates and timezone data
+RUN apk add --no-cache ca-certificates tzdata git
+
+WORKDIR /build
+
+# Copy dependency files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build with security flags
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-w -s -X main.version=1.0.0" \
+    -trimpath \
+    -o secure-notes-backend \
+    main.go
+
+# Create minimal runtime image
+FROM scratch
+
+# Copy from builder
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /build/secure-notes-backend /app/secure-notes-backend
+
+# Use non-root user
+USER appuser:appuser
+
+# Expose port (high port for rootless)
+EXPOSE 8080
+
+# Security labels for Podman
+LABEL io.containers.seccomp="runtime/default"
+
+ENTRYPOINT ["/app/secure-notes-backend"]

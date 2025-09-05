@@ -78,10 +78,7 @@ CREATE TABLE IF NOT EXISTS notes (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
-    version INT DEFAULT 1,
-    INDEX idx_notes_workspace (workspace_id) WHERE deleted_at IS NULL,
-    INDEX idx_notes_parent (parent_id),
-    INDEX idx_notes_created (created_by, created_at DESC)
+    version INT DEFAULT 1
 );
 
 -- Encrypted search index (searchable encryption)
@@ -90,8 +87,7 @@ CREATE TABLE IF NOT EXISTS search_index (
     note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
     keyword_hash BYTEA NOT NULL, -- HMAC of keyword
     position INT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    INDEX idx_search_keyword (keyword_hash)
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Collaboration table for shared notes
@@ -113,9 +109,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     ip_address_encrypted BYTEA,
     user_agent_encrypted BYTEA,
     expires_at TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    INDEX idx_sessions_user (user_id),
-    INDEX idx_sessions_expires (expires_at)
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Audit log for security
@@ -128,9 +122,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
     ip_address_encrypted BYTEA,
     user_agent_encrypted BYTEA,
     metadata JSONB,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    INDEX idx_audit_user (user_id, created_at DESC),
-    INDEX idx_audit_action (action, created_at DESC)
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- File attachments with encryption
@@ -193,6 +185,19 @@ BEGIN
     DELETE FROM sessions WHERE expires_at < NOW();
 END;
 $$ LANGUAGE plpgsql;
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_notes_workspace ON notes(workspace_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_notes_parent ON notes(parent_id);
+CREATE INDEX IF NOT EXISTS idx_notes_created ON notes(created_by, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_search_keyword ON search_index(keyword_hash);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
+
+CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action, created_at DESC);
 
 -- Automatic session cleanup job (call periodically)
 SELECT cleanup_expired_sessions();
