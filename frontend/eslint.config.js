@@ -79,7 +79,7 @@ export default [
       'comma-dangle': ['error', 'only-multiline'],
       'quotes': ['error', 'single', { avoidEscape: true }],
       'semi': ['error', 'never'],
-      'indent': ['error', 2, { SwitchCase: 1 }],
+      // 'indent': ['error', 2, { SwitchCase: 1 }], // Disabled due to stack overflow with complex JSX
       'linebreak-style': ['error', 'unix'],
       'eol-last': 'error',
       'no-trailing-spaces': 'error',
