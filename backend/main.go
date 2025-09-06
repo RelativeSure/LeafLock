@@ -640,7 +640,7 @@ func (h *NotesHandler) GetNotes(c *fiber.Ctx) error {
 	}
 	defer rows.Close()
 
-	var notes []fiber.Map
+	notes := []fiber.Map{}
 	for rows.Next() {
 		var id uuid.UUID
 		var titleEnc, contentEnc []byte
@@ -943,15 +943,15 @@ func main() {
 		})
 	})
 
-	// Protected routes
-	protected := api.Group("/", JWTMiddleware(config.JWTSecret))
-
 	// Notes handlers
 	notesHandler := &NotesHandler{
 		db:     db,
 		crypto: crypto,
 	}
 
+	// Protected routes
+	protected := api.Group("/", JWTMiddleware(config.JWTSecret))
+	
 	// Notes endpoints
 	protected.Get("/notes", notesHandler.GetNotes)
 	protected.Get("/notes/:id", notesHandler.GetNote)

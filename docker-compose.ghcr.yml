@@ -1,0 +1,16 @@
+# docker-compose.ghcr.yml - Use images from GitHub Container Registry
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.ghcr.yml up -d
+
+services:
+  # Backend service using GitHub Container Registry image
+  backend:
+    image: ghcr.io/${GITHUB_REPOSITORY:-relativesure/notes}/backend:${VERSION:-latest}
+    build: null  # Disable local build when using registry image
+
+  # Frontend service using GitHub Container Registry image  
+  frontend:
+    image: ghcr.io/${GITHUB_REPOSITORY:-relativesure/notes}/frontend:${VERSION:-latest}
+    build: null  # Disable local build when using registry image
+
+# All other services (postgres, redis, nginx) remain unchanged
+# and inherit from the base docker-compose.yml file

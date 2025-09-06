@@ -198,7 +198,7 @@ Redis service name from subchart
 */}}
 {{- define "secure-notes.redis.serviceName" -}}
 {{- if .Values.redis.enabled }}
-{{- include "redis.fullname" .Subcharts.redis }}-master
+{{- include "common.names.fullname" .Subcharts.redis }}-master
 {{- end }}
 {{- end }}
 

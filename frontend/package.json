@@ -4,11 +4,25 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint src",
-    "test": "vitest run"
+    "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
+    "format": "prettier --write src/**/*.{js,jsx,ts,tsx,json,css,md}",
+    "format:check": "prettier --check src/**/*.{js,jsx,ts,tsx,json,css,md}",
+    "typecheck": "tsc --noEmit",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "test:security": "vitest run src/**/*.test.js --reporter=verbose",
+    "test:e2e": "vitest run src/e2e.test.js",
+    "clean": "rm -rf dist node_modules/.vite coverage",
+    "analyze": "vite build --mode analyze",
+    "serve": "vite preview --host 0.0.0.0",
+    "check-all": "npm run type-check && npm run lint && npm run format:check && npm run test"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -27,11 +41,28 @@
     "tailwindcss": "^3.4.16",
     "typescript": "^5.7.2",
     "vite": "^5.4.11",
+    "vite-bundle-analyzer": "^0.10.3",
     "vitest": "^2.1.8",
+    "@vitest/coverage-v8": "^2.1.8",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/user-event": "^14.5.2",
+    "jsdom": "^26.0.0",
     "eslint": "^9.16.0",
+    "@eslint/js": "^9.16.0",
     "@typescript-eslint/parser": "^8.18.0",
     "@typescript-eslint/eslint-plugin": "^8.18.0",
     "eslint-plugin-react": "^7.37.2",
-    "eslint-plugin-react-hooks": "^5.0.0"
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.14",
+    "prettier": "^3.2.5",
+    "prettier-plugin-tailwindcss": "^0.5.11",
+    "globals": "^15.12.0"
+  },
+  "prettier": {
+    "semi": false,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "es5"
   }
 }

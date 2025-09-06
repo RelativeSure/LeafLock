@@ -62,7 +62,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: development  # Use development stage if available
     environment:
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-devpassword123}@postgres:5432/notes?sslmode=disable
       REDIS_URL: redis:6379
@@ -83,7 +82,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: development  # Use development stage if available
       args:
         VITE_API_URL: http://localhost:8080
         NODE_ENV: development

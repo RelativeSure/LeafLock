@@ -55,7 +55,7 @@ spec:
             - sh
             - -c
             - |
-              until pg_isready -h {{ include "secure-notes.postgresql.serviceName" . }} -p {{ .Values.postgresql.primary.service.ports.postgresql | default 5432 }}; do
+              until pg_isready -h {{ include "secure-notes.postgresql.serviceName" . }} -p {{ .Values.postgresql.primary.service.ports.postgresql | default 5432 }} -U {{ .Values.postgresql.auth.username | default "postgres" }}; do
                 echo "Waiting for PostgreSQL to be ready..."
                 sleep 2
               done
@@ -66,11 +66,17 @@ spec:
         {{- if .Values.redis.enabled }}
         - name: wait-for-redis
           image: redis:7-alpine
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.redis.auth.existingSecret | default (printf "%s-redis" .Release.Name) }}
+                  key: {{ .Values.redis.auth.existingSecretPasswordKey | default "redis-password" }}
           command:
             - sh
             - -c
             - |
-              until redis-cli -h {{ include "secure-notes.redis.serviceName" . }} -p {{ .Values.redis.master.service.ports.redis | default 6379 }} ping; do
+              until redis-cli -h {{ include "secure-notes.redis.serviceName" . }} -p {{ .Values.redis.master.service.ports.redis | default 6379 }} -a "$REDIS_PASSWORD" ping; do
                 echo "Waiting for Redis to be ready..."
                 sleep 2
               done
