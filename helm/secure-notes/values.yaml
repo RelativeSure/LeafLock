@@ -15,8 +15,8 @@ backend:
   image:
     registry: ""
     repository: secure-notes/backend
-    tag: "1.0.0"
-    pullPolicy: IfNotPresent
+    tag: "latest"
+    pullPolicy: Never
     pullSecrets: []
   
   # Service configuration
@@ -134,8 +134,8 @@ frontend:
   image:
     registry: ""
     repository: secure-notes/frontend
-    tag: "1.0.0"
-    pullPolicy: IfNotPresent
+    tag: "latest"
+    pullPolicy: Never
     pullSecrets: []
   
   # Service configuration

@@ -1,0 +1,159 @@
+# Pre-commit configuration for Secure Notes project
+# This ensures code quality and security before commits
+
+repos:
+  # Generic file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: \.(md|txt)$
+      - id: end-of-file-fixer
+        exclude: \.(md|txt)$
+      - id: check-yaml
+        exclude: ^(docker-compose|podman-compose)\.yml$
+      - id: check-json
+        exclude: ^(frontend/node_modules|\.vscode)/
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-case-conflict
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: detect-private-key
+        exclude: ^(ssl/|\.ssh/)
+      - id: no-commit-to-branch
+        args: ['--branch', 'master', '--branch', 'main']
+
+  # Security scanning
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: |
+          (?x)^(
+            \.env\.example|
+            frontend/node_modules/.*|
+            \.git/.*|
+            backend/coverage\..*|
+            .*\.sum$
+          )$
+
+  # Go-specific hooks
+  - repo: local
+    hooks:
+      - id: go-fmt
+        name: go-fmt
+        entry: gofmt
+        args: [-s, -w]
+        language: system
+        files: \.go$
+        
+      - id: go-vet
+        name: go-vet
+        entry: bash -c 'cd backend && go vet ./...'
+        language: system
+        files: \.go$
+        pass_filenames: false
+        
+      - id: go-test-unit
+        name: go-test-unit
+        entry: bash -c 'cd backend && go test -short -v ./...'
+        language: system
+        files: \.go$
+        pass_filenames: false
+        
+      - id: go-mod-tidy
+        name: go-mod-tidy
+        entry: bash -c 'cd backend && go mod tidy'
+        language: system
+        files: (go\.mod|go\.sum)$
+        pass_filenames: false
+        
+      - id: go-security-check
+        name: go-security-check
+        entry: bash -c 'cd backend && if command -v gosec >/dev/null; then gosec ./...; else echo "gosec not found, skipping security check"; fi'
+        language: system
+        files: \.go$
+        pass_filenames: false
+
+  # Frontend/JavaScript hooks
+  - repo: local
+    hooks:
+      - id: npm-lint
+        name: npm-lint
+        entry: bash -c 'cd frontend && npm run lint'
+        language: system
+        files: \.(js|jsx|ts|tsx)$
+        pass_filenames: false
+        
+      - id: npm-test
+        name: npm-test
+        entry: bash -c 'cd frontend && npm test -- --run'
+        language: system
+        files: \.(js|jsx|ts|tsx)$
+        pass_filenames: false
+        
+      - id: check-package-json
+        name: check-package-json
+        entry: bash -c 'cd frontend && npm audit --audit-level=high'
+        language: system
+        files: package\.json$
+        pass_filenames: false
+
+  # Docker/Container checks
+  - repo: local
+    hooks:
+      - id: dockerfile-lint
+        name: dockerfile-lint
+        entry: bash -c 'if command -v hadolint >/dev/null; then hadolint backend/Dockerfile frontend/Dockerfile || true; else echo "hadolint not found, skipping Dockerfile lint"; fi'
+        language: system
+        files: Dockerfile$
+        pass_filenames: false
+
+  # Environment and secrets check
+  - repo: local
+    hooks:
+      - id: env-check
+        name: env-security-check
+        entry: bash -c '
+          # Check for accidentally staged .env files
+          if git diff --cached --name-only | grep -E "^\.env$"; then
+            echo "❌ .env file is staged for commit. This file contains secrets!";
+            echo "Run: git reset HEAD .env";
+            exit 1;
+          fi
+          
+          # Check for hardcoded secrets in staged files
+          if git diff --cached | grep -E "(password|secret|key|token).*=.*(admin|password|secret|123)" -i; then
+            echo "❌ Potential hardcoded secrets detected in staged changes";
+            echo "Please review and remove any hardcoded secrets";
+            exit 1;
+          fi
+          
+          echo "✅ Environment security check passed"
+        '
+        language: system
+        always_run: true
+        pass_filenames: false
+
+  # Documentation checks
+  - repo: local
+    hooks:
+      - id: check-documentation
+        name: documentation-freshness-check
+        entry: bash -c '
+          # Check if API changes require documentation updates
+          if git diff --cached --name-only | grep -E "(main\.go|.*\.go)" && ! git diff --cached --name-only | grep -E "\.md$"; then
+            echo "⚠️  Go files changed but no documentation updated. Consider updating relevant .md files";
+          fi
+          
+          # Check for TODO/FIXME comments in production code
+          if git diff --cached | grep -E "TODO|FIXME|XXX|HACK" -i; then
+            echo "⚠️  TODO/FIXME comments found in staged changes. Consider addressing before commit";
+          fi
+        '
+        language: system
+        always_run: true
+        pass_filenames: false
