@@ -8,7 +8,7 @@ This document summarizes all the developer experience optimizations implemented 
 **Problem Solved**: Manual setup taking 30+ minutes with multiple potential failure points  
 **Solution**: One-command setup in 2-5 minutes
 
-- **Script**: `./dev-setup.sh`
+- **Script**: `./scripts/dev-setup.sh`
 - **Features**:
   - Automated system requirement checks
   - Secure environment file generation with random secrets
@@ -21,7 +21,7 @@ This document summarizes all the developer experience optimizations implemented 
 **Problem Solved**: Manual restart cycles breaking flow  
 **Solution**: Intelligent hot reload for both backend and frontend
 
-- **Script**: `./dev-watch.sh`
+- **Script**: `./scripts/dev-watch.sh`
 - **Features**:
   - Go backend with instant rebuild on file changes
   - React frontend with Vite Hot Module Replacement
@@ -33,7 +33,7 @@ This document summarizes all the developer experience optimizations implemented 
 **Problem Solved**: Inconsistent code style and manual quality checks  
 **Solution**: Automated linting, formatting, and pre-commit hooks
 
-- **Pre-commit Hooks**: `./setup-git-hooks.sh`
+- **Pre-commit Hooks**: `./scripts/setup-git-hooks.sh`
 - **Configurations**:
   - ESLint for TypeScript/React (`frontend/eslint.config.js`)
   - Prettier for code formatting (`frontend/.prettierrc`)
@@ -44,7 +44,7 @@ This document summarizes all the developer experience optimizations implemented 
 **Problem Solved**: Manual testing and fragmented test execution  
 **Solution**: Automated test orchestration with reporting
 
-- **Script**: `./test-automation.sh`
+- **Script**: `./scripts/test-automation.sh`
 - **Test Suites**:
   - Unit tests (backend & frontend)
   - Integration tests with test databases
@@ -57,7 +57,7 @@ This document summarizes all the developer experience optimizations implemented 
 **Problem Solved**: Time-consuming manual debugging  
 **Solution**: Automated diagnostics and error recovery
 
-- **Debug Tools**: `./debug-tools.sh`
+- **Debug Tools**: `./scripts/debug-tools.sh`
 - **Error Handler**: `./error-handler.sh`
 - **Features**:
   - System health checks
@@ -106,10 +106,10 @@ This document summarizes all the developer experience optimizations implemented 
 # Clone and setup everything
 git clone <repository-url>
 cd secure-notes
-./dev-setup.sh
+./scripts/dev-setup.sh
 
 # Setup Git hooks for code quality
-./setup-git-hooks.sh
+./scripts/setup-git-hooks.sh
 ```
 
 ### Daily Development Workflow
@@ -124,7 +124,7 @@ cd secure-notes
 ./test-automation.sh quick
 
 # Debug any issues
-./debug-tools.sh
+./scripts/debug-tools.sh
 
 # Recover from errors automatically
 ./error-handler.sh full
@@ -146,7 +146,7 @@ cd frontend && npm run lint && npm run format && npm test
 ./test-automation.sh all
 
 # Security audit
-./debug-tools.sh security
+./scripts/debug-tools.sh security
 
 # Build validation
 make build
@@ -174,9 +174,9 @@ make build
 ### Environment Management
 | Script | Purpose | Usage |
 |--------|---------|--------|
-| `dev-setup.sh` | Complete environment setup | `./dev-setup.sh` |
+| `dev-setup.sh` | Complete environment setup | `./scripts/dev-setup.sh` |
 | `dev-watch.sh` | Hot reload development | `./dev-watch.sh [--with-tests]` |
-| `setup-git-hooks.sh` | Git hooks configuration | `./setup-git-hooks.sh` |
+| `setup-git-hooks.sh` | Git hooks configuration | `./scripts/setup-git-hooks.sh` |
 
 ### Testing & Quality
 | Script | Purpose | Usage |
@@ -188,7 +188,7 @@ make build
 ### Debugging & Maintenance
 | Script | Purpose | Usage |
 |--------|---------|--------|
-| `debug-tools.sh` | System diagnostics | `./debug-tools.sh [health\|logs\|network]` |
+| `debug-tools.sh` | System diagnostics | `./scripts/debug-tools.sh [health\|logs\|network]` |
 | `error-handler.sh` | Automated recovery | `./error-handler.sh [full\|monitor]` |
 
 ### Container Operations
@@ -303,17 +303,17 @@ PARALLEL_JOBS=4               # Test parallelization
 ## 🆘 Troubleshooting
 
 ### Common Issues
-1. **Setup Fails**: Run `./debug-tools.sh health` to diagnose
+1. **Setup Fails**: Run `./scripts/debug-tools.sh health` to diagnose
 2. **Hot Reload Not Working**: Check `./error-handler.sh full`
 3. **Tests Failing**: Use `./test-automation.sh quick` for focused testing
-4. **Port Conflicts**: Check `./debug-tools.sh network`
+4. **Port Conflicts**: Check `./scripts/debug-tools.sh network`
 5. **Permission Issues**: Run `./error-handler.sh permissions`
 
 ### Getting Help
 - Check `.claude/commands/` for specific command documentation
 - Run diagnostic scripts for automated troubleshooting
 - Review logs in `/tmp/secure-notes-*` files
-- Use `./debug-tools.sh interactive` for guided debugging
+- Use `./scripts/debug-tools.sh interactive` for guided debugging
 
 ---
 

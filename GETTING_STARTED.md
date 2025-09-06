@@ -173,7 +173,7 @@ openssl rand -base64 32  # For SERVER_ENCRYPTION_KEY (32 chars)
 **Using the Provided Script:**
 ```bash
 # Auto-generate secure environment file
-./setup-docker.sh  # Generates .env with secure random values
+./scripts/setup-docker.sh  # Generates .env with secure random values
 ```
 
 ## Development Workflow

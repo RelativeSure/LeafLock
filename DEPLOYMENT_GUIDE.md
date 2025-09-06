@@ -8,14 +8,14 @@ The fastest way to deploy Secure Notes is using our master deployment script:
 
 ```bash
 # Interactive deployment menu
-./deploy.sh
+./scripts/deploy.sh
 
 # Or use specific commands
-./deploy.sh dev          # Development environment
-./deploy.sh docker       # Docker Compose (development)
-./deploy.sh docker-prod  # Docker Compose (production)
-./deploy.sh k8s          # Kubernetes (development)
-./deploy.sh k8s-prod     # Kubernetes (production)
+./scripts/deploy.sh dev          # Development environment
+./scripts/deploy.sh docker       # Docker Compose (development)
+./scripts/deploy.sh docker-prod  # Docker Compose (production)
+./scripts/deploy.sh k8s          # Kubernetes (development)
+./scripts/deploy.sh k8s-prod     # Kubernetes (production)
 ```
 
 ## 📋 Table of Contents
@@ -72,7 +72,7 @@ Best for: Active development, debugging, hot reload
 
 **Command:**
 ```bash
-./deploy.sh dev
+./scripts/deploy.sh dev
 ```
 
 **Access:**
@@ -94,7 +94,7 @@ Best for: Testing full stack, CI/CD pipelines, local production simulation
 **Commands:**
 ```bash
 # Development configuration
-./deploy.sh docker
+./scripts/deploy.sh docker
 
 # Or manually
 ./scripts/deploy-docker.sh
@@ -119,7 +119,7 @@ Best for: Small-scale production, single-server deployments
 **Commands:**
 ```bash
 # Production configuration with SSL
-./deploy.sh docker-prod
+./scripts/deploy.sh docker-prod
 
 # Or manually
 ./scripts/deploy-docker.sh --prod
@@ -143,7 +143,7 @@ Best for: Testing Kubernetes deployment, learning K8s, staging environment
 **Commands:**
 ```bash
 # Deploy to local Kubernetes
-./deploy.sh k8s
+./scripts/deploy.sh k8s
 
 # Or manually
 ./scripts/deploy-k8s.sh
@@ -170,7 +170,7 @@ Best for: Production deployments, high availability, enterprise environments
 **Commands:**
 ```bash
 # Deploy to production Kubernetes
-./deploy.sh k8s-prod your-domain.com
+./scripts/deploy.sh k8s-prod your-domain.com
 
 # Or manually
 ./scripts/deploy-k8s.sh --prod --domain your-domain.com
@@ -182,7 +182,7 @@ Best for: Production deployments, high availability, enterprise environments
 
 ```bash
 # One command setup
-./deploy.sh dev
+./scripts/deploy.sh dev
 ```
 
 This will:
@@ -483,7 +483,7 @@ The application includes comprehensive health monitoring:
 
 ```bash
 # Full health check
-./deploy.sh health
+./scripts/deploy.sh health
 
 # Or directly
 ./scripts/health-check.sh full
@@ -521,7 +521,7 @@ The application includes comprehensive health monitoring:
 
 ```bash
 # Run full diagnostic scan
-./deploy.sh troubleshoot
+./scripts/deploy.sh troubleshoot
 
 # Or specific diagnostics
 ./scripts/troubleshoot.sh docker
@@ -729,7 +729,7 @@ Each deployment method is designed to be:
 Choose the deployment method that best fits your needs and follow the specific instructions above. All deployments include automated environment setup, health monitoring, and troubleshooting tools to ensure a smooth experience.
 
 For additional help, use the built-in tools:
-- `./deploy.sh` - Interactive deployment menu
+- `./scripts/deploy.sh` - Interactive deployment menu
 - `./scripts/health-check.sh` - Comprehensive health monitoring
 - `./scripts/troubleshoot.sh` - Diagnostic and troubleshooting tools
 - `./scripts/env-setup.sh` - Environment configuration management

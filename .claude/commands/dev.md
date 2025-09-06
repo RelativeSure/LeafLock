@@ -6,7 +6,7 @@ Quick development environment management commands for Secure Notes.
 Set up the complete development environment automatically.
 
 ```bash
-./dev-setup.sh
+./scripts/dev-setup.sh
 ```
 
 **What it does:**
@@ -24,7 +24,7 @@ Set up the complete development environment automatically.
 Start development servers with hot reload.
 
 ```bash
-./dev-watch.sh
+./scripts/dev-watch.sh
 ```
 
 **Features:**
@@ -36,7 +36,7 @@ Start development servers with hot reload.
 
 **With test watchers:**
 ```bash
-./dev-watch.sh --with-tests
+./scripts/dev-watch.sh --with-tests
 ```
 
 ## dev-test
@@ -93,7 +93,7 @@ make clean
 rm -f .env
 
 # Re-run setup
-./dev-setup.sh
+./scripts/dev-setup.sh
 ```
 
 ## Quick Commands

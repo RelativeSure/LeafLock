@@ -1,3 +1,4 @@
+---
 # .github/workflows/ci.yml - Complete CI/CD workflow
 name: CI/CD Pipeline
 
@@ -72,7 +73,6 @@ jobs:
           echo "Building backend..."
           if go build -o app .; then
             echo "✅ Backend built successfully"
-            
             # Set environment variables for the backend
             export DATABASE_URL="postgres://postgres:testpass123@localhost:5432/notes?sslmode=disable"
             export REDIS_URL="localhost:6379"
@@ -80,12 +80,10 @@ jobs:
             export SERVER_ENCRYPTION_KEY="test_encryption_key_32_chars_ok"
             export CORS_ORIGINS="http://localhost:3000"
             export PORT="8080"
-            
             # Start backend in background
             echo "Starting backend server..."
             ./app &
             BACKEND_PID=$!
-            
             # Wait for backend to be ready
             echo "Waiting for backend to start..."
             for i in {1..30}; do
@@ -101,19 +99,15 @@ jobs:
               echo "Waiting... ($i/30)"
               sleep 1
             done
-            
             # Test the health endpoint
             echo "Testing health endpoint..."
             response=$(curl -s http://localhost:8080/api/v1/health)
             echo "Health response: $response"
-            
             # Stop backend
             echo "Stopping backend..."
             kill $BACKEND_PID 2>/dev/null || true
-            
           else
             echo "⚠️ Main build failed, creating fallback test server..."
-            
             # Create a minimal test server
             cat > test_server.go << 'EOF'
           package main
@@ -136,16 +130,14 @@ jobs:
               }
           }
           EOF
-            
             # Build and run the test server
             go build -o app test_server.go
             ./app &
             TEST_PID=$!
             sleep 3
-            
             # Test the fallback server
-            curl -f http://localhost:8080/api/v1/health || echo "Test server health check failed"
-            
+            curl -f http://localhost:8080/api/v1/health || \
+              echo "Test server health check failed"
             # Stop test server
             kill $TEST_PID 2>/dev/null || true
           fi
@@ -189,11 +181,13 @@ jobs:
 
           # Test backend Docker build
           echo "Building backend Docker image..."
-          docker build -t secure-notes-backend:test ./backend || echo "Backend Docker build failed"
+          docker build -t secure-notes-backend:test ./backend || \
+            echo "Backend Docker build failed"
 
           # Test frontend Docker build
           echo "Building frontend Docker image..."
-          docker build -t secure-notes-frontend:test ./frontend || echo "Frontend Docker build failed"
+          docker build -t secure-notes-frontend:test ./frontend || \
+            echo "Frontend Docker build failed"
 
           # List built images
           echo "Built images:"
@@ -210,7 +204,8 @@ jobs:
 
           # Test PostgreSQL connection
           echo "Testing PostgreSQL..."
-          PGPASSWORD=testpass123 psql -h localhost -U postgres -d notes -c "SELECT version();" || echo "PostgreSQL connection failed"
+          PGPASSWORD=testpass123 psql -h localhost -U postgres -d notes \
+            -c "SELECT version();" || echo "PostgreSQL connection failed"
 
           # Test Redis connection
           echo "Testing Redis..."
@@ -255,4 +250,3 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📝 Notes" >> $GITHUB_STEP_SUMMARY
           echo "All services were successfully tested with health checks." >> $GITHUB_STEP_SUMMARY
-
