@@ -1,0 +1,4 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["github>kubearchitect/renovate-runner//.github/renovate.json5"]
+}
