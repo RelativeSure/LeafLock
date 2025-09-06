@@ -5,19 +5,12 @@ run:
   timeout: 5m
   issues-exit-code: 1
   tests: true
-  skip-dirs:
-    - vendor/
-    - .git/
-    - tmp/
-  skip-files:
-    - ".*\\.pb\\.go$"
-    - ".*\\.gen\\.go$"
 
 output:
-  format: colored-line-number
+  formats:
+    - format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
-  uniq-by-line: true
   path-prefix: ""
   sort-results: true
 
@@ -85,9 +78,8 @@ linters-settings:
     max: 8
 
   # Magic numbers
-  gomnd:
+  mnd:
     settings:
-      mnd:
         checks:
           - argument
           - case
@@ -257,9 +249,8 @@ linters:
     - durationcheck
     - errname
     - errorlint
-    - execinquery
     - exhaustive
-    - exportloopref
+    - copyloopvar
     - forbidigo
     - forcetypeassert
     - funlen
@@ -278,7 +269,7 @@ linters:
     - gofumpt
     - goheader
     - goimports
-    - gomnd
+    - mnd
     - gomoddirectives
     - gomodguard
     - goprintffuncname
@@ -309,7 +300,7 @@ linters:
     - sqlclosecheck
     - stylecheck
     - tagliatelle
-    - tenv
+    - usetesting
     - testableexamples
     - thelper
     - tparallel
@@ -324,19 +315,22 @@ linters:
 
   disable:
     - depguard  # We manage dependencies appropriately
-    - exhaustivestruct # Too restrictive
     - exhaustruct # Too restrictive
     - gochecksumtype # Not needed for this project
-    - goerr113 # Too restrictive for this project
-    - golint # Deprecated
-    - interfacer # Deprecated
-    - maligned # Deprecated
+    - err113 # Too restrictive for this project
     - nosnakecase # We use snake_case for JSON/DB tags
     - paralleltest # Not all tests need to be parallel
-    - scopelint # Deprecated
     - testpackage # Not required for this project
 
 issues:
+  exclude-dirs:
+    - vendor/
+    - .git/
+    - tmp/
+  exclude-files:
+    - ".*\\.pb\\.go$"
+    - ".*\\.gen\\.go$"
+  uniq-by-line: true
   exclude-rules:
     # Exclude some linters from running on tests files.
     - path: _test\.go
@@ -366,7 +360,7 @@ issues:
     # Exclude magic number issues in tests and main files
     - path: "(main|_test)\\.go"
       linters:
-        - gomnd
+        - mnd
 
   exclude-use-default: false
   max-issues-per-linter: 0
