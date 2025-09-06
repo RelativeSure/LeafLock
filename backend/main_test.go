@@ -1,3 +1,5 @@
+// Copyright (c) 2025 RelativeSure
+// main_test.go - Comprehensive test suite for the secure notes backend
 package main
 
 import (
@@ -23,13 +25,13 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// Test configuration
+// Test configuration.
 const (
 	TestDatabaseURL = "postgres://test:test@localhost:5433/test_notes?sslmode=disable"
 	TestRedisURL    = "localhost:6380"
 )
 
-// MockDB represents a mock database connection for unit tests
+// MockDB represents a mock database connection for unit tests.
 type MockDB struct {
 	mock.Mock
 }
@@ -121,25 +123,25 @@ func (m *MockResult) RowsAffected() int64 {
 	return mockArgs.Get(0).(int64)
 }
 
-// CryptoService Tests
+// CryptoService Tests.
 func TestCryptoService(t *testing.T) {
-	// Generate test key
-	key := make([]byte, 32)
-	_, err := rand.Read(key)
+	// Generate test key.
+	testKey := make([]byte, 32)
+	_, err := rand.Read(testKey)
 	require.NoError(t, err)
 
-	crypto := NewCryptoService(key)
+	crypto := NewCryptoService(testKey)
 
 	t.Run("EncryptDecrypt", func(t *testing.T) {
 		plaintext := []byte("test message for encryption")
 		
-		// Test encryption
+		// Test encryption.
 		ciphertext, err := crypto.Encrypt(plaintext)
 		assert.NoError(t, err)
 		assert.NotNil(t, ciphertext)
 		assert.NotEqual(t, plaintext, ciphertext)
 		
-		// Test decryption
+		// Test decryption.
 		decrypted, err := crypto.Decrypt(ciphertext)
 		assert.NoError(t, err)
 		assert.Equal(t, plaintext, decrypted)
@@ -172,25 +174,27 @@ func TestCryptoService(t *testing.T) {
 	})
 }
 
-// Password Hashing Tests
+// Password Hashing Tests.
 func TestPasswordHashing(t *testing.T) {
 	password := "TestPassword123!"
-	salt := make([]byte, 32)
-	rand.Read(salt)
+	passwordSalt := make([]byte, 32)
+	if _, err := rand.Read(passwordSalt); err != nil {
+		t.Fatalf("Failed to generate salt: %v", err)
+	}
 
 	t.Run("HashPassword", func(t *testing.T) {
-		hash := HashPassword(password, salt)
+		hash := HashPassword(password, passwordSalt)
 		assert.NotEmpty(t, hash)
 		assert.Contains(t, hash, "$argon2id$")
 	})
 
 	t.Run("VerifyPassword", func(t *testing.T) {
-		hash := HashPassword(password, salt)
+		hash := HashPassword(password, passwordSalt)
 		
-		// Correct password should verify
+		// Correct password should verify.
 		assert.True(t, VerifyPassword(password, hash))
 		
-		// Wrong password should not verify
+		// Wrong password should not verify.
 		assert.False(t, VerifyPassword("WrongPassword", hash))
 	})
 
@@ -199,9 +203,9 @@ func TestPasswordHashing(t *testing.T) {
 	})
 
 	t.Run("ConstantTimeComparison", func(t *testing.T) {
-		hash := HashPassword(password, salt)
+		hash := HashPassword(password, passwordSalt)
 		
-		// Multiple verifications should take similar time (constant time)
+		// Multiple verifications should take similar time (constant time).
 		start1 := time.Now()
 		VerifyPassword(password, hash)
 		duration1 := time.Since(start1)
@@ -216,7 +220,7 @@ func TestPasswordHashing(t *testing.T) {
 	})
 }
 
-// Configuration Tests
+// Configuration Tests.
 func TestConfig(t *testing.T) {
 	// Store original environment
 	originalJWT := os.Getenv("JWT_SECRET")
@@ -263,7 +267,7 @@ func TestConfig(t *testing.T) {
 	})
 }
 
-// JWT Middleware Tests
+// JWT Middleware Tests.
 func TestJWTMiddleware(t *testing.T) {
 	secret := []byte("test-secret-key-for-jwt-tokens-with-sufficient-length")
 	middleware := JWTMiddleware(secret)

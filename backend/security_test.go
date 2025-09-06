@@ -1,3 +1,5 @@
+// Copyright (c) 2025 RelativeSure
+// security_test.go - Comprehensive security testing suite
 package main
 
 import (
@@ -18,7 +20,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// Security Test Suite
+// Security Test Suite.
 type SecurityTestSuite struct {
 	suite.Suite
 	app    *fiber.App
@@ -26,15 +28,19 @@ type SecurityTestSuite struct {
 }
 
 func (suite *SecurityTestSuite) SetupTest() {
-	// Generate test keys
+	// Generate test keys.
 	jwtKey := make([]byte, 64)
-	encKey := make([]byte, 32)
-	rand.Read(jwtKey)
-	rand.Read(encKey)
+	encryptionKey := make([]byte, 32)
+	if _, err := rand.Read(jwtKey); err != nil {
+		panic(fmt.Sprintf("Failed to generate JWT key: %v", err))
+	}
+	if _, err := rand.Read(encryptionKey); err != nil {
+		panic(fmt.Sprintf("Failed to generate encryption key: %v", err))
+	}
 
 	suite.config = &Config{
 		JWTSecret:        jwtKey,
-		EncryptionKey:    encKey,
+		EncryptionKey:    encryptionKey,
 		MaxLoginAttempts: 3,
 		LockoutDuration:  5 * time.Minute,
 		SessionDuration:  24 * time.Hour,
@@ -76,9 +82,9 @@ func (suite *SecurityTestSuite) SetupTest() {
 	})
 }
 
-// SQL Injection Tests
+// SQL Injection Tests.
 func (suite *SecurityTestSuite) TestSQLInjectionPrevention() {
-	// Test various SQL injection payloads
+	// Test various SQL injection payloads.
 	sqlInjectionPayloads := []string{
 		"' OR '1'='1",
 		"' OR 1=1 --",
@@ -106,10 +112,10 @@ func (suite *SecurityTestSuite) TestSQLInjectionPrevention() {
 			resp, err := suite.app.Test(httpReq)
 			require.NoError(suite.T(), err)
 
-			// Should not cause server error (parameterized queries prevent injection)
+			// Should not cause server error (parameterized queries prevent injection).
 			assert.True(suite.T(), resp.StatusCode < 500, "SQL injection should not cause server error")
 
-			// Response should not contain SQL error messages
+			// Response should not contain SQL error messages.
 			var response map[string]interface{}
 			json.NewDecoder(resp.Body).Decode(&response)
 
@@ -122,7 +128,7 @@ func (suite *SecurityTestSuite) TestSQLInjectionPrevention() {
 	}
 }
 
-// XSS Prevention Tests
+// XSS Prevention Tests.
 func (suite *SecurityTestSuite) TestXSSPrevention() {
 	xssPayloads := []string{
 		"<script>alert('xss')</script>",
@@ -167,7 +173,7 @@ func (suite *SecurityTestSuite) TestXSSPrevention() {
 	}
 }
 
-// JWT Security Tests
+// JWT Security Tests.
 func (suite *SecurityTestSuite) TestJWTSecurity() {
 	suite.Run("ValidJWT", func() {
 		// Create valid JWT
@@ -266,7 +272,7 @@ func (suite *SecurityTestSuite) TestJWTSecurity() {
 	})
 }
 
-// Password Security Tests
+// Password Security Tests.
 func (suite *SecurityTestSuite) TestPasswordSecurity() {
 	suite.Run("TimingAttackResistance", func() {
 		// Test that password verification takes similar time for valid/invalid passwords
@@ -350,7 +356,7 @@ func (suite *SecurityTestSuite) TestPasswordSecurity() {
 	})
 }
 
-// Rate Limiting Tests
+// Rate Limiting Tests.
 func (suite *SecurityTestSuite) TestRateLimiting() {
 	suite.Run("LoginAttemptLimiting", func() {
 		// Create app with rate limiting middleware
@@ -387,7 +393,7 @@ func (suite *SecurityTestSuite) TestRateLimiting() {
 	})
 }
 
-// Encryption Security Tests
+// Encryption Security Tests.
 func (suite *SecurityTestSuite) TestEncryptionSecurity() {
 	crypto := NewCryptoService(suite.config.EncryptionKey)
 
@@ -467,7 +473,7 @@ func (suite *SecurityTestSuite) TestEncryptionSecurity() {
 	})
 }
 
-// Input Validation Tests
+// Input Validation Tests.
 func (suite *SecurityTestSuite) TestInputValidation() {
 	suite.Run("OversizedInput", func() {
 		// Test with very large input
@@ -558,7 +564,7 @@ func (suite *SecurityTestSuite) TestInputValidation() {
 	})
 }
 
-// Security Headers Tests
+// Security Headers Tests.
 func (suite *SecurityTestSuite) TestSecurityHeaders() {
 	req := httptest.NewRequest("GET", "/test-protected", nil)
 	
@@ -583,7 +589,7 @@ func (suite *SecurityTestSuite) TestSecurityHeaders() {
 	assert.Contains(suite.T(), resp.Header.Get("Strict-Transport-Security"), "max-age=31536000")
 }
 
-// CORS Security Tests
+// CORS Security Tests.
 func (suite *SecurityTestSuite) TestCORSSecurity() {
 	suite.Run("ValidOrigin", func() {
 		app := fiber.New()
@@ -646,7 +652,7 @@ func (suite *SecurityTestSuite) TestCORSSecurity() {
 	})
 }
 
-// Information Disclosure Tests
+// Information Disclosure Tests.
 func (suite *SecurityTestSuite) TestInformationDisclosure() {
 	suite.Run("ErrorMessages", func() {
 		// Test that detailed error messages are not exposed

@@ -1,3 +1,4 @@
+// Copyright (c) 2025 RelativeSure
 // main.go - Complete secure backend with automatic PostgreSQL setup
 package main
 
@@ -29,7 +30,7 @@ import (
 	"golang.org/x/crypto/chacha20poly1305"
 )
 
-// AUTOMATIC DATABASE SETUP - Runs migrations on startup
+// DatabaseSchema contains the complete database schema for automatic setup
 const DatabaseSchema = `
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -203,7 +204,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action, created_at DESC
 SELECT cleanup_expired_sessions();
 `
 
-// Configuration with secure defaults
+// Config holds the application configuration with secure defaults
 type Config struct {
 	DatabaseURL      string
 	RedisURL         string
@@ -217,21 +218,28 @@ type Config struct {
 	SessionDuration  time.Duration
 }
 
+// LoadConfig loads the application configuration from environment variables.
 func LoadConfig() *Config {
 	// Generate secure random keys if not provided
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		key := make([]byte, 64)
-		rand.Read(key)
+		if _, err := rand.Read(key); err != nil {
+			log.Fatal("Failed to generate JWT secret:", err)
+		}
 		jwtSecret = base64.StdEncoding.EncodeToString(key)
+
 		log.Println("Generated new JWT secret")
 	}
 
 	encKey := os.Getenv("SERVER_ENCRYPTION_KEY")
 	if encKey == "" {
 		key := make([]byte, 32)
-		rand.Read(key)
+		if _, err := rand.Read(key); err != nil {
+			log.Fatal("Failed to generate encryption key:", err)
+		}
 		encKey = base64.StdEncoding.EncodeToString(key)
+
 		log.Println("Generated new server encryption key")
 	}
 
@@ -258,37 +266,43 @@ func getEnvOrDefault(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
 	}
+
 	return defaultValue
 }
 
-// Crypto Service for server-side encryption
+// CryptoService provides server-side encryption capabilities.
 type CryptoService struct {
 	serverKey []byte
 }
 
+// NewCryptoService creates a new crypto service with the provided key.
 func NewCryptoService(key []byte) *CryptoService {
 	return &CryptoService{serverKey: key}
 }
 
+// Encrypt encrypts plaintext using XChaCha20-Poly1305.
 func (c *CryptoService) Encrypt(plaintext []byte) ([]byte, error) {
 	aead, err := chacha20poly1305.NewX(c.serverKey[:32])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create cipher: %w", err)
 	}
 
 	nonce := make([]byte, aead.NonceSize())
 	if _, err := rand.Read(nonce); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to generate nonce: %w", err)
 	}
 
 	ciphertext := aead.Seal(nil, nonce, plaintext, nil)
-	return append(nonce, ciphertext...), nil
+	result := make([]byte, len(nonce))
+	copy(result, nonce)
+	return append(result, ciphertext...), nil
 }
 
+// Decrypt decrypts ciphertext using XChaCha20-Poly1305.
 func (c *CryptoService) Decrypt(ciphertext []byte) ([]byte, error) {
 	aead, err := chacha20poly1305.NewX(c.serverKey[:32])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create cipher: %w", err)
 	}
 
 	if len(ciphertext) < aead.NonceSize() {
@@ -298,55 +312,72 @@ func (c *CryptoService) Decrypt(ciphertext []byte) ([]byte, error) {
 	nonce := ciphertext[:aead.NonceSize()]
 	ciphertext = ciphertext[aead.NonceSize():]
 
-	return aead.Open(nil, nonce, ciphertext, nil)
+	plaintext, err := aead.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, fmt.Errorf("decryption failed: %w", err)
+	}
+	return plaintext, nil
 }
 
-// Secure password hashing with Argon2id
+// HashPassword securely hashes a password using Argon2id.
 func HashPassword(password string, salt []byte) string {
 	hash := argon2.IDKey([]byte(password), salt, 3, 64*1024, 4, 32)
 	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
 	b64Hash := base64.RawStdEncoding.EncodeToString(hash)
+
 	return fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
 		argon2.Version, 64*1024, 3, 4, b64Salt, b64Hash)
 }
 
+// VerifyPassword verifies a password against its hash using constant-time comparison.
 func VerifyPassword(password, encodedHash string) bool {
 	parts := strings.Split(encodedHash, "$")
 	if len(parts) != 6 {
 		return false
 	}
 
-	salt, _ := base64.RawStdEncoding.DecodeString(parts[4])
-	hash, _ := base64.RawStdEncoding.DecodeString(parts[5])
+	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
+	if err != nil {
+		return false
+	}
+	hash, err := base64.RawStdEncoding.DecodeString(parts[5])
+	if err != nil {
+		return false
+	}
 
 	comparisonHash := argon2.IDKey([]byte(password), salt, 3, 64*1024, 4, 32)
+
 	return subtle.ConstantTimeCompare(hash, comparisonHash) == 1
 }
 
-// Database setup and migration runner
-func SetupDatabase(dbURL string) (*pgxpool.Pool, error) {
-	// Connect to postgres to create database if needed
-	tempURL := strings.Replace(dbURL, "/notes", "/postgres", 1)
-	db, err := sql.Open("pgx", tempURL)
+// SetupDatabase initializes the database connection and runs migrations.
+func SetupDatabase(databaseURL string) (*pgxpool.Pool, error) {
+	// Connect to postgres to create database if needed.
+	tempURL := strings.Replace(databaseURL, "/notes", "/postgres", 1)
+	database, err := sql.Open("pgx", tempURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if closeErr := database.Close(); closeErr != nil {
+			log.Printf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 
-	// Create database if not exists
-	_, err = db.Exec("CREATE DATABASE notes")
+	// Create database if not exists.
+	_, err = database.Exec("CREATE DATABASE notes")
 	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		log.Printf("Note: Database might already exist: %v", err)
 	}
 
-	// Connect to the actual database
+	// Connect to the actual database.
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, dbURL)
+	pool, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Run migrations
+	// Run migrations.
 	log.Println("Running database migrations...")
 	_, err = pool.Exec(ctx, DatabaseSchema)
 	if err != nil {
@@ -357,18 +388,20 @@ func SetupDatabase(dbURL string) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
-// Auth handlers
+// AuthHandler handles authentication-related requests.
 type AuthHandler struct {
 	db     *pgxpool.Pool
 	crypto *CryptoService
 	config *Config
 }
 
+// RegisterRequest represents a user registration request.
 type RegisterRequest struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=12"`
 }
 
+// LoginRequest represents a user login request.
 type LoginRequest struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required"`
@@ -376,66 +409,90 @@ type LoginRequest struct {
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
-	var req RegisterRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	var request RegisterRequest
+	if err := c.BodyParser(&request); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
-	// Generate salt and hash password
+	// Generate salt and hash password.
 	salt := make([]byte, 32)
-	rand.Read(salt)
-	passwordHash := HashPassword(req.Password, salt)
+	if _, err := rand.Read(salt); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate salt"})
+	}
+	passwordHash := HashPassword(request.Password, salt)
 
-	// Generate user's master encryption key
+	// Generate user's master encryption key.
 	masterKey := make([]byte, 32)
-	rand.Read(masterKey)
+	if _, err := rand.Read(masterKey); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate master key"})
+	}
 
-	// Derive key from password to encrypt master key
-	userKey := argon2.IDKey([]byte(req.Password), salt, 1, 64*1024, 4, 32)
+	// Derive key from password to encrypt master key.
+	userKey := argon2.IDKey([]byte(request.Password), salt, 1, 64*1024, 4, 32)
 
-	// Encrypt master key with user's derived key
-	aead, _ := chacha20poly1305.NewX(userKey)
+	// Encrypt master key with user's derived key.
+	aead, err := chacha20poly1305.NewX(userKey)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create cipher"})
+	}
 	nonce := make([]byte, aead.NonceSize())
-	rand.Read(nonce)
+	if _, err := rand.Read(nonce); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate nonce"})
+	}
 	encryptedMasterKey := aead.Seal(nonce, nonce, masterKey, nil)
 
-	// Encrypt email for storage
-	encryptedEmail, _ := h.crypto.Encrypt([]byte(req.Email))
-
-	// Start transaction
-	ctx := context.Background()
-	tx, err := h.db.Begin(ctx)
+	// Encrypt email for storage.
+	encryptedEmail, err := h.crypto.Encrypt([]byte(request.Email))
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Database error"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to encrypt email"})
 	}
-	defer tx.Rollback(ctx)
 
-	// Create user
+	// Start transaction.
+	ctx := context.Background()
+	transaction, err := h.db.Begin(ctx)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database error"})
+	}
+	defer func() {
+		if rollbackErr := transaction.Rollback(ctx); rollbackErr != nil {
+			log.Printf("Failed to rollback transaction: %v", rollbackErr)
+		}
+	}()
+
+	// Create user.
 	var userID uuid.UUID
-	err = tx.QueryRow(ctx, `
+	err = transaction.QueryRow(ctx, `
         INSERT INTO users (email, email_encrypted, password_hash, salt, master_key_encrypted)
         VALUES ($1, $2, $3, $4, $5)
         RETURNING id`,
-		req.Email, encryptedEmail, passwordHash, salt, encryptedMasterKey,
+		request.Email, encryptedEmail, passwordHash, salt, encryptedMasterKey,
 	).Scan(&userID)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate") {
-			return c.Status(409).JSON(fiber.Map{"error": "Email already registered"})
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Email already registered"})
 		}
-		return c.Status(500).JSON(fiber.Map{"error": "Registration failed"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Registration failed"})
 	}
 
-	// Create default workspace
-	workspaceName, _ := h.crypto.Encrypt([]byte("My Workspace"))
+	// Create default workspace.
+	workspaceName, err := h.crypto.Encrypt([]byte("My Workspace"))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to encrypt workspace name"})
+	}
 	workspaceKey := make([]byte, 32)
-	rand.Read(workspaceKey)
+	if _, err := rand.Read(workspaceKey); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate workspace key"})
+	}
 
-	// Encrypt workspace key with user's master key
-	encryptedWorkspaceKey, _ := h.crypto.Encrypt(workspaceKey)
+	// Encrypt workspace key with user's master key.
+	encryptedWorkspaceKey, err := h.crypto.Encrypt(workspaceKey)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to encrypt workspace key"})
+	}
 
 	var workspaceID uuid.UUID
-	err = tx.QueryRow(ctx, `
+	err = transaction.QueryRow(ctx, `
         INSERT INTO workspaces (name_encrypted, owner_id, encryption_key_encrypted)
         VALUES ($1, $2, $3)
         RETURNING id`,
@@ -443,24 +500,24 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	).Scan(&workspaceID)
 
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to create workspace"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create workspace"})
 	}
 
-	// Commit transaction
-	if err = tx.Commit(ctx); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Registration failed"})
+	// Commit transaction.
+	if err = transaction.Commit(ctx); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Registration failed"})
 	}
 
-	// Log audit event
+	// Log audit event.
 	h.logAudit(ctx, userID, "user.registered", "user", userID, c)
 
-	// Generate session token
+	// Generate session token.
 	token, err := h.generateToken(userID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Token generation failed"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Token generation failed"})
 	}
 
-	return c.Status(201).JSON(fiber.Map{
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"message":      "Registration successful",
 		"token":        token,
 		"user_id":      userID,
@@ -469,14 +526,14 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
-	var req LoginRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	var request LoginRequest
+	if err := c.BodyParser(&request); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
 	ctx := context.Background()
 
-	// Get user
+	// Get user.
 	var userID uuid.UUID
 	var passwordHash string
 	var failedAttempts int
@@ -487,66 +544,80 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	err := h.db.QueryRow(ctx, `
         SELECT id, password_hash, failed_attempts, locked_until, mfa_enabled, mfa_secret_encrypted
         FROM users WHERE email = $1`,
-		req.Email,
+		request.Email,
 	).Scan(&userID, &passwordHash, &failedAttempts, &lockedUntil, &mfaEnabled, &mfaSecret)
 
 	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
-	// Check if account is locked
+	// Check if account is locked.
 	if lockedUntil != nil && lockedUntil.After(time.Now()) {
-		return c.Status(403).JSON(fiber.Map{"error": "Account locked. Try again later."})
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Account locked. Try again later."})
 	}
 
-	// Verify password
-	if !VerifyPassword(req.Password, passwordHash) {
-		// Increment failed attempts
+	// Verify password.
+	if !VerifyPassword(request.Password, passwordHash) {
+		// Increment failed attempts.
 		failedAttempts++
 		if failedAttempts >= h.config.MaxLoginAttempts {
 			lockUntil := time.Now().Add(h.config.LockoutDuration)
-			h.db.Exec(ctx, `
+			if _, execErr := h.db.Exec(ctx, `
                 UPDATE users SET failed_attempts = $1, locked_until = $2 
                 WHERE id = $3`,
 				failedAttempts, lockUntil, userID,
-			)
+			); execErr != nil {
+				log.Printf("Failed to update failed attempts: %v", execErr)
+			}
 			h.logAudit(ctx, userID, "login.locked", "user", userID, c)
-			return c.Status(403).JSON(fiber.Map{"error": "Account locked due to too many failed attempts"})
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Account locked due to too many failed attempts"})
 		}
 
-		h.db.Exec(ctx, `UPDATE users SET failed_attempts = $1 WHERE id = $2`, failedAttempts, userID)
+		if _, execErr := h.db.Exec(ctx, `UPDATE users SET failed_attempts = $1 WHERE id = $2`, failedAttempts, userID); execErr != nil {
+			log.Printf("Failed to update failed attempts: %v", execErr)
+		}
 		h.logAudit(ctx, userID, "login.failed", "user", userID, c)
-		return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
-	// Verify MFA if enabled
+	// Verify MFA if enabled.
 	if mfaEnabled {
-		if req.MFACode == "" {
-			return c.Status(200).JSON(fiber.Map{"mfa_required": true})
+		if request.MFACode == "" {
+			return c.Status(fiber.StatusOK).JSON(fiber.Map{"mfa_required": true})
 		}
-		// Verify TOTP code here (implement TOTP verification)
+		// Verify TOTP code here (implement TOTP verification).
 	}
 
-	// Reset failed attempts and update last login
-	h.db.Exec(ctx, `
+	// Reset failed attempts and update last login.
+	if _, execErr := h.db.Exec(ctx, `
         UPDATE users SET failed_attempts = 0, locked_until = NULL, last_login = NOW() 
         WHERE id = $1`,
 		userID,
-	)
+	); execErr != nil {
+		log.Printf("Failed to reset failed attempts: %v", execErr)
+	}
 
-	// Generate session
+	// Generate session.
 	sessionToken := make([]byte, 32)
-	rand.Read(sessionToken)
+	if _, err := rand.Read(sessionToken); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate session token"})
+	}
 	sessionTokenStr := hex.EncodeToString(sessionToken)
 
-	// Hash token for storage
+	// Hash token for storage.
 	tokenHash := argon2.IDKey(sessionToken, []byte("session"), 1, 64*1024, 4, 32)
 
-	// Encrypt IP and user agent
-	encryptedIP, _ := h.crypto.Encrypt([]byte(c.IP()))
-	encryptedUA, _ := h.crypto.Encrypt([]byte(c.Get("User-Agent")))
+	// Encrypt IP and user agent.
+	encryptedIP, err := h.crypto.Encrypt([]byte(c.IP()))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to encrypt IP"})
+	}
+	encryptedUA, err := h.crypto.Encrypt([]byte(c.Get("User-Agent")))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to encrypt user agent"})
+	}
 
-	// Store session
+	// Store session.
 	_, err = h.db.Exec(ctx, `
         INSERT INTO sessions (user_id, token_hash, ip_address_encrypted, user_agent_encrypted, expires_at)
         VALUES ($1, $2, $3, $4, $5)`,
@@ -554,21 +625,23 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Session creation failed"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Session creation failed"})
 	}
 
-	// Log successful login
+	// Log successful login.
 	h.logAudit(ctx, userID, "login.success", "user", userID, c)
 
-	// Generate JWT token
+	// Generate JWT token.
 	token, err := h.generateToken(userID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Token generation failed"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Token generation failed"})
 	}
 
-	// Get workspace
+	// Get workspace.
 	var workspaceID uuid.UUID
-	h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&workspaceID)
+	if scanErr := h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&workspaceID); scanErr != nil {
+		log.Printf("Failed to get workspace for user %v: %v", userID, scanErr)
+	}
 
 	return c.JSON(fiber.Map{
 		"token":        token,
@@ -590,44 +663,59 @@ func (h *AuthHandler) generateToken(userID uuid.UUID) (string, error) {
 }
 
 func (h *AuthHandler) logAudit(ctx context.Context, userID uuid.UUID, action, resourceType string, resourceID uuid.UUID, c *fiber.Ctx) {
-	encryptedIP, _ := h.crypto.Encrypt([]byte(c.IP()))
-	encryptedUA, _ := h.crypto.Encrypt([]byte(c.Get("User-Agent")))
+	encryptedIP, err := h.crypto.Encrypt([]byte(c.IP()))
+	if err != nil {
+		log.Printf("Failed to encrypt IP for audit log: %v", err)
+		return
+	}
+	encryptedUA, err := h.crypto.Encrypt([]byte(c.Get("User-Agent")))
+	if err != nil {
+		log.Printf("Failed to encrypt user agent for audit log: %v", err)
+		return
+	}
 
-	h.db.Exec(ctx, `
+	if _, execErr := h.db.Exec(ctx, `
         INSERT INTO audit_log (user_id, action, resource_type, resource_id, ip_address_encrypted, user_agent_encrypted)
         VALUES ($1, $2, $3, $4, $5, $6)`,
 		userID, action, resourceType, resourceID, encryptedIP, encryptedUA,
-	)
+	); execErr != nil {
+		log.Printf("Failed to insert audit log: %v", execErr)
+	}
 }
 
-// Notes Handler
+// NotesHandler handles note-related operations.
 type NotesHandler struct {
 	db     *pgxpool.Pool
 	crypto *CryptoService
 }
 
+// CreateNoteRequest represents a request to create a new note.
 type CreateNoteRequest struct {
 	TitleEncrypted   string `json:"title_encrypted" validate:"required"`
 	ContentEncrypted string `json:"content_encrypted" validate:"required"`
 }
 
+// UpdateNoteRequest represents a request to update an existing note.
 type UpdateNoteRequest struct {
 	TitleEncrypted   string `json:"title_encrypted" validate:"required"`
 	ContentEncrypted string `json:"content_encrypted" validate:"required"`
 }
 
 func (h *NotesHandler) GetNotes(c *fiber.Ctx) error {
-	userID := c.Locals("user_id").(uuid.UUID)
+	userID, ok := c.Locals("user_id").(uuid.UUID)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user context"})
+	}
 	ctx := context.Background()
 
-	// Get user's default workspace
+	// Get user's default workspace.
 	var workspaceID uuid.UUID
 	err := h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&workspaceID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to get workspace"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to get workspace"})
 	}
 
-	// Get notes from workspace
+	// Get notes from workspace.
 	rows, err := h.db.Query(ctx, `
 		SELECT id, title_encrypted, content_encrypted, created_at, updated_at
 		FROM notes 
@@ -636,7 +724,7 @@ func (h *NotesHandler) GetNotes(c *fiber.Ctx) error {
 		workspaceID)
 	
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch notes"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch notes"})
 	}
 	defer rows.Close()
 
@@ -663,10 +751,13 @@ func (h *NotesHandler) GetNotes(c *fiber.Ctx) error {
 }
 
 func (h *NotesHandler) GetNote(c *fiber.Ctx) error {
-	userID := c.Locals("user_id").(uuid.UUID)
+	userID, ok := c.Locals("user_id").(uuid.UUID)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user context"})
+	}
 	noteID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid note ID"})
 	}
 
 	ctx := context.Background()
@@ -682,7 +773,7 @@ func (h *NotesHandler) GetNote(c *fiber.Ctx) error {
 		noteID, userID).Scan(&id, &titleEnc, &contentEnc, &createdAt, &updatedAt)
 
 	if err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Note not found"})
 	}
 
 	return c.JSON(fiber.Map{
@@ -695,30 +786,33 @@ func (h *NotesHandler) GetNote(c *fiber.Ctx) error {
 }
 
 func (h *NotesHandler) CreateNote(c *fiber.Ctx) error {
-	userID := c.Locals("user_id").(uuid.UUID)
-	var req CreateNoteRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	userID, ok := c.Locals("user_id").(uuid.UUID)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user context"})
+	}
+	var request CreateNoteRequest
+	if err := c.BodyParser(&request); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
 	ctx := context.Background()
 
-	// Get user's default workspace
+	// Get user's default workspace.
 	var workspaceID uuid.UUID
 	err := h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&workspaceID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to get workspace"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to get workspace"})
 	}
 
 	// Decode encrypted data
 	titleEnc, err := base64.StdEncoding.DecodeString(req.TitleEncrypted)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid title encryption"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid title encryption"})
 	}
 
 	contentEnc, err := base64.StdEncoding.DecodeString(req.ContentEncrypted)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid content encryption"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid content encryption"})
 	}
 
 	// Create content hash for integrity
@@ -733,7 +827,7 @@ func (h *NotesHandler) CreateNote(c *fiber.Ctx) error {
 		workspaceID, titleEnc, contentEnc, contentHash, userID).Scan(&noteID)
 
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to create note"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create note"})
 	}
 
 	return c.Status(201).JSON(fiber.Map{
@@ -746,12 +840,12 @@ func (h *NotesHandler) UpdateNote(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 	noteID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid note ID"})
 	}
 
 	var req UpdateNoteRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
 	ctx := context.Background()
@@ -759,12 +853,12 @@ func (h *NotesHandler) UpdateNote(c *fiber.Ctx) error {
 	// Decode encrypted data
 	titleEnc, err := base64.StdEncoding.DecodeString(req.TitleEncrypted)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid title encryption"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid title encryption"})
 	}
 
 	contentEnc, err := base64.StdEncoding.DecodeString(req.ContentEncrypted)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid content encryption"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid content encryption"})
 	}
 
 	// Create content hash for integrity
@@ -779,11 +873,11 @@ func (h *NotesHandler) UpdateNote(c *fiber.Ctx) error {
 		titleEnc, contentEnc, contentHash, noteID, userID)
 
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to update note"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update note"})
 	}
 
 	if result.RowsAffected() == 0 {
-		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Note not found"})
 	}
 
 	return c.JSON(fiber.Map{"message": "Note updated successfully"})
@@ -793,7 +887,7 @@ func (h *NotesHandler) DeleteNote(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 	noteID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid note ID"})
 	}
 
 	ctx := context.Background()
@@ -807,22 +901,22 @@ func (h *NotesHandler) DeleteNote(c *fiber.Ctx) error {
 		noteID, userID)
 
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete note"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete note"})
 	}
 
 	if result.RowsAffected() == 0 {
-		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Note not found"})
 	}
 
 	return c.JSON(fiber.Map{"message": "Note deleted successfully"})
 }
 
-// JWT Middleware
+// JWTMiddleware creates a middleware for JWT token validation.
 func JWTMiddleware(secret []byte) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		token := c.Get("Authorization")
 		if token == "" {
-			return c.Status(401).JSON(fiber.Map{"error": "Missing authorization"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing authorization"})
 		}
 
 		token = strings.TrimPrefix(token, "Bearer ")
@@ -832,7 +926,7 @@ func JWTMiddleware(secret []byte) fiber.Handler {
 		})
 
 		if err != nil || !parsed.Valid {
-			return c.Status(401).JSON(fiber.Map{"error": "Invalid token"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token"})
 		}
 
 		claims := parsed.Claims.(jwt.MapClaims)
@@ -928,11 +1022,11 @@ func main() {
 		defer cancel()
 
 		if err := db.Ping(ctx); err != nil {
-			return c.Status(503).JSON(fiber.Map{"status": "not ready", "db": "down"})
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"status": "not ready", "db": "down"})
 		}
 
 		if err := rdb.Ping(ctx).Err(); err != nil {
-			return c.Status(503).JSON(fiber.Map{"status": "not ready", "redis": "down"})
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"status": "not ready", "redis": "down"})
 		}
 
 		return c.JSON(fiber.Map{

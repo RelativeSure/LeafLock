@@ -1,3 +1,5 @@
+// Copyright (c) 2025 RelativeSure
+// notes_test.go - Test suite for notes handling functionality
 package main
 
 import (
@@ -19,7 +21,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// NotesHandler Test Suite
+// NotesHandler Test Suite.
 type NotesHandlerTestSuite struct {
 	suite.Suite
 	handler *NotesHandler
@@ -31,10 +33,12 @@ type NotesHandlerTestSuite struct {
 func (suite *NotesHandlerTestSuite) SetupTest() {
 	suite.mockDB = &MockDB{}
 	
-	// Generate test encryption key
-	key := make([]byte, 32)
-	rand.Read(key)
-	suite.crypto = NewCryptoService(key)
+	// Generate test encryption key.
+	testKey := make([]byte, 32)
+	if _, err := rand.Read(testKey); err != nil {
+		panic(fmt.Sprintf("Failed to generate test key: %v", err))
+	}
+	suite.crypto = NewCryptoService(testKey)
 	
 	suite.handler = &NotesHandler{
 		crypto: suite.crypto,
@@ -46,7 +50,7 @@ func (suite *NotesHandlerTestSuite) SetupTest() {
 func (suite *NotesHandlerTestSuite) TestGetNotesSuccess() {
 	app := fiber.New()
 	
-	// Mock workspace lookup
+	// Mock workspace lookup.
 	workspaceID := uuid.New()
 	mockRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), suite.userID).Return(mockRow)
@@ -56,16 +60,16 @@ func (suite *NotesHandlerTestSuite) TestGetNotesSuccess() {
 		}
 	}).Return(nil)
 	
-	// Mock notes query
+	// Mock notes query.
 	mockRows := &MockRows{}
 	suite.mockDB.On("Query", mock.Anything, mock.AnythingOfType("string"), workspaceID).Return(mockRows, nil)
 	
-	// Mock two notes returned
+	// Mock two notes returned.
 	mockRows.On("Next").Return(true).Once()
 	mockRows.On("Next").Return(true).Once() 
 	mockRows.On("Next").Return(false).Once()
 	
-	// Mock encrypted test data
+	// Mock encrypted test data.
 	titleEnc, _ := suite.crypto.Encrypt([]byte("Test Note 1"))
 	contentEnc, _ := suite.crypto.Encrypt([]byte("Test content"))
 	noteID1 := uuid.New()
@@ -357,7 +361,7 @@ func (suite *NotesHandlerTestSuite) TestDeleteNoteSuccess() {
 	suite.Equal(200, resp.StatusCode)
 }
 
-// Database Integration Tests
+// Database Integration Tests.
 type DatabaseIntegrationTestSuite struct {
 	suite.Suite
 	db      *pgxpool.Pool
@@ -610,7 +614,7 @@ func (suite *DatabaseIntegrationTestSuite) TestAuditLogging() {
 	suite.Equal(resourceType, retrievedResourceType)
 }
 
-// Helper methods for test data creation
+// Helper methods for test data creation.
 func (suite *DatabaseIntegrationTestSuite) createTestUser() uuid.UUID {
 	ctx := context.Background()
 	
@@ -662,7 +666,7 @@ func TestDatabaseIntegrationSuite(t *testing.T) {
 	suite.Run(t, new(DatabaseIntegrationTestSuite))
 }
 
-// Security Tests
+// Security Tests.
 func TestSQLInjectionPrevention(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
