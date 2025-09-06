@@ -61,7 +61,7 @@ export default [
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-empty-function': 'warn',
-      '@typescript-eslint/prefer-const': 'error',
+      // '@typescript-eslint/prefer-const': 'error', // Rule not available in this plugin version
       '@typescript-eslint/no-var-requires': 'error',
 
       // General JavaScript/React
