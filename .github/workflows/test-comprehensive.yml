@@ -22,7 +22,7 @@ on:
           - full
 
 env:
-  GO_VERSION: "1.23"
+  GO_VERSION: "1.23.0"
   NODE_VERSION: "20"
   POSTGRES_VERSION: "15"
   REDIS_VERSION: "7"
@@ -184,8 +184,8 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Upload coverage
-        if: matrix.test-type == 'unit'
-        uses: codecov/codecov-action@v4
+        if: false  # Disabled until codecov is configured
+        uses: codecov/codecov-action@v3
         with:
           file: backend/coverage.out
           flags: backend
@@ -263,8 +263,8 @@ jobs:
         run: npm run build
 
       - name: Upload coverage
-        if: matrix.test-type == 'unit'
-        uses: codecov/codecov-action@v4
+        if: false  # Disabled until codecov is configured
+        uses: codecov/codecov-action@v3
         with:
           file: frontend/coverage/lcov.info
           flags: frontend

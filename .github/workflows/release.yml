@@ -201,7 +201,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version: "1.23.0"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -271,12 +271,12 @@ jobs:
 
       - name: Create GitHub Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ needs.version-calculation.outputs.next_version }}
-          release_name: 🚀 Release ${{ needs.version-calculation.outputs.next_version }}
+          name: 🚀 Release ${{ needs.version-calculation.outputs.next_version }}
           body: |
             ${{ github.event.inputs.release_notes || needs.version-calculation.outputs.changelog }}
             
