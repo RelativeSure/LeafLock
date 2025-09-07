@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:20-alpine@sha256:eabac870db94f7342d6c33560d6613f188bbcf4bbe1f4eb47d5e2a08e1a37722 AS builder
 
 # Add security updates
 RUN apk --no-cache add git
@@ -18,7 +18,7 @@ COPY . .
 RUN npm run build
 
 # Final stage - optimized nginx
-FROM nginx:1.25-alpine
+FROM nginx:1.25-alpine@sha256:516475cc129da42866742567714ddc681e5eed7b9ee0b9e9c015e464b4221a00
 
 # Install security updates
 RUN apk --no-cache add ca-certificates
