@@ -1,403 +1,173 @@
-# Automated Release Management Workflow
-# Handles semantic versioning, changelog generation, and GitHub releases
-name: 🚀 Release Management
+name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      version_type:
-        description: 'Version bump type'
-        required: true
-        default: 'patch'
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
-          - prerelease
-      custom_version:
-        description: 'Custom version (optional, overrides version_type)'
-        required: false
-        type: string
-      release_notes:
-        description: 'Custom release notes (optional)'
-        required: false
-        type: string
-      skip_tests:
-        description: 'Skip tests (use with caution)'
-        required: false
-        default: false
-        type: boolean
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write      # create release + push CHANGELOG
+  packages: write      # push container images
+  actions: read
+  checks: read
 
 env:
-  REGISTRY: ghcr.io
+  IMAGE_BASE: ghcr.io/RelativeSure/notes
 
 jobs:
-  # Determine next version
-  version-calculation:
-    name: 📊 Calculate Next Version
+  build-and-release:
     runs-on: ubuntu-latest
-    outputs:
-      current_version: ${{ steps.current.outputs.version }}
-      next_version: ${{ steps.next.outputs.version }}
-      changelog: ${{ steps.changelog.outputs.changelog }}
-      
+
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch full history for changelog
+          fetch-depth: 0
 
-      - name: Get current version
-        id: current
+      - name: Determine previous tag
+        id: prev
         run: |
-          # Get latest tag, default to v0.0.0 if no tags exist
-          CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          echo "version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
-          echo "Current version: ${CURRENT_VERSION}"
+          PREV_TAG=$(git describe --tags --abbrev=0 "$(git rev-list --tags --skip=1 --max-count=1)" 2>/dev/null || true)
+          echo "previous_tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Calculate next version
-        id: next
+      - name: Collect commits since previous tag
+        id: raw_commits
         run: |
-          CURRENT="${{ steps.current.outputs.version }}"
-          VERSION_TYPE="${{ github.event.inputs.version_type }}"
-          CUSTOM_VERSION="${{ github.event.inputs.custom_version }}"
-          
-          # Use custom version if provided
-          if [ -n "$CUSTOM_VERSION" ]; then
-            # Ensure custom version starts with 'v'
-            if [[ ! $CUSTOM_VERSION =~ ^v ]]; then
-              NEXT_VERSION="v${CUSTOM_VERSION}"
-            else
-              NEXT_VERSION="$CUSTOM_VERSION"
-            fi
+          if [ -n "${{ steps.prev.outputs.previous_tag }}" ]; then
+            RANGE="${{ steps.prev.outputs.previous_tag }}..HEAD"
+            git log --pretty='%H||%s' "$RANGE" > commits.txt
           else
-            # Remove 'v' prefix for calculation
-            CURRENT_CLEAN=${CURRENT#v}
-            
-            # Split version into components
-            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_CLEAN"
-            
-            # Default values if empty
-            MAJOR=${MAJOR:-0}
-            MINOR=${MINOR:-0}
-            PATCH=${PATCH:-0}
-            
-            case "$VERSION_TYPE" in
-              "major")
-                MAJOR=$((MAJOR + 1))
-                MINOR=0
-                PATCH=0
-                ;;
-              "minor")
-                MINOR=$((MINOR + 1))
-                PATCH=0
-                ;;
-              "patch")
-                PATCH=$((PATCH + 1))
-                ;;
-              "prerelease")
-                PATCH=$((PATCH + 1))
-                PRERELEASE="-rc.$(date +%Y%m%d%H%M%S)"
-                ;;
+            git log --pretty='%H||%s' > commits.txt
+          fi
+          echo "count=$(wc -l < commits.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Categorize commits & build release notes
+        id: notes
+        run: |
+          set -euo pipefail
+          DATE=$(date -u +%Y-%m-%d)
+          TAG="${GITHUB_REF_NAME}"
+          FEAT=""; FIX=""; PERF=""; DOCS=""; REFACTOR=""; TESTS=""; CHORE=""; OTHER=""
+          while IFS='||' read -r HASH SUBJECT; do
+            [ -z "$HASH" ] && continue
+            SH=$(echo "$HASH" | cut -c1-7)
+            LINE="- ${SUBJECT} (${SH})"
+            shopt -s nocasematch
+            case "$SUBJECT" in
+              feat:* ) FEAT+="${LINE}\n" ;;
+              fix:* ) FIX+="${LINE}\n" ;;
+              perf:* ) PERF+="${LINE}\n" ;;
+              docs:* ) DOCS+="${LINE}\n" ;;
+              refactor:* ) REFACTOR+="${LINE}\n" ;;
+              test:*|tests:* ) TESTS+="${LINE}\n" ;;
+              chore:* ) CHORE+="${LINE}\n" ;;
+              * ) OTHER+="${LINE}\n" ;;
             esac
-            
-            if [ "$VERSION_TYPE" = "prerelease" ]; then
-              NEXT_VERSION="v${MAJOR}.${MINOR}.${PATCH}${PRERELEASE}"
-            else
-              NEXT_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
-            fi
-          fi
-          
-          echo "version=${NEXT_VERSION}" >> $GITHUB_OUTPUT
-          echo "Next version: ${NEXT_VERSION}"
+            shopt -u nocasematch
+          done < commits.txt
 
-      - name: Generate changelog
-        id: changelog
-        run: |
-          CURRENT="${{ steps.current.outputs.version }}"
-          NEXT="${{ steps.next.outputs.version }}"
-          
-          # Create changelog between versions
-          if [ "$CURRENT" = "v0.0.0" ]; then
-            # First release - get all commits
-            CHANGELOG=$(git log --pretty=format:"* %s (%h)" --no-merges)
-          else
-            # Get commits since last tag
-            CHANGELOG=$(git log ${CURRENT}..HEAD --pretty=format:"* %s (%h)" --no-merges)
-          fi
-          
-          # If no changes, create default changelog
-          if [ -z "$CHANGELOG" ]; then
-            CHANGELOG="* Maintenance release"
-          fi
-          
-          # Save changelog to file for multi-line output
-          cat > changelog.md << EOF
-          ## What's Changed
-          
-          ${CHANGELOG}
-          
-          **Full Changelog**: https://github.com/${{ github.repository }}/compare/${CURRENT}...${NEXT}
-          EOF
-          
-          # Set output using heredoc for multi-line
+          section () { [ -n "$2" ] && { echo "### $1"; printf "%b" "$2"; echo; }; }
+
           {
-            echo "changelog<<CHANGELOG_EOF"
-            cat changelog.md
-            echo "CHANGELOG_EOF"
-          } >> $GITHUB_OUTPUT
+            echo "## ${TAG} - ${DATE}"
+            echo
+            section "Features" "$FEAT"
+            section "Fixes" "$FIX"
+            section "Performance" "$PERF"
+            section "Documentation" "$DOCS"
+            section "Refactoring" "$REFACTOR"
+            section "Tests" "$TESTS"
+            section "Chore" "$CHORE"
+            section "Other" "$OTHER"
+          } > RELEASE_NOTES_BODY.md
 
-      - name: Validate version
+          {
+            echo 'body<<EOF'
+            cat RELEASE_NOTES_BODY.md
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Update CHANGELOG.md
         run: |
-          NEXT="${{ steps.next.outputs.version }}"
-          CURRENT="${{ steps.current.outputs.version }}"
-          
-          # Check if version already exists
-          if git rev-parse "$NEXT" >/dev/null 2>&1; then
-            echo "❌ Version $NEXT already exists!"
-            exit 1
+          set -e
+          [ -f CHANGELOG.md ] && mv CHANGELOG.md CHANGELOG_OLD.md || true
+            cat RELEASE_NOTES_BODY.md CHANGELOG_OLD.md 2>/dev/null > CHANGELOG.md
+          echo "CHANGELOG preview:"
+          head -n 60 CHANGELOG.md || true
+
+      - name: Commit CHANGELOG.md back to master
+        run: |
+          set -e
+          DEFAULT_BRANCH="master"
+          git fetch origin "$DEFAULT_BRANCH" --depth=1
+          git checkout "$DEFAULT_BRANCH"
+          cp -f "$GITHUB_WORKSPACE/CHANGELOG.md" CHANGELOG.md
+          git add CHANGELOG.md
+          if git diff --cached --quiet; then
+            echo "No CHANGELOG changes to commit."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "docs(changelog): update for $GITHUB_REF_NAME"
+            git push origin "$DEFAULT_BRANCH"
           fi
-          
-          echo "✅ Version validation passed"
-          echo "📈 Version bump: $CURRENT → $NEXT"
 
-  # Run tests before release (unless skipped)
-  pre-release-tests:
-    name: 🧪 Pre-release Tests  
-    runs-on: ubuntu-latest
-    needs: version-calculation
-    if: github.event.inputs.skip_tests != 'true'
+      - name: Determine image tag variants
+        id: taglogic
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if [[ "$TAG" != *"-"* ]]; then
+            echo "latest_ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "latest_ok=false" >> "$GITHUB_OUTPUT"
+          fi
 
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_PASSWORD: testpass123
-          POSTGRES_DB: notes
-          POSTGRES_USER: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-      redis:
-        image: redis:7-alpine
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - name: Docker login (GHCR)
+        uses: docker/login-action@v3
         with:
-          go-version: "1.23.0"
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Run backend tests
-        working-directory: backend
+      - name: Build & push backend image
         run: |
-          go test -v -race ./...
+          set -e
+          TAG="${GITHUB_REF_NAME}"
+          IMAGE="${IMAGE_BASE}-backend"
+          docker build -f backend/Dockerfile backend -t "${IMAGE}:${TAG}"
+          if [ "${{ steps.taglogic.outputs.latest_ok }}" = "true" ]; then
+            docker tag "${IMAGE}:${TAG}" "${IMAGE}:latest"
+          fi
+          docker push "${IMAGE}:${TAG}"
+          if [ "${{ steps.taglogic.outputs.latest_ok }}" = "true" ]; then
+            docker push "${IMAGE}:latest"
+          fi
 
-      - name: Run frontend tests
-        working-directory: frontend
+      - name: Build & push frontend image
         run: |
-          npm ci
-          npm run test
-
-      - name: Quick integration test
-        env:
-          DATABASE_URL: postgres://postgres:testpass123@localhost:5432/notes?sslmode=disable
-          REDIS_URL: localhost:6379
-          JWT_SECRET: test_jwt_secret_for_ci_only_not_for_production_use_12345678901234567890
-          SERVER_ENCRYPTION_KEY: test_encryption_key_32_chars_ok12
-        working-directory: backend
-        run: |
-          go build -o app .
-          ./app &
-          BACKEND_PID=$!
-          
-          sleep 5
-          curl -f http://localhost:8080/api/v1/health || exit 1
-          kill $BACKEND_PID
-
-  # Create the release
-  create-release:
-    name: 🎉 Create Release
-    runs-on: ubuntu-latest
-    needs: [version-calculation, pre-release-tests]
-    if: always() && (needs.pre-release-tests.result == 'success' || github.event.inputs.skip_tests == 'true')
-
-    permissions:
-      contents: write
-      packages: write
-
-    outputs:
-      release_id: ${{ steps.create_release.outputs.id }}
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Create and push tag
-        run: |
-          VERSION="${{ needs.version-calculation.outputs.next_version }}"
-          git tag -a "$VERSION" -m "Release $VERSION"
-          git push origin "$VERSION"
+          set -e
+          TAG="${GITHUB_REF_NAME}"
+          IMAGE="${IMAGE_BASE}-frontend"
+          docker build -f frontend/Dockerfile frontend -t "${IMAGE}:${TAG}"
+          if [ "${{ steps.taglogic.outputs.latest_ok }}" = "true" ]; then
+            docker tag "${IMAGE}:${TAG}" "${IMAGE}:latest"
+          fi
+          docker push "${IMAGE}:${TAG}"
+          if [ "${{ steps.taglogic.outputs.latest_ok }}" = "true" ]; then
+            docker push "${IMAGE}:latest"
+          fi
 
       - name: Create GitHub Release
-        id: create_release
         uses: softprops/action-gh-release@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ needs.version-calculation.outputs.next_version }}
-          name: 🚀 Release ${{ needs.version-calculation.outputs.next_version }}
-          body: |
-            ${{ github.event.inputs.release_notes || needs.version-calculation.outputs.changelog }}
-            
-            ## 📦 Container Images
-            
-            Pull the latest images:
-            ```bash
-            docker pull ghcr.io/${{ github.repository }}/backend:${{ needs.version-calculation.outputs.next_version }}
-            docker pull ghcr.io/${{ github.repository }}/frontend:${{ needs.version-calculation.outputs.next_version }}
-            ```
-            
-            ## 🚀 Quick Deploy
-            
-            ```bash
-            # Deploy this specific version
-            VERSION=${{ needs.version-calculation.outputs.next_version }} ./deploy-from-ghcr.sh deploy
-            
-            # Or update your docker-compose
-            export VERSION=${{ needs.version-calculation.outputs.next_version }}
-            docker-compose -f docker-compose.yml -f docker-compose.ghcr.yml up -d
-            ```
-            
-            ---
-            
-            🤖 *This release was created automatically by [GitHub Actions](https://github.com/${{ github.repository }}/actions)*
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: ${{ steps.notes.outputs.body }}
           draft: false
-          prerelease: ${{ contains(needs.version-calculation.outputs.next_version, '-rc.') }}
+          prerelease: false
 
-  # Trigger container build workflow
-  trigger-container-build:
-    name: 🐳 Trigger Container Build
-    runs-on: ubuntu-latest
-    needs: create-release
-    
-    steps:
-      - name: Trigger build workflow
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const result = await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'build-and-deploy.yml',
-              ref: '${{ needs.version-calculation.outputs.next_version }}'
-            });
-            
-            console.log('Triggered build workflow:', result.status);
-
-      - name: Wait for containers to be built
+      - name: Summary
         run: |
-          echo "⏳ Waiting for containers to be built..."
-          echo "🔗 Check build progress: https://github.com/${{ github.repository }}/actions/workflows/build-and-deploy.yml"
-          
-          VERSION="${{ needs.version-calculation.outputs.next_version }}"
-          echo "📦 Containers will be available at:"
-          echo "   - ghcr.io/${{ github.repository }}/backend:${VERSION}"
-          echo "   - ghcr.io/${{ github.repository }}/frontend:${VERSION}"
-
-  # Post-release tasks
-  post-release:
-    name: 📋 Post-release Tasks
-    runs-on: ubuntu-latest
-    needs: [version-calculation, create-release, trigger-container-build]
-    if: always() && needs.create-release.result == 'success'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Update version in files
-        run: |
-          VERSION="${{ needs.version-calculation.outputs.next_version }}"
-          VERSION_CLEAN=${VERSION#v}
-          
-          # Update package.json files if they exist
-          if [ -f "frontend/package.json" ]; then
-            sed -i "s/\"version\": \".*\"/\"version\": \"${VERSION_CLEAN}\"/" frontend/package.json
-            echo "Updated frontend/package.json version to ${VERSION_CLEAN}"
-          fi
-          
-          # Update any other version files
-          if [ -f "VERSION" ]; then
-            echo "${VERSION_CLEAN}" > VERSION
-            echo "Updated VERSION file to ${VERSION_CLEAN}"
-          fi
-
-      - name: Create version bump PR
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "🔖 Bump version to ${{ needs.version-calculation.outputs.next_version }}"
-          title: "🔖 Version bump to ${{ needs.version-calculation.outputs.next_version }}"
-          body: |
-            Automated version bump after release ${{ needs.version-calculation.outputs.next_version }}
-            
-            This PR updates version numbers in configuration files to match the latest release.
-            
-            - Updated package.json version
-            - Updated VERSION file (if exists)
-            
-            **This PR can be auto-merged safely.**
-          branch: version-bump-${{ needs.version-calculation.outputs.next_version }}
-          delete-branch: true
-
-      - name: Create release summary
-        run: |
-          echo "## 🎉 Release ${{ needs.version-calculation.outputs.next_version }} Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "Release created for ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📊 Release Details:" >> $GITHUB_STEP_SUMMARY
-          echo "- **Previous Version**: ${{ needs.version-calculation.outputs.current_version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **New Version**: ${{ needs.version-calculation.outputs.next_version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Release Type**: ${{ github.event.inputs.version_type }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Release ID**: ${{ needs.create-release.outputs.release_id }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔗 Links:" >> $GITHUB_STEP_SUMMARY
-          echo "- [📋 View Release](https://github.com/${{ github.repository }}/releases/tag/${{ needs.version-calculation.outputs.next_version }})" >> $GITHUB_STEP_SUMMARY
-          echo "- [📦 View Packages](https://github.com/${{ github.repository }}/pkgs/container)" >> $GITHUB_STEP_SUMMARY
-          echo "- [🔄 Build Workflow](https://github.com/${{ github.repository }}/actions/workflows/build-and-deploy.yml)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🚀 Next Steps:" >> $GITHUB_STEP_SUMMARY
-          echo "1. ✅ **Release created and tagged**" >> $GITHUB_STEP_SUMMARY
-          echo "2. ⏳ **Container images building** (check build workflow)" >> $GITHUB_STEP_SUMMARY
-          echo "3. 🔄 **Version bump PR created** (can be auto-merged)" >> $GITHUB_STEP_SUMMARY
-          echo "4. 🚀 **Ready for deployment** once containers are built" >> $GITHUB_STEP_SUMMARY
+          head -n 120 RELEASE_NOTES_BODY.md >> $GITHUB_STEP_SUMMARY
