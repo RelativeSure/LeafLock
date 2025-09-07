@@ -22,6 +22,8 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/redis/go-redis/v9"
@@ -357,9 +359,17 @@ func SetupDatabase(dbURL string) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
+// Database interface for dependency injection and testing
+type Database interface {
+	QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row
+	Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
+	Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error)
+	Begin(ctx context.Context) (pgx.Tx, error)
+}
+
 // Auth handlers
 type AuthHandler struct {
-	db     *pgxpool.Pool
+	db     Database
 	crypto *CryptoService
 	config *Config
 }
@@ -602,7 +612,7 @@ func (h *AuthHandler) logAudit(ctx context.Context, userID uuid.UUID, action, re
 
 // Notes Handler
 type NotesHandler struct {
-	db     *pgxpool.Pool
+	db     Database
 	crypto *CryptoService
 }
 
