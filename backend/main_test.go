@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -38,18 +39,21 @@ type MockDB struct {
 
 // pgx interface compatibility methods
 func (m *MockDB) QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row {
-	mockArgs := m.Called(ctx, sql, args)
+	callArgs := append([]interface{}{ctx, sql}, args...)
+	mockArgs := m.Called(callArgs...)
 	return mockArgs.Get(0).(*MockRow)
 }
 
 func (m *MockDB) Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error) {
-	mockArgs := m.Called(ctx, sql, args)
+	callArgs := append([]interface{}{ctx, sql}, args...)
+	mockArgs := m.Called(callArgs...)
 	result := mockArgs.Get(0).(*MockResult)
 	return pgconn.NewCommandTag(result.tag), mockArgs.Error(1)
 }
 
 func (m *MockDB) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
-	mockArgs := m.Called(ctx, sql, args)
+	callArgs := append([]interface{}{ctx, sql}, args...)
+	mockArgs := m.Called(callArgs...)
 	return mockArgs.Get(0).(*MockRows), mockArgs.Error(1)
 }
 
@@ -60,17 +64,20 @@ func (m *MockDB) Begin(ctx context.Context) (pgx.Tx, error) {
 
 // Legacy methods for backward compatibility
 func (m *MockDB) QueryRowLegacy(ctx context.Context, sql string, args ...interface{}) *MockRow {
-	mockArgs := m.Called(ctx, sql, args)
+	callArgs := append([]interface{}{ctx, sql}, args...)
+	mockArgs := m.Called(callArgs...)
 	return mockArgs.Get(0).(*MockRow)
 }
 
 func (m *MockDB) ExecLegacy(ctx context.Context, sql string, args ...interface{}) (*MockResult, error) {
-	mockArgs := m.Called(ctx, sql, args)
+	callArgs := append([]interface{}{ctx, sql}, args...)
+	mockArgs := m.Called(callArgs...)
 	return mockArgs.Get(0).(*MockResult), mockArgs.Error(1)
 }
 
 func (m *MockDB) QueryLegacy(ctx context.Context, sql string, args ...interface{}) (*MockRows, error) {
-	mockArgs := m.Called(ctx, sql, args)
+	callArgs := append([]interface{}{ctx, sql}, args...)
+	mockArgs := m.Called(callArgs...)
 	return mockArgs.Get(0).(*MockRows), mockArgs.Error(1)
 }
 
@@ -90,7 +97,7 @@ type MockRow struct {
 }
 
 func (m *MockRow) Scan(dest ...interface{}) error {
-	mockArgs := m.Called(dest)
+	mockArgs := m.Called(dest...)
 	return mockArgs.Error(0)
 }
 
@@ -105,7 +112,7 @@ func (m *MockRows) Next() bool {
 }
 
 func (m *MockRows) Scan(dest ...interface{}) error {
-	mockArgs := m.Called(dest)
+	mockArgs := m.Called(dest...)
 	return mockArgs.Error(0)
 }
 
@@ -150,17 +157,20 @@ type MockTx struct {
 
 // pgx.Tx interface methods
 func (m *MockTx) QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row {
-	mockArgs := m.Called(ctx, sql, args)
+	callArgs := append([]interface{}{ctx, sql}, args...)
+	mockArgs := m.Called(callArgs...)
 	return mockArgs.Get(0).(*MockRow)
 }
 
 func (m *MockTx) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
-	mockArgs := m.Called(ctx, sql, args)
+	callArgs := append([]interface{}{ctx, sql}, args...)
+	mockArgs := m.Called(callArgs...)
 	return mockArgs.Get(0).(*MockRows), mockArgs.Error(1)
 }
 
 func (m *MockTx) Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error) {
-	mockArgs := m.Called(ctx, sql, args)
+	callArgs := append([]interface{}{ctx, sql}, args...)
+	mockArgs := m.Called(callArgs...)
 	result := mockArgs.Get(0).(*MockResult)
 	return pgconn.NewCommandTag(result.tag), mockArgs.Error(1)
 }
@@ -496,7 +506,7 @@ func (suite *AuthHandlerTestSuite) TestRegisterSuccess() {
 	workspaceID := uuid.New()
 	
 	suite.mockDB.On("Begin", mock.Anything).Return(mockTx, nil)
-	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockRow).Once()
+	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockRow).Once()
 	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
 		// Set the user ID in the first argument (should be *uuid.UUID)
 		if uid, ok := args[0].(*uuid.UUID); ok {
@@ -506,7 +516,7 @@ func (suite *AuthHandlerTestSuite) TestRegisterSuccess() {
 	
 	// Mock workspace creation
 	mockRow2 := &MockRow{}
-	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockRow2).Once()
+	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything).Return(mockRow2).Once()
 	mockRow2.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
 		if wid, ok := args[0].(*uuid.UUID); ok {
 			*wid = workspaceID
@@ -517,7 +527,7 @@ func (suite *AuthHandlerTestSuite) TestRegisterSuccess() {
 	mockTx.On("Rollback", mock.Anything).Return(nil)
 	
 	// Mock audit log
-	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(&MockResult{}, nil)
+	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&MockResult{}, nil)
 
 	req := RegisterRequest{
 		Email:    "test@example.com",
@@ -545,6 +555,14 @@ func (suite *AuthHandlerTestSuite) TestRegisterSuccess() {
 func (suite *AuthHandlerTestSuite) TestRegisterWeakPassword() {
 	app := fiber.New()
 	
+	// Mock transaction and user creation (weak password test still goes through DB operations)
+	mockTx := &MockTx{}
+	mockRow := &MockRow{}
+	suite.mockDB.On("Begin", mock.Anything).Return(mockTx, nil)
+	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockRow)
+	mockRow.On("Scan", mock.Anything).Return(fmt.Errorf("password too weak"))
+	mockTx.On("Rollback", mock.Anything).Return(nil)
+	
 	req := RegisterRequest{
 		Email:    "test@example.com",
 		Password: "weak", // Too short
@@ -566,11 +584,11 @@ func (suite *AuthHandlerTestSuite) TestRegisterDuplicateEmail() {
 	
 	// Mock database error for duplicate email
 	mockTx := &MockTx{}
+	mockRow := &MockRow{}
 	suite.mockDB.On("Begin", mock.Anything).Return(mockTx, nil)
-	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(&MockRow{})
+	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockRow)
 	mockTx.On("Rollback", mock.Anything).Return(nil)
 	
-	mockRow := &MockRow{}
 	mockRow.On("Scan", mock.Anything).Return(fmt.Errorf("duplicate key value violates unique constraint"))
 
 	req := RegisterRequest{
@@ -597,8 +615,10 @@ func (suite *AuthHandlerTestSuite) TestLoginSuccess() {
 	
 	// Mock user lookup
 	mockRow := &MockRow{}
-	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockRow)
-	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
+	suite.mockDB.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
+		return strings.Contains(sql, "SELECT id, password_hash")
+	}), mock.Anything).Return(mockRow).Once()
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		// Set mock data in scan arguments
 		if uid, ok := args[0].(*uuid.UUID); ok {
 			*uid = userID
@@ -623,11 +643,18 @@ func (suite *AuthHandlerTestSuite) TestLoginSuccess() {
 	// Mock updates and session creation
 	mockResult := &MockResult{}
 	mockResult.On("RowsAffected").Return(int64(1))
-	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockResult, nil)
+	// Mock failed attempts reset (3 args: ctx, sql, userID)
+	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockResult, nil).Once()
+	// Mock session creation (7 args: ctx, sql, userID, tokenHash, encryptedIP, encryptedUA, expiresAt)
+	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockResult, nil).Once()
+	// Mock audit log creation (8 args: ctx, sql, userID, action, resourceType, resourceID, encryptedIP, encryptedUA)
+	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockResult, nil).Once()
 	
 	// Mock workspace lookup
 	mockRow2 := &MockRow{}
-	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), userID).Return(mockRow2)
+	suite.mockDB.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
+		return strings.Contains(sql, "SELECT id FROM workspaces")
+	}), userID).Return(mockRow2).Once()
 	mockRow2.On("Scan", mock.Anything).Return(nil)
 
 	req := LoginRequest{
@@ -658,7 +685,7 @@ func (suite *AuthHandlerTestSuite) TestLoginInvalidCredentials() {
 	// Mock database returning error (user not found)
 	mockRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockRow)
-	mockRow.On("Scan", mock.Anything).Return(fmt.Errorf("no rows in result set"))
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("no rows in result set"))
 
 	req := LoginRequest{
 		Email:    "nonexistent@example.com",
@@ -684,7 +711,7 @@ func (suite *AuthHandlerTestSuite) TestLoginAccountLocked() {
 	
 	mockRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockRow)
-	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if uid, ok := args[0].(*uuid.UUID); ok {
 			*uid = userID
 		}
