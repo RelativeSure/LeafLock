@@ -50,7 +50,7 @@ spec:
         # Wait for database to be ready
         {{- if .Values.postgresql.enabled }}
         - name: wait-for-postgres
-          image: postgres:15-alpine
+          image: postgres:15-alpine@sha256:987b242173006d6df08506f10b967a71478a3610664cfefbc49b9c775d3d0eed
           command:
             - sh
             - -c
@@ -65,7 +65,7 @@ spec:
         # Wait for Redis to be ready
         {{- if .Values.redis.enabled }}
         - name: wait-for-redis
-          image: redis:7-alpine
+          image: redis:7-alpine@sha256:bb186d083732f669da90be8b0f975a37812b15e913465bb14d845db72a4e3e08
           env:
             - name: REDIS_PASSWORD
               valueFrom:
