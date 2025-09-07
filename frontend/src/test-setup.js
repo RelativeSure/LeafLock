@@ -1,14 +1,14 @@
 // Global test setup for Vitest
-import { vi } from 'vitest';
-import { cleanup } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import { vi } from 'vitest'
+import { cleanup } from '@testing-library/react'
+import '@testing-library/jest-dom'
 
 // Clean up after each test
 afterEach(() => {
-  cleanup();
-  vi.clearAllMocks();
-  vi.resetAllMocks();
-});
+  cleanup()
+  vi.clearAllMocks()
+  vi.resetAllMocks()
+})
 
 // Mock IntersectionObserver
 global.IntersectionObserver = vi.fn(() => ({
@@ -36,14 +36,14 @@ Object.defineProperty(window, 'matchMedia', {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
-  })),
-});
+  }),
+})
 
 // Mock window.scrollTo
 Object.defineProperty(window, 'scrollTo', {
   writable: true,
   value: vi.fn(),
-});
+})
 
 // Mock console methods to reduce noise in tests
 global.console = {
@@ -52,7 +52,7 @@ global.console = {
   warn: vi.fn(),
   error: vi.fn(),
   debug: vi.fn(),
-};
+}
 
 // Mock performance API
 global.performance = {
@@ -64,7 +64,7 @@ global.performance = {
   clearMarks: vi.fn(),
   clearMeasures: vi.fn(),
   now: vi.fn(() => Date.now()),
-};
+}
 
 // Mock requestAnimationFrame
 global.requestAnimationFrame = vi.fn((cb) => setTimeout(cb, 0));
@@ -75,7 +75,7 @@ global.URL = {
   ...global.URL,
   createObjectURL: vi.fn(() => 'mock-url'),
   revokeObjectURL: vi.fn(),
-};
+}
 
 // Mock File and FileReader for upload tests
 global.File = class MockFile {
@@ -85,7 +85,7 @@ global.File = class MockFile {
     this.type = options.type || '';
     this.lastModified = options.lastModified || Date.now();
   }
-};
+}
 
 global.FileReader = class MockFileReader {
   constructor() {
@@ -98,7 +98,7 @@ global.FileReader = class MockFileReader {
     setTimeout(() => {
       this.readyState = 2;
       this.result = 'mock file content';
-      this.onload?.({ target: this });
+      this.onload?.({ target: this })
     }, 0);
   }
 
@@ -106,10 +106,10 @@ global.FileReader = class MockFileReader {
     setTimeout(() => {
       this.readyState = 2;
       this.result = 'data:text/plain;base64,bW9jayBmaWxlIGNvbnRlbnQ=';
-      this.onload?.({ target: this });
+      this.onload?.({ target: this })
     }, 0);
   }
-};
+}
 
 // Mock clipboard API
 Object.defineProperty(navigator, 'clipboard', {
@@ -118,7 +118,7 @@ Object.defineProperty(navigator, 'clipboard', {
     writeText: vi.fn().mockResolvedValue(),
     readText: vi.fn().mockResolvedValue('mock clipboard content'),
   },
-});
+})
 
 // Mock geolocation API
 Object.defineProperty(navigator, 'geolocation', {
@@ -128,7 +128,7 @@ Object.defineProperty(navigator, 'geolocation', {
     watchPosition: vi.fn(),
     clearWatch: vi.fn(),
   },
-});
+})
 
 // Mock Notification API
 global.Notification = class MockNotification {
@@ -149,7 +149,7 @@ global.Notification = class MockNotification {
   close() {
     this.onclose?.();
   }
-};
+}
 
 // Mock Service Worker API
 Object.defineProperty(navigator, 'serviceWorker', {
@@ -166,14 +166,14 @@ Object.defineProperty(navigator, 'serviceWorker', {
     getRegistration: vi.fn().mockResolvedValue(null),
     getRegistrations: vi.fn().mockResolvedValue([]),
   },
-});
+})
 
 // Mock indexedDB for offline storage tests
 global.indexedDB = {
   open: vi.fn(),
   deleteDatabase: vi.fn(),
   databases: vi.fn().mockResolvedValue([]),
-};
+}
 
 // Mock WebSocket for real-time features
 global.WebSocket = class MockWebSocket {
@@ -192,7 +192,7 @@ global.WebSocket = class MockWebSocket {
     
     setTimeout(() => {
       this.readyState = MockWebSocket.OPEN;
-      this.onopen?.({ type: 'open' });
+      this.onopen?.({ type: 'open' })
     }, 0);
   }
 
@@ -204,9 +204,9 @@ global.WebSocket = class MockWebSocket {
 
   close() {
     this.readyState = MockWebSocket.CLOSED;
-    this.onclose?.({ type: 'close', code: 1000, reason: 'Normal closure' });
+    this.onclose?.({ type: 'close', code: 1000, reason: 'Normal closure' })
   }
-};
+}
 
 // Mock crypto.getRandomValues for secure random generation
 Object.defineProperty(crypto, 'getRandomValues', {
@@ -217,7 +217,7 @@ Object.defineProperty(crypto, 'getRandomValues', {
     }
     return array;
   }),
-});
+})
 
 // Mock TextEncoder/TextDecoder for older environments
 if (!global.TextEncoder) {
@@ -225,7 +225,7 @@ if (!global.TextEncoder) {
     encode(string) {
       return new Uint8Array(string.split('').map(char => char.charCodeAt(0)));
     }
-  };
+  }
 }
 
 if (!global.TextDecoder) {
@@ -233,19 +233,19 @@ if (!global.TextDecoder) {
     decode(bytes) {
       return String.fromCharCode(...bytes);
     }
-  };
+  }
 }
 
 // Global error handler for unhandled promise rejections
 process.on('unhandledRejection', (reason) => {
   console.error('Unhandled Promise Rejection:', reason);
-});
+})
 
 // Global uncaught exception handler
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
-});
+})
 
 // Set test environment variables
-process.env.NODE_ENV = 'test';
-process.env.VITEST = 'true';
+process.env.NODE_ENV = 'test'
+process.env.VITEST = 'true'

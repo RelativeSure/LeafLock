@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import SecureNotesApp from './App.jsx';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import SecureNotesApp from './App.jsx'
 import {
   mockSodium,
   mockFetch,
@@ -10,7 +10,7 @@ import {
   mockApiError,
   createMockNote,
   createMockEncryptedNote
-} from './test-utils.jsx';
+} from './test-utils.jsx'
 
 // Mock libsodium for E2E tests
 vi.mock('libsodium-wrappers', () => mockSodium);
@@ -24,11 +24,11 @@ describe('End-to-End User Flows', () => {
     vi.clearAllMocks();
     mockLocalStorage.clear();
     mockFetch.mockClear();
-  });
+  })
 
   afterEach(() => {
     vi.resetAllMocks();
-  });
+  })
 
   describe('Complete Registration Flow', () => {
     it('allows user to register, create notes, and manage them', async () => {
@@ -86,7 +86,7 @@ describe('End-to-End User Flows', () => {
       // Step 2: Should automatically transition to notes view
       await waitFor(() => {
         expect(screen.getByText(/encryption active/i)).toBeInTheDocument();
-      });
+      })
 
       // Step 3: Create first note
       await user.click(screen.getByText(/new encrypted note/i));
@@ -103,16 +103,16 @@ describe('End-to-End User Flows', () => {
           expect.stringContaining('/notes'),
           expect.objectContaining({ method: 'POST' })
         );
-      }, { timeout: 3000 });
+      }, { timeout: 3000 })
 
       // Step 4: Verify note appears in list
       await waitFor(() => {
         expect(screen.getByText('My First Note')).toBeInTheDocument();
-      });
+      })
 
       // Step 5: Verify token was stored
       expect(mockLocalStorage.setItem).toHaveBeenCalledWith('secure_token', 'new-user-token');
-    });
+    })
 
     it('handles registration errors gracefully', async () => {
       const user = userEvent.setup();
@@ -129,13 +129,13 @@ describe('End-to-End User Flows', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/registration failed/i)).toBeInTheDocument();
-      });
+      })
 
       // Should remain on registration form
       expect(screen.getByRole('button', { name: /create secure account/i })).toBeInTheDocument();
       expect(mockLocalStorage.setItem).not.toHaveBeenCalled();
-    });
-  });
+    })
+  })
 
   describe('Complete Login and Notes Management Flow', () => {
     it('allows existing user to login and manage notes', async () => {
@@ -197,13 +197,13 @@ describe('End-to-End User Flows', () => {
       // Step 2: Verify transition to notes view
       await waitFor(() => {
         expect(screen.getByText(/encryption active/i)).toBeInTheDocument();
-      });
+      })
 
       // Step 3: Verify existing notes are displayed
       await waitFor(() => {
         expect(screen.getByText('Work Notes')).toBeInTheDocument();
         expect(screen.getByText('Personal Journal')).toBeInTheDocument();
-      });
+      })
 
       // Step 4: Edit an existing note
       await user.click(screen.getByText('Personal Journal'));
@@ -223,12 +223,12 @@ describe('End-to-End User Flows', () => {
           expect.stringContaining('/notes/note-2'),
           expect.objectContaining({ method: 'PUT' })
         );
-      }, { timeout: 3000 });
+      }, { timeout: 3000 })
 
       // Step 5: Verify update in notes list
       await waitFor(() => {
         expect(screen.getByText('Updated Personal Journal')).toBeInTheDocument();
-      });
+      })
 
       // Step 6: Search functionality
       const searchField = screen.getByPlaceholderText(/search notes/i);
@@ -237,7 +237,7 @@ describe('End-to-End User Flows', () => {
       await waitFor(() => {
         expect(screen.getByText('Work Notes')).toBeInTheDocument();
         expect(screen.queryByText('Updated Personal Journal')).not.toBeInTheDocument();
-      });
+      })
 
       // Clear search
       await user.clear(searchField);
@@ -245,12 +245,12 @@ describe('End-to-End User Flows', () => {
       await waitFor(() => {
         expect(screen.getByText('Work Notes')).toBeInTheDocument();
         expect(screen.getByText('Updated Personal Journal')).toBeInTheDocument();
-      });
+      })
 
       // Step 7: Delete a note (would require additional UI for delete button)
       // For this test, we'll simulate the API call
       expect(mockFetch).toHaveBeenCalledTimes(4); // login, load, update, reload
-    });
+    })
 
     it('handles login with MFA requirement', async () => {
       const user = userEvent.setup();
@@ -279,7 +279,7 @@ describe('End-to-End User Flows', () => {
       // Step 2: MFA field should appear
       await waitFor(() => {
         expect(screen.getByLabelText(/2fa code/i)).toBeInTheDocument();
-      });
+      })
 
       // Step 3: Enter MFA code and submit
       await user.type(screen.getByLabelText(/2fa code/i), '123456');
@@ -288,7 +288,7 @@ describe('End-to-End User Flows', () => {
       // Step 4: Should transition to notes view
       await waitFor(() => {
         expect(screen.getByText(/encryption active/i)).toBeInTheDocument();
-      });
+      })
 
       // Verify MFA login API call
       expect(mockFetch).toHaveBeenCalledWith(
@@ -297,8 +297,8 @@ describe('End-to-End User Flows', () => {
           body: expect.stringContaining('123456')
         })
       );
-    });
-  });
+    })
+  })
 
   describe('Session Management Flow', () => {
     it('restores session on app reload', async () => {
@@ -315,12 +315,12 @@ describe('End-to-End User Flows', () => {
       // Should skip login and go directly to notes view
       await waitFor(() => {
         expect(screen.getByText(/encryption active/i)).toBeInTheDocument();
-      });
+      })
 
       // Should load existing notes
       await waitFor(() => {
         expect(screen.getByText('Existing Note')).toBeInTheDocument();
-      });
+      })
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/notes'),
@@ -330,7 +330,7 @@ describe('End-to-End User Flows', () => {
           })
         })
       );
-    });
+    })
 
     it('handles session expiration and logout', async () => {
       const user = userEvent.setup();
@@ -347,10 +347,10 @@ describe('End-to-End User Flows', () => {
       await waitFor(() => {
         expect(screen.getByText(/secure notes/i)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /login securely/i })).toBeInTheDocument();
-      });
+      })
 
       expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('secure_token');
-    });
+    })
 
     it('allows manual logout', async () => {
       const user = userEvent.setup();
@@ -363,7 +363,7 @@ describe('End-to-End User Flows', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/encryption active/i)).toBeInTheDocument();
-      });
+      })
 
       // Find and click logout button
       const logoutButton = screen.getByRole('button');
@@ -372,11 +372,11 @@ describe('End-to-End User Flows', () => {
       // Should return to login view
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /login securely/i })).toBeInTheDocument();
-      });
+      })
 
       expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('secure_token');
-    });
-  });
+    })
+  })
 
   describe('Error Handling Flows', () => {
     it('handles network connectivity issues', async () => {
@@ -393,11 +393,11 @@ describe('End-to-End User Flows', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/login failed/i)).toBeInTheDocument();
-      });
+      })
 
       // Should remain on login form
       expect(screen.getByRole('button', { name: /login securely/i })).toBeInTheDocument();
-    });
+    })
 
     it('handles server errors gracefully', async () => {
       const user = userEvent.setup();
@@ -412,11 +412,11 @@ describe('End-to-End User Flows', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/failed to load notes/i)).toBeInTheDocument();
-      });
+      })
 
       // Should still show main interface with error
       expect(screen.getByText(/encryption active/i)).toBeInTheDocument();
-    });
+    })
 
     it('recovers from temporary errors', async () => {
       const user = userEvent.setup();
@@ -434,15 +434,15 @@ describe('End-to-End User Flows', () => {
       // Should show error initially
       await waitFor(() => {
         expect(screen.getByText(/failed to load notes/i)).toBeInTheDocument();
-      });
+      })
 
       // Simulate retry by creating a new note (which triggers reload)
       await user.click(screen.getByText(/new encrypted note/i));
 
       // Should recover and show editor
       expect(screen.getByPlaceholderText(/note title/i)).toBeInTheDocument();
-    });
-  });
+    })
+  })
 
   describe('Data Persistence and Integrity', () => {
     it('maintains encryption throughout the entire flow', async () => {
@@ -470,7 +470,7 @@ describe('End-to-End User Flows', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/encryption active/i)).toBeInTheDocument();
-      });
+      })
 
       // Create note with sensitive data
       await user.click(screen.getByText(/new encrypted note/i));
@@ -487,7 +487,7 @@ describe('End-to-End User Flows', () => {
           expect.stringContaining('/notes'),
           expect.objectContaining({ method: 'POST' })
         );
-      }, { timeout: 3000 });
+      }, { timeout: 3000 })
 
       // Verify sensitive data was encrypted before sending
       const createCall = mockFetch.mock.calls.find(call => 
@@ -505,7 +505,7 @@ describe('End-to-End User Flows', () => {
       // Should contain encrypted versions
       expect(requestBody).toContain('title_encrypted');
       expect(requestBody).toContain('content_encrypted');
-    });
+    })
 
     it('handles encryption failures gracefully', async () => {
       const user = userEvent.setup();
@@ -518,13 +518,13 @@ describe('End-to-End User Flows', () => {
       const originalEncrypt = mockSodium.crypto_secretbox_easy;
       mockSodium.crypto_secretbox_easy.mockImplementationOnce(() => {
         throw new Error('Encryption failed');
-      });
+      })
 
       render(<SecureNotesApp />);
 
       await waitFor(() => {
         expect(screen.getByText(/encryption active/i)).toBeInTheDocument();
-      });
+      })
 
       await user.click(screen.getByText(/new encrypted note/i));
       await user.type(screen.getByPlaceholderText(/note title/i), 'Test Note');
@@ -534,12 +534,12 @@ describe('End-to-End User Flows', () => {
         // Note: In real implementation, this might show an error message
         // For now, we just verify it doesn't crash
         expect(screen.getByPlaceholderText(/note title/i)).toBeInTheDocument();
-      });
+      })
 
       // Restore original function
       mockSodium.crypto_secretbox_easy.mockImplementation(originalEncrypt);
-    });
-  });
+    })
+  })
 
   describe('Performance and User Experience', () => {
     it('provides smooth user experience with loading states', async () => {
@@ -548,7 +548,7 @@ describe('End-to-End User Flows', () => {
       // Mock slow login
       const slowLogin = new Promise(resolve => {
         setTimeout(() => resolve(mockApiResponse({ token: 'token' })), 200);
-      });
+      })
       mockFetch.mockReturnValueOnce(slowLogin);
 
       render(<SecureNotesApp />);
@@ -564,8 +564,8 @@ describe('End-to-End User Flows', () => {
       // Wait for completion
       await waitFor(() => {
         expect(screen.queryByText(/processing/i)).not.toBeInTheDocument();
-      });
-    });
+      })
+    })
 
     it('handles rapid user interactions gracefully', async () => {
       const user = userEvent.setup();
@@ -578,7 +578,7 @@ describe('End-to-End User Flows', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/encryption active/i)).toBeInTheDocument();
-      });
+      })
 
       // Rapidly create and type in note
       await user.click(screen.getByText(/new encrypted note/i));
@@ -586,11 +586,11 @@ describe('End-to-End User Flows', () => {
       const titleField = screen.getByPlaceholderText(/note title/i);
       
       // Type rapidly
-      await user.type(titleField, 'Rapid typing test', { delay: 1 });
+      await user.type(titleField, 'Rapid typing test', { delay: 1 })
       
       // Should handle rapid input without crashing
       expect(titleField.value).toBe('Rapid typing test');
-    });
+    })
 
     it('maintains state consistency during navigation', async () => {
       const user = userEvent.setup();
@@ -615,7 +615,7 @@ describe('End-to-End User Flows', () => {
       await waitFor(() => {
         expect(screen.getByText('Note 1')).toBeInTheDocument();
         expect(screen.getByText('Note 2')).toBeInTheDocument();
-      });
+      })
 
       // Select first note
       await user.click(screen.getByText('Note 1'));
@@ -632,6 +632,6 @@ describe('End-to-End User Flows', () => {
       // State should remain consistent
       expect(screen.getByText('Note 1')).toBeInTheDocument();
       expect(screen.getByText('Note 2')).toBeInTheDocument();
-    });
-  });
-});
+    })
+  })
+})

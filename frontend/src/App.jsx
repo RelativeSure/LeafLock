@@ -1,24 +1,24 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import * as sodium from 'libsodium-wrappers';
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import * as sodium from 'libsodium-wrappers'
 
 // Secure Crypto Service for E2E Encryption
 class CryptoService {
   constructor() {
-    this.masterKey = null;
-    this.derivedKey = null;
-    this.sodiumReady = false;
-    this.initSodium();
+    this.masterKey = null
+    this.derivedKey = null
+    this.sodiumReady = false
+    this.initSodium()
   }
 
   async initSodium() {
-    await sodium.ready;
-    this.sodiumReady = true;
+    await sodium.ready
+    this.sodiumReady = true
   }
 
   async deriveKeyFromPassword(password, salt) {
-    const encoder = new TextEncoder();
-    const passwordBytes = encoder.encode(password);
-    
+    const encoder = new TextEncoder()
+    const passwordBytes = encoder.encode(password)
+
     // Use PBKDF2 with high iterations for key derivation
     const keyMaterial = await window.crypto.subtle.importKey(
       'raw',
@@ -26,7 +26,7 @@ class CryptoService {
       'PBKDF2',
       false,
       ['deriveBits']
-    );
+    )
 
     const derivedBits = await window.crypto.subtle.deriveBits(
       {
@@ -37,50 +37,48 @@ class CryptoService {
       },
       keyMaterial,
       256
-    );
+    )
 
-    return new Uint8Array(derivedBits);
+    return new Uint8Array(derivedBits)
   }
 
   async encryptData(plaintext) {
-    if (!this.sodiumReady) await this.initSodium();
-    if (!this.masterKey) throw new Error('No encryption key set');
-    
-    const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-    const messageBytes = sodium.from_string(plaintext);
-    const ciphertext = sodium.crypto_secretbox_easy(messageBytes, nonce, this.masterKey);
+    if (!this.sodiumReady) await this.initSodium()
+    if (!this.masterKey) throw new Error('No encryption key set')
+    const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES)
+    const messageBytes = sodium.from_string(plaintext)
+    const ciphertext = sodium.crypto_secretbox_easy(messageBytes, nonce, this.masterKey)
     
     // Combine nonce and ciphertext
-    const combined = new Uint8Array(nonce.length + ciphertext.length);
-    combined.set(nonce);
-    combined.set(ciphertext, nonce.length);
-    
-    return sodium.to_base64(combined, sodium.base64_variants.ORIGINAL);
+    const combined = new Uint8Array(nonce.length + ciphertext.length)
+    combined.set(nonce)
+    combined.set(ciphertext, nonce.length)
+
+    return sodium.to_base64(combined, sodium.base64_variants.ORIGINAL)
   }
 
   async decryptData(encryptedData) {
-    if (!this.sodiumReady) await this.initSodium();
-    if (!this.masterKey) throw new Error('No decryption key set');
-    
-    const combined = sodium.from_base64(encryptedData, sodium.base64_variants.ORIGINAL);
-    const nonce = combined.slice(0, sodium.crypto_secretbox_NONCEBYTES);
-    const ciphertext = combined.slice(sodium.crypto_secretbox_NONCEBYTES);
-    
-    const decrypted = sodium.crypto_secretbox_open_easy(ciphertext, nonce, this.masterKey);
-    return sodium.to_string(decrypted);
+    if (!this.sodiumReady) await this.initSodium()
+    if (!this.masterKey) throw new Error('No decryption key set')
+    const combined = sodium.from_base64(encryptedData, sodium.base64_variants.ORIGINAL)
+    const nonce = combined.slice(0, sodium.crypto_secretbox_NONCEBYTES)
+    const ciphertext = combined.slice(sodium.crypto_secretbox_NONCEBYTES)
+
+    const decrypted = sodium.crypto_secretbox_open_easy(ciphertext, nonce, this.masterKey)
+    return sodium.to_string(decrypted)
   }
 
   async generateSalt() {
-    if (!this.sodiumReady) await this.initSodium();
-    return sodium.randombytes_buf(sodium.crypto_pwhash_SALTBYTES);
+    if (!this.sodiumReady) await this.initSodium()
+    return sodium.randombytes_buf(sodium.crypto_pwhash_SALTBYTES)
   }
 
   async setMasterKey(key) {
-    this.masterKey = key;
+    this.masterKey = key
   }
 }
 
-const cryptoService = new CryptoService();
+const cryptoService = new CryptoService()
 
 // Loading Skeleton Components
 const NoteSkeleton = () => (
@@ -90,7 +88,7 @@ const NoteSkeleton = () => (
     <div className="h-3 bg-gray-700 rounded w-2/3 mb-2"></div>
     <div className="h-3 bg-gray-700 rounded w-1/4"></div>
   </div>
-);
+)
 
 const NoteListSkeleton = () => (
   <div>
@@ -98,7 +96,7 @@ const NoteListSkeleton = () => (
       <NoteSkeleton key={i} />
     ))}
   </div>
-);
+)
 
 const LoadingOverlay = ({ message = 'Loading...' }) => (
   <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
@@ -111,29 +109,29 @@ const LoadingOverlay = ({ message = 'Loading...' }) => (
       <p className="text-gray-400 text-sm mt-2">Initializing secure encryption...</p>
     </div>
   </div>
-);
+)
 
-const ErrorBoundary = ({ error, onRetry, onDismiss, className = "" }) => {
+const ErrorBoundary = ({ error, onRetry, onDismiss, className = '' }) => {
   const getErrorMessage = (error) => {
-    if (typeof error === 'string') return error;
-    if (error?.message) return error.message;
-    return 'An unexpected error occurred';
-  };
+    if (typeof error === 'string') return error
+    if (error?.message) return error.message
+    return 'An unexpected error occurred'
+  }
 
   const getErrorSuggestions = (error) => {
-    const message = getErrorMessage(error).toLowerCase();
+    const message = getErrorMessage(error).toLowerCase()
     
     if (message.includes('network') || message.includes('fetch')) {
-      return 'Check your internet connection and try again.';
+      return 'Check your internet connection and try again.'
     }
     if (message.includes('unauthorized') || message.includes('401')) {
-      return 'Your session may have expired. Please sign in again.';
+      return 'Your session may have expired. Please sign in again.'
     }
     if (message.includes('decrypt') || message.includes('encryption')) {
-      return 'There was an issue with encryption. Try refreshing the page.';
+      return 'There was an issue with encryption. Try refreshing the page.'
     }
-    return 'Please try again or refresh the page if the problem persists.';
-  };
+    return 'Please try again or refresh the page if the problem persists.'
+  }
 
   return (
     <div className={`bg-red-900/50 border border-red-600 rounded-lg p-4 ${className}`} role="alert">
@@ -167,8 +165,8 @@ const ErrorBoundary = ({ error, onRetry, onDismiss, className = "" }) => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
 // Onboarding Component
 const OnboardingOverlay = ({ step, onNext, onPrev, onSkip, onComplete }) => {
@@ -211,8 +209,8 @@ const OnboardingOverlay = ({ step, onNext, onPrev, onSkip, onComplete }) => {
     },
   ];
 
-  const currentStep = onboardingSteps[step] || onboardingSteps[0];
-  const isLastStep = step === onboardingSteps.length - 1;
+  const currentStep = onboardingSteps[step] || onboardingSteps[0]
+  const isLastStep = step === onboardingSteps.length - 1
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -263,25 +261,25 @@ const OnboardingOverlay = ({ step, onNext, onPrev, onSkip, onComplete }) => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
 // Secure API Service with encryption
 class SecureAPI {
   constructor(baseURL = '/api/v1') {
-    this.baseURL = baseURL;
-    this.token = localStorage.getItem('secure_token');
+    this.baseURL = baseURL
+    this.token = localStorage.getItem('secure_token')
   }
 
   async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
+    const url = `${this.baseURL}${endpoint}`
     const headers = {
       'Content-Type': 'application/json',
       ...options.headers
-    };
+    }
 
     if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+      headers['Authorization'] = `Bearer ${this.token}`
     }
 
     try {
@@ -290,67 +288,67 @@ class SecureAPI {
         headers,
         credentials: 'include',
         mode: 'cors'
-      });
+      })
 
       if (!response.ok) {
         if (response.status === 401) {
-          this.handleUnauthorized();
+          this.handleUnauthorized()
         }
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(`HTTP ${response.status}`)
       }
 
-      return await response.json();
+      return await response.json()
     } catch (error) {
-      console.error('API request failed:', error);
-      throw error;
+      console.error('API request failed:', error)
+      throw error
     }
   }
 
   handleUnauthorized() {
-    localStorage.removeItem('secure_token');
-    window.location.href = '/login';
+    localStorage.removeItem('secure_token')
+    window.location.href = '/login'
   }
 
   setToken(token) {
-    this.token = token;
-    localStorage.setItem('secure_token', token);
+    this.token = token
+    localStorage.setItem('secure_token', token)
   }
 
   clearToken() {
-    this.token = null;
-    localStorage.removeItem('secure_token');
+    this.token = null
+    localStorage.removeItem('secure_token')
   }
 
   async register(email, password) {
     const response = await this.request('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password })
-    });
+    })
     
     if (response.token) {
-      this.setToken(response.token);
+      this.setToken(response.token)
     }
     
-    return response;
+    return response
   }
 
   async login(email, password, mfaCode) {
     const response = await this.request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password, mfa_code: mfaCode })
-    });
+    })
     
     if (response.token) {
-      this.setToken(response.token);
+      this.setToken(response.token)
     }
     
-    return response;
+    return response
   }
 
   async createNote(title, content) {
     // Encrypt note content before sending
-    const encryptedTitle = await cryptoService.encryptData(title);
-    const encryptedContent = await cryptoService.encryptData(JSON.stringify(content));
+    const encryptedTitle = await cryptoService.encryptData(title)
+    const encryptedContent = await cryptoService.encryptData(JSON.stringify(content))
     
     return this.request('/notes', {
       method: 'POST',
@@ -358,34 +356,34 @@ class SecureAPI {
         title_encrypted: encryptedTitle,
         content_encrypted: encryptedContent
       })
-    });
+    })
   }
 
   async getNotes() {
-    const response = await this.request('/notes');
-    const notes = response.notes || response || [];
+    const response = await this.request('/notes')
+    const notes = response.notes || response || []
     
     // Decrypt notes
     const decryptedNotes = await Promise.all(
       notes.map(async (note) => {
         try {
-          const title = await cryptoService.decryptData(note.title_encrypted);
-          const content = JSON.parse(await cryptoService.decryptData(note.content_encrypted));
-          return { ...note, title, content };
+          const title = await cryptoService.decryptData(note.title_encrypted)
+          const content = JSON.parse(await cryptoService.decryptData(note.content_encrypted))
+          return { ...note, title, content }
         } catch (err) {
-          console.error('Failed to decrypt note:', note.id);
-          return null;
+          console.error('Failed to decrypt note:', note.id)
+          return null
         }
       })
-    );
+    )
     
-    return decryptedNotes.filter(note => note !== null);
+    return decryptedNotes.filter(note => note !== null)
   }
 
   async updateNote(noteId, title, content) {
     // Encrypt note content before sending
-    const encryptedTitle = await cryptoService.encryptData(title);
-    const encryptedContent = await cryptoService.encryptData(JSON.stringify(content));
+    const encryptedTitle = await cryptoService.encryptData(title)
+    const encryptedContent = await cryptoService.encryptData(JSON.stringify(content))
     
     return this.request(`/notes/${noteId}`, {
       method: 'PUT',
@@ -393,234 +391,234 @@ class SecureAPI {
         title_encrypted: encryptedTitle,
         content_encrypted: encryptedContent
       })
-    });
+    })
   }
 
   async deleteNote(noteId) {
     return this.request(`/notes/${noteId}`, {
       method: 'DELETE'
-    });
+    })
   }
 }
 
-const api = new SecureAPI();
+const api = new SecureAPI()
 
 // Main App Component
 export default function SecureNotesApp() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentView, setCurrentView] = useState('login');
-  const [notes, setNotes] = useState([]);
-  const [selectedNote, setSelectedNote] = useState(null);
-  const [encryptionStatus, setEncryptionStatus] = useState('locked');
-  const [loading, setLoading] = useState(false);
-  const [initializing, setInitializing] = useState(true);
-  const [error, setError] = useState(null);
-  const [notesError, setNotesError] = useState(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [currentView, setCurrentView] = useState('login')
+  const [notes, setNotes] = useState([])
+  const [selectedNote, setSelectedNote] = useState(null)
+  const [encryptionStatus, setEncryptionStatus] = useState('locked')
+  const [loading, setLoading] = useState(false)
+  const [initializing, setInitializing] = useState(true)
+  const [error, setError] = useState(null)
+  const [notesError, setNotesError] = useState(null)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [onboardingStep, setOnboardingStep] = useState(0)
 
   useEffect(() => {
     // Check if user has a valid session
     const initializeApp = async () => {
       try {
-        const token = localStorage.getItem('secure_token');
+        const token = localStorage.getItem('secure_token')
         if (token) {
-          setIsAuthenticated(true);
-          setCurrentView('notes');
-          await loadNotes();
+          setIsAuthenticated(true)
+          setCurrentView('notes')
+          await loadNotes()
           
           // Check if user needs onboarding
-          const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+          const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding')
           if (!hasSeenOnboarding) {
-            setShowOnboarding(true);
+            setShowOnboarding(true)
           }
         }
       } catch (err) {
-        console.error('Failed to initialize app:', err);
-        setError('Failed to initialize application');
+        console.error('Failed to initialize app:', err)
+        setError('Failed to initialize application')
       } finally {
-        setInitializing(false);
+        setInitializing(false)
       }
-    };
+    }
     
-    initializeApp();
-  }, []);
+    initializeApp()
+  }, [])
 
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Only handle shortcuts when authenticated and not in onboarding
-      if (!isAuthenticated || showOnboarding) return;
+      if (!isAuthenticated || showOnboarding) return
 
       // Cmd/Ctrl + N: New note
       if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
-        e.preventDefault();
-        setSelectedNote(null);
-        setCurrentView('editor');
+        e.preventDefault()
+        setSelectedNote(null)
+        setCurrentView('editor')
       }
 
       // Cmd/Ctrl + K: Search notes (focus search)
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        const searchInput = document.getElementById('search-notes');
+        e.preventDefault()
+        const searchInput = document.getElementById('search-notes')
         if (searchInput) {
-          searchInput.focus();
+          searchInput.focus()
         }
       }
 
       // Escape: Close current view/go back
       if (e.key === 'Escape') {
         if (selectedNote || currentView === 'editor') {
-          setSelectedNote(null);
-          setCurrentView('notes');
+          setSelectedNote(null)
+          setCurrentView('notes')
         }
       }
 
       // Cmd/Ctrl + S: Manual save (if in editor)
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-        e.preventDefault();
+        e.preventDefault()
         if (selectedNote || currentView === 'editor') {
           // Trigger save if we're in the editor
-          const saveButton = document.querySelector('[data-save-action]');
+          const saveButton = document.querySelector('[data-save-action]')
           if (saveButton) {
-            saveButton.click();
+            saveButton.click()
           }
         }
       }
 
       // Arrow navigation in notes list
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        const noteButtons = document.querySelectorAll('[data-note-button]');
-        const currentIndex = Array.from(noteButtons).findIndex(btn => btn === document.activeElement);
+        const noteButtons = document.querySelectorAll('[data-note-button]')
+        const currentIndex = Array.from(noteButtons).findIndex(btn => btn === document.activeElement)
         
         if (currentIndex !== -1) {
-          e.preventDefault();
+          e.preventDefault()
           let nextIndex;
           if (e.key === 'ArrowDown') {
-            nextIndex = Math.min(currentIndex + 1, noteButtons.length - 1);
+            nextIndex = Math.min(currentIndex + 1, noteButtons.length - 1)
           } else {
-            nextIndex = Math.max(currentIndex - 1, 0);
+            nextIndex = Math.max(currentIndex - 1, 0)
           }
-          noteButtons[nextIndex]?.focus();
+          noteButtons[nextIndex]?.focus()
         }
       }
-    };
+    }
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isAuthenticated, showOnboarding, selectedNote, currentView]);
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isAuthenticated, showOnboarding, selectedNote, currentView])
 
   const loadNotes = async () => {
     try {
-      setLoading(true);
-      setNotesError(null);
-      const fetchedNotes = await api.getNotes();
-      setNotes(fetchedNotes);
+      setLoading(true)
+      setNotesError(null)
+      const fetchedNotes = await api.getNotes()
+      setNotes(fetchedNotes)
     } catch (err) {
-      console.error('Failed to load notes:', err);
-      setNotesError(err.message || 'Failed to load notes');
+      console.error('Failed to load notes:', err)
+      setNotesError(err.message || 'Failed to load notes')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleOnboardingNext = () => {
-    setOnboardingStep(prev => prev + 1);
-  };
+    setOnboardingStep(prev => prev + 1)
+  }
 
   const handleOnboardingPrev = () => {
-    setOnboardingStep(prev => Math.max(0, prev - 1));
-  };
+    setOnboardingStep(prev => Math.max(0, prev - 1))
+  }
 
   const handleOnboardingSkip = () => {
-    localStorage.setItem('hasSeenOnboarding', 'true');
-    setShowOnboarding(false);
-    setOnboardingStep(0);
-  };
+    localStorage.setItem('hasSeenOnboarding', 'true')
+    setShowOnboarding(false)
+    setOnboardingStep(0)
+  }
 
   const handleOnboardingComplete = () => {
-    localStorage.setItem('hasSeenOnboarding', 'true');
-    setShowOnboarding(false);
-    setOnboardingStep(0);
-  };
+    localStorage.setItem('hasSeenOnboarding', 'true')
+    setShowOnboarding(false)
+    setOnboardingStep(0)
+  }
 
   // Login Component
   const LoginView = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [mfaCode, setMfaCode] = useState('');
-    const [mfaRequired, setMfaRequired] = useState(false);
-    const [isRegistering, setIsRegistering] = useState(false);
-    const [passwordStrength, setPasswordStrength] = useState(0);
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [mfaCode, setMfaCode] = useState('')
+    const [mfaRequired, setMfaRequired] = useState(false)
+    const [isRegistering, setIsRegistering] = useState(false)
+    const [passwordStrength, setPasswordStrength] = useState(0)
 
     const calculatePasswordStrength = (pwd) => {
-      let strength = 0;
-      if (pwd.length >= 12) strength++;
-      if (pwd.length >= 16) strength++;
-      if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) strength++;
-      if (/[0-9]/.test(pwd)) strength++;
-      if (/[^A-Za-z0-9]/.test(pwd)) strength++;
-      return strength;
-    };
+      let strength = 0
+      if (pwd.length >= 12) strength++
+      if (pwd.length >= 16) strength++
+      if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) strength++
+      if (/[0-9]/.test(pwd)) strength++
+      if (/[^A-Za-z0-9]/.test(pwd)) strength++
+      return strength
+    }
 
     const handlePasswordChange = (e) => {
-      const pwd = e.target.value;
-      setPassword(pwd);
-      setPasswordStrength(calculatePasswordStrength(pwd));
-    };
+      const pwd = e.target.value
+      setPassword(pwd)
+      setPasswordStrength(calculatePasswordStrength(pwd))
+    }
 
     const handleSubmit = async (e) => {
-      e.preventDefault();
-      setError(null);
-      setLoading(true);
+      e.preventDefault()
+      setError(null)
+      setLoading(true)
 
       try {
         if (isRegistering) {
           if (password.length < 12) {
-            setError('Password must be at least 12 characters');
-            return;
+            setError('Password must be at least 12 characters')
+            return
           }
           
-          const response = await api.register(email, password);
+          const response = await api.register(email, password)
           
           // Derive encryption key from password
-          const salt = response.salt ? sodium.from_base64(response.salt) : await cryptoService.generateSalt();
-          const key = await cryptoService.deriveKeyFromPassword(password, salt);
-          await cryptoService.setMasterKey(key);
+          const salt = response.salt ? sodium.from_base64(response.salt) : await cryptoService.generateSalt()
+          const key = await cryptoService.deriveKeyFromPassword(password, salt)
+          await cryptoService.setMasterKey(key)
           
-          setIsAuthenticated(true);
-          setCurrentView('notes');
-          setEncryptionStatus('unlocked');
+          setIsAuthenticated(true)
+          setCurrentView('notes')
+          setEncryptionStatus('unlocked')
           
           // Check if this is a new user
-          const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+          const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding')
           if (!hasSeenOnboarding) {
-            setShowOnboarding(true);
+            setShowOnboarding(true)
           }
         } else {
-          const response = await api.login(email, password, mfaCode);
+          const response = await api.login(email, password, mfaCode)
           
           if (response.mfa_required) {
-            setMfaRequired(true);
-            return;
+            setMfaRequired(true)
+            return
           }
           
           // Derive encryption key from password (we'll store this in localStorage for this demo)
-          const salt = response.salt ? sodium.from_base64(response.salt) : await cryptoService.generateSalt();
-          const key = await cryptoService.deriveKeyFromPassword(password, salt);
-          await cryptoService.setMasterKey(key);
+          const salt = response.salt ? sodium.from_base64(response.salt) : await cryptoService.generateSalt()
+          const key = await cryptoService.deriveKeyFromPassword(password, salt)
+          await cryptoService.setMasterKey(key)
           
-          setIsAuthenticated(true);
-          setCurrentView('notes');
-          setEncryptionStatus('unlocked');
-          loadNotes();
+          setIsAuthenticated(true)
+          setCurrentView('notes')
+          setEncryptionStatus('unlocked')
+          loadNotes()
         }
       } catch (err) {
-        setError(isRegistering ? 'Registration failed' : 'Login failed');
+        setError(isRegistering ? 'Registration failed' : 'Login failed')
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
@@ -756,9 +754,9 @@ export default function SecureNotesApp() {
             <button
               type="button"
               onClick={() => {
-                setIsRegistering(!isRegistering);
-                setError(null);
-                setMfaRequired(false);
+                setIsRegistering(!isRegistering)
+                setError(null)
+                setMfaRequired(false)
               }}
               className="w-full text-gray-400 hover:text-white text-sm transition-colors focus:outline-none focus:underline"
             >
@@ -767,51 +765,51 @@ export default function SecureNotesApp() {
           </form>
         </main>
       </div>
-    );
-  };
+    )
+  }
 
   // Notes Editor Component
   const NotesEditor = () => {
-    const [title, setTitle] = useState(selectedNote?.title || '');
-    const [content, setContent] = useState(selectedNote?.content || '');
-    const [saving, setSaving] = useState(false);
-    const [lastSaved, setLastSaved] = useState(null);
-    const [saveError, setSaveError] = useState(null);
+    const [title, setTitle] = useState(selectedNote?.title || '')
+    const [content, setContent] = useState(selectedNote?.content || '')
+    const [saving, setSaving] = useState(false)
+    const [lastSaved, setLastSaved] = useState(null)
+    const [saveError, setSaveError] = useState(null)
 
     const handleSave = async () => {
-      setSaving(true);
-      setSaveError(null);
+      setSaving(true)
+      setSaveError(null)
       try {
         if (selectedNote) {
           // Update existing note
-          await api.updateNote(selectedNote.id, title, content);
+          await api.updateNote(selectedNote.id, title, content)
         } else {
           // Create new note
-          await api.createNote(title, content);
+          await api.createNote(title, content)
         }
-        setLastSaved(new Date());
-        loadNotes();
+        setLastSaved(new Date())
+        loadNotes()
       } catch (err) {
-        console.error('Failed to save note:', err);
-        setSaveError(err.message || 'Failed to save note');
+        console.error('Failed to save note:', err)
+        setSaveError(err.message || 'Failed to save note')
       } finally {
-        setSaving(false);
+        setSaving(false)
       }
-    };
+    }
 
     const autoSave = useMemo(
       () =>
         debounce(() => {
           if (title || content) {
-            handleSave();
+            handleSave()
           }
         }, 2000),
       [title, content]
-    );
+    )
 
     useEffect(() => {
-      autoSave();
-    }, [title, content]);
+      autoSave()
+    }, [title, content])
 
     return (
       <div className="flex-1 flex flex-col" role="main" aria-label="Note editor">
@@ -878,17 +876,17 @@ export default function SecureNotesApp() {
           </p>
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   // Notes List Component
   const NotesList = () => {
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchQuery, setSearchQuery] = useState('')
     
     const filteredNotes = notes.filter(note =>
       note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       note.content.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    )
 
     return (
       <nav className="w-full md:w-80 bg-gray-800 md:border-r border-gray-700 flex flex-col h-full" role="navigation" aria-label="Notes list">
@@ -932,10 +930,10 @@ export default function SecureNotesApp() {
               key={note.id}
               data-note-button
               onClick={() => {
-                setSelectedNote(note);
+                setSelectedNote(note)
                 // On mobile, switch to editor view when selecting a note
                 if (window.innerWidth < 768) {
-                  setCurrentView('editor');
+                  setCurrentView('editor')
                 }
               }}
               className={`w-full text-left p-4 md:p-4 py-6 md:py-4 border-b border-gray-700 cursor-pointer hover:bg-gray-700 active:bg-gray-600 transition focus:outline-none focus:bg-gray-700 focus:ring-2 focus:ring-blue-500/50 ${
@@ -964,8 +962,8 @@ export default function SecureNotesApp() {
         <div className="p-4 border-t border-gray-700">
           <button
             onClick={() => {
-              setSelectedNote(null);
-              setCurrentView('editor');
+              setSelectedNote(null)
+              setCurrentView('editor')
             }}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             aria-describedby="new-note-help"
@@ -977,8 +975,8 @@ export default function SecureNotesApp() {
           </p>
         </div>
       </nav>
-    );
-  };
+    )
+  }
 
   // Main App Layout
   const AppLayout = () => {
@@ -1024,11 +1022,11 @@ export default function SecureNotesApp() {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => {
-                  api.clearToken();
-                  cryptoService.masterKey = null;
-                  setIsAuthenticated(false);
-                  setCurrentView('login');
-                  setEncryptionStatus('locked');
+                  api.clearToken()
+                  cryptoService.masterKey = null
+                  setIsAuthenticated(false)
+                  setCurrentView('login')
+                  setEncryptionStatus('locked')
                 }}
                 className="text-gray-400 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded p-1"
                 aria-label="Sign out"
@@ -1056,8 +1054,8 @@ export default function SecureNotesApp() {
           )}
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   if (initializing) {
     return <LoadingOverlay message="Starting Secure Notes" />;
@@ -1076,18 +1074,18 @@ export default function SecureNotesApp() {
         />
       )}
     </>
-  );
+  )
 }
 
 // Utility function for debouncing
 function debounce(func, wait) {
-  let timeout;
+  let timeout
   return function executedFunction(...args) {
     const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
+      clearTimeout(timeout)
+      func(...args)
+    }
+    clearTimeout(timeout)
+    timeout = setTimeout(later, wait)
+  }
 }

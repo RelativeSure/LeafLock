@@ -1,7 +1,7 @@
 // Test utilities for React components
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
+import React from 'react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { vi } from 'vitest'
 
 // Mock libsodium-wrappers
 export const mockSodium = {
@@ -18,11 +18,11 @@ export const mockSodium = {
   to_base64: vi.fn().mockImplementation((bytes) => 'mocked-base64'),
   crypto_secretbox_easy: vi.fn().mockImplementation(() => new Uint8Array([5, 6, 7, 8])),
   crypto_secretbox_open_easy: vi.fn().mockImplementation(() => new TextEncoder().encode('decrypted')),
-};
+}
 
 // Mock fetch for API calls
-export const mockFetch = vi.fn();
-global.fetch = mockFetch;
+export const mockFetch = vi.fn()
+global.fetch = mockFetch
 
 // Mock localStorage
 export const mockLocalStorage = {
@@ -30,24 +30,24 @@ export const mockLocalStorage = {
   setItem: vi.fn(),
   removeItem: vi.fn(),
   clear: vi.fn(),
-};
-global.localStorage = mockLocalStorage;
+}
+global.localStorage = mockLocalStorage
 
 // Mock crypto.subtle for password derivation
 export const mockCryptoSubtle = {
   importKey: vi.fn().mockResolvedValue('mock-key-material'),
   deriveBits: vi.fn().mockResolvedValue(new ArrayBuffer(32)),
-};
+}
 global.crypto = {
   subtle: mockCryptoSubtle
-};
+}
 
 // Test data factories
 export const createMockUser = (overrides = {}) => ({
   id: 'test-user-id',
   email: 'test@example.com',
   ...overrides
-});
+})
 
 export const createMockNote = (overrides = {}) => ({
   id: 'test-note-id',
@@ -56,7 +56,7 @@ export const createMockNote = (overrides = {}) => ({
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
   ...overrides
-});
+})
 
 export const createMockEncryptedNote = (overrides = {}) => ({
   id: 'test-note-id',
@@ -65,7 +65,7 @@ export const createMockEncryptedNote = (overrides = {}) => ({
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
   ...overrides
-});
+})
 
 // API response mocks
 export const mockApiResponse = (data, status = 200) => {
@@ -73,61 +73,61 @@ export const mockApiResponse = (data, status = 200) => {
     ok: status >= 200 && status < 300,
     status,
     json: vi.fn().mockResolvedValue(data),
-  };
-  return response;
-};
+  }
+  return response
+}
 
 export const mockApiError = (status = 500, message = 'Server Error') => {
   const response = {
     ok: false,
     status,
     json: vi.fn().mockResolvedValue({ error: message }),
-  };
-  return response;
-};
+  }
+  return response
+}
 
 // Custom render function with common providers
 export const renderWithProviders = (ui, options = {}) => {
   const Wrapper = ({ children }) => {
-    return <div data-testid="test-wrapper">{children}</div>;
-  };
+    return <div data-testid="test-wrapper">{children}</div>
+  }
 
-  return render(ui, { wrapper: Wrapper, ...options });
-};
+  return render(ui, { wrapper: Wrapper, ...options })
+}
 
 // Helper functions for common interactions
 export const typeIntoField = async (fieldName, value) => {
-  const field = screen.getByLabelText(fieldName) || screen.getByPlaceholderText(fieldName);
-  fireEvent.change(field, { target: { value } });
-  await waitFor(() => expect(field.value).toBe(value));
-};
+  const field = screen.getByLabelText(fieldName) || screen.getByPlaceholderText(fieldName)
+  fireEvent.change(field, { target: { value } })
+  await waitFor(() => expect(field.value).toBe(value))
+}
 
 export const clickButton = async (buttonText) => {
-  const button = screen.getByRole('button', { name: new RegExp(buttonText, 'i') });
-  fireEvent.click(button);
-};
+  const button = screen.getByRole('button', { name: new RegExp(buttonText, 'i') })
+  fireEvent.click(button)
+}
 
 export const waitForLoading = async () => {
   await waitFor(() => {
-    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
-  });
-};
+    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument()
+  })
+}
 
 export const waitForError = async (errorText) => {
   await waitFor(() => {
-    expect(screen.getByText(new RegExp(errorText, 'i'))).toBeInTheDocument();
-  });
-};
+    expect(screen.getByText(new RegExp(errorText, 'i'))).toBeInTheDocument()
+  })
+}
 
 // Mock CryptoService for consistent testing
 export class MockCryptoService {
   constructor() {
-    this.masterKey = new Uint8Array(32).fill(1);
-    this.sodiumReady = true;
+    this.masterKey = new Uint8Array(32).fill(1)
+    this.sodiumReady = true
   }
 
   async initSodium() {
-    this.sodiumReady = true;
+    this.sodiumReady = true
   }
 
   async deriveKeyFromPassword(password, salt) {
@@ -174,7 +174,7 @@ export class MockSecureAPI {
     }
 
     // Default success response
-    return { success: true };
+    return { success: true }
   }
 
   setToken(token) {
@@ -190,13 +190,13 @@ export class MockSecureAPI {
       token: 'mock-token',
       user_id: 'test-user-id',
       workspace_id: 'test-workspace-id'
-    };
+    }
     
     if (response.token) {
       this.setToken(response.token);
     }
     
-    return response;
+    return response
   }
 
   async login(email, password, mfaCode) {
@@ -205,20 +205,20 @@ export class MockSecureAPI {
       session: 'mock-session',
       user_id: 'test-user-id',
       workspace_id: 'test-workspace-id'
-    };
+    }
     
     if (response.token) {
       this.setToken(response.token);
     }
     
-    return response;
+    return response
   }
 
   async createNote(title, content) {
     return this.responses.get('/notes') || {
       id: 'test-note-id',
       message: 'Note created successfully'
-    };
+    }
   }
 
   async getNotes() {
@@ -227,19 +227,19 @@ export class MockSecureAPI {
       createMockNote({ id: '2', title: 'Note 2' })
     ];
     
-    return mockNotes;
+    return mockNotes
   }
 
   async updateNote(noteId, title, content) {
     return this.responses.get(`/notes/${noteId}`) || {
       message: 'Note updated successfully'
-    };
+    }
   }
 
   async deleteNote(noteId) {
     return this.responses.get(`/notes/${noteId}/delete`) || {
       message: 'Note deleted successfully'
-    };
+    }
   }
 }
 
@@ -249,14 +249,14 @@ export const measureRenderTime = (component) => {
   render(component);
   const end = performance.now();
   return end - start;
-};
+}
 
 export const measureEncryptionTime = async (cryptoService, data) => {
   const start = performance.now();
   await cryptoService.encryptData(data);
   const end = performance.now();
   return end - start;
-};
+}
 
 // Accessibility testing helpers
 export const checkA11y = async () => {
@@ -264,13 +264,13 @@ export const checkA11y = async () => {
   const buttons = screen.getAllByRole('button');
   buttons.forEach(button => {
     expect(button).toHaveAttribute('type');
-  });
+  })
 
   const inputs = screen.getAllByRole('textbox');
   inputs.forEach(input => {
     expect(input).toHaveAttribute('aria-label');
-  });
-};
+  })
+}
 
 // Security testing utilities
 export const checkForXSS = (component, userInput) => {
@@ -288,8 +288,8 @@ export const checkForXSS = (component, userInput) => {
     expect(document.body.innerHTML).not.toContain('javascript:');
     expect(document.body.innerHTML).not.toContain('onerror=');
     expect(document.body.innerHTML).not.toContain('onload=');
-  });
-};
+  })
+}
 
 export const checkForCSRF = (apiCall) => {
   // Verify that API calls include proper headers
@@ -304,7 +304,7 @@ export const checkForCSRF = (apiCall) => {
       })
     })
   );
-};
+}
 
 export default {
   mockSodium,
@@ -328,4 +328,4 @@ export default {
   checkA11y,
   checkForXSS,
   checkForCSRF
-};
+}
