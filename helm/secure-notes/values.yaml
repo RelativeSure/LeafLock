@@ -518,5 +518,5 @@ tests:
   image:
     registry: ""
     repository: curlimages/curl
-    tag: "8.5.0"
+    tag: "8.5.0@sha256:08e466006f0860e54fc299378de998935333e0e130a15f6f98482e9f8dab3058"
     pullPolicy: IfNotPresent
