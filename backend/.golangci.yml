@@ -5,19 +5,12 @@ run:
   timeout: 5m
   issues-exit-code: 1
   tests: true
-  skip-dirs:
-    - vendor/
-    - .git/
-    - tmp/
-  skip-files:
-    - ".*\\.pb\\.go$"
-    - ".*\\.gen\\.go$"
 
 output:
-  format: colored-line-number
+  formats:
+    - format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
-  uniq-by-line: true
   path-prefix: ""
   sort-results: true
 
@@ -246,11 +239,10 @@ linters:
     - gosec         # Security analysis
     - bodyclose     # HTTP body close checks
     - contextcheck  # Context usage validation
-    - execinquery   # SQL injection detection
     - sqlclosecheck # SQL statement close checks
 
     # Performance - Keep important ones
-    - exportloopref # Loop variable reference issues
+    - copyloopvar   # Loop variable reference issues (replacement for exportloopref)
     - makezero      # Slice initialization
     - prealloc      # Slice preallocation
     - unconvert     # Unnecessary type conversions
@@ -312,7 +304,7 @@ linters:
     - gochecknoinits
     - goconst
     - gofumpt
-    - gomnd         # Magic numbers (too strict)
+    - mnd           # Magic numbers (too strict)
     - gomoddirectives
     - gomodguard
     - goprintffuncname
@@ -338,20 +330,22 @@ linters:
     
     # Deprecated or not needed
     - depguard      # We manage dependencies appropriately
-    - exhaustivestruct # Too restrictive
     - exhaustruct   # Too restrictive
     - gochecksumtype # Not needed for this project
-    - goerr113      # Too restrictive for this project
-    - golint        # Deprecated
-    - interfacer    # Deprecated
-    - maligned      # Deprecated
-    - nosnakecase   # We use snake_case for JSON/DB tags
+    - err113        # Too restrictive for this project (renamed from goerr113)
     - paralleltest  # Not all tests need to be parallel
-    - scopelint     # Deprecated
     - testpackage   # Not required for this project
     - godox         # TODO comments (not critical)
 
 issues:
+  exclude-files:
+    - ".*\\.pb\\.go$"
+    - ".*\\.gen\\.go$"
+  exclude-dirs:
+    - vendor/
+    - .git/
+    - tmp/
+  uniq-by-line: true
   exclude-rules:
     # Exclude many linters from running on test files
     - path: _test\.go
@@ -379,7 +373,6 @@ issues:
         - rowserrcheck
         - bodyclose
         - contextcheck
-        - execinquery
         - sqlclosecheck
 
     # Exclude some staticcheck messages
@@ -411,7 +404,7 @@ issues:
     # Exclude magic number issues in tests and main files
     - path: "(main|_test)\\.go"
       linters:
-        - gomnd
+        - mnd
         
     # Exclude some issues in main.go (initialization code)
     - path: "main\\.go"
