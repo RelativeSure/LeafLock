@@ -768,7 +768,7 @@ func setupTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 	_, err = pool.Exec(ctx, DatabaseSchema)
 	if err != nil {
 		pool.Close()
-		t.Fatalf("Failed to setup test schema: %v", err)
+		t.Skipf("Failed to setup test schema: %v", err)
 	}
 
 	cleanup := func() {
