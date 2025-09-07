@@ -1,5 +1,5 @@
 # Containerfile for Podman - More secure than Dockerfile
-FROM docker.io/golang:1.23-alpine AS builder
+FROM docker.io/golang:1.23-alpine@sha256:383395b794dffa5b53012a212365d40c8e37109a626ca30d6151c8348d380b5f AS builder
 
 # Security: Create non-root user at build time
 RUN adduser -D -u 10001 -g 10001 appuser
