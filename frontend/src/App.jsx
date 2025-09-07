@@ -1,5 +1,12 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import * as sodium from 'libsodium-wrappers'
+
+// Constants
+const PBKDF2_ITERATIONS = 600000 // High iteration count for security
+const ENCRYPTION_KEY_BITS = 256
+const AUTOSAVE_DELAY = 2000
+const MIN_PASSWORD_LENGTH = 12
+const STRONG_PASSWORD_LENGTH = 16
 
 // Secure Crypto Service for E2E Encryption
 class CryptoService {
@@ -32,11 +39,11 @@ class CryptoService {
       {
         name: 'PBKDF2',
         salt: salt,
-        iterations: 600000, // High iteration count for security
+        iterations: PBKDF2_ITERATIONS,
         hash: 'SHA-256'
       },
       keyMaterial,
-      256
+      ENCRYPTION_KEY_BITS
     )
 
     return new Uint8Array(derivedBits)
@@ -299,7 +306,8 @@ class SecureAPI {
 
       return await response.json()
     } catch (error) {
-      console.error('API request failed:', error)
+      // Log error for debugging (console.error disabled by ESLint)
+      // console.error('API request failed:', error)
       throw error
     }
   }
@@ -553,8 +561,8 @@ export default function SecureNotesApp() {
 
     const calculatePasswordStrength = (pwd) => {
       let strength = 0
-      if (pwd.length >= 12) strength++
-      if (pwd.length >= 16) strength++
+      if (pwd.length >= MIN_PASSWORD_LENGTH) strength++
+      if (pwd.length >= STRONG_PASSWORD_LENGTH) strength++
       if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) strength++
       if (/[0-9]/.test(pwd)) strength++
       if (/[^A-Za-z0-9]/.test(pwd)) strength++
@@ -574,8 +582,8 @@ export default function SecureNotesApp() {
 
       try {
         if (isRegistering) {
-          if (password.length < 12) {
-            setError('Password must be at least 12 characters')
+          if (password.length < MIN_PASSWORD_LENGTH) {
+            setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
             return
           }
           
@@ -803,13 +811,13 @@ export default function SecureNotesApp() {
           if (title || content) {
             handleSave()
           }
-        }, 2000),
-      [title, content]
+        }, AUTOSAVE_DELAY),
+      [handleSave, title, content]
     )
 
     useEffect(() => {
       autoSave()
-    }, [title, content])
+    }, [autoSave])
 
     return (
       <div className="flex-1 flex flex-col" role="main" aria-label="Note editor">

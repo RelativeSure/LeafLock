@@ -1,5 +1,5 @@
 // Global test setup for Vitest
-import { vi } from 'vitest'
+import { afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
@@ -15,14 +15,14 @@ global.IntersectionObserver = vi.fn(() => ({
   disconnect: vi.fn(),
   observe: vi.fn(),
   unobserve: vi.fn(),
-}));
+}))
 
 // Mock ResizeObserver
 global.ResizeObserver = vi.fn(() => ({
   disconnect: vi.fn(),
   observe: vi.fn(),
   unobserve: vi.fn(),
-}));
+}))
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
@@ -67,8 +67,8 @@ global.performance = {
 }
 
 // Mock requestAnimationFrame
-global.requestAnimationFrame = vi.fn((cb) => setTimeout(cb, 0));
-global.cancelAnimationFrame = vi.fn((id) => clearTimeout(id));
+global.requestAnimationFrame = vi.fn((cb) => setTimeout(cb, 0))
+global.cancelAnimationFrame = vi.fn((id) => clearTimeout(id))
 
 // Mock URL constructor for blob URLs
 global.URL = {
@@ -80,34 +80,34 @@ global.URL = {
 // Mock File and FileReader for upload tests
 global.File = class MockFile {
   constructor(bits, name, options = {}) {
-    this.name = name;
-    this.size = bits.length;
-    this.type = options.type || '';
-    this.lastModified = options.lastModified || Date.now();
+    this.name = name
+    this.size = bits.length
+    this.type = options.type || ''
+    this.lastModified = options.lastModified || Date.now()
   }
 }
 
 global.FileReader = class MockFileReader {
   constructor() {
-    this.readyState = 0;
-    this.result = null;
-    this.error = null;
+    this.readyState = 0
+    this.result = null
+    this.error = null
   }
 
   readAsText(file) {
     setTimeout(() => {
-      this.readyState = 2;
-      this.result = 'mock file content';
+      this.readyState = 2
+      this.result = 'mock file content'
       this.onload?.({ target: this })
-    }, 0);
+    }, 0)
   }
 
   readAsDataURL(file) {
     setTimeout(() => {
-      this.readyState = 2;
-      this.result = 'data:text/plain;base64,bW9jayBmaWxlIGNvbnRlbnQ=';
+      this.readyState = 2
+      this.result = 'data:text/plain;base64,bW9jayBmaWxlIGNvbnRlbnQ='
       this.onload?.({ target: this })
-    }, 0);
+    }, 0)
   }
 }
 

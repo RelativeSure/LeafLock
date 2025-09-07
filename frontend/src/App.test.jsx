@@ -1,21 +1,21 @@
 import React from 'react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import SecureNotesApp from './App.jsx'
 import {
-  mockSodium,
+  MockCryptoService,
+  checkForXSS,
+  clickButton,
+  createMockNote,
+  mockApiError,
+  mockApiResponse,
+  mockCryptoSubtle,
   mockFetch,
   mockLocalStorage,
-  mockCryptoSubtle,
-  mockApiResponse,
-  mockApiError,
-  createMockNote,
+  mockSodium,
   typeIntoField,
-  clickButton,
-  waitForLoading,
-  MockCryptoService,
-  checkForXSS
+  waitForLoading
 } from './test-utils.jsx'
 
 // Mock libsodium-wrappers
