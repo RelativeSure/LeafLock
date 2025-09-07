@@ -37,6 +37,7 @@ func (suite *NotesHandlerTestSuite) SetupTest() {
 	suite.crypto = NewCryptoService(key)
 	
 	suite.handler = &NotesHandler{
+		db:     suite.mockDB,
 		crypto: suite.crypto,
 	}
 	

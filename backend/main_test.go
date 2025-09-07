@@ -15,6 +15,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
@@ -34,22 +36,45 @@ type MockDB struct {
 	mock.Mock
 }
 
-func (m *MockDB) QueryRow(ctx context.Context, sql string, args ...interface{}) *MockRow {
+// pgx interface compatibility methods
+func (m *MockDB) QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row {
 	mockArgs := m.Called(ctx, sql, args)
 	return mockArgs.Get(0).(*MockRow)
 }
 
-func (m *MockDB) Exec(ctx context.Context, sql string, args ...interface{}) (*MockResult, error) {
+func (m *MockDB) Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error) {
 	mockArgs := m.Called(ctx, sql, args)
-	return mockArgs.Get(0).(*MockResult), mockArgs.Error(1)
+	result := mockArgs.Get(0).(*MockResult)
+	return pgconn.NewCommandTag(result.tag), mockArgs.Error(1)
 }
 
-func (m *MockDB) Query(ctx context.Context, sql string, args ...interface{}) (*MockRows, error) {
+func (m *MockDB) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
 	mockArgs := m.Called(ctx, sql, args)
 	return mockArgs.Get(0).(*MockRows), mockArgs.Error(1)
 }
 
-func (m *MockDB) Begin(ctx context.Context) (*MockTx, error) {
+func (m *MockDB) Begin(ctx context.Context) (pgx.Tx, error) {
+	mockArgs := m.Called(ctx)
+	return mockArgs.Get(0).(*MockTx), mockArgs.Error(1)
+}
+
+// Legacy methods for backward compatibility
+func (m *MockDB) QueryRowLegacy(ctx context.Context, sql string, args ...interface{}) *MockRow {
+	mockArgs := m.Called(ctx, sql, args)
+	return mockArgs.Get(0).(*MockRow)
+}
+
+func (m *MockDB) ExecLegacy(ctx context.Context, sql string, args ...interface{}) (*MockResult, error) {
+	mockArgs := m.Called(ctx, sql, args)
+	return mockArgs.Get(0).(*MockResult), mockArgs.Error(1)
+}
+
+func (m *MockDB) QueryLegacy(ctx context.Context, sql string, args ...interface{}) (*MockRows, error) {
+	mockArgs := m.Called(ctx, sql, args)
+	return mockArgs.Get(0).(*MockRows), mockArgs.Error(1)
+}
+
+func (m *MockDB) BeginLegacy(ctx context.Context) (*MockTx, error) {
 	mockArgs := m.Called(ctx)
 	return mockArgs.Get(0).(*MockTx), mockArgs.Error(1)
 }
@@ -88,18 +113,56 @@ func (m *MockRows) Close() {
 	m.closed = true
 }
 
+// Additional methods required by pgx.Rows interface
+func (m *MockRows) Err() error {
+	mockArgs := m.Called()
+	return mockArgs.Error(0)
+}
+
+func (m *MockRows) CommandTag() pgconn.CommandTag {
+	mockArgs := m.Called()
+	return pgconn.NewCommandTag(mockArgs.String(0))
+}
+
+func (m *MockRows) FieldDescriptions() []pgconn.FieldDescription {
+	mockArgs := m.Called()
+	return mockArgs.Get(0).([]pgconn.FieldDescription)
+}
+
+func (m *MockRows) Values() ([]interface{}, error) {
+	mockArgs := m.Called()
+	return mockArgs.Get(0).([]interface{}), mockArgs.Error(1)
+}
+
+func (m *MockRows) RawValues() [][]byte {
+	mockArgs := m.Called()
+	return mockArgs.Get(0).([][]byte)
+}
+
+func (m *MockRows) Conn() *pgx.Conn {
+	mockArgs := m.Called()
+	return mockArgs.Get(0).(*pgx.Conn)
+}
+
 type MockTx struct {
 	mock.Mock
 }
 
-func (m *MockTx) QueryRow(ctx context.Context, sql string, args ...interface{}) *MockRow {
+// pgx.Tx interface methods
+func (m *MockTx) QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row {
 	mockArgs := m.Called(ctx, sql, args)
 	return mockArgs.Get(0).(*MockRow)
 }
 
-func (m *MockTx) Exec(ctx context.Context, sql string, args ...interface{}) (*MockResult, error) {
+func (m *MockTx) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
 	mockArgs := m.Called(ctx, sql, args)
-	return mockArgs.Get(0).(*MockResult), mockArgs.Error(1)
+	return mockArgs.Get(0).(*MockRows), mockArgs.Error(1)
+}
+
+func (m *MockTx) Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error) {
+	mockArgs := m.Called(ctx, sql, args)
+	result := mockArgs.Get(0).(*MockResult)
+	return pgconn.NewCommandTag(result.tag), mockArgs.Error(1)
 }
 
 func (m *MockTx) Rollback(ctx context.Context) error {
@@ -112,8 +175,45 @@ func (m *MockTx) Commit(ctx context.Context) error {
 	return mockArgs.Error(0)
 }
 
+// Additional methods required by pgx.Tx interface
+func (m *MockTx) Begin(ctx context.Context) (pgx.Tx, error) {
+	mockArgs := m.Called(ctx)
+	return mockArgs.Get(0).(pgx.Tx), mockArgs.Error(1)
+}
+
+func (m *MockTx) CopyFrom(ctx context.Context, tableName pgx.Identifier, columnNames []string, rowSrc pgx.CopyFromSource) (int64, error) {
+	mockArgs := m.Called(ctx, tableName, columnNames, rowSrc)
+	return mockArgs.Get(0).(int64), mockArgs.Error(1)
+}
+
+func (m *MockTx) SendBatch(ctx context.Context, b *pgx.Batch) pgx.BatchResults {
+	mockArgs := m.Called(ctx, b)
+	return mockArgs.Get(0).(pgx.BatchResults)
+}
+
+func (m *MockTx) LargeObjects() pgx.LargeObjects {
+	mockArgs := m.Called()
+	return mockArgs.Get(0).(pgx.LargeObjects)
+}
+
+func (m *MockTx) Prepare(ctx context.Context, name, sql string) (*pgconn.StatementDescription, error) {
+	mockArgs := m.Called(ctx, name, sql)
+	return mockArgs.Get(0).(*pgconn.StatementDescription), mockArgs.Error(1)
+}
+
+func (m *MockTx) Deallocate(ctx context.Context, name string) error {
+	mockArgs := m.Called(ctx, name)
+	return mockArgs.Error(0)
+}
+
+func (m *MockTx) Conn() *pgx.Conn {
+	mockArgs := m.Called()
+	return mockArgs.Get(0).(*pgx.Conn)
+}
+
 type MockResult struct {
 	mock.Mock
+	tag string
 }
 
 func (m *MockResult) RowsAffected() int64 {
@@ -380,6 +480,7 @@ func (suite *AuthHandlerTestSuite) SetupTest() {
 	}
 	
 	suite.handler = &AuthHandler{
+		db:     suite.mockDB,
 		crypto: suite.crypto,
 		config: suite.config,
 	}
