@@ -7,10 +7,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/http/httptest"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -155,6 +153,10 @@ func TestCryptoService(t *testing.T) {
 		
 		decrypted, err := crypto.Decrypt(ciphertext)
 		assert.NoError(t, err)
+		// Handle the case where empty data might return nil instead of empty slice
+		if decrypted == nil {
+			decrypted = []byte("")
+		}
 		assert.Equal(t, plaintext, decrypted)
 	})
 
