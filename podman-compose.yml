@@ -4,7 +4,7 @@ version: '3.8'
 services:
   # PostgreSQL with automatic SSL setup - Podman optimized
   postgres:
-    image: docker.io/library/postgres:15-alpine
+    image: docker.io/library/postgres:15-alpine@sha256:987b242173006d6df08506f10b967a71478a3610664cfefbc49b9c775d3d0eed
     container_name: secure-notes-postgres
     hostname: postgres
     environment:
@@ -40,7 +40,7 @@ services:
 
   # Redis for session management - Podman optimized
   redis:
-    image: docker.io/library/redis:7-alpine
+    image: docker.io/library/redis:7-alpine@sha256:bb186d083732f669da90be8b0f975a37812b15e913465bb14d845db72a4e3e08
     container_name: secure-notes-redis
     hostname: redis
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-ChangeThisRedisPassword123!}
@@ -156,7 +156,7 @@ spec:
   restartPolicy: Always
   containers:
   - name: postgres
-    image: docker.io/library/postgres:15-alpine
+    image: docker.io/library/postgres:15-alpine@sha256:987b242173006d6df08506f10b967a71478a3610664cfefbc49b9c775d3d0eed
     env:
     - name: POSTGRES_PASSWORD
       value: "ChangeThisSecurePassword123!"
@@ -193,7 +193,7 @@ spec:
         cpu: "100m"
         
   - name: redis
-    image: docker.io/library/redis:7-alpine
+    image: docker.io/library/redis:7-alpine@sha256:bb186d083732f669da90be8b0f975a37812b15e913465bb14d845db72a4e3e08
     command:
     - redis-server
     - --appendonly
