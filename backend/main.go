@@ -851,7 +851,23 @@ func JWTMiddleware(secret []byte) fiber.Handler {
 		}
 
 		claims := parsed.Claims.(jwt.MapClaims)
-		userID, _ := uuid.Parse(claims["user_id"].(string))
+		
+		// Safely extract user_id claim
+		userIDClaim, exists := claims["user_id"]
+		if !exists {
+			return c.Status(401).JSON(fiber.Map{"error": "Missing user_id claim"})
+		}
+		
+		userIDStr, ok := userIDClaim.(string)
+		if !ok {
+			return c.Status(401).JSON(fiber.Map{"error": "Invalid user_id claim type"})
+		}
+		
+		userID, err := uuid.Parse(userIDStr)
+		if err != nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Invalid user_id format"})
+		}
+		
 		c.Locals("user_id", userID)
 
 		return c.Next()
@@ -883,6 +899,7 @@ func main() {
 	// Create Fiber app with security middleware
 	app := fiber.New(fiber.Config{
 		DisableStartupMessage: false,
+		BodyLimit:             512 * 1024, // 512KB body size limit
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			if e, ok := err.(*fiber.Error); ok {

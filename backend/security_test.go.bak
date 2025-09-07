@@ -756,10 +756,18 @@ func TestPenetrationTesting(t *testing.T) {
 		app := fiber.New()
 		app.Get("/file/:filename", func(c *fiber.Ctx) error {
 			filename := c.Params("filename")
-			// Simulate file access with path validation
-			if strings.Contains(filename, "..") || strings.Contains(filename, "\\") {
+			
+			// Check for directory traversal attempts
+			// This should catch all forms including URL-encoded patterns
+			if strings.Contains(filename, "..") || 
+			   strings.Contains(filename, "\\") ||
+			   strings.Contains(filename, "%2e%2e") || // URL-encoded ".."
+			   strings.Contains(filename, "%2E%2E") || // URL-encoded ".." (uppercase)
+			   strings.Contains(filename, "..%2f") ||  // Mixed encoding
+			   strings.Contains(filename, "..%2F") {   // Mixed encoding (uppercase)
 				return c.Status(403).JSON(fiber.Map{"error": "Access denied"})
 			}
+			
 			return c.JSON(fiber.Map{"file": filename})
 		})
 
