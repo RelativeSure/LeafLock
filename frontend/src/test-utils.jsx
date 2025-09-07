@@ -1,6 +1,6 @@
 // Test utilities for React components
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
 
 // Mock libsodium-wrappers
@@ -131,46 +131,46 @@ export class MockCryptoService {
   }
 
   async deriveKeyFromPassword(password, salt) {
-    return new Uint8Array(32).fill(1);
+    return new Uint8Array(32).fill(1)
   }
 
   async encryptData(plaintext) {
-    return btoa(plaintext); // Simple base64 encoding for tests
+    return btoa(plaintext) // Simple base64 encoding for tests
   }
 
   async decryptData(encryptedData) {
-    return atob(encryptedData); // Simple base64 decoding for tests
+    return atob(encryptedData) // Simple base64 decoding for tests
   }
 
   async generateSalt() {
-    return new Uint8Array(32).fill(1);
+    return new Uint8Array(32).fill(1)
   }
 
   async setMasterKey(key) {
-    this.masterKey = key;
+    this.masterKey = key
   }
 }
 
 // Mock SecureAPI for consistent testing
 export class MockSecureAPI {
   constructor() {
-    this.token = null;
-    this.responses = new Map();
-    this.mockCrypto = new MockCryptoService();
+    this.token = null
+    this.responses = new Map()
+    this.mockCrypto = new MockCryptoService()
   }
 
   // Set mock responses for specific endpoints
   setMockResponse(endpoint, response) {
-    this.responses.set(endpoint, response);
+    this.responses.set(endpoint, response)
   }
 
   async request(endpoint, options = {}) {
-    const mockResponse = this.responses.get(endpoint);
+    const mockResponse = this.responses.get(endpoint)
     if (mockResponse) {
       if (mockResponse.error) {
-        throw new Error(mockResponse.error);
+        throw new Error(mockResponse.error)
       }
-      return mockResponse;
+      return mockResponse
     }
 
     // Default success response
@@ -178,11 +178,11 @@ export class MockSecureAPI {
   }
 
   setToken(token) {
-    this.token = token;
+    this.token = token
   }
 
   clearToken() {
-    this.token = null;
+    this.token = null
   }
 
   async register(email, password) {
@@ -191,11 +191,11 @@ export class MockSecureAPI {
       user_id: 'test-user-id',
       workspace_id: 'test-workspace-id'
     }
-    
+
     if (response.token) {
-      this.setToken(response.token);
+      this.setToken(response.token)
     }
-    
+
     return response
   }
 
@@ -206,11 +206,11 @@ export class MockSecureAPI {
       user_id: 'test-user-id',
       workspace_id: 'test-workspace-id'
     }
-    
+
     if (response.token) {
-      this.setToken(response.token);
+      this.setToken(response.token)
     }
-    
+
     return response
   }
 
@@ -225,8 +225,8 @@ export class MockSecureAPI {
     const mockNotes = this.responses.get('/notes/list') || [
       createMockNote({ id: '1', title: 'Note 1' }),
       createMockNote({ id: '2', title: 'Note 2' })
-    ];
-    
+    ]
+
     return mockNotes
   }
 
@@ -245,57 +245,57 @@ export class MockSecureAPI {
 
 // Performance testing utilities
 export const measureRenderTime = (component) => {
-  const start = performance.now();
-  render(component);
-  const end = performance.now();
-  return end - start;
+  const start = performance.now()
+  render(component)
+  const end = performance.now()
+  return end - start
 }
 
 export const measureEncryptionTime = async (cryptoService, data) => {
-  const start = performance.now();
-  await cryptoService.encryptData(data);
-  const end = performance.now();
-  return end - start;
+  const start = performance.now()
+  await cryptoService.encryptData(data)
+  const end = performance.now()
+  return end - start
 }
 
 // Accessibility testing helpers
 export const checkA11y = async () => {
   // Check for basic accessibility attributes
-  const buttons = screen.getAllByRole('button');
+  const buttons = screen.getAllByRole('button')
   buttons.forEach(button => {
-    expect(button).toHaveAttribute('type');
+    expect(button).toHaveAttribute('type')
   })
 
-  const inputs = screen.getAllByRole('textbox');
+  const inputs = screen.getAllByRole('textbox')
   inputs.forEach(input => {
-    expect(input).toHaveAttribute('aria-label');
+    expect(input).toHaveAttribute('aria-label')
   })
 }
 
 // Security testing utilities
-export const checkForXSS = (component, userInput) => {
+export const checkForXSS = (component, _userInput) => {
   const maliciousInputs = [
     '<script>alert("xss")</script>',
-    'javascript:alert("xss")',
+    'data:text/html,<script>alert("xss")</script>',
     '"><img src=x onerror=alert("xss")>',
-    '\"><svg onload=alert("xss")>'
-  ];
+    '"><svg onload=alert("xss")>'
+  ]
 
-  maliciousInputs.forEach(input => {
-    render(component);
+  maliciousInputs.forEach(_input => {
+    render(component)
     // Verify that malicious input is properly escaped
-    expect(document.body.innerHTML).not.toContain('<script>');
-    expect(document.body.innerHTML).not.toContain('javascript:');
-    expect(document.body.innerHTML).not.toContain('onerror=');
-    expect(document.body.innerHTML).not.toContain('onload=');
+    expect(document.body.innerHTML).not.toContain('<script>')
+    expect(document.body.innerHTML).not.toContain('data:text/html')
+    expect(document.body.innerHTML).not.toContain('onerror=')
+    expect(document.body.innerHTML).not.toContain('onload=')
   })
 }
 
 export const checkForCSRF = (apiCall) => {
   // Verify that API calls include proper headers
-  const mockCall = vi.fn();
-  apiCall(mockCall);
-  
+  const mockCall = vi.fn()
+  apiCall(mockCall)
+
   expect(mockCall).toHaveBeenCalledWith(
     expect.anything(),
     expect.objectContaining({
@@ -303,7 +303,7 @@ export const checkForCSRF = (apiCall) => {
         'Content-Type': 'application/json'
       })
     })
-  );
+  )
 }
 
 export default {

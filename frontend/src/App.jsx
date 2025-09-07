@@ -38,7 +38,7 @@ class CryptoService {
     const derivedBits = await window.crypto.subtle.deriveBits(
       {
         name: 'PBKDF2',
-        salt: salt,
+        salt,
         iterations: PBKDF2_ITERATIONS,
         hash: 'SHA-256'
       },
@@ -55,7 +55,7 @@ class CryptoService {
     const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES)
     const messageBytes = sodium.from_string(plaintext)
     const ciphertext = sodium.crypto_secretbox_easy(messageBytes, nonce, this.masterKey)
-    
+
     // Combine nonce and ciphertext
     const combined = new Uint8Array(nonce.length + ciphertext.length)
     combined.set(nonce)
@@ -127,7 +127,7 @@ const ErrorBoundary = ({ error, onRetry, onDismiss, className = '' }) => {
 
   const getErrorSuggestions = (error) => {
     const message = getErrorMessage(error).toLowerCase()
-    
+
     if (message.includes('network') || message.includes('fetch')) {
       return 'Check your internet connection and try again.'
     }
@@ -150,7 +150,7 @@ const ErrorBoundary = ({ error, onRetry, onDismiss, className = '' }) => {
           <h3 className="text-red-200 font-medium mb-1">Something went wrong</h3>
           <p className="text-red-300 text-sm mb-2">{getErrorMessage(error)}</p>
           <p className="text-red-400 text-xs mb-4">{getErrorSuggestions(error)}</p>
-          
+
           <div className="flex space-x-3">
             {onRetry && (
               <button
@@ -179,7 +179,7 @@ const ErrorBoundary = ({ error, onRetry, onDismiss, className = '' }) => {
 const OnboardingOverlay = ({ step, onNext, onPrev, onSkip, onComplete }) => {
   const onboardingSteps = [
     {
-      title: "Welcome to Secure Notes!",
+      title: 'Welcome to Secure Notes!',
       content: "Your notes are protected with end-to-end encryption. Only you can read your content, even we can't see it.",
       icon: (
         <svg className="w-12 h-12 text-blue-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -188,7 +188,7 @@ const OnboardingOverlay = ({ step, onNext, onPrev, onSkip, onComplete }) => {
       ),
     },
     {
-      title: "Create Your First Note",
+      title: 'Create Your First Note',
       content: "Click 'New Encrypted Note' to start writing. Your notes are automatically saved and encrypted as you type.",
       icon: (
         <svg className="w-12 h-12 text-green-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -197,8 +197,8 @@ const OnboardingOverlay = ({ step, onNext, onPrev, onSkip, onComplete }) => {
       ),
     },
     {
-      title: "Search and Organize",
-      content: "Use the search bar to quickly find your notes. All searching happens locally - your data never leaves your device unencrypted.",
+      title: 'Search and Organize',
+      content: 'Use the search bar to quickly find your notes. All searching happens locally - your data never leaves your device unencrypted.',
       icon: (
         <svg className="w-12 h-12 text-purple-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -206,7 +206,7 @@ const OnboardingOverlay = ({ step, onNext, onPrev, onSkip, onComplete }) => {
       ),
     },
     {
-      title: "Stay Secure",
+      title: 'Stay Secure',
       content: "Always log out when you're done, especially on shared computers. Your encryption keys are tied to your session.",
       icon: (
         <svg className="w-12 h-12 text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -214,7 +214,7 @@ const OnboardingOverlay = ({ step, onNext, onPrev, onSkip, onComplete }) => {
         </svg>
       ),
     },
-  ];
+  ]
 
   const currentStep = onboardingSteps[step] || onboardingSteps[0]
   const isLastStep = step === onboardingSteps.length - 1
@@ -226,7 +226,7 @@ const OnboardingOverlay = ({ step, onNext, onPrev, onSkip, onComplete }) => {
           {currentStep.icon}
           <h2 className="text-2xl font-bold text-white mb-4">{currentStep.title}</h2>
           <p className="text-gray-300 mb-6 leading-relaxed">{currentStep.content}</p>
-          
+
           <div className="flex justify-center mb-6">
             <div className="flex space-x-2">
               {onboardingSteps.map((_, index) => (
@@ -239,7 +239,7 @@ const OnboardingOverlay = ({ step, onNext, onPrev, onSkip, onComplete }) => {
               ))}
             </div>
           </div>
-          
+
           <div className="flex justify-between">
             <button
               onClick={onSkip}
@@ -247,7 +247,7 @@ const OnboardingOverlay = ({ step, onNext, onPrev, onSkip, onComplete }) => {
             >
               Skip Tour
             </button>
-            
+
             <div className="flex space-x-3">
               {step > 0 && (
                 <button
@@ -289,27 +289,21 @@ class SecureAPI {
       headers['Authorization'] = `Bearer ${this.token}`
     }
 
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers,
-        credentials: 'include',
-        mode: 'cors'
-      })
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: 'include',
+      mode: 'cors'
+    })
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          this.handleUnauthorized()
-        }
-        throw new Error(`HTTP ${response.status}`)
+    if (!response.ok) {
+      if (response.status === 401) {
+        this.handleUnauthorized()
       }
-
-      return await response.json()
-    } catch (error) {
-      // Log error for debugging (console.error disabled by ESLint)
-      // console.error('API request failed:', error)
-      throw error
+      throw new Error(`HTTP ${response.status}`)
     }
+
+    return await response.json()
   }
 
   handleUnauthorized() {
@@ -332,11 +326,11 @@ class SecureAPI {
       method: 'POST',
       body: JSON.stringify({ email, password })
     })
-    
+
     if (response.token) {
       this.setToken(response.token)
     }
-    
+
     return response
   }
 
@@ -345,11 +339,11 @@ class SecureAPI {
       method: 'POST',
       body: JSON.stringify({ email, password, mfa_code: mfaCode })
     })
-    
+
     if (response.token) {
       this.setToken(response.token)
     }
-    
+
     return response
   }
 
@@ -357,7 +351,7 @@ class SecureAPI {
     // Encrypt note content before sending
     const encryptedTitle = await cryptoService.encryptData(title)
     const encryptedContent = await cryptoService.encryptData(JSON.stringify(content))
-    
+
     return this.request('/notes', {
       method: 'POST',
       body: JSON.stringify({
@@ -370,7 +364,7 @@ class SecureAPI {
   async getNotes() {
     const response = await this.request('/notes')
     const notes = response.notes || response || []
-    
+
     // Decrypt notes
     const decryptedNotes = await Promise.all(
       notes.map(async (note) => {
@@ -378,13 +372,13 @@ class SecureAPI {
           const title = await cryptoService.decryptData(note.title_encrypted)
           const content = JSON.parse(await cryptoService.decryptData(note.content_encrypted))
           return { ...note, title, content }
-        } catch (err) {
+        } catch (_err) {
           console.error('Failed to decrypt note:', note.id)
           return null
         }
       })
     )
-    
+
     return decryptedNotes.filter(note => note !== null)
   }
 
@@ -392,7 +386,7 @@ class SecureAPI {
     // Encrypt note content before sending
     const encryptedTitle = await cryptoService.encryptData(title)
     const encryptedContent = await cryptoService.encryptData(JSON.stringify(content))
-    
+
     return this.request(`/notes/${noteId}`, {
       method: 'PUT',
       body: JSON.stringify({
@@ -434,7 +428,7 @@ export default function SecureNotesApp() {
           setIsAuthenticated(true)
           setCurrentView('notes')
           await loadNotes()
-          
+
           // Check if user needs onboarding
           const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding')
           if (!hasSeenOnboarding) {
@@ -448,7 +442,7 @@ export default function SecureNotesApp() {
         setInitializing(false)
       }
     }
-    
+
     initializeApp()
   }, [])
 
@@ -498,10 +492,10 @@ export default function SecureNotesApp() {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         const noteButtons = document.querySelectorAll('[data-note-button]')
         const currentIndex = Array.from(noteButtons).findIndex(btn => btn === document.activeElement)
-        
+
         if (currentIndex !== -1) {
           e.preventDefault()
-          let nextIndex;
+          let nextIndex
           if (e.key === 'ArrowDown') {
             nextIndex = Math.min(currentIndex + 1, noteButtons.length - 1)
           } else {
@@ -586,18 +580,18 @@ export default function SecureNotesApp() {
             setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
             return
           }
-          
+
           const response = await api.register(email, password)
-          
+
           // Derive encryption key from password
           const salt = response.salt ? sodium.from_base64(response.salt) : await cryptoService.generateSalt()
           const key = await cryptoService.deriveKeyFromPassword(password, salt)
           await cryptoService.setMasterKey(key)
-          
+
           setIsAuthenticated(true)
           setCurrentView('notes')
           setEncryptionStatus('unlocked')
-          
+
           // Check if this is a new user
           const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding')
           if (!hasSeenOnboarding) {
@@ -605,23 +599,23 @@ export default function SecureNotesApp() {
           }
         } else {
           const response = await api.login(email, password, mfaCode)
-          
+
           if (response.mfa_required) {
             setMfaRequired(true)
             return
           }
-          
+
           // Derive encryption key from password (we'll store this in localStorage for this demo)
           const salt = response.salt ? sodium.from_base64(response.salt) : await cryptoService.generateSalt()
           const key = await cryptoService.deriveKeyFromPassword(password, salt)
           await cryptoService.setMasterKey(key)
-          
+
           setIsAuthenticated(true)
           setCurrentView('notes')
           setEncryptionStatus('unlocked')
           loadNotes()
         }
-      } catch (err) {
+      } catch (_err) {
         setError(isRegistering ? 'Registration failed' : 'Login failed')
       } finally {
         setLoading(false)
@@ -639,7 +633,7 @@ export default function SecureNotesApp() {
               <h1 className="text-2xl font-bold text-white">Secure Notes</h1>
             </div>
           </header>
-          
+
           <div className="bg-yellow-900/50 border border-yellow-600 rounded-lg p-4 mb-6" role="note" aria-label="Security information">
             <p className="text-yellow-200 text-sm">
               <span className="sr-only">Security features: </span>
@@ -676,7 +670,7 @@ export default function SecureNotesApp() {
                 className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors"
                 required
                 minLength={12}
-                autoComplete={isRegistering ? "new-password" : "current-password"}
+                autoComplete={isRegistering ? 'new-password' : 'current-password'}
                 aria-describedby={isRegistering ? 'password-strength password-help' : undefined}
               />
               {isRegistering && (
@@ -687,8 +681,8 @@ export default function SecureNotesApp() {
                         key={i}
                         className={`h-2 flex-1 rounded ${
                           i < passwordStrength
-                            ? passwordStrength <= 2 ? 'bg-red-500' 
-                              : passwordStrength <= 3 ? 'bg-yellow-500' 
+                            ? passwordStrength <= 2 ? 'bg-red-500'
+                              : passwordStrength <= 3 ? 'bg-yellow-500'
                               : 'bg-green-500'
                             : 'bg-gray-600'
                         }`}
@@ -855,10 +849,10 @@ export default function SecureNotesApp() {
             </span>
           </div>
         </header>
-        
+
         {saveError && (
           <div className="px-6 py-2">
-            <ErrorBoundary 
+            <ErrorBoundary
               error={saveError}
               onRetry={handleSave}
               onDismiss={() => setSaveError(null)}
@@ -866,7 +860,7 @@ export default function SecureNotesApp() {
             />
           </div>
         )}
-        
+
         <div className="flex-1 p-6">
           <label htmlFor="note-content" className="sr-only">
             Note content
@@ -890,7 +884,7 @@ export default function SecureNotesApp() {
   // Notes List Component
   const NotesList = () => {
     const [searchQuery, setSearchQuery] = useState('')
-    
+
     const filteredNotes = notes.filter(note =>
       note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       note.content.toLowerCase().includes(searchQuery.toLowerCase())
@@ -920,11 +914,11 @@ export default function SecureNotesApp() {
             </p>
           </div>
         </div>
-        
+
         <div className="flex-1 overflow-y-auto" role="list" aria-label="Notes">
           {notesError ? (
             <div className="p-4">
-              <ErrorBoundary 
+              <ErrorBoundary
                 error={notesError}
                 onRetry={() => loadNotes()}
                 onDismiss={() => setNotesError(null)}
@@ -966,7 +960,7 @@ export default function SecureNotesApp() {
             </div>
           )}
         </div>
-        
+
         <div className="p-4 border-t border-gray-700">
           <button
             onClick={() => {
@@ -1012,7 +1006,7 @@ export default function SecureNotesApp() {
         <div className={`${currentView === 'notes' || selectedNote || currentView === 'editor' ? 'hidden md:block' : 'block'} w-full md:w-80`}>
           <NotesList />
         </div>
-        
+
         <div className={`${currentView === 'notes' && !selectedNote && currentView !== 'editor' ? 'hidden md:flex' : 'flex'} flex-1 flex-col`}>
           <header className="hidden md:flex bg-gray-800 border-b border-gray-700 px-6 py-3 items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -1026,7 +1020,7 @@ export default function SecureNotesApp() {
                 </span>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => {
@@ -1046,7 +1040,7 @@ export default function SecureNotesApp() {
               </button>
             </div>
           </header>
-          
+
           {selectedNote || currentView === 'editor' ? (
             <NotesEditor />
           ) : (
@@ -1066,14 +1060,14 @@ export default function SecureNotesApp() {
   }
 
   if (initializing) {
-    return <LoadingOverlay message="Starting Secure Notes" />;
+    return <LoadingOverlay message="Starting Secure Notes" />
   }
 
   return (
     <>
       {isAuthenticated ? <AppLayout /> : <LoginView />}
       {showOnboarding && isAuthenticated && (
-        <OnboardingOverlay 
+        <OnboardingOverlay
           step={onboardingStep}
           onNext={handleOnboardingNext}
           onPrev={handleOnboardingPrev}

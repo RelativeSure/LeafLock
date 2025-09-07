@@ -1,38 +1,38 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import SecureNotesApp from './App.jsx'
 import {
-  mockSodium,
+  createMockEncryptedNote,
+  createMockNote,
+  mockApiError,
+  mockApiResponse,
   mockFetch,
   mockLocalStorage,
-  mockApiResponse,
-  mockApiError,
-  createMockNote,
-  createMockEncryptedNote
+  mockSodium
 } from './test-utils.jsx'
 
 // Mock libsodium for E2E tests
-vi.mock('libsodium-wrappers', () => mockSodium);
+vi.mock('libsodium-wrappers', () => mockSodium)
 
 // Mock fetch globally
-global.fetch = mockFetch;
-global.localStorage = mockLocalStorage;
+global.fetch = mockFetch
+global.localStorage = mockLocalStorage
 
 describe('End-to-End User Flows', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockLocalStorage.clear();
-    mockFetch.mockClear();
+    vi.clearAllMocks()
+    mockLocalStorage.clear()
+    mockFetch.mockClear()
   })
 
   afterEach(() => {
-    vi.resetAllMocks();
+    vi.resetAllMocks()
   })
 
   describe('Complete Registration Flow', () => {
     it('allows user to register, create notes, and manage them', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup()
 
       // Mock successful registration
       mockFetch.mockResolvedValueOnce(mockApiResponse({
@@ -40,16 +40,16 @@ describe('End-to-End User Flows', () => {
         user_id: 'user-123',
         workspace_id: 'workspace-456',
         message: 'Registration successful'
-      }));
+      }))
 
       // Mock initial notes load (empty)
-      mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: [] }));
+      mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: [] }))
 
       // Mock note creation
       mockFetch.mockResolvedValueOnce(mockApiResponse({
         id: 'note-1',
         message: 'Note created successfully'
-      }));
+      }))
 
       // Mock notes reload after creation
       mockFetch.mockResolvedValueOnce(mockApiResponse({
@@ -60,19 +60,19 @@ describe('End-to-End User Flows', () => {
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z'
         }]
-      }));
+      }))
 
-      render(<SecureNotesApp />);
+      render(<SecureNotesApp />)
 
       // Step 1: Register a new account
-      expect(screen.getByText('Secure Notes')).toBeInTheDocument();
-      
-      await user.click(screen.getByText(/need an account\? register/i));
-      
-      await user.type(screen.getByLabelText(/email/i), 'newuser@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'SuperSecurePassword123!');
-      
-      await user.click(screen.getByRole('button', { name: /create secure account/i }));
+      expect(screen.getByText('Secure Notes')).toBeInTheDocument()
+
+      await user.click(screen.getByText(/need an account\? register/i))
+
+      await user.type(screen.getByLabelText(/email/i), 'newuser@example.com')
+      await user.type(screen.getByLabelText(/password/i), 'SuperSecurePassword123!')
+
+      await user.click(screen.getByRole('button', { name: /create secure account/i }))
 
       // Verify registration API call
       expect(mockFetch).toHaveBeenCalledWith(
@@ -81,65 +81,65 @@ describe('End-to-End User Flows', () => {
           method: 'POST',
           body: expect.stringContaining('newuser@example.com')
         })
-      );
+      )
 
       // Step 2: Should automatically transition to notes view
       await waitFor(() => {
-        expect(screen.getByText(/encryption active/i)).toBeInTheDocument();
+        expect(screen.getByText(/encryption active/i)).toBeInTheDocument()
       })
 
       // Step 3: Create first note
-      await user.click(screen.getByText(/new encrypted note/i));
-      
-      const titleField = screen.getByPlaceholderText(/note title/i);
-      const contentField = screen.getByPlaceholderText(/start writing/i);
-      
-      await user.type(titleField, 'My First Note');
-      await user.type(contentField, 'This is my first secure note!');
+      await user.click(screen.getByText(/new encrypted note/i))
+
+      const titleField = screen.getByPlaceholderText(/note title/i)
+      const contentField = screen.getByPlaceholderText(/start writing/i)
+
+      await user.type(titleField, 'My First Note')
+      await user.type(contentField, 'This is my first secure note!')
 
       // Wait for auto-save
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith(
           expect.stringContaining('/notes'),
           expect.objectContaining({ method: 'POST' })
-        );
+        )
       }, { timeout: 3000 })
 
       // Step 4: Verify note appears in list
       await waitFor(() => {
-        expect(screen.getByText('My First Note')).toBeInTheDocument();
+        expect(screen.getByText('My First Note')).toBeInTheDocument()
       })
 
       // Step 5: Verify token was stored
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('secure_token', 'new-user-token');
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('secure_token', 'new-user-token')
     })
 
     it('handles registration errors gracefully', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup()
 
       // Mock registration failure
-      mockFetch.mockResolvedValueOnce(mockApiError(409, 'Email already registered'));
+      mockFetch.mockResolvedValueOnce(mockApiError(409, 'Email already registered'))
 
-      render(<SecureNotesApp />);
+      render(<SecureNotesApp />)
 
-      await user.click(screen.getByText(/need an account\? register/i));
-      await user.type(screen.getByLabelText(/email/i), 'existing@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'SecurePassword123!');
-      await user.click(screen.getByRole('button', { name: /create secure account/i }));
+      await user.click(screen.getByText(/need an account\? register/i))
+      await user.type(screen.getByLabelText(/email/i), 'existing@example.com')
+      await user.type(screen.getByLabelText(/password/i), 'SecurePassword123!')
+      await user.click(screen.getByRole('button', { name: /create secure account/i }))
 
       await waitFor(() => {
-        expect(screen.getByText(/registration failed/i)).toBeInTheDocument();
+        expect(screen.getByText(/registration failed/i)).toBeInTheDocument()
       })
 
       // Should remain on registration form
-      expect(screen.getByRole('button', { name: /create secure account/i })).toBeInTheDocument();
-      expect(mockLocalStorage.setItem).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: /create secure account/i })).toBeInTheDocument()
+      expect(mockLocalStorage.setItem).not.toHaveBeenCalled()
     })
   })
 
   describe('Complete Login and Notes Management Flow', () => {
     it('allows existing user to login and manage notes', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup()
 
       // Mock successful login
       mockFetch.mockResolvedValueOnce(mockApiResponse({
@@ -147,7 +147,7 @@ describe('End-to-End User Flows', () => {
         session: 'session-123',
         user_id: 'user-456',
         workspace_id: 'workspace-789'
-      }));
+      }))
 
       // Mock initial notes load
       const existingNotes = [
@@ -161,11 +161,11 @@ describe('End-to-End User Flows', () => {
           title_encrypted: btoa('Personal Journal'),
           content_encrypted: btoa(JSON.stringify('Personal thoughts'))
         })
-      ];
-      mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: existingNotes }));
+      ]
+      mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: existingNotes }))
 
       // Mock note update
-      mockFetch.mockResolvedValueOnce(mockApiResponse({ message: 'Note updated successfully' }));
+      mockFetch.mockResolvedValueOnce(mockApiResponse({ message: 'Note updated successfully' }))
 
       // Mock notes reload after update
       mockFetch.mockResolvedValueOnce(mockApiResponse({
@@ -177,86 +177,86 @@ describe('End-to-End User Flows', () => {
             content_encrypted: btoa(JSON.stringify('Updated personal thoughts'))
           }
         ]
-      }));
+      }))
 
       // Mock note deletion
-      mockFetch.mockResolvedValueOnce(mockApiResponse({ message: 'Note deleted successfully' }));
+      mockFetch.mockResolvedValueOnce(mockApiResponse({ message: 'Note deleted successfully' }))
 
       // Mock final notes reload
       mockFetch.mockResolvedValueOnce(mockApiResponse({
         notes: existingNotes.slice(0, 1) // Only first note remains
-      }));
+      }))
 
-      render(<SecureNotesApp />);
+      render(<SecureNotesApp />)
 
       // Step 1: Login
-      await user.type(screen.getByLabelText(/email/i), 'user@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'UserPassword123!');
-      await user.click(screen.getByRole('button', { name: /login securely/i }));
+      await user.type(screen.getByLabelText(/email/i), 'user@example.com')
+      await user.type(screen.getByLabelText(/password/i), 'UserPassword123!')
+      await user.click(screen.getByRole('button', { name: /login securely/i }))
 
       // Step 2: Verify transition to notes view
       await waitFor(() => {
-        expect(screen.getByText(/encryption active/i)).toBeInTheDocument();
+        expect(screen.getByText(/encryption active/i)).toBeInTheDocument()
       })
 
       // Step 3: Verify existing notes are displayed
       await waitFor(() => {
-        expect(screen.getByText('Work Notes')).toBeInTheDocument();
-        expect(screen.getByText('Personal Journal')).toBeInTheDocument();
+        expect(screen.getByText('Work Notes')).toBeInTheDocument()
+        expect(screen.getByText('Personal Journal')).toBeInTheDocument()
       })
 
       // Step 4: Edit an existing note
-      await user.click(screen.getByText('Personal Journal'));
+      await user.click(screen.getByText('Personal Journal'))
 
-      const titleField = screen.getByDisplayValue('Personal Journal');
-      const contentField = screen.getByDisplayValue('Personal thoughts');
+      const titleField = screen.getByDisplayValue('Personal Journal')
+      const contentField = screen.getByDisplayValue('Personal thoughts')
 
-      await user.clear(titleField);
-      await user.type(titleField, 'Updated Personal Journal');
-      
-      await user.clear(contentField);
-      await user.type(contentField, 'Updated personal thoughts');
+      await user.clear(titleField)
+      await user.type(titleField, 'Updated Personal Journal')
+
+      await user.clear(contentField)
+      await user.type(contentField, 'Updated personal thoughts')
 
       // Wait for auto-save
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith(
           expect.stringContaining('/notes/note-2'),
           expect.objectContaining({ method: 'PUT' })
-        );
+        )
       }, { timeout: 3000 })
 
       // Step 5: Verify update in notes list
       await waitFor(() => {
-        expect(screen.getByText('Updated Personal Journal')).toBeInTheDocument();
+        expect(screen.getByText('Updated Personal Journal')).toBeInTheDocument()
       })
 
       // Step 6: Search functionality
-      const searchField = screen.getByPlaceholderText(/search notes/i);
-      await user.type(searchField, 'work');
+      const searchField = screen.getByPlaceholderText(/search notes/i)
+      await user.type(searchField, 'work')
 
       await waitFor(() => {
-        expect(screen.getByText('Work Notes')).toBeInTheDocument();
-        expect(screen.queryByText('Updated Personal Journal')).not.toBeInTheDocument();
+        expect(screen.getByText('Work Notes')).toBeInTheDocument()
+        expect(screen.queryByText('Updated Personal Journal')).not.toBeInTheDocument()
       })
 
       // Clear search
-      await user.clear(searchField);
+      await user.clear(searchField)
 
       await waitFor(() => {
-        expect(screen.getByText('Work Notes')).toBeInTheDocument();
-        expect(screen.getByText('Updated Personal Journal')).toBeInTheDocument();
+        expect(screen.getByText('Work Notes')).toBeInTheDocument()
+        expect(screen.getByText('Updated Personal Journal')).toBeInTheDocument()
       })
 
       // Step 7: Delete a note (would require additional UI for delete button)
       // For this test, we'll simulate the API call
-      expect(mockFetch).toHaveBeenCalledTimes(4); // login, load, update, reload
+      expect(mockFetch).toHaveBeenCalledTimes(4) // login, load, update, reload
     })
 
     it('handles login with MFA requirement', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup()
 
       // Mock MFA required response
-      mockFetch.mockResolvedValueOnce(mockApiResponse({ mfa_required: true }));
+      mockFetch.mockResolvedValueOnce(mockApiResponse({ mfa_required: true }))
 
       // Mock successful MFA login
       mockFetch.mockResolvedValueOnce(mockApiResponse({
@@ -264,30 +264,30 @@ describe('End-to-End User Flows', () => {
         session: 'mfa-session-123',
         user_id: 'mfa-user-456',
         workspace_id: 'mfa-workspace-789'
-      }));
+      }))
 
       // Mock notes load
-      mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: [] }));
+      mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: [] }))
 
-      render(<SecureNotesApp />);
+      render(<SecureNotesApp />)
 
       // Step 1: Initial login attempt
-      await user.type(screen.getByLabelText(/email/i), 'mfauser@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'MFAPassword123!');
-      await user.click(screen.getByRole('button', { name: /login securely/i }));
+      await user.type(screen.getByLabelText(/email/i), 'mfauser@example.com')
+      await user.type(screen.getByLabelText(/password/i), 'MFAPassword123!')
+      await user.click(screen.getByRole('button', { name: /login securely/i }))
 
       // Step 2: MFA field should appear
       await waitFor(() => {
-        expect(screen.getByLabelText(/2fa code/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/2fa code/i)).toBeInTheDocument()
       })
 
       // Step 3: Enter MFA code and submit
-      await user.type(screen.getByLabelText(/2fa code/i), '123456');
-      await user.click(screen.getByRole('button', { name: /login securely/i }));
+      await user.type(screen.getByLabelText(/2fa code/i), '123456')
+      await user.click(screen.getByRole('button', { name: /login securely/i }))
 
       // Step 4: Should transition to notes view
       await waitFor(() => {
-        expect(screen.getByText(/encryption active/i)).toBeInTheDocument();
+        expect(screen.getByText(/encryption active/i)).toBeInTheDocument()
       })
 
       // Verify MFA login API call
@@ -296,30 +296,30 @@ describe('End-to-End User Flows', () => {
         expect.objectContaining({
           body: expect.stringContaining('123456')
         })
-      );
+      )
     })
   })
 
   describe('Session Management Flow', () => {
     it('restores session on app reload', async () => {
       // Mock existing token
-      mockLocalStorage.getItem.mockReturnValue('existing-token');
+      mockLocalStorage.getItem.mockReturnValue('existing-token')
 
       // Mock notes load for restored session
       mockFetch.mockResolvedValueOnce(mockApiResponse({
         notes: [createMockEncryptedNote({ title_encrypted: btoa('Existing Note') })]
-      }));
+      }))
 
-      render(<SecureNotesApp />);
+      render(<SecureNotesApp />)
 
       // Should skip login and go directly to notes view
       await waitFor(() => {
-        expect(screen.getByText(/encryption active/i)).toBeInTheDocument();
+        expect(screen.getByText(/encryption active/i)).toBeInTheDocument()
       })
 
       // Should load existing notes
       await waitFor(() => {
-        expect(screen.getByText('Existing Note')).toBeInTheDocument();
+        expect(screen.getByText('Existing Note')).toBeInTheDocument()
       })
 
       expect(mockFetch).toHaveBeenCalledWith(
@@ -329,274 +329,274 @@ describe('End-to-End User Flows', () => {
             'Authorization': 'Bearer existing-token'
           })
         })
-      );
+      )
     })
 
     it('handles session expiration and logout', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup()
 
       // Mock existing token
-      mockLocalStorage.getItem.mockReturnValue('expired-token');
+      mockLocalStorage.getItem.mockReturnValue('expired-token')
 
       // Mock expired token response
-      mockFetch.mockResolvedValueOnce(mockApiError(401, 'Token expired'));
+      mockFetch.mockResolvedValueOnce(mockApiError(401, 'Token expired'))
 
-      render(<SecureNotesApp />);
+      render(<SecureNotesApp />)
 
       // Should detect expired token and redirect to login
       await waitFor(() => {
-        expect(screen.getByText(/secure notes/i)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /login securely/i })).toBeInTheDocument();
+        expect(screen.getByText(/secure notes/i)).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /login securely/i })).toBeInTheDocument()
       })
 
-      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('secure_token');
+      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('secure_token')
     })
 
     it('allows manual logout', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup()
 
       // Setup authenticated state
-      mockLocalStorage.getItem.mockReturnValue('user-token');
-      mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: [] }));
+      mockLocalStorage.getItem.mockReturnValue('user-token')
+      mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: [] }))
 
-      render(<SecureNotesApp />);
+      render(<SecureNotesApp />)
 
       await waitFor(() => {
-        expect(screen.getByText(/encryption active/i)).toBeInTheDocument();
+        expect(screen.getByText(/encryption active/i)).toBeInTheDocument()
       })
 
       // Find and click logout button
-      const logoutButton = screen.getByRole('button');
-      await user.click(logoutButton);
+      const logoutButton = screen.getByRole('button')
+      await user.click(logoutButton)
 
       // Should return to login view
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /login securely/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /login securely/i })).toBeInTheDocument()
       })
 
-      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('secure_token');
+      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('secure_token')
     })
   })
 
   describe('Error Handling Flows', () => {
     it('handles network connectivity issues', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup()
 
       // Mock network error
-      mockFetch.mockRejectedValueOnce(new Error('Failed to fetch'));
+      mockFetch.mockRejectedValueOnce(new Error('Failed to fetch'))
 
-      render(<SecureNotesApp />);
+      render(<SecureNotesApp />)
 
-      await user.type(screen.getByLabelText(/email/i), 'user@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'Password123!');
-      await user.click(screen.getByRole('button', { name: /login securely/i }));
+      await user.type(screen.getByLabelText(/email/i), 'user@example.com')
+      await user.type(screen.getByLabelText(/password/i), 'Password123!')
+      await user.click(screen.getByRole('button', { name: /login securely/i }))
 
       await waitFor(() => {
-        expect(screen.getByText(/login failed/i)).toBeInTheDocument();
+        expect(screen.getByText(/login failed/i)).toBeInTheDocument()
       })
 
       // Should remain on login form
-      expect(screen.getByRole('button', { name: /login securely/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /login securely/i })).toBeInTheDocument()
     })
 
     it('handles server errors gracefully', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup()
 
       // Mock authenticated state
-      mockLocalStorage.getItem.mockReturnValue('user-token');
+      mockLocalStorage.getItem.mockReturnValue('user-token')
 
       // Mock server error when loading notes
-      mockFetch.mockResolvedValueOnce(mockApiError(500, 'Internal server error'));
+      mockFetch.mockResolvedValueOnce(mockApiError(500, 'Internal server error'))
 
-      render(<SecureNotesApp />);
+      render(<SecureNotesApp />)
 
       await waitFor(() => {
-        expect(screen.getByText(/failed to load notes/i)).toBeInTheDocument();
+        expect(screen.getByText(/failed to load notes/i)).toBeInTheDocument()
       })
 
       // Should still show main interface with error
-      expect(screen.getByText(/encryption active/i)).toBeInTheDocument();
+      expect(screen.getByText(/encryption active/i)).toBeInTheDocument()
     })
 
     it('recovers from temporary errors', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup()
 
       // Setup authenticated state
-      mockLocalStorage.getItem.mockReturnValue('user-token');
+      mockLocalStorage.getItem.mockReturnValue('user-token')
 
       // First call fails, second succeeds
       mockFetch
         .mockResolvedValueOnce(mockApiError(500, 'Server error'))
-        .mockResolvedValueOnce(mockApiResponse({ notes: [] }));
+        .mockResolvedValueOnce(mockApiResponse({ notes: [] }))
 
-      render(<SecureNotesApp />);
+      render(<SecureNotesApp />)
 
       // Should show error initially
       await waitFor(() => {
-        expect(screen.getByText(/failed to load notes/i)).toBeInTheDocument();
+        expect(screen.getByText(/failed to load notes/i)).toBeInTheDocument()
       })
 
       // Simulate retry by creating a new note (which triggers reload)
-      await user.click(screen.getByText(/new encrypted note/i));
+      await user.click(screen.getByText(/new encrypted note/i))
 
       // Should recover and show editor
-      expect(screen.getByPlaceholderText(/note title/i)).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/note title/i)).toBeInTheDocument()
     })
   })
 
   describe('Data Persistence and Integrity', () => {
     it('maintains encryption throughout the entire flow', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup()
 
       // Mock login
       mockFetch.mockResolvedValueOnce(mockApiResponse({
         token: 'user-token',
         user_id: 'user-123',
         workspace_id: 'workspace-456'
-      }));
+      }))
 
       // Mock initial load
-      mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: [] }));
+      mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: [] }))
 
       // Mock note creation
-      mockFetch.mockResolvedValueOnce(mockApiResponse({ id: 'note-1' }));
+      mockFetch.mockResolvedValueOnce(mockApiResponse({ id: 'note-1' }))
 
-      render(<SecureNotesApp />);
+      render(<SecureNotesApp />)
 
       // Login
-      await user.type(screen.getByLabelText(/email/i), 'user@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'Password123!');
-      await user.click(screen.getByRole('button', { name: /login securely/i }));
+      await user.type(screen.getByLabelText(/email/i), 'user@example.com')
+      await user.type(screen.getByLabelText(/password/i), 'Password123!')
+      await user.click(screen.getByRole('button', { name: /login securely/i }))
 
       await waitFor(() => {
-        expect(screen.getByText(/encryption active/i)).toBeInTheDocument();
+        expect(screen.getByText(/encryption active/i)).toBeInTheDocument()
       })
 
       // Create note with sensitive data
-      await user.click(screen.getByText(/new encrypted note/i));
-      
-      const sensitiveTitle = 'Credit Card Info';
-      const sensitiveContent = 'Card: 1234-5678-9012-3456, CVV: 123';
-      
-      await user.type(screen.getByPlaceholderText(/note title/i), sensitiveTitle);
-      await user.type(screen.getByPlaceholderText(/start writing/i), sensitiveContent);
+      await user.click(screen.getByText(/new encrypted note/i))
+
+      const sensitiveTitle = 'Credit Card Info'
+      const sensitiveContent = 'Card: 1234-5678-9012-3456, CVV: 123'
+
+      await user.type(screen.getByPlaceholderText(/note title/i), sensitiveTitle)
+      await user.type(screen.getByPlaceholderText(/start writing/i), sensitiveContent)
 
       // Wait for save
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith(
           expect.stringContaining('/notes'),
           expect.objectContaining({ method: 'POST' })
-        );
+        )
       }, { timeout: 3000 })
 
       // Verify sensitive data was encrypted before sending
-      const createCall = mockFetch.mock.calls.find(call => 
+      const createCall = mockFetch.mock.calls.find(call =>
         call[1]?.method === 'POST' && call[0].includes('/notes')
-      );
-      
-      expect(createCall).toBeDefined();
-      const requestBody = createCall[1].body;
-      
+      )
+
+      expect(createCall).toBeDefined()
+      const requestBody = createCall[1].body
+
       // Sensitive data should not appear in plaintext
-      expect(requestBody).not.toContain('Credit Card Info');
-      expect(requestBody).not.toContain('1234-5678-9012-3456');
-      expect(requestBody).not.toContain('CVV: 123');
-      
+      expect(requestBody).not.toContain('Credit Card Info')
+      expect(requestBody).not.toContain('1234-5678-9012-3456')
+      expect(requestBody).not.toContain('CVV: 123')
+
       // Should contain encrypted versions
-      expect(requestBody).toContain('title_encrypted');
-      expect(requestBody).toContain('content_encrypted');
+      expect(requestBody).toContain('title_encrypted')
+      expect(requestBody).toContain('content_encrypted')
     })
 
     it('handles encryption failures gracefully', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup()
 
       // Mock authenticated state
-      mockLocalStorage.getItem.mockReturnValue('user-token');
-      mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: [] }));
+      mockLocalStorage.getItem.mockReturnValue('user-token')
+      mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: [] }))
 
       // Mock encryption failure by corrupting sodium
-      const originalEncrypt = mockSodium.crypto_secretbox_easy;
+      const originalEncrypt = mockSodium.crypto_secretbox_easy
       mockSodium.crypto_secretbox_easy.mockImplementationOnce(() => {
-        throw new Error('Encryption failed');
+        throw new Error('Encryption failed')
       })
 
-      render(<SecureNotesApp />);
+      render(<SecureNotesApp />)
 
       await waitFor(() => {
-        expect(screen.getByText(/encryption active/i)).toBeInTheDocument();
+        expect(screen.getByText(/encryption active/i)).toBeInTheDocument()
       })
 
-      await user.click(screen.getByText(/new encrypted note/i));
-      await user.type(screen.getByPlaceholderText(/note title/i), 'Test Note');
+      await user.click(screen.getByText(/new encrypted note/i))
+      await user.type(screen.getByPlaceholderText(/note title/i), 'Test Note')
 
       // Should handle encryption error gracefully
       await waitFor(() => {
         // Note: In real implementation, this might show an error message
         // For now, we just verify it doesn't crash
-        expect(screen.getByPlaceholderText(/note title/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/note title/i)).toBeInTheDocument()
       })
 
       // Restore original function
-      mockSodium.crypto_secretbox_easy.mockImplementation(originalEncrypt);
+      mockSodium.crypto_secretbox_easy.mockImplementation(originalEncrypt)
     })
   })
 
   describe('Performance and User Experience', () => {
     it('provides smooth user experience with loading states', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup()
 
       // Mock slow login
       const slowLogin = new Promise(resolve => {
-        setTimeout(() => resolve(mockApiResponse({ token: 'token' })), 200);
+        setTimeout(() => resolve(mockApiResponse({ token: 'token' })), 200)
       })
-      mockFetch.mockReturnValueOnce(slowLogin);
+      mockFetch.mockReturnValueOnce(slowLogin)
 
-      render(<SecureNotesApp />);
+      render(<SecureNotesApp />)
 
-      await user.type(screen.getByLabelText(/email/i), 'user@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'Password123!');
-      await user.click(screen.getByRole('button', { name: /login securely/i }));
+      await user.type(screen.getByLabelText(/email/i), 'user@example.com')
+      await user.type(screen.getByLabelText(/password/i), 'Password123!')
+      await user.click(screen.getByRole('button', { name: /login securely/i }))
 
       // Should show loading state
-      expect(screen.getByText(/processing/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /processing/i })).toBeDisabled();
+      expect(screen.getByText(/processing/i)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /processing/i })).toBeDisabled()
 
       // Wait for completion
       await waitFor(() => {
-        expect(screen.queryByText(/processing/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/processing/i)).not.toBeInTheDocument()
       })
     })
 
     it('handles rapid user interactions gracefully', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup()
 
       // Setup authenticated state
-      mockLocalStorage.getItem.mockReturnValue('user-token');
-      mockFetch.mockResolvedValue(mockApiResponse({ notes: [] }));
+      mockLocalStorage.getItem.mockReturnValue('user-token')
+      mockFetch.mockResolvedValue(mockApiResponse({ notes: [] }))
 
-      render(<SecureNotesApp />);
+      render(<SecureNotesApp />)
 
       await waitFor(() => {
-        expect(screen.getByText(/encryption active/i)).toBeInTheDocument();
+        expect(screen.getByText(/encryption active/i)).toBeInTheDocument()
       })
 
       // Rapidly create and type in note
-      await user.click(screen.getByText(/new encrypted note/i));
-      
-      const titleField = screen.getByPlaceholderText(/note title/i);
-      
+      await user.click(screen.getByText(/new encrypted note/i))
+
+      const titleField = screen.getByPlaceholderText(/note title/i)
+
       // Type rapidly
       await user.type(titleField, 'Rapid typing test', { delay: 1 })
-      
+
       // Should handle rapid input without crashing
-      expect(titleField.value).toBe('Rapid typing test');
+      expect(titleField.value).toBe('Rapid typing test')
     })
 
     it('maintains state consistency during navigation', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup()
 
       // Setup with existing notes
-      mockLocalStorage.getItem.mockReturnValue('user-token');
+      mockLocalStorage.getItem.mockReturnValue('user-token')
       mockFetch.mockResolvedValueOnce(mockApiResponse({
         notes: [
           createMockEncryptedNote({
@@ -608,30 +608,30 @@ describe('End-to-End User Flows', () => {
             title_encrypted: btoa('Note 2')
           })
         ]
-      }));
+      }))
 
-      render(<SecureNotesApp />);
+      render(<SecureNotesApp />)
 
       await waitFor(() => {
-        expect(screen.getByText('Note 1')).toBeInTheDocument();
-        expect(screen.getByText('Note 2')).toBeInTheDocument();
+        expect(screen.getByText('Note 1')).toBeInTheDocument()
+        expect(screen.getByText('Note 2')).toBeInTheDocument()
       })
 
       // Select first note
-      await user.click(screen.getByText('Note 1'));
-      expect(screen.getByDisplayValue('Note 1')).toBeInTheDocument();
+      await user.click(screen.getByText('Note 1'))
+      expect(screen.getByDisplayValue('Note 1')).toBeInTheDocument()
 
       // Switch to second note
-      await user.click(screen.getByText('Note 2'));
-      expect(screen.getByDisplayValue('Note 2')).toBeInTheDocument();
+      await user.click(screen.getByText('Note 2'))
+      expect(screen.getByDisplayValue('Note 2')).toBeInTheDocument()
 
       // Switch back to first note
-      await user.click(screen.getByText('Note 1'));
-      expect(screen.getByDisplayValue('Note 1')).toBeInTheDocument();
+      await user.click(screen.getByText('Note 1'))
+      expect(screen.getByDisplayValue('Note 1')).toBeInTheDocument()
 
       // State should remain consistent
-      expect(screen.getByText('Note 1')).toBeInTheDocument();
-      expect(screen.getByText('Note 2')).toBeInTheDocument();
+      expect(screen.getByText('Note 1')).toBeInTheDocument()
+      expect(screen.getByText('Note 2')).toBeInTheDocument()
     })
   })
 })

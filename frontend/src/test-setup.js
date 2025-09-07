@@ -36,7 +36,7 @@ Object.defineProperty(window, 'matchMedia', {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
-  }),
+  })),
 })
 
 // Mock window.scrollTo
@@ -132,22 +132,22 @@ Object.defineProperty(navigator, 'geolocation', {
 
 // Mock Notification API
 global.Notification = class MockNotification {
-  static permission = 'granted';
-  static requestPermission = vi.fn().mockResolvedValue('granted');
-  
+  static permission = 'granted'
+  static requestPermission = vi.fn().mockResolvedValue('granted')
+
   constructor(title, options = {}) {
-    this.title = title;
-    this.body = options.body;
-    this.icon = options.icon;
-    this.tag = options.tag;
-    this.onclick = null;
-    this.onclose = null;
-    this.onerror = null;
-    this.onshow = null;
+    this.title = title
+    this.body = options.body
+    this.icon = options.icon
+    this.tag = options.tag
+    this.onclick = null
+    this.onclose = null
+    this.onerror = null
+    this.onshow = null
   }
 
   close() {
-    this.onclose?.();
+    this.onclose?.()
   }
 }
 
@@ -177,33 +177,33 @@ global.indexedDB = {
 
 // Mock WebSocket for real-time features
 global.WebSocket = class MockWebSocket {
-  static CONNECTING = 0;
-  static OPEN = 1;
-  static CLOSING = 2;
-  static CLOSED = 3;
+  static CONNECTING = 0
+  static OPEN = 1
+  static CLOSING = 2
+  static CLOSED = 3
 
   constructor(url) {
-    this.url = url;
-    this.readyState = MockWebSocket.CONNECTING;
-    this.onopen = null;
-    this.onclose = null;
-    this.onerror = null;
-    this.onmessage = null;
-    
+    this.url = url
+    this.readyState = MockWebSocket.CONNECTING
+    this.onopen = null
+    this.onclose = null
+    this.onerror = null
+    this.onmessage = null
+
     setTimeout(() => {
-      this.readyState = MockWebSocket.OPEN;
+      this.readyState = MockWebSocket.OPEN
       this.onopen?.({ type: 'open' })
-    }, 0);
+    }, 0)
   }
 
   send(data) {
     if (this.readyState !== MockWebSocket.OPEN) {
-      throw new Error('WebSocket is not open');
+      throw new Error('WebSocket is not open')
     }
   }
 
   close() {
-    this.readyState = MockWebSocket.CLOSED;
+    this.readyState = MockWebSocket.CLOSED
     this.onclose?.({ type: 'close', code: 1000, reason: 'Normal closure' })
   }
 }
@@ -213,9 +213,9 @@ Object.defineProperty(crypto, 'getRandomValues', {
   writable: true,
   value: vi.fn((array) => {
     for (let i = 0; i < array.length; i++) {
-      array[i] = Math.floor(Math.random() * 256);
+      array[i] = Math.floor(Math.random() * 256)
     }
-    return array;
+    return array
   }),
 })
 
@@ -223,7 +223,7 @@ Object.defineProperty(crypto, 'getRandomValues', {
 if (!global.TextEncoder) {
   global.TextEncoder = class MockTextEncoder {
     encode(string) {
-      return new Uint8Array(string.split('').map(char => char.charCodeAt(0)));
+      return new Uint8Array(string.split('').map(char => char.charCodeAt(0)))
     }
   }
 }
@@ -231,19 +231,19 @@ if (!global.TextEncoder) {
 if (!global.TextDecoder) {
   global.TextDecoder = class MockTextDecoder {
     decode(bytes) {
-      return String.fromCharCode(...bytes);
+      return String.fromCharCode(...bytes)
     }
   }
 }
 
 // Global error handler for unhandled promise rejections
 process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled Promise Rejection:', reason);
+  console.error('Unhandled Promise Rejection:', reason)
 })
 
 // Global uncaught exception handler
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
+  console.error('Uncaught Exception:', error)
 })
 
 // Set test environment variables

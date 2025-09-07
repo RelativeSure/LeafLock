@@ -805,12 +805,12 @@ func (h *NotesHandler) CreateNote(c *fiber.Ctx) error {
 	}
 
 	// Decode encrypted data
-	titleEnc, err := base64.StdEncoding.DecodeString(req.TitleEncrypted)
+	titleEnc, err := base64.StdEncoding.DecodeString(request.TitleEncrypted)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid title encryption"})
 	}
 
-	contentEnc, err := base64.StdEncoding.DecodeString(req.ContentEncrypted)
+	contentEnc, err := base64.StdEncoding.DecodeString(request.ContentEncrypted)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid content encryption"})
 	}
