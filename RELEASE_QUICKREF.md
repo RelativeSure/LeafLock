@@ -39,7 +39,7 @@ ghcr.io/your-org/your-repo/frontend:v1.2.3
 
 ## GitHub Actions Alternative
 
-1. Go to **Actions** → **🚀 Release Management**
+1. Go to **Actions** → **🚀 Streamlined Release**
 2. Click **Run workflow**  
 3. Choose version type and options
 4. Click **Run workflow**

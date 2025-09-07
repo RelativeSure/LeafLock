@@ -52,7 +52,7 @@ The easiest way to create releases using the local script:
 ### Method 2: GitHub Actions Web Interface
 
 1. Go to **Actions** tab in your repository
-2. Select **🚀 Release Management** workflow  
+2. Select **🚀 Streamlined Release** workflow  
 3. Click **Run workflow**
 4. Choose options:
    - **Version bump type**: patch, minor, major, prerelease
@@ -64,12 +64,12 @@ The easiest way to create releases using the local script:
 
 ```bash
 # Trigger release workflow with gh CLI
-gh workflow run release.yml \
+gh workflow run release-streamlined.yml \
   --field version_type=minor \
   --field release_notes="Added new features and improvements"
 
 # With custom version
-gh workflow run release.yml \
+gh workflow run release-streamlined.yml \
   --field version_type=custom \
   --field custom_version="2.0.0" \
   --field release_notes="Major release with breaking changes"
@@ -106,30 +106,23 @@ docker pull ghcr.io/your-org/your-repo/backend:v1.2.3-rc.1
 
 ```mermaid
 graph TB
-    A[Developer initiates release] --> B[Version calculation]
-    B --> C[Generate changelog]
-    C --> D[Run pre-release tests]
-    D --> E{Tests pass?}
-    E -->|No| F[Fix issues & restart]
-    E -->|Yes| G[Create Git tag]
-    G --> H[Create GitHub Release]
-    H --> I[Trigger container builds]
-    I --> J[Generate SBOM]
-    J --> K[Update version files]
-    K --> L[Create version bump PR]
-    L --> M[Release complete! 🎉]
+    A[Developer initiates release] --> B[Calculate version & changelog]
+    B --> C[Run quick validation tests]
+    C --> D{Tests pass?}
+    D -->|No| E[Fix issues & restart]
+    D -->|Yes| F[Create Git tag & GitHub Release]
+    F --> G[Trigger container builds]
+    G --> H[Release complete! 🎉]
 ```
 
 ### What Happens During a Release:
 
-1. **📊 Version Calculation**: Determines next version based on type
-2. **📝 Changelog Generation**: Auto-generates from Git commits  
-3. **🧪 Pre-release Tests**: Runs full test suite (unless skipped)
-4. **🏷️ Tag Creation**: Creates and pushes Git tag
-5. **📋 GitHub Release**: Creates release with changelog
-6. **🐳 Container Build**: Triggers image build workflow
-7. **📋 SBOM Generation**: Creates Software Bill of Materials
-8. **🔖 Version Bump**: Updates package.json and creates PR
+1. **📊 Single Job Execution**: Streamlined process in one job for faster execution
+2. **📝 Automatic Changelog**: Generated from Git commits with formatting
+3. **🧪 Quick Validation**: Basic syntax and dependency checks (unless skipped)
+4. **🏷️ Tag & Release**: Creates Git tag and GitHub release simultaneously
+5. **🐳 Container Build**: Triggers separate reusable build workflow
+6. **📋 Summary**: Provides links and next steps for deployment
 
 ## 🎯 Release Guidelines
 

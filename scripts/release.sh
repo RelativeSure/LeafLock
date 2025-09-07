@@ -271,7 +271,7 @@ trigger_release() {
     log_step "Triggering GitHub Actions release workflow..."
     
     local gh_args=(
-        "workflow" "run" "release.yml"
+        "workflow" "run" "release-streamlined.yml"
         "--field" "version_type=$version_type"
         "--field" "skip_tests=$skip_tests"
     )
@@ -288,7 +288,7 @@ trigger_release() {
         log_success "Release workflow triggered successfully!"
         
         # Get the workflow URL
-        local workflow_url="https://github.com/$GITHUB_REPO/actions/workflows/release.yml"
+        local workflow_url="https://github.com/$GITHUB_REPO/actions/workflows/release-streamlined.yml"
         echo
         log_info "🔗 Monitor progress: $workflow_url"
         log_info "📦 Packages will be available: https://github.com/$GITHUB_REPO/pkgs/container"
@@ -299,7 +299,7 @@ trigger_release() {
         
         if command -v gh &> /dev/null; then
             log_info "Recent workflow runs:"
-            gh run list --workflow="release.yml" --limit=3
+            gh run list --workflow="release-streamlined.yml" --limit=3
         fi
     else
         log_error "Failed to trigger release workflow"

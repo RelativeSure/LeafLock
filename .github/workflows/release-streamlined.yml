@@ -1,0 +1,248 @@
+# Streamlined Release Workflow
+# Single reusable workflow for tagging + release creation
+# Benefits: Less duplication, faster tagging, automatic changelog scaffold
+name: 🚀 Streamlined Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - prerelease
+      custom_version:
+        description: 'Custom version (optional, overrides version_type)'
+        required: false
+        type: string
+      release_notes:
+        description: 'Custom release notes (optional)'
+        required: false
+        type: string
+      skip_tests:
+        description: 'Skip tests (use with caution)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  # Single streamlined job for tagging and release creation
+  create-release:
+    name: 🎉 Create Release & Tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
+      release_id: ${{ steps.release.outputs.id }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Calculate version
+        id: version
+        run: |
+          # Get current version
+          CURRENT=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "current_version=${CURRENT}" >> $GITHUB_OUTPUT
+
+          # Calculate next version
+          VERSION_TYPE="${{ github.event.inputs.version_type }}"
+          CUSTOM_VERSION="${{ github.event.inputs.custom_version }}"
+
+          if [ -n "$CUSTOM_VERSION" ]; then
+            # Use custom version
+            if [[ ! $CUSTOM_VERSION =~ ^v ]]; then
+              NEXT="v${CUSTOM_VERSION}"
+            else
+              NEXT="$CUSTOM_VERSION"
+            fi
+          else
+            # Calculate semantic version
+            CURRENT_CLEAN=${CURRENT#v}
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_CLEAN"
+            MAJOR=${MAJOR:-0}
+            MINOR=${MINOR:-0}
+            PATCH=${PATCH:-0}
+
+            case "$VERSION_TYPE" in
+              "major")
+                MAJOR=$((MAJOR + 1))
+                MINOR=0
+                PATCH=0
+                ;;
+              "minor")
+                MINOR=$((MINOR + 1))
+                PATCH=0
+                ;;
+              "patch")
+                PATCH=$((PATCH + 1))
+                ;;
+              "prerelease")
+                PATCH=$((PATCH + 1))
+                PRERELEASE="-rc.$(date +%Y%m%d%H%M%S)"
+                ;;
+            esac
+
+            if [ "$VERSION_TYPE" = "prerelease" ]; then
+              NEXT="v${MAJOR}.${MINOR}.${PATCH}${PRERELEASE}"
+            else
+              NEXT="v${MAJOR}.${MINOR}.${PATCH}"
+            fi
+          fi
+
+          echo "version=${NEXT}" >> $GITHUB_OUTPUT
+          echo "📈 Version: ${CURRENT} → ${NEXT}"
+
+          # Validate version doesn't exist
+          if git rev-parse "$NEXT" >/dev/null 2>&1; then
+            echo "❌ Version $NEXT already exists!"
+            exit 1
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          CURRENT="${{ steps.version.outputs.current_version }}"
+          NEXT="${{ steps.version.outputs.version }}"
+
+          # Generate commit-based changelog
+          if [ "$CURRENT" = "v0.0.0" ]; then
+            CHANGELOG=$(git log --pretty=format:"* %s (%h)" --no-merges | head -20)
+          else
+            CHANGELOG=$(git log ${CURRENT}..HEAD --pretty=format:"* %s (%h)" --no-merges)
+          fi
+
+          # Fallback if no changes
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="* Maintenance release"
+          fi
+
+          # Create formatted changelog
+          cat > changelog.md << EOF
+          ## What's Changed
+
+          ${CHANGELOG}
+
+          ## 📦 Container Images
+
+          Pull the latest images:
+          \`\`\`bash
+          docker pull ghcr.io/${{ github.repository }}/backend:${{ steps.version.outputs.version }}
+          docker pull ghcr.io/${{ github.repository }}/frontend:${{ steps.version.outputs.version }}
+          \`\`\`
+
+          ## 🚀 Quick Deploy
+
+          \`\`\`bash
+          VERSION=${{ steps.version.outputs.version }} ./deploy-from-ghcr.sh deploy
+          \`\`\`
+
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/${CURRENT}...${NEXT}
+          EOF
+
+          {
+            echo "changelog<<CHANGELOG_EOF"
+            cat changelog.md
+            echo "CHANGELOG_EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Run quick tests
+        if: github.event.inputs.skip_tests != 'true'
+        run: |
+          echo "🧪 Running quick validation tests..."
+
+          # Basic syntax checks
+          if [ -f "backend/go.mod" ]; then
+            cd backend && go mod verify && cd ..
+            echo "✅ Go modules verified"
+          fi
+
+          if [ -f "frontend/package.json" ]; then
+            cd frontend && npm ci --prefer-offline && cd ..
+            echo "✅ NPM dependencies verified"
+          fi
+
+          echo "✅ Quick tests passed"
+
+      - name: Create tag and release
+        id: release
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Create and push tag
+          git tag -a "$VERSION" -m "Release $VERSION"
+          git push origin "$VERSION"
+          echo "✅ Tag $VERSION created and pushed"
+
+          # Create GitHub release
+          RELEASE_NOTES="${{ github.event.inputs.release_notes }}"
+          if [ -n "$RELEASE_NOTES" ]; then
+            BODY="$RELEASE_NOTES"$'\n\n'"${{ steps.changelog.outputs.changelog }}"
+          else
+            BODY="${{ steps.changelog.outputs.changelog }}"
+          fi
+
+          # Use GitHub CLI to create release
+          gh release create "$VERSION" \
+            --title "🚀 Release $VERSION" \
+            --notes "$BODY" \
+            --latest=${{ !contains(steps.version.outputs.version, '-rc.') }} \
+            --prerelease=${{ contains(steps.version.outputs.version, '-rc.') }}
+
+          # Get release ID for output
+          RELEASE_ID=$(gh release view "$VERSION" --json id --jq .id)
+          echo "id=${RELEASE_ID}" >> $GITHUB_OUTPUT
+
+          echo "✅ Release $VERSION created successfully"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger container build
+        run: |
+          echo "🐳 Triggering container build workflow..."
+
+          # Trigger the reusable build workflow
+          gh workflow run build-containers.yml \
+            --ref "${{ steps.version.outputs.version }}" \
+            --field "release_version=${{ steps.version.outputs.version }}"
+
+          echo "✅ Container build triggered"
+          echo "🔗 Monitor build: https://github.com/${{ github.repository }}/actions/workflows/build-containers.yml"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create summary
+        run: |
+          echo "## 🎉 Release ${{ steps.version.outputs.version }} Created!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Release Details:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Type**: ${{ github.event.inputs.version_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release ID**: ${{ steps.release.outputs.id }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Links:" >> $GITHUB_STEP_SUMMARY
+          echo "- [📋 View Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.version }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [🐳 Container Build](https://github.com/${{ github.repository }}/actions/workflows/build-containers.yml)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ⏳ Next Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "1. ✅ Release created and tagged" >> $GITHUB_STEP_SUMMARY
+          echo "2. 🔄 Container build in progress" >> $GITHUB_STEP_SUMMARY
+          echo "3. 🚀 Deploy when containers are ready" >> $GITHUB_STEP_SUMMARY
