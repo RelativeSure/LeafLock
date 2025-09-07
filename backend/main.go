@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -293,8 +294,8 @@ func (c *CryptoService) Encrypt(plaintext []byte) ([]byte, error) {
 	}
 
 	ciphertext := aead.Seal(nil, nonce, plaintext, nil)
-	result := make([]byte, len(nonce))
-	copy(result, nonce)
+	result := make([]byte, 0, len(nonce)+len(ciphertext))
+	result = append(result, nonce...)
 	return append(result, ciphertext...), nil
 }
 
@@ -722,7 +723,7 @@ func (h *NotesHandler) GetNotes(c *fiber.Ctx) error {
 		WHERE workspace_id = $1 AND deleted_at IS NULL
 		ORDER BY updated_at DESC`,
 		workspaceID)
-	
+
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch notes"})
 	}
@@ -837,7 +838,10 @@ func (h *NotesHandler) CreateNote(c *fiber.Ctx) error {
 }
 
 func (h *NotesHandler) UpdateNote(c *fiber.Ctx) error {
-	userID := c.Locals("user_id").(uuid.UUID)
+	userID, ok := c.Locals("user_id").(uuid.UUID)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user context"})
+	}
 	noteID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid note ID"})
@@ -884,7 +888,10 @@ func (h *NotesHandler) UpdateNote(c *fiber.Ctx) error {
 }
 
 func (h *NotesHandler) DeleteNote(c *fiber.Ctx) error {
-	userID := c.Locals("user_id").(uuid.UUID)
+	userID, ok := c.Locals("user_id").(uuid.UUID)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user context"})
+	}
 	noteID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid note ID"})
@@ -929,8 +936,18 @@ func JWTMiddleware(secret []byte) fiber.Handler {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token"})
 		}
 
-		claims := parsed.Claims.(jwt.MapClaims)
-		userID, _ := uuid.Parse(claims["user_id"].(string))
+		claims, ok := parsed.Claims.(jwt.MapClaims)
+		if !ok {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token claims"})
+		}
+		userIDStr, ok := claims["user_id"].(string)
+		if !ok {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user ID in token"})
+		}
+		userID, err := uuid.Parse(userIDStr)
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user ID format"})
+		}
 		c.Locals("user_id", userID)
 
 		return c.Next()
@@ -954,7 +971,11 @@ func main() {
 		Password: config.RedisPassword,
 		DB:       0, // use default DB
 	})
-	defer rdb.Close()
+	defer func() {
+		if err := rdb.Close(); err != nil {
+			log.Printf("Failed to close Redis connection: %v", err)
+		}
+	}()
 
 	// Initialize crypto service
 	crypto := NewCryptoService(config.EncryptionKey)
@@ -964,8 +985,9 @@ func main() {
 		DisableStartupMessage: false,
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
-			if e, ok := err.(*fiber.Error); ok {
-				code = e.Code
+			var fiberErr *fiber.Error
+			if errors.As(err, &fiberErr) {
+				code = fiberErr.Code
 			}
 			return c.Status(code).JSON(fiber.Map{"error": err.Error()})
 		},
@@ -1045,7 +1067,7 @@ func main() {
 
 	// Protected routes
 	protected := api.Group("/", JWTMiddleware(config.JWTSecret))
-	
+
 	// Notes endpoints
 	protected.Get("/notes", notesHandler.GetNotes)
 	protected.Get("/notes/:id", notesHandler.GetNote)

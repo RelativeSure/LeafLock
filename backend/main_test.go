@@ -18,7 +18,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -134,13 +133,13 @@ func TestCryptoService(t *testing.T) {
 
 	t.Run("EncryptDecrypt", func(t *testing.T) {
 		plaintext := []byte("test message for encryption")
-		
+
 		// Test encryption.
 		ciphertext, err := crypto.Encrypt(plaintext)
 		assert.NoError(t, err)
 		assert.NotNil(t, ciphertext)
 		assert.NotEqual(t, plaintext, ciphertext)
-		
+
 		// Test decryption.
 		decrypted, err := crypto.Decrypt(ciphertext)
 		assert.NoError(t, err)
@@ -149,10 +148,10 @@ func TestCryptoService(t *testing.T) {
 
 	t.Run("EncryptEmptyData", func(t *testing.T) {
 		plaintext := []byte("")
-		
+
 		ciphertext, err := crypto.Encrypt(plaintext)
 		assert.NoError(t, err)
-		
+
 		decrypted, err := crypto.Decrypt(ciphertext)
 		assert.NoError(t, err)
 		assert.Equal(t, plaintext, decrypted)
@@ -160,14 +159,14 @@ func TestCryptoService(t *testing.T) {
 
 	t.Run("DecryptInvalidData", func(t *testing.T) {
 		invalidData := []byte("invalid ciphertext")
-		
+
 		_, err := crypto.Decrypt(invalidData)
 		assert.Error(t, err)
 	})
 
 	t.Run("DecryptTooShort", func(t *testing.T) {
 		shortData := make([]byte, 10) // Less than nonce size
-		
+
 		_, err := crypto.Decrypt(shortData)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "ciphertext too short")
@@ -190,10 +189,10 @@ func TestPasswordHashing(t *testing.T) {
 
 	t.Run("VerifyPassword", func(t *testing.T) {
 		hash := HashPassword(password, passwordSalt)
-		
+
 		// Correct password should verify.
 		assert.True(t, VerifyPassword(password, hash))
-		
+
 		// Wrong password should not verify.
 		assert.False(t, VerifyPassword("WrongPassword", hash))
 	})
@@ -204,16 +203,16 @@ func TestPasswordHashing(t *testing.T) {
 
 	t.Run("ConstantTimeComparison", func(t *testing.T) {
 		hash := HashPassword(password, passwordSalt)
-		
+
 		// Multiple verifications should take similar time (constant time).
 		start1 := time.Now()
 		VerifyPassword(password, hash)
 		duration1 := time.Since(start1)
-		
+
 		start2 := time.Now()
 		VerifyPassword("WrongPassword", hash)
 		duration2 := time.Since(start2)
-		
+
 		// Times should be within reasonable range (not exact due to system variations)
 		ratio := float64(duration1) / float64(duration2)
 		assert.True(t, ratio > 0.5 && ratio < 2.0, "Password verification should be constant time")
@@ -241,7 +240,7 @@ func TestConfig(t *testing.T) {
 		os.Unsetenv("DATABASE_URL")
 
 		config := LoadConfig()
-		
+
 		assert.NotEmpty(t, config.JWTSecret)
 		assert.NotEmpty(t, config.EncryptionKey)
 		assert.Equal(t, "postgres://postgres:postgres@localhost:5432/notes?sslmode=disable", config.DatabaseURL)
@@ -260,7 +259,7 @@ func TestConfig(t *testing.T) {
 		os.Setenv("DATABASE_URL", testDBURL)
 
 		config := LoadConfig()
-		
+
 		assert.Equal(t, testJWT, string(config.JWTSecret))
 		assert.Equal(t, testEncKey, string(config.EncryptionKey))
 		assert.Equal(t, testDBURL, config.DatabaseURL)
@@ -293,7 +292,7 @@ func TestJWTMiddleware(t *testing.T) {
 
 		req := httptest.NewRequest("GET", "/test", nil)
 		req.Header.Set("Authorization", "Bearer "+tokenString)
-		
+
 		resp, err := app.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
@@ -321,7 +320,7 @@ func TestJWTMiddleware(t *testing.T) {
 
 		req := httptest.NewRequest("GET", "/test", nil)
 		req.Header.Set("Authorization", "Bearer invalid.token.here")
-		
+
 		resp, err := app.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, 401, resp.StatusCode)
@@ -339,7 +338,7 @@ func TestJWTMiddleware(t *testing.T) {
 		claims := jwt.MapClaims{
 			"user_id": userID.String(),
 			"exp":     time.Now().Add(-time.Hour).Unix(), // Expired 1 hour ago
-			"iat":     time.Now().Add(-2*time.Hour).Unix(),
+			"iat":     time.Now().Add(-2 * time.Hour).Unix(),
 		}
 		token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 		tokenString, err := token.SignedString(secret)
@@ -347,7 +346,7 @@ func TestJWTMiddleware(t *testing.T) {
 
 		req := httptest.NewRequest("GET", "/test", nil)
 		req.Header.Set("Authorization", "Bearer "+tokenString)
-		
+
 		resp, err := app.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, 401, resp.StatusCode)
@@ -365,12 +364,12 @@ type AuthHandlerTestSuite struct {
 
 func (suite *AuthHandlerTestSuite) SetupTest() {
 	suite.mockDB = &MockDB{}
-	
+
 	// Generate test encryption key
 	key := make([]byte, 32)
 	rand.Read(key)
 	suite.crypto = NewCryptoService(key)
-	
+
 	suite.config = &Config{
 		JWTSecret:        []byte("test-jwt-secret-key-for-testing-purposes-with-sufficient-length"),
 		EncryptionKey:    key,
@@ -378,7 +377,7 @@ func (suite *AuthHandlerTestSuite) SetupTest() {
 		LockoutDuration:  15 * time.Minute,
 		SessionDuration:  24 * time.Hour,
 	}
-	
+
 	suite.handler = &AuthHandler{
 		crypto: suite.crypto,
 		config: suite.config,
@@ -387,13 +386,13 @@ func (suite *AuthHandlerTestSuite) SetupTest() {
 
 func (suite *AuthHandlerTestSuite) TestRegisterSuccess() {
 	app := fiber.New()
-	
+
 	// Mock successful database interactions
 	mockTx := &MockTx{}
 	mockRow := &MockRow{}
 	userID := uuid.New()
 	workspaceID := uuid.New()
-	
+
 	suite.mockDB.On("Begin", mock.Anything).Return(mockTx, nil)
 	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockRow).Once()
 	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
@@ -402,7 +401,7 @@ func (suite *AuthHandlerTestSuite) TestRegisterSuccess() {
 			*uid = userID
 		}
 	}).Return(nil).Once()
-	
+
 	// Mock workspace creation
 	mockRow2 := &MockRow{}
 	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockRow2).Once()
@@ -411,10 +410,10 @@ func (suite *AuthHandlerTestSuite) TestRegisterSuccess() {
 			*wid = workspaceID
 		}
 	}).Return(nil).Once()
-	
+
 	mockTx.On("Commit", mock.Anything).Return(nil)
 	mockTx.On("Rollback", mock.Anything).Return(nil)
-	
+
 	// Mock audit log
 	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(&MockResult{}, nil)
 
@@ -422,20 +421,20 @@ func (suite *AuthHandlerTestSuite) TestRegisterSuccess() {
 		Email:    "test@example.com",
 		Password: "SuperSecurePassword123!@#",
 	}
-	
+
 	body, _ := json.Marshal(req)
 	httpReq := httptest.NewRequest("POST", "/register", bytes.NewBuffer(body))
 	httpReq.Header.Set("Content-Type", "application/json")
-	
+
 	app.Post("/register", suite.handler.Register)
 	resp, err := app.Test(httpReq)
-	
+
 	suite.NoError(err)
 	suite.Equal(201, resp.StatusCode)
-	
+
 	var response map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&response)
-	
+
 	suite.Equal("Registration successful", response["message"])
 	suite.NotEmpty(response["token"])
 	suite.Equal(userID.String(), response["user_id"])
@@ -443,32 +442,32 @@ func (suite *AuthHandlerTestSuite) TestRegisterSuccess() {
 
 func (suite *AuthHandlerTestSuite) TestRegisterWeakPassword() {
 	app := fiber.New()
-	
+
 	req := RegisterRequest{
 		Email:    "test@example.com",
 		Password: "weak", // Too short
 	}
-	
+
 	body, _ := json.Marshal(req)
 	httpReq := httptest.NewRequest("POST", "/register", bytes.NewBuffer(body))
 	httpReq.Header.Set("Content-Type", "application/json")
-	
+
 	app.Post("/register", suite.handler.Register)
 	resp, err := app.Test(httpReq)
-	
+
 	suite.NoError(err)
 	suite.Equal(400, resp.StatusCode)
 }
 
 func (suite *AuthHandlerTestSuite) TestRegisterDuplicateEmail() {
 	app := fiber.New()
-	
+
 	// Mock database error for duplicate email
 	mockTx := &MockTx{}
 	suite.mockDB.On("Begin", mock.Anything).Return(mockTx, nil)
 	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(&MockRow{})
 	mockTx.On("Rollback", mock.Anything).Return(nil)
-	
+
 	mockRow := &MockRow{}
 	mockRow.On("Scan", mock.Anything).Return(fmt.Errorf("duplicate key value violates unique constraint"))
 
@@ -476,24 +475,24 @@ func (suite *AuthHandlerTestSuite) TestRegisterDuplicateEmail() {
 		Email:    "existing@example.com",
 		Password: "SuperSecurePassword123!@#",
 	}
-	
+
 	body, _ := json.Marshal(req)
 	httpReq := httptest.NewRequest("POST", "/register", bytes.NewBuffer(body))
 	httpReq.Header.Set("Content-Type", "application/json")
-	
+
 	app.Post("/register", suite.handler.Register)
 	resp, err := app.Test(httpReq)
-	
+
 	suite.NoError(err)
 	suite.Equal(409, resp.StatusCode)
 }
 
 func (suite *AuthHandlerTestSuite) TestLoginSuccess() {
 	app := fiber.New()
-	
+
 	userID := uuid.New()
 	passwordHash := HashPassword("TestPassword123!", make([]byte, 32))
-	
+
 	// Mock user lookup
 	mockRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockRow)
@@ -518,12 +517,12 @@ func (suite *AuthHandlerTestSuite) TestLoginSuccess() {
 			*mfaSecret = nil
 		}
 	}).Return(nil)
-	
+
 	// Mock updates and session creation
 	mockResult := &MockResult{}
 	mockResult.On("RowsAffected").Return(int64(1))
 	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockResult, nil)
-	
+
 	// Mock workspace lookup
 	mockRow2 := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), userID).Return(mockRow2)
@@ -533,27 +532,27 @@ func (suite *AuthHandlerTestSuite) TestLoginSuccess() {
 		Email:    "test@example.com",
 		Password: "TestPassword123!",
 	}
-	
+
 	body, _ := json.Marshal(req)
 	httpReq := httptest.NewRequest("POST", "/login", bytes.NewBuffer(body))
 	httpReq.Header.Set("Content-Type", "application/json")
-	
+
 	app.Post("/login", suite.handler.Login)
 	resp, err := app.Test(httpReq)
-	
+
 	suite.NoError(err)
 	suite.Equal(200, resp.StatusCode)
-	
+
 	var response map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&response)
-	
+
 	suite.NotEmpty(response["token"])
 	suite.NotEmpty(response["session"])
 }
 
 func (suite *AuthHandlerTestSuite) TestLoginInvalidCredentials() {
 	app := fiber.New()
-	
+
 	// Mock database returning error (user not found)
 	mockRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockRow)
@@ -563,24 +562,24 @@ func (suite *AuthHandlerTestSuite) TestLoginInvalidCredentials() {
 		Email:    "nonexistent@example.com",
 		Password: "TestPassword123!",
 	}
-	
+
 	body, _ := json.Marshal(req)
 	httpReq := httptest.NewRequest("POST", "/login", bytes.NewBuffer(body))
 	httpReq.Header.Set("Content-Type", "application/json")
-	
+
 	app.Post("/login", suite.handler.Login)
 	resp, err := app.Test(httpReq)
-	
+
 	suite.NoError(err)
 	suite.Equal(401, resp.StatusCode)
 }
 
 func (suite *AuthHandlerTestSuite) TestLoginAccountLocked() {
 	app := fiber.New()
-	
+
 	userID := uuid.New()
 	lockTime := time.Now().Add(10 * time.Minute) // Locked for 10 more minutes
-	
+
 	mockRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockRow)
 	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
@@ -608,14 +607,14 @@ func (suite *AuthHandlerTestSuite) TestLoginAccountLocked() {
 		Email:    "locked@example.com",
 		Password: "TestPassword123!",
 	}
-	
+
 	body, _ := json.Marshal(req)
 	httpReq := httptest.NewRequest("POST", "/login", bytes.NewBuffer(body))
 	httpReq.Header.Set("Content-Type", "application/json")
-	
+
 	app.Post("/login", suite.handler.Login)
 	resp, err := app.Test(httpReq)
-	
+
 	suite.NoError(err)
 	suite.Equal(403, resp.StatusCode)
 }
@@ -654,28 +653,7 @@ func setupTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 	return pool, cleanup
 }
 
-func setupTestRedis(t *testing.T) (*redis.Client, func()) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	rdb := redis.NewClient(&redis.Options{
-		Addr: TestRedisURL,
-		DB:   1, // Use test database
-	})
-
-	ctx := context.Background()
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		t.Skipf("Cannot connect to test Redis: %v", err)
-	}
-
-	cleanup := func() {
-		rdb.FlushDB(ctx)
-		rdb.Close()
-	}
-
-	return rdb, cleanup
-}
+// setupTestRedis function removed as it was unused
 
 // Benchmarks for performance testing
 func BenchmarkPasswordHashing(b *testing.B) {
