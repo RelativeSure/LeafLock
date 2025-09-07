@@ -27,7 +27,7 @@ global.ResizeObserver = vi.fn(() => ({
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -223,7 +223,7 @@ Object.defineProperty(crypto, 'getRandomValues', {
 if (!global.TextEncoder) {
   global.TextEncoder = class MockTextEncoder {
     encode(string) {
-      return new Uint8Array(string.split('').map(char => char.charCodeAt(0)))
+      return new Uint8Array(string.split('').map((char) => char.charCodeAt(0)))
     }
   }
 }

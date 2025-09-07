@@ -15,7 +15,7 @@ import {
   mockLocalStorage,
   mockSodium,
   typeIntoField,
-  waitForLoading
+  waitForLoading,
 } from './test-utils.jsx'
 
 // Mock libsodium-wrappers
@@ -78,23 +78,28 @@ describe('SecureNotesApp', () => {
       await user.type(passwordField, 'StrongPassword123!@#')
 
       // Should show strength indicator bars
-      const strengthBars = screen.getAllByRole('generic').filter(el =>
-        el.className.includes('bg-green-500') ||
-        el.className.includes('bg-yellow-500') ||
-        el.className.includes('bg-red-500')
-      )
+      const strengthBars = screen
+        .getAllByRole('generic')
+        .filter(
+          (el) =>
+            el.className.includes('bg-green-500') ||
+            el.className.includes('bg-yellow-500') ||
+            el.className.includes('bg-red-500')
+        )
       expect(strengthBars.length).toBeGreaterThan(0)
     })
 
     it('handles successful registration', async () => {
       const user = userEvent.setup()
 
-      mockFetch.mockResolvedValue(mockApiResponse({
-        token: 'test-token',
-        user_id: 'test-user-id',
-        workspace_id: 'test-workspace-id',
-        message: 'Registration successful'
-      }))
+      mockFetch.mockResolvedValue(
+        mockApiResponse({
+          token: 'test-token',
+          user_id: 'test-user-id',
+          workspace_id: 'test-workspace-id',
+          message: 'Registration successful',
+        })
+      )
 
       render(<SecureNotesApp />)
 
@@ -114,9 +119,9 @@ describe('SecureNotesApp', () => {
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           }),
-          body: expect.stringContaining('test@example.com')
+          body: expect.stringContaining('test@example.com'),
         })
       )
 
@@ -150,12 +155,14 @@ describe('SecureNotesApp', () => {
     it('handles successful login', async () => {
       const user = userEvent.setup()
 
-      mockFetch.mockResolvedValue(mockApiResponse({
-        token: 'test-token',
-        session: 'test-session',
-        user_id: 'test-user-id',
-        workspace_id: 'test-workspace-id'
-      }))
+      mockFetch.mockResolvedValue(
+        mockApiResponse({
+          token: 'test-token',
+          session: 'test-session',
+          user_id: 'test-user-id',
+          workspace_id: 'test-workspace-id',
+        })
+      )
 
       render(<SecureNotesApp />)
 
@@ -170,7 +177,7 @@ describe('SecureNotesApp', () => {
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/auth/login'),
         expect.objectContaining({
-          method: 'POST'
+          method: 'POST',
         })
       )
     })
@@ -178,9 +185,11 @@ describe('SecureNotesApp', () => {
     it('handles MFA requirement', async () => {
       const user = userEvent.setup()
 
-      mockFetch.mockResolvedValue(mockApiResponse({
-        mfa_required: true
-      }))
+      mockFetch.mockResolvedValue(
+        mockApiResponse({
+          mfa_required: true,
+        })
+      )
 
       render(<SecureNotesApp />)
 
@@ -202,7 +211,7 @@ describe('SecureNotesApp', () => {
       expect(mockFetch).toHaveBeenLastCalledWith(
         expect.stringContaining('/auth/login'),
         expect.objectContaining({
-          body: expect.stringContaining('123456')
+          body: expect.stringContaining('123456'),
         })
       )
     })
@@ -272,7 +281,7 @@ describe('SecureNotesApp', () => {
     it('displays notes list', async () => {
       const mockNotes = [
         createMockNote({ id: '1', title: 'Note 1', content: 'Content 1' }),
-        createMockNote({ id: '2', title: 'Note 2', content: 'Content 2' })
+        createMockNote({ id: '2', title: 'Note 2', content: 'Content 2' }),
       ]
 
       mockFetch.mockResolvedValue(mockApiResponse({ notes: mockNotes }))
@@ -300,7 +309,9 @@ describe('SecureNotesApp', () => {
 
       mockFetch
         .mockResolvedValueOnce(mockApiResponse({ notes: [] })) // Initial load
-        .mockResolvedValueOnce(mockApiResponse({ id: 'new-note-id', message: 'Note created successfully' })) // Create
+        .mockResolvedValueOnce(
+          mockApiResponse({ id: 'new-note-id', message: 'Note created successfully' })
+        ) // Create
         .mockResolvedValueOnce(mockApiResponse({ notes: [createMockNote({ id: 'new-note-id' })] })) // Reload
 
       render(<SecureNotesApp />)
@@ -317,7 +328,7 @@ describe('SecureNotesApp', () => {
       const user = userEvent.setup()
       const mockNotes = [
         createMockNote({ id: '1', title: 'JavaScript Notes', content: 'Programming content' }),
-        createMockNote({ id: '2', title: 'Recipe Ideas', content: 'Cooking content' })
+        createMockNote({ id: '2', title: 'Recipe Ideas', content: 'Cooking content' }),
       ]
 
       mockFetch.mockResolvedValue(mockApiResponse({ notes: mockNotes }))
@@ -342,9 +353,7 @@ describe('SecureNotesApp', () => {
 
     it('selects and displays note', async () => {
       const user = userEvent.setup()
-      const mockNotes = [
-        createMockNote({ id: '1', title: 'Test Note', content: 'Test content' })
-      ]
+      const mockNotes = [createMockNote({ id: '1', title: 'Test Note', content: 'Test content' })]
 
       mockFetch.mockResolvedValue(mockApiResponse({ notes: mockNotes }))
 
@@ -380,14 +389,17 @@ describe('SecureNotesApp', () => {
       await user.type(titleField, 'Auto-save Test')
 
       // Should trigger auto-save after debounce
-      await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringContaining('/notes'),
-          expect.objectContaining({
-            method: 'POST'
-          })
-        )
-      }, { timeout: 3000 })
+      await waitFor(
+        () => {
+          expect(mockFetch).toHaveBeenCalledWith(
+            expect.stringContaining('/notes'),
+            expect.objectContaining({
+              method: 'POST',
+            })
+          )
+        },
+        { timeout: 3000 }
+      )
     })
   })
 
@@ -443,7 +455,7 @@ describe('SecureNotesApp', () => {
       const user = userEvent.setup()
 
       // Mock slow API response
-      const slowPromise = new Promise(resolve => {
+      const slowPromise = new Promise((resolve) => {
         setTimeout(() => resolve(mockApiResponse({ token: 'test-token' })), 100)
       })
       mockFetch.mockReturnValue(slowPromise)
@@ -467,13 +479,11 @@ describe('SecureNotesApp', () => {
       mockLocalStorage.getItem.mockReturnValue('test-token')
 
       // Mock slow save
-      const slowSave = new Promise(resolve => {
+      const slowSave = new Promise((resolve) => {
         setTimeout(() => resolve(mockApiResponse({ id: 'test-note' })), 100)
       })
 
-      mockFetch
-        .mockResolvedValueOnce(mockApiResponse({ notes: [] }))
-        .mockReturnValueOnce(slowSave)
+      mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: [] })).mockReturnValueOnce(slowSave)
 
       render(<SecureNotesApp />)
 
@@ -494,7 +504,7 @@ describe('SecureNotesApp', () => {
     it('prevents XSS in note content', () => {
       const maliciousContent = '<script>alert("xss")</script>'
       const mockNotes = [
-        createMockNote({ id: '1', title: maliciousContent, content: maliciousContent })
+        createMockNote({ id: '1', title: maliciousContent, content: maliciousContent }),
       ]
 
       mockLocalStorage.getItem.mockReturnValue('test-token')
@@ -541,8 +551,8 @@ describe('SecureNotesApp', () => {
           credentials: 'include',
           mode: 'cors',
           headers: expect.objectContaining({
-            'Content-Type': 'application/json'
-          })
+            'Content-Type': 'application/json',
+          }),
         })
       )
     })
@@ -587,9 +597,11 @@ describe('SecureNotesApp', () => {
       const user = userEvent.setup()
 
       mockLocalStorage.getItem.mockReturnValue('test-token')
-      mockFetch.mockResolvedValue(mockApiResponse({
-        notes: [createMockNote({ title: 'Test Note' })]
-      }))
+      mockFetch.mockResolvedValue(
+        mockApiResponse({
+          notes: [createMockNote({ title: 'Test Note' })],
+        })
+      )
 
       render(<SecureNotesApp />)
 

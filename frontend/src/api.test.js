@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MockSecureAPI, createMockNote, mockApiError, mockApiResponse, mockFetch, mockLocalStorage } from './test-utils.jsx'
+import {
+  MockSecureAPI,
+  createMockNote,
+  mockApiError,
+  mockApiResponse,
+  mockFetch,
+  mockLocalStorage,
+} from './test-utils.jsx'
 
 // Mock environment
 global.fetch = mockFetch
@@ -16,7 +23,7 @@ class TestSecureAPI {
     const url = `${this.baseURL}${endpoint}`
     const headers = {
       'Content-Type': 'application/json',
-      ...options.headers
+      ...options.headers,
     }
 
     if (this.token) {
@@ -27,7 +34,7 @@ class TestSecureAPI {
       ...options,
       headers,
       credentials: 'include',
-      mode: 'cors'
+      mode: 'cors',
     })
 
     if (!response.ok) {
@@ -60,7 +67,7 @@ class TestSecureAPI {
   async register(email, password) {
     const response = await this.request('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email, password }),
     })
 
     if (response.token) {
@@ -73,7 +80,7 @@ class TestSecureAPI {
   async login(email, password, mfaCode) {
     const response = await this.request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password, mfa_code: mfaCode })
+      body: JSON.stringify({ email, password, mfa_code: mfaCode }),
     })
 
     if (response.token) {
@@ -92,8 +99,8 @@ class TestSecureAPI {
       method: 'POST',
       body: JSON.stringify({
         title_encrypted: encryptedTitle,
-        content_encrypted: encryptedContent
-      })
+        content_encrypted: encryptedContent,
+      }),
     })
   }
 
@@ -102,10 +109,10 @@ class TestSecureAPI {
     const notes = response.notes || response || []
 
     // Mock decryption for testing
-    return notes.map(note => ({
+    return notes.map((note) => ({
       ...note,
       title: note.title_encrypted ? atob(note.title_encrypted) : 'Untitled',
-      content: note.content_encrypted ? JSON.parse(atob(note.content_encrypted)) : ''
+      content: note.content_encrypted ? JSON.parse(atob(note.content_encrypted)) : '',
     }))
   }
 
@@ -117,14 +124,14 @@ class TestSecureAPI {
       method: 'PUT',
       body: JSON.stringify({
         title_encrypted: encryptedTitle,
-        content_encrypted: encryptedContent
-      })
+        content_encrypted: encryptedContent,
+      }),
     })
   }
 
   async deleteNote(noteId) {
     return this.request(`/notes/${noteId}`, {
-      method: 'DELETE'
+      method: 'DELETE',
     })
   }
 }
@@ -177,10 +184,10 @@ describe('SecureAPI', () => {
         '/api/v1/test',
         expect.objectContaining({
           headers: expect.objectContaining({
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           }),
           credentials: 'include',
-          mode: 'cors'
+          mode: 'cors',
         })
       )
     })
@@ -195,8 +202,8 @@ describe('SecureAPI', () => {
         expect.any(String),
         expect.objectContaining({
           headers: expect.objectContaining({
-            'Authorization': 'Bearer test-token'
-          })
+            Authorization: 'Bearer test-token',
+          }),
         })
       )
     })
@@ -207,14 +214,14 @@ describe('SecureAPI', () => {
 
       await api.request('/test', {
         method: 'POST',
-        body: JSON.stringify(testData)
+        body: JSON.stringify(testData),
       })
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify(testData)
+          body: JSON.stringify(testData),
         })
       )
     })
@@ -265,7 +272,7 @@ describe('SecureAPI', () => {
       mockFetch.mockResolvedValue(mockApiResponse({ data: 'test' }))
 
       await api.request('/test', {
-        headers: { 'X-Custom-Header': 'custom-value' }
+        headers: { 'X-Custom-Header': 'custom-value' },
       })
 
       expect(mockFetch).toHaveBeenCalledWith(
@@ -273,8 +280,8 @@ describe('SecureAPI', () => {
         expect.objectContaining({
           headers: expect.objectContaining({
             'Content-Type': 'application/json',
-            'X-Custom-Header': 'custom-value'
-          })
+            'X-Custom-Header': 'custom-value',
+          }),
         })
       )
     })
@@ -313,7 +320,7 @@ describe('SecureAPI', () => {
           token: 'new-token',
           user_id: 'user-123',
           workspace_id: 'workspace-456',
-          message: 'Registration successful'
+          message: 'Registration successful',
         }
         mockFetch.mockResolvedValue(mockApiResponse(responseData))
 
@@ -325,8 +332,8 @@ describe('SecureAPI', () => {
             method: 'POST',
             body: JSON.stringify({
               email: 'test@example.com',
-              password: 'SecurePassword123!'
-            })
+              password: 'SecurePassword123!',
+            }),
           })
         )
         expect(result).toEqual(responseData)
@@ -337,7 +344,9 @@ describe('SecureAPI', () => {
       it('handles registration failure', async () => {
         mockFetch.mockResolvedValue(mockApiError(400, 'Email already exists'))
 
-        await expect(api.register('existing@example.com', 'password')).rejects.toThrow('Email already exists')
+        await expect(api.register('existing@example.com', 'password')).rejects.toThrow(
+          'Email already exists'
+        )
         expect(api.token).toBeNull()
       })
 
@@ -354,7 +363,7 @@ describe('SecureAPI', () => {
           token: 'login-token',
           session: 'session-123',
           user_id: 'user-123',
-          workspace_id: 'workspace-456'
+          workspace_id: 'workspace-456',
         }
         mockFetch.mockResolvedValue(mockApiResponse(responseData))
 
@@ -367,8 +376,8 @@ describe('SecureAPI', () => {
             body: JSON.stringify({
               email: 'test@example.com',
               password: 'Password123!',
-              mfa_code: undefined
-            })
+              mfa_code: undefined,
+            }),
           })
         )
         expect(result).toEqual(responseData)
@@ -387,8 +396,8 @@ describe('SecureAPI', () => {
             body: JSON.stringify({
               email: 'test@example.com',
               password: 'Password123!',
-              mfa_code: '123456'
-            })
+              mfa_code: '123456',
+            }),
           })
         )
       })
@@ -406,7 +415,9 @@ describe('SecureAPI', () => {
       it('handles invalid credentials', async () => {
         mockFetch.mockResolvedValue(mockApiError(401, 'Invalid credentials'))
 
-        await expect(api.login('wrong@example.com', 'wrongpass')).rejects.toThrow('Invalid credentials')
+        await expect(api.login('wrong@example.com', 'wrongpass')).rejects.toThrow(
+          'Invalid credentials'
+        )
         expect(api.token).toBeNull()
       })
 
@@ -427,7 +438,7 @@ describe('SecureAPI', () => {
       it('creates note successfully', async () => {
         const responseData = {
           id: 'note-123',
-          message: 'Note created successfully'
+          message: 'Note created successfully',
         }
         mockFetch.mockResolvedValue(mockApiResponse(responseData))
 
@@ -438,12 +449,12 @@ describe('SecureAPI', () => {
           expect.objectContaining({
             method: 'POST',
             headers: expect.objectContaining({
-              'Authorization': 'Bearer valid-token'
+              Authorization: 'Bearer valid-token',
             }),
             body: JSON.stringify({
               title_encrypted: btoa('Test Title'),
-              content_encrypted: btoa(JSON.stringify('Test content'))
-            })
+              content_encrypted: btoa(JSON.stringify('Test content')),
+            }),
           })
         )
         expect(result).toEqual(responseData)
@@ -472,15 +483,15 @@ describe('SecureAPI', () => {
             title_encrypted: btoa('Note 1'),
             content_encrypted: btoa(JSON.stringify('Content 1')),
             created_at: '2024-01-01T00:00:00Z',
-            updated_at: '2024-01-01T00:00:00Z'
+            updated_at: '2024-01-01T00:00:00Z',
           },
           {
             id: 'note-2',
             title_encrypted: btoa('Note 2'),
             content_encrypted: btoa(JSON.stringify('Content 2')),
             created_at: '2024-01-02T00:00:00Z',
-            updated_at: '2024-01-02T00:00:00Z'
-          }
+            updated_at: '2024-01-02T00:00:00Z',
+          },
         ]
         mockFetch.mockResolvedValue(mockApiResponse({ notes: encryptedNotes }))
 
@@ -490,22 +501,26 @@ describe('SecureAPI', () => {
           '/api/v1/notes',
           expect.objectContaining({
             headers: expect.objectContaining({
-              'Authorization': 'Bearer valid-token'
-            })
+              Authorization: 'Bearer valid-token',
+            }),
           })
         )
 
         expect(result).toHaveLength(2)
-        expect(result[0]).toEqual(expect.objectContaining({
-          id: 'note-1',
-          title: 'Note 1',
-          content: 'Content 1'
-        }))
-        expect(result[1]).toEqual(expect.objectContaining({
-          id: 'note-2',
-          title: 'Note 2',
-          content: 'Content 2'
-        }))
+        expect(result[0]).toEqual(
+          expect.objectContaining({
+            id: 'note-1',
+            title: 'Note 1',
+            content: 'Content 1',
+          })
+        )
+        expect(result[1]).toEqual(
+          expect.objectContaining({
+            id: 'note-2',
+            title: 'Note 2',
+            content: 'Content 2',
+          })
+        )
       })
 
       it('handles empty notes response', async () => {
@@ -530,13 +545,13 @@ describe('SecureAPI', () => {
           {
             id: 'note-1',
             title_encrypted: btoa('Good Note'),
-            content_encrypted: btoa(JSON.stringify('Good Content'))
+            content_encrypted: btoa(JSON.stringify('Good Content')),
           },
           {
             id: 'note-2',
             title_encrypted: 'invalid-base64!',
-            content_encrypted: btoa(JSON.stringify('Content'))
-          }
+            content_encrypted: btoa(JSON.stringify('Content')),
+          },
         ]
         mockFetch.mockResolvedValue(mockApiResponse({ notes: mixedNotes }))
 
@@ -569,8 +584,8 @@ describe('SecureAPI', () => {
             method: 'PUT',
             body: JSON.stringify({
               title_encrypted: btoa('Updated Title'),
-              content_encrypted: btoa(JSON.stringify('Updated content'))
-            })
+              content_encrypted: btoa(JSON.stringify('Updated content')),
+            }),
           })
         )
         expect(result).toEqual(responseData)
@@ -579,13 +594,17 @@ describe('SecureAPI', () => {
       it('handles note not found', async () => {
         mockFetch.mockResolvedValue(mockApiError(404, 'Note not found'))
 
-        await expect(api.updateNote('nonexistent', 'Title', 'Content')).rejects.toThrow('Note not found')
+        await expect(api.updateNote('nonexistent', 'Title', 'Content')).rejects.toThrow(
+          'Note not found'
+        )
       })
 
       it('handles unauthorized access', async () => {
         mockFetch.mockResolvedValue(mockApiError(403, 'Access denied'))
 
-        await expect(api.updateNote('other-user-note', 'Title', 'Content')).rejects.toThrow('Access denied')
+        await expect(api.updateNote('other-user-note', 'Title', 'Content')).rejects.toThrow(
+          'Access denied'
+        )
       })
     })
 
@@ -599,7 +618,7 @@ describe('SecureAPI', () => {
         expect(mockFetch).toHaveBeenCalledWith(
           '/api/v1/notes/note-123',
           expect.objectContaining({
-            method: 'DELETE'
+            method: 'DELETE',
           })
         )
         expect(result).toEqual(responseData)
@@ -630,7 +649,7 @@ describe('SecureAPI', () => {
       const invalidJsonResponse = {
         ok: true,
         status: 200,
-        json: vi.fn().mockRejectedValue(new Error('Invalid JSON'))
+        json: vi.fn().mockRejectedValue(new Error('Invalid JSON')),
       }
       mockFetch.mockResolvedValue(invalidJsonResponse)
 
@@ -641,7 +660,7 @@ describe('SecureAPI', () => {
       mockFetch.mockResolvedValue({
         ok: false,
         status: 500,
-        json: vi.fn().mockResolvedValue({})
+        json: vi.fn().mockResolvedValue({}),
       })
 
       await expect(api.request('/test')).rejects.toThrow('HTTP 500')
@@ -667,7 +686,7 @@ describe('SecureAPI', () => {
         expect.any(String),
         expect.objectContaining({
           credentials: 'include',
-          mode: 'cors'
+          mode: 'cors',
         })
       )
     })

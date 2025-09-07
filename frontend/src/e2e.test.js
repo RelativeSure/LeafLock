@@ -9,7 +9,7 @@ import {
   mockApiResponse,
   mockFetch,
   mockLocalStorage,
-  mockSodium
+  mockSodium,
 } from './test-utils.jsx'
 
 // Mock libsodium for E2E tests
@@ -35,32 +35,40 @@ describe('End-to-End User Flows', () => {
       const user = userEvent.setup()
 
       // Mock successful registration
-      mockFetch.mockResolvedValueOnce(mockApiResponse({
-        token: 'new-user-token',
-        user_id: 'user-123',
-        workspace_id: 'workspace-456',
-        message: 'Registration successful'
-      }))
+      mockFetch.mockResolvedValueOnce(
+        mockApiResponse({
+          token: 'new-user-token',
+          user_id: 'user-123',
+          workspace_id: 'workspace-456',
+          message: 'Registration successful',
+        })
+      )
 
       // Mock initial notes load (empty)
       mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: [] }))
 
       // Mock note creation
-      mockFetch.mockResolvedValueOnce(mockApiResponse({
-        id: 'note-1',
-        message: 'Note created successfully'
-      }))
+      mockFetch.mockResolvedValueOnce(
+        mockApiResponse({
+          id: 'note-1',
+          message: 'Note created successfully',
+        })
+      )
 
       // Mock notes reload after creation
-      mockFetch.mockResolvedValueOnce(mockApiResponse({
-        notes: [{
-          id: 'note-1',
-          title_encrypted: btoa('My First Note'),
-          content_encrypted: btoa(JSON.stringify('This is my first secure note!')),
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z'
-        }]
-      }))
+      mockFetch.mockResolvedValueOnce(
+        mockApiResponse({
+          notes: [
+            {
+              id: 'note-1',
+              title_encrypted: btoa('My First Note'),
+              content_encrypted: btoa(JSON.stringify('This is my first secure note!')),
+              created_at: '2024-01-01T00:00:00Z',
+              updated_at: '2024-01-01T00:00:00Z',
+            },
+          ],
+        })
+      )
 
       render(<SecureNotesApp />)
 
@@ -79,7 +87,7 @@ describe('End-to-End User Flows', () => {
         expect.stringContaining('/auth/register'),
         expect.objectContaining({
           method: 'POST',
-          body: expect.stringContaining('newuser@example.com')
+          body: expect.stringContaining('newuser@example.com'),
         })
       )
 
@@ -98,12 +106,15 @@ describe('End-to-End User Flows', () => {
       await user.type(contentField, 'This is my first secure note!')
 
       // Wait for auto-save
-      await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringContaining('/notes'),
-          expect.objectContaining({ method: 'POST' })
-        )
-      }, { timeout: 3000 })
+      await waitFor(
+        () => {
+          expect(mockFetch).toHaveBeenCalledWith(
+            expect.stringContaining('/notes'),
+            expect.objectContaining({ method: 'POST' })
+          )
+        },
+        { timeout: 3000 }
+      )
 
       // Step 4: Verify note appears in list
       await waitFor(() => {
@@ -142,25 +153,27 @@ describe('End-to-End User Flows', () => {
       const user = userEvent.setup()
 
       // Mock successful login
-      mockFetch.mockResolvedValueOnce(mockApiResponse({
-        token: 'user-token',
-        session: 'session-123',
-        user_id: 'user-456',
-        workspace_id: 'workspace-789'
-      }))
+      mockFetch.mockResolvedValueOnce(
+        mockApiResponse({
+          token: 'user-token',
+          session: 'session-123',
+          user_id: 'user-456',
+          workspace_id: 'workspace-789',
+        })
+      )
 
       // Mock initial notes load
       const existingNotes = [
         createMockEncryptedNote({
           id: 'note-1',
           title_encrypted: btoa('Work Notes'),
-          content_encrypted: btoa(JSON.stringify('Important work stuff'))
+          content_encrypted: btoa(JSON.stringify('Important work stuff')),
         }),
         createMockEncryptedNote({
           id: 'note-2',
           title_encrypted: btoa('Personal Journal'),
-          content_encrypted: btoa(JSON.stringify('Personal thoughts'))
-        })
+          content_encrypted: btoa(JSON.stringify('Personal thoughts')),
+        }),
       ]
       mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: existingNotes }))
 
@@ -168,24 +181,28 @@ describe('End-to-End User Flows', () => {
       mockFetch.mockResolvedValueOnce(mockApiResponse({ message: 'Note updated successfully' }))
 
       // Mock notes reload after update
-      mockFetch.mockResolvedValueOnce(mockApiResponse({
-        notes: [
-          ...existingNotes.slice(0, 1),
-          {
-            ...existingNotes[1],
-            title_encrypted: btoa('Updated Personal Journal'),
-            content_encrypted: btoa(JSON.stringify('Updated personal thoughts'))
-          }
-        ]
-      }))
+      mockFetch.mockResolvedValueOnce(
+        mockApiResponse({
+          notes: [
+            ...existingNotes.slice(0, 1),
+            {
+              ...existingNotes[1],
+              title_encrypted: btoa('Updated Personal Journal'),
+              content_encrypted: btoa(JSON.stringify('Updated personal thoughts')),
+            },
+          ],
+        })
+      )
 
       // Mock note deletion
       mockFetch.mockResolvedValueOnce(mockApiResponse({ message: 'Note deleted successfully' }))
 
       // Mock final notes reload
-      mockFetch.mockResolvedValueOnce(mockApiResponse({
-        notes: existingNotes.slice(0, 1) // Only first note remains
-      }))
+      mockFetch.mockResolvedValueOnce(
+        mockApiResponse({
+          notes: existingNotes.slice(0, 1), // Only first note remains
+        })
+      )
 
       render(<SecureNotesApp />)
 
@@ -218,12 +235,15 @@ describe('End-to-End User Flows', () => {
       await user.type(contentField, 'Updated personal thoughts')
 
       // Wait for auto-save
-      await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringContaining('/notes/note-2'),
-          expect.objectContaining({ method: 'PUT' })
-        )
-      }, { timeout: 3000 })
+      await waitFor(
+        () => {
+          expect(mockFetch).toHaveBeenCalledWith(
+            expect.stringContaining('/notes/note-2'),
+            expect.objectContaining({ method: 'PUT' })
+          )
+        },
+        { timeout: 3000 }
+      )
 
       // Step 5: Verify update in notes list
       await waitFor(() => {
@@ -259,12 +279,14 @@ describe('End-to-End User Flows', () => {
       mockFetch.mockResolvedValueOnce(mockApiResponse({ mfa_required: true }))
 
       // Mock successful MFA login
-      mockFetch.mockResolvedValueOnce(mockApiResponse({
-        token: 'mfa-user-token',
-        session: 'mfa-session-123',
-        user_id: 'mfa-user-456',
-        workspace_id: 'mfa-workspace-789'
-      }))
+      mockFetch.mockResolvedValueOnce(
+        mockApiResponse({
+          token: 'mfa-user-token',
+          session: 'mfa-session-123',
+          user_id: 'mfa-user-456',
+          workspace_id: 'mfa-workspace-789',
+        })
+      )
 
       // Mock notes load
       mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: [] }))
@@ -294,7 +316,7 @@ describe('End-to-End User Flows', () => {
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/auth/login'),
         expect.objectContaining({
-          body: expect.stringContaining('123456')
+          body: expect.stringContaining('123456'),
         })
       )
     })
@@ -306,9 +328,11 @@ describe('End-to-End User Flows', () => {
       mockLocalStorage.getItem.mockReturnValue('existing-token')
 
       // Mock notes load for restored session
-      mockFetch.mockResolvedValueOnce(mockApiResponse({
-        notes: [createMockEncryptedNote({ title_encrypted: btoa('Existing Note') })]
-      }))
+      mockFetch.mockResolvedValueOnce(
+        mockApiResponse({
+          notes: [createMockEncryptedNote({ title_encrypted: btoa('Existing Note') })],
+        })
+      )
 
       render(<SecureNotesApp />)
 
@@ -326,8 +350,8 @@ describe('End-to-End User Flows', () => {
         expect.stringContaining('/notes'),
         expect.objectContaining({
           headers: expect.objectContaining({
-            'Authorization': 'Bearer existing-token'
-          })
+            Authorization: 'Bearer existing-token',
+          }),
         })
       )
     })
@@ -449,11 +473,13 @@ describe('End-to-End User Flows', () => {
       const user = userEvent.setup()
 
       // Mock login
-      mockFetch.mockResolvedValueOnce(mockApiResponse({
-        token: 'user-token',
-        user_id: 'user-123',
-        workspace_id: 'workspace-456'
-      }))
+      mockFetch.mockResolvedValueOnce(
+        mockApiResponse({
+          token: 'user-token',
+          user_id: 'user-123',
+          workspace_id: 'workspace-456',
+        })
+      )
 
       // Mock initial load
       mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: [] }))
@@ -482,16 +508,19 @@ describe('End-to-End User Flows', () => {
       await user.type(screen.getByPlaceholderText(/start writing/i), sensitiveContent)
 
       // Wait for save
-      await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringContaining('/notes'),
-          expect.objectContaining({ method: 'POST' })
-        )
-      }, { timeout: 3000 })
+      await waitFor(
+        () => {
+          expect(mockFetch).toHaveBeenCalledWith(
+            expect.stringContaining('/notes'),
+            expect.objectContaining({ method: 'POST' })
+          )
+        },
+        { timeout: 3000 }
+      )
 
       // Verify sensitive data was encrypted before sending
-      const createCall = mockFetch.mock.calls.find(call =>
-        call[1]?.method === 'POST' && call[0].includes('/notes')
+      const createCall = mockFetch.mock.calls.find(
+        (call) => call[1]?.method === 'POST' && call[0].includes('/notes')
       )
 
       expect(createCall).toBeDefined()
@@ -546,7 +575,7 @@ describe('End-to-End User Flows', () => {
       const user = userEvent.setup()
 
       // Mock slow login
-      const slowLogin = new Promise(resolve => {
+      const slowLogin = new Promise((resolve) => {
         setTimeout(() => resolve(mockApiResponse({ token: 'token' })), 200)
       })
       mockFetch.mockReturnValueOnce(slowLogin)
@@ -597,18 +626,20 @@ describe('End-to-End User Flows', () => {
 
       // Setup with existing notes
       mockLocalStorage.getItem.mockReturnValue('user-token')
-      mockFetch.mockResolvedValueOnce(mockApiResponse({
-        notes: [
-          createMockEncryptedNote({
-            id: 'note-1',
-            title_encrypted: btoa('Note 1')
-          }),
-          createMockEncryptedNote({
-            id: 'note-2',
-            title_encrypted: btoa('Note 2')
-          })
-        ]
-      }))
+      mockFetch.mockResolvedValueOnce(
+        mockApiResponse({
+          notes: [
+            createMockEncryptedNote({
+              id: 'note-1',
+              title_encrypted: btoa('Note 1'),
+            }),
+            createMockEncryptedNote({
+              id: 'note-2',
+              title_encrypted: btoa('Note 2'),
+            }),
+          ],
+        })
+      )
 
       render(<SecureNotesApp />)
 

@@ -347,7 +347,7 @@ func (suite *SecurityTestSuite) TestPasswordSecurity() {
 			suite.Run(fmt.Sprintf("StrongPassword_%s", pwd), func() {
 				salt := make([]byte, 32)
 				rand.Read(salt)
-				
+
 				hash := HashPassword(pwd, salt)
 				assert.NotEmpty(suite.T(), hash)
 				assert.True(suite.T(), VerifyPassword(pwd, hash))
@@ -361,7 +361,7 @@ func (suite *SecurityTestSuite) TestRateLimiting() {
 	suite.Run("LoginAttemptLimiting", func() {
 		// Create app with rate limiting middleware
 		app := fiber.New()
-		
+
 		attempts := make(map[string]int)
 		app.Use(func(c *fiber.Ctx) error {
 			ip := c.IP()
@@ -371,7 +371,7 @@ func (suite *SecurityTestSuite) TestRateLimiting() {
 			}
 			return c.Next()
 		})
-		
+
 		app.Post("/login", func(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"status": "ok"})
 		})
@@ -380,10 +380,10 @@ func (suite *SecurityTestSuite) TestRateLimiting() {
 		for i := 0; i < 10; i++ {
 			req := httptest.NewRequest("POST", "/login", strings.NewReader("{}"))
 			req.Header.Set("Content-Type", "application/json")
-			
+
 			resp, err := app.Test(req)
 			require.NoError(suite.T(), err)
-			
+
 			if i < 5 {
 				assert.Equal(suite.T(), 200, resp.StatusCode, fmt.Sprintf("Request %d should succeed", i+1))
 			} else {
@@ -399,7 +399,7 @@ func (suite *SecurityTestSuite) TestEncryptionSecurity() {
 
 	suite.Run("NonceUniqueness", func() {
 		plaintext := []byte("test data")
-		
+
 		// Encrypt same data multiple times
 		ciphertexts := make([][]byte, 100)
 		for i := 0; i < 100; i++ {
@@ -443,7 +443,7 @@ func (suite *SecurityTestSuite) TestEncryptionSecurity() {
 		crypto2 := NewCryptoService(key2)
 
 		plaintext := []byte("secret data")
-		
+
 		// Encrypt with first key
 		ciphertext, err := crypto1.Encrypt(plaintext)
 		require.NoError(suite.T(), err)
@@ -455,7 +455,7 @@ func (suite *SecurityTestSuite) TestEncryptionSecurity() {
 
 	suite.Run("CiphertextRandomness", func() {
 		plaintext := []byte("test")
-		
+
 		// Encrypt multiple times and check randomness
 		ciphertexts := make([][]byte, 10)
 		for i := 0; i < 10; i++ {
@@ -478,7 +478,7 @@ func (suite *SecurityTestSuite) TestInputValidation() {
 	suite.Run("OversizedInput", func() {
 		// Test with very large input
 		largeInput := strings.Repeat("A", 1024*1024) // 1MB
-		
+
 		req := LoginRequest{
 			Email:    largeInput,
 			Password: "test",
@@ -490,7 +490,7 @@ func (suite *SecurityTestSuite) TestInputValidation() {
 
 		resp, err := suite.app.Test(httpReq)
 		require.NoError(suite.T(), err)
-		
+
 		// Should handle gracefully without crashing
 		assert.True(suite.T(), resp.StatusCode >= 400 && resp.StatusCode < 500, "Should reject oversized input")
 	})
@@ -509,7 +509,7 @@ func (suite *SecurityTestSuite) TestInputValidation() {
 	suite.Run("NullBytes", func() {
 		// Test with null bytes (could cause issues in some parsers)
 		emailWithNull := "test\x00@example.com"
-		
+
 		req := LoginRequest{
 			Email:    emailWithNull,
 			Password: "test",
@@ -521,7 +521,7 @@ func (suite *SecurityTestSuite) TestInputValidation() {
 
 		resp, err := suite.app.Test(httpReq)
 		require.NoError(suite.T(), err)
-		
+
 		// Should handle null bytes gracefully
 		assert.True(suite.T(), resp.StatusCode < 500, "Should handle null bytes without server error")
 	})
@@ -529,11 +529,11 @@ func (suite *SecurityTestSuite) TestInputValidation() {
 	suite.Run("UnicodeHandling", func() {
 		// Test with various Unicode characters
 		unicodeInputs := []string{
-			"test@例え.テスト",     // Japanese
-			"тест@пример.рф",      // Cyrillic
-			"test@مثال.شبكة",      // Arabic
-			"🔒secure@🌍.com",     // Emojis
-			"test@tëst.cøm",       // Latin with diacritics
+			"test@例え.テスト",    // Japanese
+			"тест@пример.рф", // Cyrillic
+			"test@مثال.شبكة", // Arabic
+			"🔒secure@🌍.com",  // Emojis
+			"test@tëst.cøm",  // Latin with diacritics
 		}
 
 		for _, email := range unicodeInputs {
@@ -549,13 +549,13 @@ func (suite *SecurityTestSuite) TestInputValidation() {
 
 				resp, err := suite.app.Test(httpReq)
 				require.NoError(suite.T(), err)
-				
+
 				// Should handle Unicode properly
 				assert.True(suite.T(), resp.StatusCode < 500, "Should handle Unicode without server error")
 
 				var response map[string]interface{}
 				json.NewDecoder(resp.Body).Decode(&response)
-				
+
 				if respEmail, ok := response["email"].(string); ok {
 					assert.Equal(suite.T(), email, respEmail, "Unicode should be preserved")
 				}
@@ -567,7 +567,7 @@ func (suite *SecurityTestSuite) TestInputValidation() {
 // Security Headers Tests.
 func (suite *SecurityTestSuite) TestSecurityHeaders() {
 	req := httptest.NewRequest("GET", "/test-protected", nil)
-	
+
 	// Create valid JWT for testing
 	userID := uuid.New()
 	claims := jwt.MapClaims{
@@ -578,7 +578,7 @@ func (suite *SecurityTestSuite) TestSecurityHeaders() {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	tokenString, _ := token.SignedString(suite.config.JWTSecret)
 	req.Header.Set("Authorization", "Bearer "+tokenString)
-	
+
 	resp, err := suite.app.Test(req)
 	require.NoError(suite.T(), err)
 
@@ -607,7 +607,7 @@ func (suite *SecurityTestSuite) TestCORSSecurity() {
 			}
 			return c.Next()
 		})
-		
+
 		app.Get("/test", func(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"status": "ok"})
 		})
@@ -617,7 +617,7 @@ func (suite *SecurityTestSuite) TestCORSSecurity() {
 
 		resp, err := app.Test(req)
 		require.NoError(suite.T(), err)
-		
+
 		assert.Equal(suite.T(), "https://localhost:3000", resp.Header.Get("Access-Control-Allow-Origin"))
 	})
 
@@ -637,7 +637,7 @@ func (suite *SecurityTestSuite) TestCORSSecurity() {
 			}
 			return c.Next()
 		})
-		
+
 		app.Get("/test", func(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"status": "ok"})
 		})
@@ -647,7 +647,7 @@ func (suite *SecurityTestSuite) TestCORSSecurity() {
 
 		resp, err := app.Test(req)
 		require.NoError(suite.T(), err)
-		
+
 		assert.Empty(suite.T(), resp.Header.Get("Access-Control-Allow-Origin"))
 	})
 }
@@ -657,15 +657,15 @@ func (suite *SecurityTestSuite) TestInformationDisclosure() {
 	suite.Run("ErrorMessages", func() {
 		// Test that detailed error messages are not exposed
 		req := httptest.NewRequest("GET", "/nonexistent", nil)
-		
+
 		resp, err := suite.app.Test(req)
 		require.NoError(suite.T(), err)
-		
+
 		// Should not expose internal paths or stack traces
 		body := make([]byte, 1024)
 		resp.Body.Read(body)
 		bodyStr := string(body)
-		
+
 		assert.NotContains(suite.T(), bodyStr, "/usr/")
 		assert.NotContains(suite.T(), bodyStr, "/var/")
 		assert.NotContains(suite.T(), bodyStr, "goroutine")
@@ -677,7 +677,7 @@ func (suite *SecurityTestSuite) TestInformationDisclosure() {
 		req := httptest.NewRequest("GET", "/test-protected", nil)
 		resp, err := suite.app.Test(req)
 		require.NoError(suite.T(), err)
-		
+
 		// Should not expose server version or technology stack
 		serverHeader := resp.Header.Get("Server")
 		assert.NotContains(suite.T(), strings.ToLower(serverHeader), "fiber")
@@ -696,16 +696,16 @@ func TestVulnerabilityAssessment(t *testing.T) {
 	t.Run("OWASP_Top_10_Coverage", func(t *testing.T) {
 		// Ensure we test for OWASP Top 10 vulnerabilities
 		vulnerabilities := []string{
-			"Injection",                      // SQL injection tests above
-			"Broken Authentication",          // JWT and password tests above
-			"Sensitive Data Exposure",        // Encryption tests above
-			"XML External Entities (XXE)",    // Not applicable for JSON API
-			"Broken Access Control",          // Authorization tests needed
-			"Security Misconfiguration",      // Security headers tests above
-			"Cross-Site Scripting (XSS)",    // XSS prevention tests above
-			"Insecure Deserialization",      // JSON parsing tests above
+			"Injection",                                   // SQL injection tests above
+			"Broken Authentication",                       // JWT and password tests above
+			"Sensitive Data Exposure",                     // Encryption tests above
+			"XML External Entities (XXE)",                 // Not applicable for JSON API
+			"Broken Access Control",                       // Authorization tests needed
+			"Security Misconfiguration",                   // Security headers tests above
+			"Cross-Site Scripting (XSS)",                  // XSS prevention tests above
+			"Insecure Deserialization",                    // JSON parsing tests above
 			"Using Components with Known Vulnerabilities", // Dependency scanning needed
-			"Insufficient Logging & Monitoring", // Audit log tests needed
+			"Insufficient Logging & Monitoring",           // Audit log tests needed
 		}
 
 		t.Logf("Vulnerability coverage includes: %v", vulnerabilities)
@@ -742,7 +742,7 @@ func TestPenetrationTesting(t *testing.T) {
 
 				resp, err := app.Test(req)
 				require.NoError(t, err)
-				
+
 				// All bypass attempts should fail
 				assert.Equal(t, 401, resp.StatusCode, "Authentication bypass should fail")
 			})
@@ -774,9 +774,9 @@ func TestPenetrationTesting(t *testing.T) {
 				req := httptest.NewRequest("GET", "/file/"+path, nil)
 				resp, err := app.Test(req)
 				require.NoError(t, err)
-				
+
 				// Should prevent directory traversal
-				assert.True(t, resp.StatusCode == 403 || resp.StatusCode == 404, 
+				assert.True(t, resp.StatusCode == 403 || resp.StatusCode == 404,
 					"Directory traversal should be prevented")
 			})
 		}

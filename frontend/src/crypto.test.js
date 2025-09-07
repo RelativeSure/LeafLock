@@ -39,7 +39,7 @@ class TestCryptoService {
         name: 'PBKDF2',
         salt,
         iterations: 600000,
-        hash: 'SHA-256'
+        hash: 'SHA-256',
       },
       keyMaterial,
       256
@@ -130,7 +130,7 @@ describe('CryptoService', () => {
           name: 'PBKDF2',
           salt,
           iterations: 600000,
-          hash: 'SHA-256'
+          hash: 'SHA-256',
         }),
         'mock-key-material',
         256
@@ -155,12 +155,14 @@ describe('CryptoService', () => {
       await cryptoService.deriveKeyFromPassword(password, salt1)
       await cryptoService.deriveKeyFromPassword(password, salt2)
 
-      expect(mockCryptoSubtle.deriveBits).toHaveBeenNthCalledWith(1,
+      expect(mockCryptoSubtle.deriveBits).toHaveBeenNthCalledWith(
+        1,
         expect.objectContaining({ salt: salt1 }),
         'mock-key-material',
         256
       )
-      expect(mockCryptoSubtle.deriveBits).toHaveBeenNthCalledWith(2,
+      expect(mockCryptoSubtle.deriveBits).toHaveBeenNthCalledWith(
+        2,
         expect.objectContaining({ salt: salt2 }),
         'mock-key-material',
         256
@@ -175,7 +177,7 @@ describe('CryptoService', () => {
 
       expect(mockCryptoSubtle.deriveBits).toHaveBeenCalledWith(
         expect.objectContaining({
-          iterations: 600000 // High iteration count
+          iterations: 600000, // High iteration count
         }),
         expect.any(String),
         256
@@ -255,9 +257,7 @@ describe('CryptoService', () => {
         .mockReturnValueOnce(new Uint8Array([1, 2, 3]))
         .mockReturnValueOnce(new Uint8Array([4, 5, 6]))
 
-      mockSodium.to_base64
-        .mockReturnValueOnce('encrypted-1')
-        .mockReturnValueOnce('encrypted-2')
+      mockSodium.to_base64.mockReturnValueOnce('encrypted-1').mockReturnValueOnce('encrypted-2')
 
       const encrypted1 = await cryptoService.encryptData(plaintext)
       const encrypted2 = await cryptoService.encryptData(plaintext)

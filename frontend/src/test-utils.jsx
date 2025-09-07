@@ -9,7 +9,7 @@ export const mockSodium = {
   crypto_secretbox_NONCEBYTES: 24,
   crypto_pwhash_SALTBYTES: 32,
   base64_variants: {
-    ORIGINAL: 0
+    ORIGINAL: 0,
   },
   randombytes_buf: vi.fn().mockImplementation((size) => new Uint8Array(size).fill(1)),
   from_string: vi.fn().mockImplementation((str) => new TextEncoder().encode(str)),
@@ -17,7 +17,9 @@ export const mockSodium = {
   from_base64: vi.fn().mockImplementation((str) => new Uint8Array([1, 2, 3, 4])),
   to_base64: vi.fn().mockImplementation((bytes) => 'mocked-base64'),
   crypto_secretbox_easy: vi.fn().mockImplementation(() => new Uint8Array([5, 6, 7, 8])),
-  crypto_secretbox_open_easy: vi.fn().mockImplementation(() => new TextEncoder().encode('decrypted')),
+  crypto_secretbox_open_easy: vi
+    .fn()
+    .mockImplementation(() => new TextEncoder().encode('decrypted')),
 }
 
 // Mock fetch for API calls
@@ -39,14 +41,14 @@ export const mockCryptoSubtle = {
   deriveBits: vi.fn().mockResolvedValue(new ArrayBuffer(32)),
 }
 global.crypto = {
-  subtle: mockCryptoSubtle
+  subtle: mockCryptoSubtle,
 }
 
 // Test data factories
 export const createMockUser = (overrides = {}) => ({
   id: 'test-user-id',
   email: 'test@example.com',
-  ...overrides
+  ...overrides,
 })
 
 export const createMockNote = (overrides = {}) => ({
@@ -55,7 +57,7 @@ export const createMockNote = (overrides = {}) => ({
   content: 'Test content',
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
-  ...overrides
+  ...overrides,
 })
 
 export const createMockEncryptedNote = (overrides = {}) => ({
@@ -64,7 +66,7 @@ export const createMockEncryptedNote = (overrides = {}) => ({
   content_encrypted: 'dGVzdCBjb250ZW50',
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
-  ...overrides
+  ...overrides,
 })
 
 // API response mocks
@@ -189,7 +191,7 @@ export class MockSecureAPI {
     const response = this.responses.get('/auth/register') || {
       token: 'mock-token',
       user_id: 'test-user-id',
-      workspace_id: 'test-workspace-id'
+      workspace_id: 'test-workspace-id',
     }
 
     if (response.token) {
@@ -204,7 +206,7 @@ export class MockSecureAPI {
       token: 'mock-token',
       session: 'mock-session',
       user_id: 'test-user-id',
-      workspace_id: 'test-workspace-id'
+      workspace_id: 'test-workspace-id',
     }
 
     if (response.token) {
@@ -215,31 +217,37 @@ export class MockSecureAPI {
   }
 
   async createNote(title, content) {
-    return this.responses.get('/notes') || {
-      id: 'test-note-id',
-      message: 'Note created successfully'
-    }
+    return (
+      this.responses.get('/notes') || {
+        id: 'test-note-id',
+        message: 'Note created successfully',
+      }
+    )
   }
 
   async getNotes() {
     const mockNotes = this.responses.get('/notes/list') || [
       createMockNote({ id: '1', title: 'Note 1' }),
-      createMockNote({ id: '2', title: 'Note 2' })
+      createMockNote({ id: '2', title: 'Note 2' }),
     ]
 
     return mockNotes
   }
 
   async updateNote(noteId, title, content) {
-    return this.responses.get(`/notes/${noteId}`) || {
-      message: 'Note updated successfully'
-    }
+    return (
+      this.responses.get(`/notes/${noteId}`) || {
+        message: 'Note updated successfully',
+      }
+    )
   }
 
   async deleteNote(noteId) {
-    return this.responses.get(`/notes/${noteId}/delete`) || {
-      message: 'Note deleted successfully'
-    }
+    return (
+      this.responses.get(`/notes/${noteId}/delete`) || {
+        message: 'Note deleted successfully',
+      }
+    )
   }
 }
 
@@ -262,12 +270,12 @@ export const measureEncryptionTime = async (cryptoService, data) => {
 export const checkA11y = async () => {
   // Check for basic accessibility attributes
   const buttons = screen.getAllByRole('button')
-  buttons.forEach(button => {
+  buttons.forEach((button) => {
     expect(button).toHaveAttribute('type')
   })
 
   const inputs = screen.getAllByRole('textbox')
-  inputs.forEach(input => {
+  inputs.forEach((input) => {
     expect(input).toHaveAttribute('aria-label')
   })
 }
@@ -278,10 +286,10 @@ export const checkForXSS = (component, _userInput) => {
     '<script>alert("xss")</script>',
     'data:text/html,<script>alert("xss")</script>',
     '"><img src=x onerror=alert("xss")>',
-    '"><svg onload=alert("xss")>'
+    '"><svg onload=alert("xss")>',
   ]
 
-  maliciousInputs.forEach(_input => {
+  maliciousInputs.forEach((_input) => {
     render(component)
     // Verify that malicious input is properly escaped
     expect(document.body.innerHTML).not.toContain('<script>')
@@ -300,8 +308,8 @@ export const checkForCSRF = (apiCall) => {
     expect.anything(),
     expect.objectContaining({
       headers: expect.objectContaining({
-        'Content-Type': 'application/json'
-      })
+        'Content-Type': 'application/json',
+      }),
     })
   )
 }
@@ -327,5 +335,5 @@ export default {
   measureEncryptionTime,
   checkA11y,
   checkForXSS,
-  checkForCSRF
+  checkForCSRF,
 }
