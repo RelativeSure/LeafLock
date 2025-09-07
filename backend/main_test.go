@@ -48,7 +48,9 @@ func (m *MockDB) Exec(ctx context.Context, sql string, args ...interface{}) (pgc
 	callArgs := append([]interface{}{ctx, sql}, args...)
 	mockArgs := m.Called(callArgs...)
 	result := mockArgs.Get(0).(*MockResult)
-	return pgconn.NewCommandTag(result.tag), mockArgs.Error(1)
+	// Create a command tag that uses our mock's RowsAffected value
+	tag := pgconn.NewCommandTag("UPDATE " + fmt.Sprintf("%d", result.RowsAffected()))
+	return tag, mockArgs.Error(1)
 }
 
 func (m *MockDB) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
@@ -527,7 +529,9 @@ func (suite *AuthHandlerTestSuite) TestRegisterSuccess() {
 	mockTx.On("Rollback", mock.Anything).Return(nil)
 	
 	// Mock audit log
-	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&MockResult{}, nil)
+	auditResult := &MockResult{}
+	auditResult.On("RowsAffected").Return(int64(1))
+	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(auditResult, nil)
 
 	req := RegisterRequest{
 		Email:    "test@example.com",

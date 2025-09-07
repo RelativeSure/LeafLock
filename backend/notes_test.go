@@ -74,7 +74,7 @@ func (suite *NotesHandlerTestSuite) TestGetNotesSuccess() {
 	now := time.Now()
 	
 	// First note scan
-	mockRows.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
+	mockRows.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if id, ok := args[0].(*uuid.UUID); ok {
 			*id = noteID1
 		}
@@ -93,7 +93,7 @@ func (suite *NotesHandlerTestSuite) TestGetNotesSuccess() {
 	}).Return(nil).Once()
 	
 	// Second note scan
-	mockRows.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
+	mockRows.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if id, ok := args[0].(*uuid.UUID); ok {
 			*id = noteID2
 		}
@@ -144,7 +144,7 @@ func (suite *NotesHandlerTestSuite) TestGetNoteSuccess() {
 	// Mock note lookup
 	mockRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), noteID, suite.userID).Return(mockRow)
-	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if id, ok := args[0].(*uuid.UUID); ok {
 			*id = noteID
 		}
@@ -189,7 +189,7 @@ func (suite *NotesHandlerTestSuite) TestGetNoteNotFound() {
 	// Mock note not found
 	mockRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), noteID, suite.userID).Return(mockRow)
-	mockRow.On("Scan", mock.Anything).Return(assert.AnError)
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(assert.AnError)
 
 	app.Get("/notes/:id", func(c *fiber.Ctx) error {
 		c.Locals("user_id", suite.userID)
@@ -294,7 +294,7 @@ func (suite *NotesHandlerTestSuite) TestUpdateNoteSuccess() {
 	// Mock successful update
 	mockResult := &MockResult{}
 	mockResult.On("RowsAffected").Return(int64(1))
-	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockResult, nil)
+	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockResult, nil)
 
 	req := UpdateNoteRequest{
 		TitleEncrypted:   "VXBkYXRlZCBUaXRsZQ==",
@@ -324,7 +324,7 @@ func (suite *NotesHandlerTestSuite) TestUpdateNoteNotFound() {
 	// Mock no rows affected (note not found or not owned by user)
 	mockResult := &MockResult{}
 	mockResult.On("RowsAffected").Return(int64(0))
-	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockResult, nil)
+	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockResult, nil)
 
 	req := UpdateNoteRequest{
 		TitleEncrypted:   "VXBkYXRlZCBUaXRsZQ==",
@@ -732,6 +732,7 @@ func TestRateLimitingBypass(t *testing.T) {
 	mockDB := &MockDB{}
 	
 	authHandler := &AuthHandler{
+		db:     mockDB,
 		crypto: crypto,
 		config: config,
 	}
@@ -745,7 +746,7 @@ func TestRateLimitingBypass(t *testing.T) {
 			// Mock user lookup returning invalid credentials
 			mockRow := &MockRow{}
 			mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockRow)
-			mockRow.On("Scan", mock.Anything).Return(assert.AnError) // User not found
+			mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(assert.AnError) // User not found
 			
 			req := LoginRequest{
 				Email:    "test@example.com",
