@@ -555,13 +555,7 @@ func (suite *AuthHandlerTestSuite) TestRegisterSuccess() {
 func (suite *AuthHandlerTestSuite) TestRegisterWeakPassword() {
 	app := fiber.New()
 	
-	// Mock transaction and user creation (weak password test still goes through DB operations)
-	mockTx := &MockTx{}
-	mockRow := &MockRow{}
-	suite.mockDB.On("Begin", mock.Anything).Return(mockTx, nil)
-	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockRow)
-	mockRow.On("Scan", mock.Anything).Return(fmt.Errorf("password too weak"))
-	mockTx.On("Rollback", mock.Anything).Return(nil)
+	// No mocks needed - password validation prevents database access
 	
 	req := RegisterRequest{
 		Email:    "test@example.com",

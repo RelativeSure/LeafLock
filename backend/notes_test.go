@@ -220,7 +220,7 @@ func (suite *NotesHandlerTestSuite) TestCreateNoteSuccess() {
 	
 	// Mock note creation
 	mockRow2 := &MockRow{}
-	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockRow2)
+	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockRow2)
 	mockRow2.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
 		if nid, ok := args[0].(*uuid.UUID); ok {
 			*nid = noteID
@@ -255,6 +255,16 @@ func (suite *NotesHandlerTestSuite) TestCreateNoteSuccess() {
 
 func (suite *NotesHandlerTestSuite) TestCreateNoteInvalidData() {
 	app := fiber.New()
+	
+	// Mock workspace lookup (CreateNote always checks workspace first)
+	workspaceID := uuid.New()
+	mockRow := &MockRow{}
+	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockRow)
+	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
+		if wid, ok := args[0].(*uuid.UUID); ok {
+			*wid = workspaceID
+		}
+	}).Return(nil)
 	
 	req := CreateNoteRequest{
 		TitleEncrypted:   "invalid-base64!@#",

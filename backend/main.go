@@ -391,6 +391,11 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
+	// Validate password requirements
+	if len(req.Password) < 12 {
+		return c.Status(400).JSON(fiber.Map{"error": "Password must be at least 12 characters long"})
+	}
+
 	// Generate salt and hash password
 	salt := make([]byte, 32)
 	rand.Read(salt)
