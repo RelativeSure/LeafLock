@@ -49,7 +49,7 @@ spec:
         # Wait for backend to be ready
         {{- if .Values.backend.enabled }}
         - name: wait-for-backend
-          image: curlimages/curl:8.5.0@sha256:08e466006f0860e54fc299378de998935333e0e130a15f6f98482e9f8dab3058
+          image: curlimages/curl:8.15.0@sha256:4026b29997dc7c823b51c164b71e2b51e0fd95cce4601f78202c513d97da2922
           command:
             - sh
             - -c
