@@ -305,41 +305,32 @@ jobs:
           draft: false
           prerelease: ${{ contains(needs.version-calculation.outputs.next_version, '-rc.') }}
 
-  # Trigger container build workflow
-  trigger-container-build:
-    name: 🐳 Trigger Container Build
+  # Container build info (automatic trigger via release event)
+  container-build-info:
+    name: 🐳 Container Build Info
     runs-on: ubuntu-latest
     needs: create-release
     
     steps:
-      - name: Trigger build workflow
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const result = await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'build-containers.yml',
-              ref: '${{ needs.version-calculation.outputs.next_version }}'
-            });
-            
-            console.log('Triggered build workflow:', result.status);
-
-      - name: Wait for containers to be built
+      - name: Container build notification
         run: |
-          echo "⏳ Waiting for containers to be built..."
-          echo "🔗 Check build progress: https://github.com/${{ github.repository }}/actions/workflows/build-and-deploy.yml"
+          echo "📦 Container build workflow will be triggered automatically by the release event"
+          echo "🔗 Check build progress: https://github.com/${{ github.repository }}/actions/workflows/build-containers.yml"
           
           VERSION="${{ needs.version-calculation.outputs.next_version }}"
           echo "📦 Containers will be available at:"
           echo "   - ghcr.io/${{ github.repository }}/backend:${VERSION}"
           echo "   - ghcr.io/${{ github.repository }}/frontend:${VERSION}"
+          
+          echo ""
+          echo "The build-containers.yml workflow is configured to trigger on 'release: published' events"
+          echo "and will automatically build and push the container images for this release."
 
   # Post-release tasks
   post-release:
     name: 📋 Post-release Tasks
     runs-on: ubuntu-latest
-    needs: [version-calculation, create-release, trigger-container-build]
+    needs: [version-calculation, create-release, container-build-info]
     if: always() && needs.create-release.result == 'success'
 
     steps:
@@ -394,7 +385,7 @@ jobs:
           echo "### 🔗 Links:" >> $GITHUB_STEP_SUMMARY
           echo "- [📋 View Release](https://github.com/${{ github.repository }}/releases/tag/${{ needs.version-calculation.outputs.next_version }})" >> $GITHUB_STEP_SUMMARY
           echo "- [📦 View Packages](https://github.com/${{ github.repository }}/pkgs/container)" >> $GITHUB_STEP_SUMMARY
-          echo "- [🔄 Build Workflow](https://github.com/${{ github.repository }}/actions/workflows/build-and-deploy.yml)" >> $GITHUB_STEP_SUMMARY
+          echo "- [🔄 Build Workflow](https://github.com/${{ github.repository }}/actions/workflows/build-containers.yml)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🚀 Next Steps:" >> $GITHUB_STEP_SUMMARY
           echo "1. ✅ **Release created and tagged**" >> $GITHUB_STEP_SUMMARY
