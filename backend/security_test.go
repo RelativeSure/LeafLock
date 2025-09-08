@@ -43,6 +43,7 @@ func (suite *SecurityTestSuite) SetupTest() {
 
 	// Create test app with security middleware
 	suite.app = fiber.New(fiber.Config{
+		BodyLimit: 512 * 1024, // 512KB body size limit (same as production)
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			if e, ok := err.(*fiber.Error); ok {
@@ -262,7 +263,7 @@ func (suite *SecurityTestSuite) TestJWTSecurity() {
 
 		resp, err := suite.app.Test(req)
 		require.NoError(suite.T(), err)
-		assert.Equal(suite.T(), 500, resp.StatusCode) // Should cause parsing error
+		assert.Equal(suite.T(), 401, resp.StatusCode) // Should reject invalid JWT without user_id
 	})
 }
 
@@ -483,10 +484,15 @@ func (suite *SecurityTestSuite) TestInputValidation() {
 		httpReq.Header.Set("Content-Type", "application/json")
 
 		resp, err := suite.app.Test(httpReq)
-		require.NoError(suite.T(), err)
 		
-		// Should handle gracefully without crashing
-		assert.True(suite.T(), resp.StatusCode >= 400 && resp.StatusCode < 500, "Should reject oversized input")
+		// Should either handle gracefully with 4xx status or reject at Fiber level
+		if err != nil {
+			// Fiber rejected the request due to body size limit - this is expected and good
+			assert.Contains(suite.T(), err.Error(), "body size exceeds", "Should reject oversized input at Fiber level")
+		} else {
+			// If it gets to handler level, should return 4xx status
+			assert.True(suite.T(), resp.StatusCode >= 400 && resp.StatusCode < 500, "Should reject oversized input at handler level")
+		}
 	})
 
 	suite.Run("InvalidJSON", func() {
