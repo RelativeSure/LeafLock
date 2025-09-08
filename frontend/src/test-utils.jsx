@@ -3,8 +3,8 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 
-// Mock libsodium-wrappers
-export const mockSodium = {
+// Mock libsodium-wrappers  
+const sodiumMockBase = {
   ready: Promise.resolve(),
   crypto_secretbox_NONCEBYTES: 24,
   crypto_pwhash_SALTBYTES: 32,
@@ -18,6 +18,11 @@ export const mockSodium = {
   to_base64: vi.fn().mockImplementation((bytes) => 'mocked-base64'),
   crypto_secretbox_easy: vi.fn().mockImplementation(() => new Uint8Array([5, 6, 7, 8])),
   crypto_secretbox_open_easy: vi.fn().mockImplementation(() => new TextEncoder().encode('decrypted')),
+};
+
+export const mockSodium = {
+  ...sodiumMockBase,
+  default: sodiumMockBase
 };
 
 // Mock fetch for API calls
@@ -38,9 +43,12 @@ export const mockCryptoSubtle = {
   importKey: vi.fn().mockResolvedValue('mock-key-material'),
   deriveBits: vi.fn().mockResolvedValue(new ArrayBuffer(32)),
 };
-global.crypto = {
-  subtle: mockCryptoSubtle
-};
+Object.defineProperty(global, 'crypto', {
+  value: {
+    subtle: mockCryptoSubtle
+  },
+  writable: true
+});
 
 // Test data factories
 export const createMockUser = (overrides = {}) => ({

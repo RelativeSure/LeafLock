@@ -1,8 +1,6 @@
-import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import SecureNotesApp from './App.jsx';
 import {
   mockSodium,
   mockFetch,
@@ -18,8 +16,12 @@ import {
   checkForXSS
 } from './test-utils.jsx';
 
-// Mock libsodium-wrappers
+// Mock libsodium-wrappers BEFORE importing any components
 vi.mock('libsodium-wrappers', () => mockSodium);
+
+// Import React and the component AFTER setting up the mock
+import React from 'react';
+import SecureNotesApp from './App.jsx';
 
 describe('SecureNotesApp', () => {
   beforeEach(() => {
