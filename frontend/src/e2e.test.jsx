@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import SecureNotesApp from './App.jsx';
 import {
   mockSodium,
   mockFetch,
@@ -12,8 +11,12 @@ import {
   createMockEncryptedNote
 } from './test-utils.jsx';
 
-// Mock libsodium for E2E tests
+// Mock libsodium for E2E tests BEFORE importing any components
 vi.mock('libsodium-wrappers', () => mockSodium);
+
+// Import React and the component AFTER setting up the mock
+import React from 'react';
+import SecureNotesApp from './App.jsx';
 
 // Mock fetch globally
 global.fetch = mockFetch;
