@@ -8,8 +8,8 @@ WORKDIR /app
 # Copy package files first for better caching
 COPY package*.json ./
 
-# Install dependencies with clean install
-RUN npm ci --only=production --no-audit --no-fund
+# Install dependencies with clean install (including dev dependencies for build)
+RUN npm ci --no-audit --no-fund
 
 # Copy source code
 COPY . .

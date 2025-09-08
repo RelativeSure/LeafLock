@@ -5,6 +5,16 @@ name: 🐳 Build Containers
 on:
   release:
     types: [published]
+  push:
+    branches: [main, master]
+    paths:
+      - 'VERSION'
+      - 'frontend/package.json'
+      - 'backend/go.mod'
+  workflow_run:
+    workflows: ["🚀 Release Management"]
+    types: [completed]
+    branches: [main, master]
   workflow_dispatch:
     inputs:
       tag:
@@ -22,6 +32,7 @@ jobs:
   build-and-push:
     name: 🐳 Build & Push Images
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     
     strategy:
       matrix:
@@ -99,7 +110,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           build-args: |
             VERSION=${{ github.sha }}
-            BUILD_DATE=${{ github.event.head_commit.timestamp || github.event.release.created_at }}
+            BUILD_DATE=${{ github.event.head_commit.timestamp || github.event.release.created_at || github.event.repository.pushed_at }}
 
       - name: Build and push (Frontend)
         if: matrix.component == 'frontend'
@@ -125,7 +136,7 @@ jobs:
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
 
