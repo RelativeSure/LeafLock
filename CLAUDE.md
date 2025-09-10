@@ -20,11 +20,11 @@ go test -v ./...            # Run tests
 ### Frontend (React + TypeScript)
 ```bash
 cd frontend
-npm install                 # Install dependencies
-npm run dev                 # Start development server (Vite)
-npm run build              # Build for production
-npm run lint               # Run ESLint
-npm test                   # Run tests (Vitest)
+pnpm install                # Install dependencies
+pnpm run dev                # Start development server (Vite)
+pnpm run build              # Build for production
+pnpm run lint               # Run ESLint
+pnpm test                   # Run tests (Vitest)
 ```
 
 ### Container Operations (Podman-first)
@@ -110,7 +110,7 @@ This project prioritizes Podman but supports Docker:
 cd backend && go test -v ./path/to/package
 
 # Frontend specific test  
-cd frontend && npm test -- --run specific-test
+cd frontend && pnpm test -- --run specific-test
 ```
 
 ### Building for Production
@@ -120,7 +120,7 @@ make build
 
 # Or individually
 cd backend && go build -o app .
-cd frontend && npm run build
+cd frontend && pnpm run build
 ```
 
 ### Database Operations

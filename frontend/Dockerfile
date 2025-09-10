@@ -5,17 +5,20 @@ RUN apk --no-cache add git
 
 WORKDIR /app
 
-# Copy package files first for better caching
-COPY package*.json ./
+# Install pnpm
+RUN npm install -g pnpm@10.15.1
 
-# Install dependencies with clean install (including dev dependencies for build)
-RUN npm ci --no-audit --no-fund
+# Copy package files first for better caching
+COPY package.json pnpm-lock.yaml ./
+
+# Install dependencies with frozen lockfile (including dev dependencies for build)
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
 
 # Build the application
-RUN npm run build
+RUN pnpm run build
 
 # Final stage - optimized nginx
 FROM nginx:1.29-alpine@sha256:42a516af16b852e33b7682d5ef8acbd5d13fe08fecadc7ed98605ba5e3b26ab8
