@@ -4,7 +4,7 @@ version: '3.8'
 services:
   # PostgreSQL with automatic SSL setup - Podman optimized
   postgres:
-    image: docker.io/library/postgres:15-alpine@sha256:987b242173006d6df08506f10b967a71478a3610664cfefbc49b9c775d3d0eed
+    image: docker.io/library/postgres:15-alpine@sha256:dfcf0459185089e88a43197975780f5a3078acd5ece84824a14c9d6fbbab02d0
     container_name: secure-notes-postgres
     hostname: postgres
     environment:
@@ -156,7 +156,7 @@ spec:
   restartPolicy: Always
   containers:
   - name: postgres
-    image: docker.io/library/postgres:15-alpine@sha256:987b242173006d6df08506f10b967a71478a3610664cfefbc49b9c775d3d0eed
+    image: docker.io/library/postgres:15-alpine@sha256:dfcf0459185089e88a43197975780f5a3078acd5ece84824a14c9d6fbbab02d0
     env:
     - name: POSTGRES_PASSWORD
       value: "ChangeThisSecurePassword123!"
