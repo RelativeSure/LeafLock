@@ -18,7 +18,7 @@ COPY . .
 RUN npm run build
 
 # Final stage - optimized nginx
-FROM nginx:1.25-alpine@sha256:516475cc129da42866742567714ddc681e5eed7b9ee0b9e9c015e464b4221a00
+FROM nginx:1.29-alpine@sha256:42a516af16b852e33b7682d5ef8acbd5d13fe08fecadc7ed98605ba5e3b26ab8
 
 # Install security updates
 RUN apk --no-cache add ca-certificates
