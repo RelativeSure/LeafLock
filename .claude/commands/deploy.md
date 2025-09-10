@@ -6,10 +6,10 @@ Production deployment workflows and commands for Secure Notes application.
 
 ```bash
 # Production deployment
-docker-compose -f docker-compose.prod.yml up -d
+docker-compose up -d
 
 # Staging deployment
-docker-compose -f docker-compose.yml up -d
+docker-compose up -d
 
 # Build production images
 make build
@@ -35,7 +35,7 @@ cp .env.example .env.prod
 nano .env.prod
 
 # Deploy with production config
-docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d
+docker-compose --env-file .env.prod up -d
 ```
 
 ### Health Checks
@@ -70,7 +70,7 @@ podman pull your-registry/secure-notes-backend:v1.0.0
 podman pull your-registry/secure-notes-frontend:v1.0.0
 
 # Deploy with specific versions
-VERSION=v1.0.0 docker-compose -f docker-compose.prod.yml up -d
+VERSION=v1.0.0 docker-compose up -d
 ```
 
 ## Kubernetes Deployment
@@ -206,7 +206,7 @@ podman build --squash -t secure-notes-backend-prod .
 
 ### Resource Limits
 ```yaml
-# In docker-compose.prod.yml
+# In docker-compose.yml
 services:
   backend:
     deploy:
@@ -253,10 +253,10 @@ echo "secret_value" | docker secret create jwt_secret -
 ### Quick Rollback
 ```bash
 # Stop current deployment
-docker-compose -f docker-compose.prod.yml down
+docker-compose down
 
 # Deploy previous version
-VERSION=v0.9.0 docker-compose -f docker-compose.prod.yml up -d
+VERSION=v0.9.0 docker-compose up -d
 
 # Verify rollback
 curl -k https://your-domain.com/api/v1/health
@@ -268,7 +268,7 @@ curl -k https://your-domain.com/api/v1/health
 docker exec -i secure-notes-postgres psql -U postgres notes < notes-backup-previous.sql
 
 # Restart services
-docker-compose -f docker-compose.prod.yml restart
+docker-compose restart
 ```
 
 ## Blue-Green Deployment
@@ -276,14 +276,14 @@ docker-compose -f docker-compose.prod.yml restart
 ### Blue-Green Setup
 ```bash
 # Deploy to green environment
-COMPOSE_PROJECT_NAME=secure-notes-green docker-compose -f docker-compose.prod.yml up -d
+COMPOSE_PROJECT_NAME=secure-notes-green docker-compose up -d
 
 # Test green environment
 curl -H "Host: your-domain.com" http://green-server:8080/api/v1/health
 
 # Switch traffic (update load balancer)
 # Then stop blue environment
-COMPOSE_PROJECT_NAME=secure-notes-blue docker-compose -f docker-compose.prod.yml down
+COMPOSE_PROJECT_NAME=secure-notes-blue docker-compose down
 ```
 
 ## Maintenance Mode
@@ -297,12 +297,12 @@ echo "<h1>Under Maintenance</h1><p>We'll be back shortly!</p>" > /var/www/html/m
 # nginx -s reload
 
 # Or use environment variable
-MAINTENANCE_MODE=true docker-compose -f docker-compose.prod.yml up -d
+MAINTENANCE_MODE=true docker-compose up -d
 ```
 
 ### Disable Maintenance Mode
 ```bash
-MAINTENANCE_MODE=false docker-compose -f docker-compose.prod.yml up -d
+MAINTENANCE_MODE=false docker-compose up -d
 ```
 
 ## CI/CD Integration
@@ -322,7 +322,7 @@ jobs:
       - name: Deploy
         run: |
           # Add deployment commands
-          ssh user@server 'cd /app && git pull && make build && docker-compose -f docker-compose.prod.yml up -d'
+          ssh user@server 'cd /app && git pull && make build && docker-compose up -d'
 ```
 
 ### Automated Testing in Production
@@ -340,7 +340,7 @@ curl -f https://your-domain.com/
 ### Horizontal Scaling
 ```bash
 # Scale backend services
-docker-compose -f docker-compose.prod.yml up -d --scale backend=3
+docker-compose up -d --scale backend=3
 
 # With Kubernetes
 kubectl scale deployment/secure-notes-backend --replicas=3

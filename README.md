@@ -253,7 +253,7 @@ secure-notes/
 
 ```bash
 # Production deployment
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker compose up -d
 ```
 
 ### Using Kubernetes

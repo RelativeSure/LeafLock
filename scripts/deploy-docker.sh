@@ -10,7 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="${PROJECT_ROOT}/.env"
 COMPOSE_FILE="${PROJECT_ROOT}/docker-compose.yml"
-COMPOSE_PROD_FILE="${PROJECT_ROOT}/docker-compose.prod.yml"
+# Production configuration is now integrated into main docker-compose.yml
 
 # Colors for output
 RED='\033[0;31m'
@@ -177,11 +177,10 @@ deploy_services() {
     # Change to project root
     cd "$PROJECT_ROOT"
     
-    # Choose compose file based on environment
+    # Use main compose file for all environments
     local compose_files=("-f" "$COMPOSE_FILE")
-    if [[ "$environment" == "prod" ]] && [[ -f "$COMPOSE_PROD_FILE" ]]; then
-        compose_files+=("-f" "$COMPOSE_PROD_FILE")
-        log_info "Using production configuration"
+    if [[ "$environment" == "prod" ]]; then
+        log_info "Using production environment configuration"
     fi
     
     # Pull latest images for services that don't need building

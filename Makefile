@@ -11,6 +11,7 @@ help: ## Show help
 
 up: ## Start with podman-compose
 ifeq ($(COMPOSE_CMD),podman_kube_play)
+	@if [ ! -f secure-notes-kube.yaml ]; then $(MAKE) kube; fi
 	podman play kube secure-notes-kube.yaml
 else
 	podman-compose up -d
@@ -21,13 +22,14 @@ endif
 
 down: ## Stop all containers
 ifeq ($(COMPOSE_CMD),podman_kube_play)
-	podman play kube --down secure-notes-kube.yaml
+	@if [ -f secure-notes-kube.yaml ]; then podman play kube --down secure-notes-kube.yaml; fi
 else
 	podman-compose down
 endif
 
 restart: ## Restart all containers
 ifeq ($(COMPOSE_CMD),podman_kube_play)
+	@if [ ! -f secure-notes-kube.yaml ]; then $(MAKE) kube; fi
 	podman play kube --replace secure-notes-kube.yaml
 else
 	podman-compose restart

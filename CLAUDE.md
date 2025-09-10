@@ -100,7 +100,7 @@ This project prioritizes Podman but supports Docker:
 - Makefile commands use Podman by default
 - `podman-compose.yml` is the primary compose file
 - `docker-compose.yml` available as fallback
-- Kubernetes deployment ready (`secure-notes-kube.yaml`)
+- Kubernetes deployment can be generated with `make kube`
 
 ## Common Development Tasks
 

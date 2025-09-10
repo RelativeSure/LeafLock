@@ -394,7 +394,7 @@ dev: ## Start in development mode
 	docker-compose up
 
 prod: ## Start in production mode
-	docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+	docker-compose up -d
 
 backup: ## Backup database
 	docker-compose exec postgres pg_dump -U postgres notes > backup_$(shell date +%Y%m%d_%H%M%S).sql
@@ -419,82 +419,7 @@ EOF
     echo -e "${GREEN}✅ Makefile created${NC}"
 }
 
-# Create docker-compose.prod.yml for production overrides
-create_production_compose() {
-    echo -e "${BLUE}Creating production docker-compose...${NC}"
-    
-    cat > docker-compose.prod.yml << 'EOF'
-# docker-compose.prod.yml - Production overrides
-version: '3.8'
-
-services:
-  backend:
-    restart: always
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 256M
-
-  frontend:
-    restart: always
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          cpus: '0.1'
-          memory: 128M
-
-  postgres:
-    restart: always
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
-
-  redis:
-    restart: always
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          cpus: '0.1'
-          memory: 128M
-EOF
-    
-    echo -e "${GREEN}✅ Production docker-compose created${NC}"
-}
+# Production configuration is now integrated into main docker-compose.yml file
 
 # Main setup function
 main() {
@@ -512,7 +437,6 @@ main() {
     create_frontend_package
     create_backend_gomod
     create_makefile
-    create_production_compose
     
     echo ""
     echo "======================================="
