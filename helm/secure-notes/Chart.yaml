@@ -20,7 +20,7 @@ kubeVersion: ">=1.24.0"
 
 dependencies:
   - name: postgresql
-    version: 15.2.5
+    version: 15.5.38
     repository: https://charts.bitnami.com/bitnami
     condition: postgresql.enabled
     tags:
