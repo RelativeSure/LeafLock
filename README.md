@@ -300,13 +300,19 @@ All logs are structured JSON for easy parsing:
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+We welcome contributions! Please follow these steps:
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+### Development Guidelines
+- Follow existing code style and conventions
+- Add tests for new functionality
+- Update documentation as needed
+- Ensure all tests pass before submitting PR
 
 ## 📝 API Documentation
 
