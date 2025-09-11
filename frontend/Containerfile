@@ -3,9 +3,12 @@ FROM docker.io/node:20-alpine@sha256:eabac870db94f7342d6c33560d6613f188bbcf4bbe1
 
 WORKDIR /app
 
+# Install pnpm
+RUN npm install -g pnpm@10.15.1
+
 # Copy package files
-COPY package*.json ./
-RUN npm ci --only=production
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prod
 
 # Copy source
 COPY . .
@@ -13,7 +16,7 @@ COPY . .
 # Build with API URL
 ARG VITE_API_URL=http://localhost:8080
 ENV VITE_API_URL=$VITE_API_URL
-RUN npm run build
+RUN pnpm run build
 
 # Production stage with nginx - rootless configuration
 FROM docker.io/nginxinc/nginx-unprivileged:alpine@sha256:5a3deab083279228447546aa54db9ab82e43065cac3e38f70b2b2a6cdbf57f7a
