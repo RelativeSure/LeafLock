@@ -37,7 +37,7 @@ importers:
         specifier: 9.35.0
         version: 9.35.0
       '@tailwindcss/postcss':
-        specifier: ^4.1.13
+        specifier: 4.1.13
         version: 4.1.13
       '@testing-library/jest-dom':
         specifier: 6.8.0
