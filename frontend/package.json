@@ -1,6 +1,6 @@
 {
   "name": "secure-notes-frontend",
-  "version": "0.0.3",
+  "version": "0.0.1-rc.20250910210438",
   "private": true,
   "type": "module",
   "scripts": {
