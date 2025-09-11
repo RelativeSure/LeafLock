@@ -368,49 +368,49 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 up: ## Start all services
-	docker-compose up -d
+	docker compose up -d
 	@echo "✅ Secure Notes is running!"
 	@echo "📝 Frontend: http://localhost:3000"
 	@echo "🔌 Backend API: http://localhost:8080"
 	@echo "📊 View logs: make logs"
 
 down: ## Stop all services
-	docker-compose down
+	docker compose down
 
 restart: ## Restart all services
-	docker-compose restart
+	docker compose restart
 
 logs: ## View logs
-	docker-compose logs -f
+	docker compose logs -f
 
 clean: ## Clean up everything (including volumes)
-	docker-compose down -v
+	docker compose down -v
 	rm -rf postgres_data redis_data
 
 build: ## Rebuild all containers
-	docker-compose build --no-cache
+	docker compose build --no-cache
 
 dev: ## Start in development mode
-	docker-compose up
+	docker compose up
 
 prod: ## Start in production mode
-	docker-compose up -d
+	docker compose up -d
 
 backup: ## Backup database
-	docker-compose exec postgres pg_dump -U postgres notes > backup_$(shell date +%Y%m%d_%H%M%S).sql
+	docker compose exec postgres pg_dump -U postgres notes > backup_$(shell date +%Y%m%d_%H%M%S).sql
 	@echo "✅ Database backed up"
 
 restore: ## Restore database from backup
 	@read -p "Enter backup file name: " file; \
-	docker-compose exec -T postgres psql -U postgres notes < $$file
+	docker compose exec -T postgres psql -U postgres notes < $$file
 
 status: ## Check service status
-	@docker-compose ps
+	@docker compose ps
 	@echo ""
 	@echo "Health checks:"
-	@docker-compose exec backend wget --spider --quiet http://localhost:8080/api/v1/health && echo "✅ Backend: Healthy" || echo "❌ Backend: Unhealthy"
-	@docker-compose exec postgres pg_isready -U postgres > /dev/null && echo "✅ PostgreSQL: Ready" || echo "❌ PostgreSQL: Not ready"
-	@docker-compose exec redis redis-cli ping > /dev/null && echo "✅ Redis: Ready" || echo "❌ Redis: Not ready"
+	@docker compose exec backend wget --spider --quiet http://localhost:8080/api/v1/health && echo "✅ Backend: Healthy" || echo "❌ Backend: Unhealthy"
+	@docker compose exec postgres pg_isready -U postgres > /dev/null && echo "✅ PostgreSQL: Ready" || echo "❌ PostgreSQL: Not ready"
+	@docker compose exec redis redis-cli ping > /dev/null && echo "✅ Redis: Ready" || echo "❌ Redis: Not ready"
 
 init: ## Initialize the project
 	@./setup-docker.sh
@@ -451,8 +451,8 @@ main() {
     echo "3. Start the application:"
     echo -e "   ${BLUE}make up${NC}"
     echo ""
-    echo "Or manually with docker-compose:"
-    echo -e "   ${BLUE}docker-compose up -d${NC}"
+    echo "Or manually with docker compose:"
+    echo -e "   ${BLUE}docker compose up -d${NC}"
     echo ""
     echo "Access the application:"
     echo "  📝 Frontend: http://localhost:3000"
