@@ -7,7 +7,6 @@ set -euo pipefail
 GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-relativesure/notes}"
 VERSION="${VERSION:-latest}"
 COMPOSE_FILE="docker-compose.yml"
-OVERRIDE_FILE="docker-compose.ghcr.yml"
 
 # Colors for output
 RED='\033[0;31m'
@@ -52,10 +51,6 @@ check_prerequisites() {
         exit 1
     fi
     
-    if [[ ! -f "$OVERRIDE_FILE" ]]; then
-        log_error "Override compose file not found: $OVERRIDE_FILE"
-        exit 1
-    fi
     
     if [[ ! -f ".env" ]]; then
         log_warning ".env file not found, using default environment"
@@ -76,7 +71,7 @@ pull_images() {
     
     export GITHUB_REPOSITORY VERSION
     
-    if docker-compose -f "$COMPOSE_FILE" -f "$OVERRIDE_FILE" pull; then
+    if docker-compose -f "$COMPOSE_FILE" pull; then
         log_success "Successfully pulled all images"
     else
         log_error "Failed to pull some images"
@@ -92,11 +87,11 @@ deploy_services() {
     
     # Stop existing services
     log_info "Stopping existing services..."
-    docker-compose -f "$COMPOSE_FILE" -f "$OVERRIDE_FILE" down
+    docker-compose -f "$COMPOSE_FILE" down
     
     # Start services
     log_info "Starting services..."
-    if docker-compose -f "$COMPOSE_FILE" -f "$OVERRIDE_FILE" up -d; then
+    if docker-compose -f "$COMPOSE_FILE" up -d; then
         log_success "Services started successfully"
     else
         log_error "Failed to start services"
@@ -132,7 +127,7 @@ health_check() {
         if [[ $attempt -eq $max_attempts ]]; then
             log_error "Health checks failed after $max_attempts attempts"
             log_info "Service status:"
-            docker-compose -f "$COMPOSE_FILE" -f "$OVERRIDE_FILE" ps
+            docker-compose -f "$COMPOSE_FILE" ps
             exit 1
         fi
         
@@ -147,7 +142,7 @@ health_check() {
 show_status() {
     log_info "Deployment Status:"
     echo
-    docker-compose -f "$COMPOSE_FILE" -f "$OVERRIDE_FILE" ps --format table
+    docker-compose -f "$COMPOSE_FILE" ps --format table
     echo
     
     log_info "Service URLs:"
@@ -178,8 +173,8 @@ main() {
     
     log_success "🎉 Deployment completed successfully!"
     echo
-    log_info "To view logs: docker-compose -f $COMPOSE_FILE -f $OVERRIDE_FILE logs -f"
-    log_info "To stop services: docker-compose -f $COMPOSE_FILE -f $OVERRIDE_FILE down"
+    log_info "To view logs: docker-compose -f $COMPOSE_FILE logs -f"
+    log_info "To stop services: docker-compose -f $COMPOSE_FILE down"
 }
 
 # Handle script arguments
@@ -195,13 +190,13 @@ case "${1:-deploy}" in
         show_status
         ;;
     "logs")
-        docker-compose -f "$COMPOSE_FILE" -f "$OVERRIDE_FILE" logs -f
+        docker-compose -f "$COMPOSE_FILE" logs -f
         ;;
     "stop")
-        docker-compose -f "$COMPOSE_FILE" -f "$OVERRIDE_FILE" down
+        docker-compose -f "$COMPOSE_FILE" down
         ;;
     "restart")
-        docker-compose -f "$COMPOSE_FILE" -f "$OVERRIDE_FILE" restart
+        docker-compose -f "$COMPOSE_FILE" restart
         ;;
     *)
         echo "Usage: $0 [pull|deploy|status|logs|stop|restart]"

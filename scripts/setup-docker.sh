@@ -368,49 +368,49 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 up: ## Start all services
-	docker-compose up -d
+	docker compose up -d
 	@echo "✅ Secure Notes is running!"
 	@echo "📝 Frontend: http://localhost:3000"
 	@echo "🔌 Backend API: http://localhost:8080"
 	@echo "📊 View logs: make logs"
 
 down: ## Stop all services
-	docker-compose down
+	docker compose down
 
 restart: ## Restart all services
-	docker-compose restart
+	docker compose restart
 
 logs: ## View logs
-	docker-compose logs -f
+	docker compose logs -f
 
 clean: ## Clean up everything (including volumes)
-	docker-compose down -v
+	docker compose down -v
 	rm -rf postgres_data redis_data
 
 build: ## Rebuild all containers
-	docker-compose build --no-cache
+	docker compose build --no-cache
 
 dev: ## Start in development mode
-	docker-compose up
+	docker compose up
 
 prod: ## Start in production mode
-	docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+	docker compose up -d
 
 backup: ## Backup database
-	docker-compose exec postgres pg_dump -U postgres notes > backup_$(shell date +%Y%m%d_%H%M%S).sql
+	docker compose exec postgres pg_dump -U postgres notes > backup_$(shell date +%Y%m%d_%H%M%S).sql
 	@echo "✅ Database backed up"
 
 restore: ## Restore database from backup
 	@read -p "Enter backup file name: " file; \
-	docker-compose exec -T postgres psql -U postgres notes < $$file
+	docker compose exec -T postgres psql -U postgres notes < $$file
 
 status: ## Check service status
-	@docker-compose ps
+	@docker compose ps
 	@echo ""
 	@echo "Health checks:"
-	@docker-compose exec backend wget --spider --quiet http://localhost:8080/api/v1/health && echo "✅ Backend: Healthy" || echo "❌ Backend: Unhealthy"
-	@docker-compose exec postgres pg_isready -U postgres > /dev/null && echo "✅ PostgreSQL: Ready" || echo "❌ PostgreSQL: Not ready"
-	@docker-compose exec redis redis-cli ping > /dev/null && echo "✅ Redis: Ready" || echo "❌ Redis: Not ready"
+	@docker compose exec backend wget --spider --quiet http://localhost:8080/api/v1/health && echo "✅ Backend: Healthy" || echo "❌ Backend: Unhealthy"
+	@docker compose exec postgres pg_isready -U postgres > /dev/null && echo "✅ PostgreSQL: Ready" || echo "❌ PostgreSQL: Not ready"
+	@docker compose exec redis redis-cli ping > /dev/null && echo "✅ Redis: Ready" || echo "❌ Redis: Not ready"
 
 init: ## Initialize the project
 	@./setup-docker.sh
@@ -419,82 +419,7 @@ EOF
     echo -e "${GREEN}✅ Makefile created${NC}"
 }
 
-# Create docker-compose.prod.yml for production overrides
-create_production_compose() {
-    echo -e "${BLUE}Creating production docker-compose...${NC}"
-    
-    cat > docker-compose.prod.yml << 'EOF'
-# docker-compose.prod.yml - Production overrides
-version: '3.8'
-
-services:
-  backend:
-    restart: always
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 256M
-
-  frontend:
-    restart: always
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          cpus: '0.1'
-          memory: 128M
-
-  postgres:
-    restart: always
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
-
-  redis:
-    restart: always
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          cpus: '0.1'
-          memory: 128M
-EOF
-    
-    echo -e "${GREEN}✅ Production docker-compose created${NC}"
-}
+# Production configuration is now integrated into main docker-compose.yml file
 
 # Main setup function
 main() {
@@ -512,7 +437,6 @@ main() {
     create_frontend_package
     create_backend_gomod
     create_makefile
-    create_production_compose
     
     echo ""
     echo "======================================="
@@ -527,8 +451,8 @@ main() {
     echo "3. Start the application:"
     echo -e "   ${BLUE}make up${NC}"
     echo ""
-    echo "Or manually with docker-compose:"
-    echo -e "   ${BLUE}docker-compose up -d${NC}"
+    echo "Or manually with docker compose:"
+    echo -e "   ${BLUE}docker compose up -d${NC}"
     echo ""
     echo "Access the application:"
     echo "  📝 Frontend: http://localhost:3000"

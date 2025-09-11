@@ -294,11 +294,11 @@ generate_kube_yaml() {
         --publish 3000:3000 \
         --label app=secure-notes
     
-    # Generate Kubernetes YAML
-    podman generate kube secure-notes > secure-notes-kube.yaml
+    # Generate Kubernetes YAML (will be created dynamically by Makefile when needed)
+    echo "Kubernetes YAML can be generated with: make kube"
     
-    echo -e "${GREEN}✅ Kubernetes YAML generated: secure-notes-kube.yaml${NC}"
-    echo "Deploy with: podman play kube secure-notes-kube.yaml"
+    echo -e "${GREEN}✅ Kubernetes setup configured${NC}"
+    echo "Deploy with: make up (will generate secure-notes-kube.yaml automatically)"
 }
 
 # Create Makefile for Podman
@@ -319,6 +319,7 @@ help: ## Show help
 
 up: ## Start with podman-compose
 ifeq ($(COMPOSE_CMD),podman_kube_play)
+	@if [ ! -f secure-notes-kube.yaml ]; then $(MAKE) kube; fi
 	podman play kube secure-notes-kube.yaml
 else
 	podman-compose up -d
@@ -329,13 +330,14 @@ endif
 
 down: ## Stop all containers
 ifeq ($(COMPOSE_CMD),podman_kube_play)
-	podman play kube --down secure-notes-kube.yaml
+	@if [ -f secure-notes-kube.yaml ]; then podman play kube --down secure-notes-kube.yaml; fi
 else
 	podman-compose down
 endif
 
 restart: ## Restart all containers
 ifeq ($(COMPOSE_CMD),podman_kube_play)
+	@if [ ! -f secure-notes-kube.yaml ]; then $(MAKE) kube; fi
 	podman play kube --replace secure-notes-kube.yaml
 else
 	podman-compose restart
@@ -503,7 +505,7 @@ EOF
     echo -e "   ${BLUE}make up${NC}"
     echo ""
     echo "Or use Kubernetes-style with podman:"
-    echo -e "   ${BLUE}podman play kube secure-notes-kube.yaml${NC}"
+    echo -e "   ${BLUE}make up${NC}"
     echo ""
     echo "3. Enable auto-start (systemd):"
     echo -e "   ${BLUE}make systemd${NC}"
