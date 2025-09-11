@@ -15,6 +15,10 @@ on:
         default: 'latest'
         type: string
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   REGISTRY: ghcr.io
   GO_VERSION: "1.25"
