@@ -77,11 +77,8 @@ VERSION=v1.0.0 docker compose up -d
 
 ### Generate Kubernetes YAML
 ```bash
-# Generate from Pod
-make kube
-
-# Apply to cluster
-kubectl apply -f secure-notes-kube.yaml
+# Generate from Pod and apply to cluster
+make kube && kubectl apply -f secure-notes-kube.yaml
 ```
 
 ### Helm Deployment

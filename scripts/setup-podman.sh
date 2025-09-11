@@ -298,7 +298,7 @@ generate_kube_yaml() {
     echo "Kubernetes YAML can be generated with: make kube"
     
     echo -e "${GREEN}✅ Kubernetes setup configured${NC}"
-    echo "Deploy with: podman play kube secure-notes-kube.yaml (after running 'make kube')"
+    echo "Deploy with: make up (will generate secure-notes-kube.yaml automatically)"
 }
 
 # Create Makefile for Podman
@@ -505,7 +505,7 @@ EOF
     echo -e "   ${BLUE}make up${NC}"
     echo ""
     echo "Or use Kubernetes-style with podman:"
-    echo -e "   ${BLUE}podman play kube secure-notes-kube.yaml${NC}"
+    echo -e "   ${BLUE}make up${NC}"
     echo ""
     echo "3. Enable auto-start (systemd):"
     echo -e "   ${BLUE}make systemd${NC}"
