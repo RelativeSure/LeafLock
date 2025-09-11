@@ -301,7 +301,7 @@ jobs:
             
             # Or update your docker-compose
             export VERSION=${{ needs.version-calculation.outputs.next_version }}
-            docker-compose -f docker-compose.yml -f docker-compose.ghcr.yml up -d
+            docker-compose -f docker-compose.yml up -d
             ```
             
             ---
