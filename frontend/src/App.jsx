@@ -777,19 +777,26 @@ export default function SecureNotesApp() {
       setLoading(true);
 
       try {
-        console.log('🔐 Starting authentication...', { isRegistering, email, hasPassword: !!password });
+        console.log('🔐 Starting authentication...', { 
+          mode: isRegistering ? 'REGISTRATION' : 'LOGIN',
+          isRegistering, 
+          email, 
+          hasPassword: !!password,
+          passwordLength: password?.length 
+        });
         
         // Ensure sodium is ready
         await cryptoService.initSodium();
         console.log('✅ Sodium initialized');
 
         if (isRegistering) {
+          console.log('🔄 REGISTRATION MODE - Validating inputs...');
           if (password.length < 12) {
-            setError('Password must be at least 12 characters');
+            setError('Password must be at least 12 characters for registration');
             return;
           }
           
-          console.log('📝 Attempting registration...');
+          console.log('📝 Attempting registration with email:', email);
           const response = await api.register(email, password);
           console.log('✅ Registration successful:', { userId: response.user_id, hasToken: !!response.token });
           
@@ -813,7 +820,7 @@ export default function SecureNotesApp() {
             setShowOnboarding(true);
           }
         } else {
-          console.log('🔑 Attempting login...');
+          console.log('🔑 LOGIN MODE - Attempting login with email:', email);
           const response = await api.login(email, password, mfaCode);
           console.log('✅ Login API successful:', { hasToken: !!response.token, hasSession: !!response.session });
           
@@ -847,9 +854,25 @@ export default function SecureNotesApp() {
           await loadNotes();
         }
       } catch (err) {
-        console.error('💥 Authentication failed:', err);
-        // Show the actual error message instead of generic ones
-        const errorMessage = err.message || (isRegistering ? 'Registration failed' : 'Login failed');
+        console.error('💥 Authentication failed:', { 
+          mode: isRegistering ? 'REGISTRATION' : 'LOGIN',
+          error: err.message,
+          fullError: err 
+        });
+        
+        // Provide context-aware error messages
+        let errorMessage = err.message;
+        if (!errorMessage) {
+          errorMessage = isRegistering ? 
+            'Registration failed. Please check your email and password.' : 
+            'Login failed. Please check your credentials.';
+        }
+        
+        // Special handling for common errors
+        if (errorMessage.includes('Invalid credentials') && isRegistering) {
+          errorMessage = 'Registration failed. Please try a different email address.';
+        }
+        
         setError(errorMessage);
       } finally {
         setLoading(false);
@@ -990,7 +1013,13 @@ export default function SecureNotesApp() {
             <button
               type="button"
               onClick={() => {
-                setIsRegistering(!isRegistering);
+                const newMode = !isRegistering;
+                console.log('🔄 Switching mode:', { 
+                  from: isRegistering ? 'REGISTRATION' : 'LOGIN',
+                  to: newMode ? 'REGISTRATION' : 'LOGIN',
+                  isRegistering: newMode
+                });
+                setIsRegistering(newMode);
                 setError(null);
                 setMfaRequired(false);
               }}
