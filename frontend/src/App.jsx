@@ -1147,8 +1147,8 @@ export default function SecureNotesApp() {
     }, []);
 
     // Create a stable debounced function using useMemo to prevent recreation
-    const debouncedSave = useMemo(() => {
-      return debounce(async () => {
+    const debouncedSave = useCallback(
+      debounce(async () => {
         // Check current values from refs
         if (titleRef.current || contentRef.current) {
           try {
@@ -1159,8 +1159,9 @@ export default function SecureNotesApp() {
             // Don't crash the app, just show the error
           }
         }
-      }, 2000);
-    }, [handleSave]);
+      }, 2000),
+      [handleSave]
+    );
 
     // Only trigger autosave when content actually changes
     useEffect(() => {
