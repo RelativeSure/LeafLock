@@ -152,6 +152,26 @@ CREATE TABLE IF NOT EXISTS key_rotations (
     completed_at TIMESTAMPTZ
 );
 
+-- Tags table for organizing notes
+CREATE TABLE IF NOT EXISTS tags (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    name_encrypted BYTEA NOT NULL, -- Encrypted tag name
+    color VARCHAR(7) DEFAULT '#3b82f6', -- Hex color code
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, name_encrypted) -- Prevent duplicate tag names per user
+);
+
+-- Junction table for note-tag relationships
+CREATE TABLE IF NOT EXISTS note_tags (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    tag_id UUID REFERENCES tags(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(note_id, tag_id) -- Prevent duplicate assignments
+);
+
 -- Functions for automatic updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -178,6 +198,11 @@ BEGIN
         CREATE TRIGGER update_notes_updated_at BEFORE UPDATE ON notes 
             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
     END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_tags_updated_at') THEN
+        CREATE TRIGGER update_tags_updated_at BEFORE UPDATE ON tags 
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 END $$;
 
 -- Session cleanup function
@@ -185,6 +210,14 @@ CREATE OR REPLACE FUNCTION cleanup_expired_sessions()
 RETURNS void AS $$
 BEGIN
     DELETE FROM sessions WHERE expires_at < NOW();
+END;
+$$ LANGUAGE plpgsql;
+
+-- Cleanup old deleted notes function (30 days)
+CREATE OR REPLACE FUNCTION cleanup_old_deleted_notes()
+RETURNS void AS $$
+BEGIN
+    DELETE FROM notes WHERE deleted_at IS NOT NULL AND deleted_at < NOW() - INTERVAL '30 days';
 END;
 $$ LANGUAGE plpgsql;
 
@@ -201,8 +234,12 @@ CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action, created_at DESC);
 
--- Automatic session cleanup job (call periodically)
-SELECT cleanup_expired_sessions();
+-- Tags indexes
+CREATE INDEX IF NOT EXISTS idx_tags_user ON tags(user_id);
+CREATE INDEX IF NOT EXISTS idx_note_tags_note ON note_tags(note_id);
+CREATE INDEX IF NOT EXISTS idx_note_tags_tag ON note_tags(tag_id);
+
+-- Note: Cleanup jobs run automatically via background service every 24 hours
 `
 
 // Configuration with secure defaults
@@ -386,6 +423,12 @@ type LoginRequest struct {
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
+	// Check if registration is enabled
+	enableRegistration := getEnvOrDefault("ENABLE_REGISTRATION", "true")
+	if enableRegistration != "true" {
+		return c.Status(403).JSON(fiber.Map{"error": "Registration is currently disabled"})
+	}
+
 	var req RegisterRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
@@ -829,7 +872,394 @@ func (h *NotesHandler) DeleteNote(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
 	}
 
-	return c.JSON(fiber.Map{"message": "Note deleted successfully"})
+	return c.JSON(fiber.Map{"message": "Note moved to trash successfully"})
+}
+
+func (h *NotesHandler) GetTrash(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	ctx := context.Background()
+
+	// Get user's default workspace
+	var workspaceID uuid.UUID
+	err := h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&workspaceID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to get workspace"})
+	}
+
+	// Get deleted notes from workspace
+	rows, err := h.db.Query(ctx, `
+		SELECT id, title_encrypted, content_encrypted, deleted_at, updated_at
+		FROM notes 
+		WHERE workspace_id = $1 AND deleted_at IS NOT NULL
+		ORDER BY deleted_at DESC`,
+		workspaceID)
+	
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch trash"})
+	}
+	defer rows.Close()
+
+	trashedNotes := []fiber.Map{}
+	for rows.Next() {
+		var id uuid.UUID
+		var titleEnc, contentEnc []byte
+		var deletedAt, updatedAt time.Time
+
+		if err := rows.Scan(&id, &titleEnc, &contentEnc, &deletedAt, &updatedAt); err != nil {
+			continue
+		}
+
+		trashedNotes = append(trashedNotes, fiber.Map{
+			"id":                id,
+			"title_encrypted":   base64.StdEncoding.EncodeToString(titleEnc),
+			"content_encrypted": base64.StdEncoding.EncodeToString(contentEnc),
+			"deleted_at":        deletedAt,
+			"updated_at":        updatedAt,
+		})
+	}
+
+	return c.JSON(fiber.Map{"notes": trashedNotes})
+}
+
+func (h *NotesHandler) RestoreNote(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	ctx := context.Background()
+
+	// Restore the note (set deleted_at to NULL)
+	result, err := h.db.Exec(ctx, `
+		UPDATE notes 
+		SET deleted_at = NULL, updated_at = NOW()
+		FROM workspaces w
+		WHERE notes.id = $1 AND notes.workspace_id = w.id AND w.owner_id = $2 AND notes.deleted_at IS NOT NULL`,
+		noteID, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to restore note"})
+	}
+
+	if result.RowsAffected() == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "Note not found in trash"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Note restored successfully"})
+}
+
+func (h *NotesHandler) PermanentlyDeleteNote(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	ctx := context.Background()
+
+	// Permanently delete the note
+	result, err := h.db.Exec(ctx, `
+		DELETE FROM notes 
+		USING workspaces w
+		WHERE notes.id = $1 AND notes.workspace_id = w.id AND w.owner_id = $2 AND notes.deleted_at IS NOT NULL`,
+		noteID, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to permanently delete note"})
+	}
+
+	if result.RowsAffected() == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "Note not found in trash"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Note permanently deleted successfully"})
+}
+
+// Tags Handler
+type TagsHandler struct {
+	db     Database
+	crypto *CryptoService
+}
+
+type CreateTagRequest struct {
+	Name  string `json:"name" validate:"required"`
+	Color string `json:"color,omitempty"`
+}
+
+type AssignTagRequest struct {
+	TagID string `json:"tag_id" validate:"required"`
+}
+
+func (h *TagsHandler) GetTags(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	ctx := context.Background()
+
+	// Get user's tags
+	rows, err := h.db.Query(ctx, `
+		SELECT id, name_encrypted, color, created_at, updated_at
+		FROM tags 
+		WHERE user_id = $1
+		ORDER BY name_encrypted ASC`,
+		userID)
+	
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch tags"})
+	}
+	defer rows.Close()
+
+	tags := []fiber.Map{}
+	for rows.Next() {
+		var id uuid.UUID
+		var nameEnc []byte
+		var color string
+		var createdAt, updatedAt time.Time
+
+		if err := rows.Scan(&id, &nameEnc, &color, &createdAt, &updatedAt); err != nil {
+			continue
+		}
+
+		// Decrypt tag name
+		name, err := h.crypto.Decrypt(nameEnc)
+		if err != nil {
+			continue
+		}
+
+		tags = append(tags, fiber.Map{
+			"id":         id,
+			"name":       string(name),
+			"color":      color,
+			"created_at": createdAt,
+			"updated_at": updatedAt,
+		})
+	}
+
+	return c.JSON(fiber.Map{"tags": tags})
+}
+
+func (h *TagsHandler) CreateTag(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	var req CreateTagRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	// Validate color format (if provided)
+	if req.Color != "" && !isValidHexColor(req.Color) {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid color format"})
+	}
+
+	// Set default color if not provided
+	if req.Color == "" {
+		req.Color = "#3b82f6"
+	}
+
+	// Encrypt tag name
+	encryptedName, err := h.crypto.Encrypt([]byte(req.Name))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt tag name"})
+	}
+
+	ctx := context.Background()
+
+	// Create tag
+	var tagID uuid.UUID
+	err = h.db.QueryRow(ctx, `
+		INSERT INTO tags (user_id, name_encrypted, color)
+		VALUES ($1, $2, $3)
+		RETURNING id`,
+		userID, encryptedName, req.Color).Scan(&tagID)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate") {
+			return c.Status(409).JSON(fiber.Map{"error": "Tag with this name already exists"})
+		}
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create tag"})
+	}
+
+	return c.Status(201).JSON(fiber.Map{
+		"id":      tagID,
+		"message": "Tag created successfully",
+	})
+}
+
+func (h *TagsHandler) DeleteTag(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	tagID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid tag ID"})
+	}
+
+	ctx := context.Background()
+
+	// Delete tag (this will cascade delete note_tags relationships)
+	result, err := h.db.Exec(ctx, `
+		DELETE FROM tags 
+		WHERE id = $1 AND user_id = $2`,
+		tagID, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete tag"})
+	}
+
+	if result.RowsAffected() == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "Tag not found"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Tag deleted successfully"})
+}
+
+func (h *TagsHandler) AssignTagToNote(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	var req AssignTagRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	tagID, err := uuid.Parse(req.TagID)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid tag ID"})
+	}
+
+	ctx := context.Background()
+
+	// Verify note belongs to user
+	var noteExists bool
+	err = h.db.QueryRow(ctx, `
+		SELECT true FROM notes n
+		JOIN workspaces w ON n.workspace_id = w.id
+		WHERE n.id = $1 AND w.owner_id = $2 AND n.deleted_at IS NULL`,
+		noteID, userID).Scan(&noteExists)
+
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+	}
+
+	// Verify tag belongs to user
+	var tagExists bool
+	err = h.db.QueryRow(ctx, `
+		SELECT true FROM tags WHERE id = $1 AND user_id = $2`,
+		tagID, userID).Scan(&tagExists)
+
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Tag not found"})
+	}
+
+	// Assign tag to note
+	_, err = h.db.Exec(ctx, `
+		INSERT INTO note_tags (note_id, tag_id)
+		VALUES ($1, $2)
+		ON CONFLICT (note_id, tag_id) DO NOTHING`,
+		noteID, tagID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to assign tag"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Tag assigned successfully"})
+}
+
+func (h *TagsHandler) RemoveTagFromNote(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	tagID, err := uuid.Parse(c.Params("tag_id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid tag ID"})
+	}
+
+	ctx := context.Background()
+
+	// Remove tag assignment (with user verification)
+	result, err := h.db.Exec(ctx, `
+		DELETE FROM note_tags 
+		USING notes n, workspaces w, tags t
+		WHERE note_tags.note_id = n.id 
+		AND note_tags.tag_id = t.id
+		AND n.workspace_id = w.id
+		AND note_tags.note_id = $1 
+		AND note_tags.tag_id = $2
+		AND w.owner_id = $3 
+		AND t.user_id = $3`,
+		noteID, tagID, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to remove tag"})
+	}
+
+	if result.RowsAffected() == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "Tag assignment not found"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Tag removed successfully"})
+}
+
+func (h *TagsHandler) GetNotesByTag(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	tagID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid tag ID"})
+	}
+
+	ctx := context.Background()
+
+	// Get notes with this tag
+	rows, err := h.db.Query(ctx, `
+		SELECT n.id, n.title_encrypted, n.content_encrypted, n.created_at, n.updated_at
+		FROM notes n
+		JOIN workspaces w ON n.workspace_id = w.id
+		JOIN note_tags nt ON n.id = nt.note_id
+		JOIN tags t ON nt.tag_id = t.id
+		WHERE t.id = $1 AND w.owner_id = $2 AND n.deleted_at IS NULL
+		ORDER BY n.updated_at DESC`,
+		tagID, userID)
+	
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch notes"})
+	}
+	defer rows.Close()
+
+	notes := []fiber.Map{}
+	for rows.Next() {
+		var id uuid.UUID
+		var titleEnc, contentEnc []byte
+		var createdAt, updatedAt time.Time
+
+		if err := rows.Scan(&id, &titleEnc, &contentEnc, &createdAt, &updatedAt); err != nil {
+			continue
+		}
+
+		notes = append(notes, fiber.Map{
+			"id":                id,
+			"title_encrypted":   base64.StdEncoding.EncodeToString(titleEnc),
+			"content_encrypted": base64.StdEncoding.EncodeToString(contentEnc),
+			"created_at":        createdAt,
+			"updated_at":        updatedAt,
+		})
+	}
+
+	return c.JSON(fiber.Map{"notes": notes})
+}
+
+func isValidHexColor(color string) bool {
+	if len(color) != 7 || color[0] != '#' {
+		return false
+	}
+	for i := 1; i < 7; i++ {
+		c := color[i]
+		if !((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) {
+			return false
+		}
+	}
+	return true
 }
 
 // JWT Middleware
@@ -872,6 +1302,59 @@ func JWTMiddleware(secret []byte) fiber.Handler {
 
 		return c.Next()
 	}
+}
+
+// Background cleanup service that runs every 24 hours
+func startCleanupService(db Database) {
+	go func() {
+		ctx := context.Background()
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+
+		// Run initial cleanup
+		runCleanupTasks(ctx, db)
+
+		for {
+			select {
+			case <-ticker.C:
+				runCleanupTasks(ctx, db)
+			}
+		}
+	}()
+}
+
+func runCleanupTasks(ctx context.Context, db Database) {
+	log.Println("🧹 Running scheduled cleanup tasks...")
+	
+	// Clean up expired sessions
+	result1, err1 := db.Exec(ctx, "SELECT cleanup_expired_sessions()")
+	if err1 != nil {
+		log.Printf("⚠️ Failed to cleanup expired sessions: %v", err1)
+	} else {
+		log.Println("✅ Cleaned up expired sessions")
+	}
+
+	// Clean up old deleted notes (30+ days)
+	result2, err2 := db.Exec(ctx, "SELECT cleanup_old_deleted_notes()")
+	if err2 != nil {
+		log.Printf("⚠️ Failed to cleanup old deleted notes: %v", err2)
+	} else {
+		log.Println("✅ Cleaned up old deleted notes")
+	}
+
+	// Get count of deleted notes
+	var deletedCount int
+	db.QueryRow(ctx, "SELECT COUNT(*) FROM notes WHERE deleted_at < NOW() - INTERVAL '30 days' AND deleted_at IS NOT NULL").Scan(&deletedCount)
+	
+	if deletedCount > 0 {
+		log.Printf("🗑️ Permanently deleted %d notes older than 30 days", deletedCount)
+	}
+
+	log.Println("🎯 Cleanup tasks completed successfully")
+	
+	// Prevent unused variable warnings
+	_ = result1
+	_ = result2
 }
 
 func main() {
@@ -981,6 +1464,12 @@ func main() {
 		crypto: crypto,
 	}
 
+	// Tags handlers
+	tagsHandler := &TagsHandler{
+		db:     db,
+		crypto: crypto,
+	}
+
 	// Protected routes
 	protected := api.Group("/", JWTMiddleware(config.JWTSecret))
 	
@@ -990,6 +1479,24 @@ func main() {
 	protected.Post("/notes", notesHandler.CreateNote)
 	protected.Put("/notes/:id", notesHandler.UpdateNote)
 	protected.Delete("/notes/:id", notesHandler.DeleteNote)
+	
+	// Trash endpoints
+	protected.Get("/trash", notesHandler.GetTrash)
+	protected.Put("/trash/:id/restore", notesHandler.RestoreNote)
+	protected.Delete("/trash/:id", notesHandler.PermanentlyDeleteNote)
+	
+	// Tags endpoints
+	protected.Get("/tags", tagsHandler.GetTags)
+	protected.Post("/tags", tagsHandler.CreateTag)
+	protected.Delete("/tags/:id", tagsHandler.DeleteTag)
+	protected.Get("/tags/:id/notes", tagsHandler.GetNotesByTag)
+	
+	// Note-tag assignment endpoints
+	protected.Post("/notes/:id/tags", tagsHandler.AssignTagToNote)
+	protected.Delete("/notes/:id/tags/:tag_id", tagsHandler.RemoveTagFromNote)
+
+	// Start background cleanup service
+	startCleanupService(db)
 
 	// Start server
 	log.Printf("Starting secure server on port %s with full encryption", config.Port)
