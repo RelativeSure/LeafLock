@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 
 // Types
 interface Note {
@@ -75,12 +76,13 @@ const ThemeContext = React.createContext<ThemeContextType | undefined>(undefined
 // Theme provider component
 const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<ThemeType>('system');
-  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('dark');
-
+  
   // Get system preference
   const getSystemTheme = (): 'light' | 'dark' => {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   };
+  
+  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>(getSystemTheme());
 
   // Load theme from cookie
   useEffect(() => {
@@ -198,7 +200,7 @@ class CryptoService {
     const derivedBits = await window.crypto.subtle.deriveBits(
       {
         name: 'PBKDF2',
-        salt: salt,
+        salt: salt as BufferSource,
         iterations: 600000, // High iteration count for security
         hash: 'SHA-256'
       },
@@ -297,9 +299,9 @@ class SecureAPI {
 
   async request(endpoint: string, options: RequestInit = {}): Promise<any> {
     const url = `${this.baseURL}${endpoint}`;
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers
+      ...(options.headers as Record<string, string> || {})
     };
 
     if (this.token) {
@@ -724,10 +726,10 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
     }
 
     return (
-      <ReactMarkdown 
-        remarkPlugins={[remarkGfm]}
-        className="text-gray-200"
-        components={{
+      <div className="text-gray-200">
+        <ReactMarkdown 
+          remarkPlugins={[remarkGfm]}
+          components={{
           // Style headings
           h1: ({children}) => <h1 className="text-2xl font-bold text-white mb-4 border-b border-gray-600 pb-2">{children}</h1>,
           h2: ({children}) => <h2 className="text-xl font-semibold text-white mb-3 mt-6">{children}</h2>,
@@ -753,7 +755,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
         }}
       >
         {content}
-      </ReactMarkdown>
+        </ReactMarkdown>
+      </div>
     );
   } catch (err) {
     console.error('Markdown component error:', err);
@@ -826,9 +829,11 @@ const ThemeToggle: React.FC = () => {
 
   return (
     <div className="relative">
-      <button
+      <Button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center px-3 py-1 text-sm text-gray-400 hover:text-white rounded transition focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+        variant="ghost"
+        size="sm"
+        className="flex items-center px-3 py-1 text-sm"
         aria-label="Theme selector"
         title="Change theme"
       >
@@ -837,26 +842,27 @@ const ThemeToggle: React.FC = () => {
         <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
-      </button>
+      </Button>
 
       {isOpen && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 w-32 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-20">
+          <div className="absolute right-0 top-full mt-1 w-32 bg-popover border border-border rounded-lg shadow-lg z-20">
             {themeOptions.map((option) => (
-              <button
+              <Button
                 key={option.value}
                 onClick={() => {
                   setTheme(option.value);
                   setIsOpen(false);
                 }}
-                className={`w-full flex items-center px-3 py-2 text-sm text-left hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg transition ${
-                  theme === option.value ? 'text-blue-400 bg-gray-700/50' : 'text-gray-300'
+                variant="ghost"
+                className={`w-full flex items-center justify-start px-3 py-2 text-sm first:rounded-t-lg last:rounded-b-lg h-auto ${
+                  theme === option.value ? 'text-primary bg-accent' : 'text-popover-foreground'
                 }`}
               >
                 {option.icon}
                 <span className="ml-2">{option.label}</span>
-              </button>
+              </Button>
             ))}
           </div>
         </>
@@ -998,11 +1004,11 @@ const LoginView: React.FC = () => {
           <div className="flex items-center justify-center mb-4">
             <div className="flex items-center space-x-2">
               <Lock className="h-8 w-8 text-primary" />
-              <CardTitle className="text-2xl">Secure Notes</CardTitle>
+              <CardTitle className="text-2xl">Notes</CardTitle>
             </div>
           </div>
           <CardDescription className="text-center">
-            🔐 End-to-end encrypted • Zero-knowledge architecture • Your data stays private
+            Your secure note-taking application
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -1085,7 +1091,7 @@ const LoginView: React.FC = () => {
               className="w-full"
               disabled={loading}
             >
-              {loading ? 'Processing...' : (isRegistering ? 'Create Secure Account' : 'Login Securely')}
+              {loading ? 'Processing...' : (isRegistering ? 'Create Account' : 'Login')}
             </Button>
 
             <Button
@@ -1118,7 +1124,7 @@ function SecureNotesApp() {
   const [viewingTrash, setViewingTrash] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [notesError, setNotesError] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
@@ -1161,7 +1167,21 @@ function SecureNotesApp() {
           console.log('🔐 Found stored token, validating...');
           
           // Validate token with backend before trusting it (with timeout)
-          const isValid = await api.validateToken();
+          let isValid = false;
+          try {
+            console.log('🔍 Validating token with 3-second timeout...');
+            const timeoutPromise = new Promise<boolean>((_, reject) =>
+              setTimeout(() => reject(new Error('Validation timeout')), 3000)
+            );
+            isValid = await Promise.race([
+              api.validateToken(),
+              timeoutPromise
+            ]);
+          } catch (err) {
+            console.warn('⚠️ Token validation failed:', err);
+            // If validation fails (network error, timeout, etc.), treat as invalid
+            isValid = false;
+          }
           
           if (isValid) {
             console.log('✅ Token valid, checking encryption key...');
@@ -1509,29 +1529,35 @@ function SecureNotesApp() {
     // Create a stable debounced function using useMemo to prevent recreation
     const debouncedSave = useMemo(() => {
       const debouncedFunc = debounce(async () => {
-        // Check current values from refs
-        if (titleRef.current || contentRef.current) {
+        // Check current values from refs and ensure content actually changed
+        const currentNote = selectedNoteRef.current;
+        const currentTitle = titleRef.current;
+        const currentContent = contentRef.current;
+        
+        // Only save if content has actually changed from the loaded note
+        if (currentNote && (currentTitle !== currentNote.title || currentContent !== currentNote.content)) {
           try {
             await handleSave();
+            console.log('✅ Autosave completed');
           } catch (err) {
-            console.error('Autosave failed:', err);
+            console.error('💥 Autosave failed:', err);
             setSaveError((err as Error).message || 'Autosave failed');
-            // Don't crash the app, just show the error
           }
         }
-      }, 2000);
+      }, 3000); // Increased delay to 3 seconds for better UX
       
       // Store reference for cancellation
       debouncedAutosaveRef.current = debouncedFunc;
       return debouncedFunc;
     }, [handleSave]);
 
-    // Only trigger autosave when content actually changes
+    // Only trigger autosave when content actually changes AND not during initial load
     useEffect(() => {
-      if (title || content) {
+      // Don't autosave if we just loaded the note or if content is empty
+      if ((title || content) && selectedNote && (title !== selectedNote.title || content !== selectedNote.content)) {
         debouncedSave();
       }
-    }, [title, content, debouncedSave]);
+    }, [title, content, debouncedSave, selectedNote]);
 
     return (
       <div className="flex-1 flex flex-col" role="main" aria-label="Note editor">
@@ -1671,16 +1697,16 @@ function SecureNotesApp() {
     );
 
     return (
-      <nav className="w-full md:w-80 bg-gray-800 md:border-r border-gray-700 flex flex-col h-full" role="navigation" aria-label={viewingTrash ? "Trash list" : "Notes list"}>
-        <div className="p-4 border-b border-gray-700">
+      <nav className="w-full md:w-80 bg-card md:border-r border-border flex flex-col h-full" role="navigation" aria-label={viewingTrash ? "Trash list" : "Notes list"}>
+        <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-semibold text-foreground">
               {viewingTrash ? 'Trash' : 'Notes'}
             </h2>
             {viewingTrash && (
-              <span className="text-xs text-gray-400">
+              <Badge variant="secondary" className="text-xs">
                 {trashedNotes.length} items
-              </span>
+              </Badge>
             )}
           </div>
           
@@ -1688,20 +1714,20 @@ function SecureNotesApp() {
             <label htmlFor="search-notes" className="sr-only">
               {viewingTrash ? 'Search trash' : 'Search notes'}
             </label>
-            <svg className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <svg className="absolute left-3 top-2.5 w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <input
+            <Input
               id="search-notes"
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={viewingTrash ? "Search trash..." : "Search notes..."}
-              className="w-full pl-10 pr-4 py-2 bg-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10"
               aria-describedby="search-help"
             />
             <p id="search-help" className="sr-only">
-              {viewingTrash ? 'Search through your trashed notes' : 'Search through your encrypted notes by title or content'}
+              {viewingTrash ? 'Search through your trashed notes' : 'Search through your notes by title or content'}
             </p>
           </div>
         </div>
@@ -1721,8 +1747,8 @@ function SecureNotesApp() {
             filteredNotes.map(note => (
             <div
               key={note.id}
-              className={`border-b border-gray-700 ${
-                selectedNote?.id === note.id ? 'bg-gray-700' : ''
+              className={`border-b border-border ${
+                selectedNote?.id === note.id ? 'bg-accent' : ''
               }`}
             >
               <div className="flex">
@@ -1737,7 +1763,7 @@ function SecureNotesApp() {
                       }
                     }
                   }}
-                  className={`flex-1 text-left p-4 md:p-4 py-6 md:py-4 cursor-pointer hover:bg-gray-700 active:bg-gray-600 transition focus:outline-none focus:bg-gray-700 focus:ring-2 focus:ring-blue-500/50 ${
+                  className={`flex-1 text-left p-4 md:p-4 py-6 md:py-4 cursor-pointer hover:bg-accent active:bg-accent transition focus:outline-none focus:bg-accent focus:ring-2 focus:ring-ring ${
                     viewingTrash ? 'cursor-default' : ''
                   }`}
                   role="listitem"
@@ -1745,11 +1771,11 @@ function SecureNotesApp() {
                   aria-describedby={`note-${note.id}-date`}
                   disabled={viewingTrash}
                 >
-                  <h3 className="font-medium text-white mb-1">{note.title || 'Untitled'}</h3>
-                  <p className="text-sm text-gray-400 line-clamp-2">
+                  <h3 className="font-medium text-foreground mb-1">{note.title || 'Untitled'}</h3>
+                  <p className="text-sm text-muted-foreground line-clamp-2">
                     {note.content || 'No content'}
                   </p>
-                  <p id={`note-${note.id}-date`} className="text-xs text-gray-500 mt-2">
+                  <p id={`note-${note.id}-date`} className="text-xs text-muted-foreground mt-2">
                     {viewingTrash ? 'Deleted' : 'Modified'} {new Date(note.updated_at).toLocaleDateString()}
                   </p>
                 </button>
@@ -1829,19 +1855,19 @@ function SecureNotesApp() {
         </div>
         
         {!viewingTrash && (
-          <div className="p-4 border-t border-gray-700">
-            <button
+          <div className="p-4 border-t border-border">
+            <Button
               onClick={() => {
                 setSelectedNote(null);
                 setCurrentView('editor');
               }}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="w-full"
               aria-describedby="new-note-help"
             >
-              New Encrypted Note
-            </button>
+              New Note
+            </Button>
             <p id="new-note-help" className="sr-only">
-              Create a new end-to-end encrypted note
+              Create a new note
             </p>
           </div>
         )}
@@ -1852,12 +1878,14 @@ function SecureNotesApp() {
   // Main App Layout
   const AppLayout: React.FC = () => {
     return (
-      <div className="h-screen flex flex-col md:flex-row bg-gray-900">
-        <div className="md:hidden flex items-center justify-between bg-gray-800 border-b border-gray-700 px-4 py-3">
-          <h1 className="text-lg font-semibold text-white">Secure Notes</h1>
-          <button
+      <div className="h-screen flex flex-col md:flex-row bg-background">
+        <div className="md:hidden flex items-center justify-between bg-card border-b border-border px-4 py-3">
+          <h1 className="text-lg font-semibold text-foreground">Notes</h1>
+          <Button
             onClick={() => setCurrentView(currentView === 'notes' ? 'editor' : 'notes')}
-            className="text-gray-400 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded p-1"
+            variant="ghost"
+            size="sm"
+            className="p-1"
             aria-label={currentView === 'notes' ? 'Show editor' : 'Show notes list'}
           >
             {currentView === 'notes' ? (
@@ -1869,41 +1897,17 @@ function SecureNotesApp() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             )}
-          </button>
+          </Button>
         </div>
 
         <div className={`${currentView === 'notes' || selectedNote || currentView === 'editor' ? 'hidden md:block' : 'block'} w-full md:w-80`}>
           <NotesList />
         </div>
         
-        <div className={`${currentView === 'notes' && !selectedNote && currentView !== 'editor' ? 'hidden md:flex' : 'flex'} flex-1 flex-col`}>
-          <header className="hidden md:flex bg-gray-800 border-b border-gray-700 px-6 py-3 items-center justify-between">
+        <div className={`${currentView === 'notes' && !selectedNote ? 'hidden md:flex' : 'flex'} flex-1 flex-col`}>
+          <header className="hidden md:flex bg-card border-b border-border px-6 py-3 items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2" role="status" aria-live="polite">
-                {encryptionStatus === 'locked' ? (
-                  <>
-                    <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-sm text-red-400 font-medium">
-                      🔒 Locked
-                    </span>
-                    <span className="sr-only">
-                      Authentication required - you are currently locked out
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-2 h-2 rounded-full bg-green-500" aria-hidden="true" />
-                    <span className="text-sm text-gray-400">
-                      Encryption Active
-                    </span>
-                    <span className="sr-only">
-                      Your notes are encrypted and secure
-                    </span>
-                  </>
-                )}
-              </div>
+              <h1 className="text-lg font-semibold text-foreground">Notes</h1>
             </div>
             
             <div className="flex items-center space-x-4">
