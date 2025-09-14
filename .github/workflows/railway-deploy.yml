@@ -63,14 +63,28 @@ jobs:
             echo "Note: RAILWAY_PROJECT_ID not provided; relying on CLI defaults or previous link."
           fi
 
-      - name: Debug - List Railway projects and environments
+      - name: Preflight validation
         run: |
-          echo "Listing projects..."
-          railway projects || true
-          if [ -n "$RAILWAY_PROJECT_ID" ]; then
-            echo "Listing environments for project $RAILWAY_PROJECT_ID..."
-            railway environments --project "$RAILWAY_PROJECT_ID" || true
+          set -e
+          echo "Validating Railway token..."
+          if ! railway whoami >/dev/null 2>&1; then
+            echo "❌ Invalid or missing RAILWAY_TOKEN. Please add a valid Project Token to repo secrets."
+            exit 1
           fi
+
+          echo "Selecting environment '${{ github.event.inputs.environment }}'..."
+          if ! railway environment "${{ github.event.inputs.environment }}" >/dev/null 2>&1; then
+            echo "❌ Could not select environment '${{ github.event.inputs.environment }}'. Ensure it exists in the Railway project tied to your token."
+            echo "   Tip: Use a Project Token (Project → Settings → Tokens) and create the environment in Railway UI if needed."
+            exit 1
+          fi
+
+          {
+            echo "## Railway Preflight"; echo
+            echo "- ✅ Token valid"
+            echo "- ✅ Project: $RAILWAY_PROJECT_ID"
+            echo "- ✅ Environment: ${{ github.event.inputs.environment }}"
+          } >> $GITHUB_STEP_SUMMARY
 
       - name: Deploy backend
         if: ${{ github.event.inputs.target == 'backend' || github.event.inputs.target == 'both' }}
@@ -83,10 +97,10 @@ jobs:
           echo "Deploying backend..."
           # Set variables (new CLI expects --set as option, not subcommand)
           if [ -n "$ENABLE_REGISTRATION" ]; then
-            railway variables --project "$RAILWAY_PROJECT_ID" --service backend --environment "$RAILWAY_ENVIRONMENT" --set ENABLE_REGISTRATION=$ENABLE_REGISTRATION || true
+            railway variables --service backend --environment "$RAILWAY_ENVIRONMENT" ENABLE_REGISTRATION=$ENABLE_REGISTRATION || true
           fi
-          # Deploy backend explicitly targeting project+environment+service
-          railway up --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT" --service backend
+          # Deploy backend targeting service+environment; path is current dir
+          railway up --service backend --environment "$RAILWAY_ENVIRONMENT" .
 
       - name: Deploy frontend
         if: ${{ github.event.inputs.target == 'frontend' || github.event.inputs.target == 'both' }}
@@ -98,9 +112,9 @@ jobs:
         run: |
           echo "Deploying frontend..."
           if [ -n "$VITE_ENABLE_ADMIN_PANEL" ]; then
-            railway variables --project "$RAILWAY_PROJECT_ID" --service frontend --environment "$RAILWAY_ENVIRONMENT" --set VITE_ENABLE_ADMIN_PANEL=$VITE_ENABLE_ADMIN_PANEL || true
+            railway variables --service frontend --environment "$RAILWAY_ENVIRONMENT" VITE_ENABLE_ADMIN_PANEL=$VITE_ENABLE_ADMIN_PANEL || true
           fi
-          railway up --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT" --service frontend
+          railway up --service frontend --environment "$RAILWAY_ENVIRONMENT" .
 
       - name: Summary
         run: |
