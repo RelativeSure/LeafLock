@@ -1,4 +1,10 @@
-# 🔐 Secure Notes - End-to-End Encrypted Notes Application
+# 🔐 LeafLock - End-to-End Encrypted Notes Application
+
+[![CI/CD Pipeline](https://github.com/RelativeSure/notes/actions/workflows/ci.yml/badge.svg)](https://github.com/RelativeSure/notes/actions)
+[![Discussions](https://img.shields.io/badge/Discuss-on%20GitHub-blue?logo=github)](https://github.com/RelativeSure/notes/discussions)
+[![Railway Deploy (Manual)](https://img.shields.io/badge/Run-Railway%20Deploy-0b5cff?logo=railway&logoColor=white)](https://github.com/RelativeSure/notes/actions/workflows/railway-deploy.yml)
+
+Contributions are welcome! Please open a feature request or bug report using our GitHub issue templates, or start a conversation in Discussions. See the links below. For guidelines, read [CONTRIBUTING.md](CONTRIBUTING.md) and our [Code of Conduct](CODE_OF_CONDUCT.md). Security reports: see [SECURITY.md](SECURITY.md).
 
 [![CI/CD Pipeline](https://github.com/RelativeSure/notes/actions/workflows/ci.yml/badge.svg)](https://github.com/RelativeSure/notes/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -191,7 +197,7 @@ docker compose -f docker-compose.test.yml up --abort-on-container-exit
 ### Code Structure
 
 ```
-secure-notes/
+leaflock/
 ├── backend/
 │   ├── main.go           # Server entry point
 │   ├── go.mod            # Go dependencies
@@ -249,6 +255,27 @@ secure-notes/
 
 ## 🚢 Production Deployment
 
+## 📚 Docs
+
+- Icons: docs/ICONS.md
+- Railway deploy: docs/RAILWAY.md
+- Admin panel: docs/admin-panel.md
+ - Scripts overview: docs/SCRIPTS.md
+
+GitHub
+- Issues (bug/feature/docs): use the templates under “New issue”
+- Discussions (Q&A/ideas/design): https://github.com/RelativeSure/notes/discussions
+
+Quick links
+- Open a bug: https://github.com/RelativeSure/notes/issues/new?template=bug_report.md
+- Request a feature: https://github.com/RelativeSure/notes/issues/new?template=feature_request.md
+- Improve docs: https://github.com/RelativeSure/notes/issues/new?template=docs_improvement.md
+- Good first issues: https://github.com/RelativeSure/notes/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22
+
+### Railway (recommended quick deploy)
+
+See docs/RAILWAY.md for step‑by‑step instructions to deploy the backend and frontend as separate services on Railway. Backend and frontend Dockerfiles are ready; Nginx binds to `$PORT` at runtime.
+
 ### Using Docker Compose
 
 ```bash
@@ -263,7 +290,7 @@ docker compose up -d
 kubectl apply -f k8s/
 
 # Or use Helm
-helm install secure-notes ./charts/secure-notes
+helm install leaflock ./helm/leaflock
 ```
 
 ### Environment Variables
@@ -274,8 +301,12 @@ helm install secure-notes ./charts/secure-notes
 | `REDIS_URL`             | Redis connection string          | `redis:6379`                           |
 | `JWT_SECRET`            | JWT signing secret (64 chars)    | Random 64-character string             |
 | `SERVER_ENCRYPTION_KEY` | Server encryption key (32 chars) | Random 32-character string             |
-| `CORS_ORIGINS`          | Allowed CORS origins             | `https://notes.example.com`            |
+| `CORS_ORIGINS`          | Allowed CORS origins             | `https://leaflock.app`                 |
 | `PORT`                  | Backend server port              | `8080`                                 |
+
+### Admin Access
+
+- See `docs/ADMIN.md` for enabling admin in development and using the Admin Panel. The frontend only shows the admin icon for admin users; non‑admins never see it.
 
 ## 📊 Monitoring
 
@@ -409,7 +440,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📧 Contact
 
 - **Issues**: [GitHub Issues](https://github.com/RelativeSure/notes/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/secure-notes/discussions)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/leaflock/discussions)
 - **Security**: TODO: Report security issues privately to <security@example.com>
 
 ---

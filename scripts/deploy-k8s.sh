@@ -1,6 +1,7 @@
 #!/bin/bash
+# Note: For common local tasks, prefer leaflock.sh. This script remains for advanced/CI Kubernetes deploy flows.
 
-# Secure Notes Kubernetes Deployment Script
+# LeafLock Kubernetes Deployment Script
 # One-command deployment with image building, secret generation, and health monitoring
 
 set -euo pipefail
@@ -8,9 +9,9 @@ set -euo pipefail
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-HELM_CHART_DIR="${PROJECT_ROOT}/helm/secure-notes"
-NAMESPACE="secure-notes"
-RELEASE_NAME="secure-notes"
+HELM_CHART_DIR="${PROJECT_ROOT}/helm/leaflock"
+NAMESPACE="leaflock"
+RELEASE_NAME="leaflock"
 
 # Colors for output
 RED='\033[0;31m'
@@ -101,8 +102,8 @@ build_and_load_images() {
         if command -v kind &> /dev/null && kind get clusters 2>/dev/null | grep -q .; then
             local cluster_name
             cluster_name=$(kind get clusters | head -n1)
-            kind load docker-image "secure-notes/backend:$version" --name "$cluster_name"
-            kind load docker-image "secure-notes/frontend:$version" --name "$cluster_name"
+            kind load docker-image "leaflock/backend:$version" --name "$cluster_name"
+            kind load docker-image "leaflock/frontend:$version" --name "$cluster_name"
             log_success "Images loaded into kind cluster"
         
         # For minikube
@@ -129,14 +130,14 @@ create_secrets() {
     local server_encryption_key
     
     # Check if secrets already exist
-    if kubectl get secret secure-notes-secrets -n "$NAMESPACE" &> /dev/null; then
+    if kubectl get secret leaflock-secrets -n "$NAMESPACE" &> /dev/null; then
         log_info "Secrets already exist, updating if needed..."
         
         # Get existing secrets
-        postgres_password=$(kubectl get secret secure-notes-secrets -n "$NAMESPACE" -o jsonpath='{.data.postgres-password}' | base64 -d 2>/dev/null || echo "")
-        redis_password=$(kubectl get secret secure-notes-secrets -n "$NAMESPACE" -o jsonpath='{.data.redis-password}' | base64 -d 2>/dev/null || echo "")
-        jwt_secret=$(kubectl get secret secure-notes-secrets -n "$NAMESPACE" -o jsonpath='{.data.jwt-secret}' | base64 -d 2>/dev/null || echo "")
-        server_encryption_key=$(kubectl get secret secure-notes-secrets -n "$NAMESPACE" -o jsonpath='{.data.server-encryption-key}' | base64 -d 2>/dev/null || echo "")
+        postgres_password=$(kubectl get secret leaflock-secrets -n "$NAMESPACE" -o jsonpath='{.data.postgres-password}' | base64 -d 2>/dev/null || echo "")
+        redis_password=$(kubectl get secret leaflock-secrets -n "$NAMESPACE" -o jsonpath='{.data.redis-password}' | base64 -d 2>/dev/null || echo "")
+        jwt_secret=$(kubectl get secret leaflock-secrets -n "$NAMESPACE" -o jsonpath='{.data.jwt-secret}' | base64 -d 2>/dev/null || echo "")
+        server_encryption_key=$(kubectl get secret leaflock-secrets -n "$NAMESPACE" -o jsonpath='{.data.server-encryption-key}' | base64 -d 2>/dev/null || echo "")
     fi
     
     # Generate missing secrets
@@ -146,7 +147,7 @@ create_secrets() {
     [[ -z "$server_encryption_key" ]] && server_encryption_key=$(generate_password 32)
     
     # Create main secrets
-    kubectl create secret generic secure-notes-secrets \
+    kubectl create secret generic leaflock-secrets \
         --from-literal=postgres-password="$postgres_password" \
         --from-literal=redis-password="$redis_password" \
         --from-literal=jwt-secret="$jwt_secret" \
@@ -155,14 +156,14 @@ create_secrets() {
         --dry-run=client -o yaml | kubectl apply -f -
     
     # Create PostgreSQL secrets (for Bitnami chart compatibility)
-    kubectl create secret generic secure-notes-postgresql \
+    kubectl create secret generic leaflock-postgresql \
         --from-literal=postgres-password="$postgres_password" \
         --from-literal=password="$postgres_password" \
         --namespace="$NAMESPACE" \
         --dry-run=client -o yaml | kubectl apply -f -
     
     # Create Redis secrets (for Bitnami chart compatibility)
-    kubectl create secret generic secure-notes-redis \
+    kubectl create secret generic leaflock-redis \
         --from-literal=redis-password="$redis_password" \
         --namespace="$NAMESPACE" \
         --dry-run=client -o yaml | kubectl apply -f -
@@ -175,7 +176,7 @@ deploy_with_helm() {
     local environment=${1:-"dev"}
     local registry=${2:-""}
     local version=${3:-"$(git rev-parse --short HEAD)"}
-    local domain=${4:-"secure-notes.local"}
+    local domain=${4:-"leaflock.app"}
     
     log_info "Deploying with Helm (environment: $environment)..."
     
@@ -198,13 +199,13 @@ global:
 backend:
   image:
     registry: "$registry"
-    repository: secure-notes/backend
+    repository: leaflock/backend
     tag: "$version"
 
 frontend:
   image:
     registry: "$registry"
-    repository: secure-notes/frontend
+    repository: leaflock/frontend
     tag: "$version"
 
 ingress:
@@ -223,7 +224,7 @@ ingress:
             name: backend
             port: 8080
   tls:
-    - secretName: secure-notes-tls
+    - secretName: leaflock-tls
       hosts:
         - $domain
 
@@ -233,14 +234,14 @@ secrets:
 
 postgresql:
   auth:
-    existingSecret: "secure-notes-postgresql"
+    existingSecret: "leaflock-postgresql"
     secretKeys:
       adminPasswordKey: "postgres-password"
       userPasswordKey: "password"
 
 redis:
   auth:
-    existingSecret: "secure-notes-redis"
+    existingSecret: "leaflock-redis"
     existingSecretPasswordKey: "redis-password"
 EOF
     
@@ -277,7 +278,7 @@ wait_for_deployment() {
     
     for deployment in "${deployments[@]}"; do
         log_info "Waiting for $deployment deployment..."
-        kubectl rollout status deployment/secure-notes-$deployment -n "$NAMESPACE" --timeout=300s
+        kubectl rollout status deployment/leaflock-$deployment -n "$NAMESPACE" --timeout=300s
     done
     
     # Wait for StatefulSets (PostgreSQL, Redis)
@@ -296,8 +297,8 @@ run_health_checks() {
     local backend_service
     local frontend_service
     
-    backend_service=$(kubectl get svc secure-notes-backend -n "$NAMESPACE" -o jsonpath='{.spec.clusterIP}')
-    frontend_service=$(kubectl get svc secure-notes-frontend -n "$NAMESPACE" -o jsonpath='{.spec.clusterIP}')
+    backend_service=$(kubectl get svc leaflock-backend -n "$NAMESPACE" -o jsonpath='{.spec.clusterIP}')
+    frontend_service=$(kubectl get svc leaflock-frontend -n "$NAMESPACE" -o jsonpath='{.spec.clusterIP}')
     
     # Create a temporary pod for testing
     kubectl run test-pod --rm -i --restart=Never --image=curlimages/curl:8.5.0 -n "$NAMESPACE" -- /bin/sh -c "
@@ -318,7 +319,7 @@ run_health_checks() {
 
 # Function to show deployment status
 show_deployment_status() {
-    local domain=${1:-"secure-notes.local"}
+    local domain=${1:-"leaflock.app"}
     
     log_info "Deployment Status:"
     echo
@@ -336,7 +337,7 @@ show_deployment_status() {
     echo
     
     # Show access information
-    log_success "🎉 Secure Notes deployed to Kubernetes!"
+    log_success "🎉 LeafLock deployed to Kubernetes!"
     echo
     echo "Access Information:"
     
@@ -346,15 +347,15 @@ show_deployment_status() {
         echo "  API: https://$domain/api"
     else
         echo "  Use port-forwarding to access the application:"
-        echo "    Frontend: kubectl port-forward svc/secure-notes-frontend -n $NAMESPACE 3000:80"
-        echo "    Backend: kubectl port-forward svc/secure-notes-backend -n $NAMESPACE 8080:8080"
+        echo "    Frontend: kubectl port-forward svc/leaflock-frontend -n $NAMESPACE 3000:80"
+        echo "    Backend: kubectl port-forward svc/leaflock-backend -n $NAMESPACE 8080:8080"
     fi
     
     echo
     echo "Useful commands:"
-    echo "  View logs: kubectl logs -f deployment/secure-notes-backend -n $NAMESPACE"
+    echo "  View logs: kubectl logs -f deployment/leaflock-backend -n $NAMESPACE"
     echo "  View pods: kubectl get pods -n $NAMESPACE"
-    echo "  Shell access: kubectl exec -it deployment/secure-notes-backend -n $NAMESPACE -- /bin/sh"
+    echo "  Shell access: kubectl exec -it deployment/leaflock-backend -n $NAMESPACE -- /bin/sh"
     echo "  Delete deployment: helm uninstall $RELEASE_NAME -n $NAMESPACE"
     echo
 }
@@ -373,7 +374,7 @@ main() {
     local environment="dev"
     local registry=""
     local version
-    local domain="secure-notes.local"
+    local domain="leaflock.app"
     local build_images=true
     local create_namespace_flag=true
     

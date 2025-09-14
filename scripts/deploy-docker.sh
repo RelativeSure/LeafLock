@@ -1,6 +1,7 @@
 #!/bin/bash
+# Note: Prefer leaflock.sh docker:up / docker:down for local runs. This script is for bespoke Docker deploy flows.
 
-# Secure Notes Docker Compose Deployment Script
+# LeafLock Docker Compose Deployment Script
 # One-command deployment with environment validation and health checks
 
 set -euo pipefail
@@ -172,7 +173,7 @@ check_dependencies() {
 deploy_services() {
     local environment=${1:-"dev"}
     
-    log_info "Deploying Secure Notes ($environment environment)..."
+    log_info "Deploying LeafLock ($environment environment)..."
     
     # Change to project root
     cd "$PROJECT_ROOT"
@@ -258,7 +259,7 @@ run_health_checks() {
 
 # Function to show deployment summary
 show_summary() {
-    log_success "🎉 Secure Notes deployed successfully!"
+    log_success "🎉 LeafLock deployed successfully!"
     echo
     echo "Access your application:"
     echo "  Frontend: http://localhost:3000"
@@ -282,7 +283,7 @@ cleanup_on_failure() {
 
 # Function to update deployment
 update_deployment() {
-    log_info "Updating Secure Notes deployment..."
+    log_info "Updating LeafLock deployment..."
     cd "$PROJECT_ROOT"
     
     # Pull latest images and rebuild
@@ -337,7 +338,7 @@ main() {
     # Set up error handling
     trap cleanup_on_failure ERR
     
-    log_info "🚀 Starting Secure Notes deployment..."
+    log_info "🚀 Starting LeafLock deployment..."
     
     # Update only mode
     if [[ $update_only == true ]]; then

@@ -30,12 +30,12 @@ type TagsHandlerTestSuite struct {
 
 func (suite *TagsHandlerTestSuite) SetupTest() {
 	suite.mockDB = &MockDB{}
-	
+
 	// Generate test encryption key
 	key := make([]byte, 32)
 	rand.Read(key)
 	suite.crypto = NewCryptoService(key)
-	
+
 	suite.handler = &TagsHandler{
 		db:     suite.mockDB,
 		crypto: suite.crypto,
@@ -99,7 +99,7 @@ func (suite *TagsHandlerTestSuite) TestGetTagsSuccess() {
 	// Make request
 	req := httptest.NewRequest("GET", "/tags", nil)
 	resp, err := suite.app.Test(req)
-	
+
 	suite.NoError(err)
 	suite.Equal(200, resp.StatusCode)
 
@@ -114,7 +114,7 @@ func (suite *TagsHandlerTestSuite) TestGetTagsSuccess() {
 func (suite *TagsHandlerTestSuite) TestCreateTagSuccess() {
 	mockRow := &MockRow{}
 	tagID := uuid.New()
-	
+
 	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), suite.userID, mock.Anything, "#3b82f6").Return(mockRow)
 	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
 		*args[0].(*uuid.UUID) = tagID
@@ -124,13 +124,13 @@ func (suite *TagsHandlerTestSuite) TestCreateTagSuccess() {
 		Name:  "Work",
 		Color: "#3b82f6",
 	}
-	
+
 	body, _ := json.Marshal(req)
 	httpReq := httptest.NewRequest("POST", "/tags", bytes.NewBuffer(body))
 	httpReq.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := suite.app.Test(httpReq)
-	
+
 	suite.NoError(err)
 	suite.Equal(201, resp.StatusCode)
 
@@ -144,7 +144,7 @@ func (suite *TagsHandlerTestSuite) TestCreateTagSuccess() {
 func (suite *TagsHandlerTestSuite) TestCreateTagDefaultColor() {
 	mockRow := &MockRow{}
 	tagID := uuid.New()
-	
+
 	// Should use default color when none provided
 	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), suite.userID, mock.Anything, "#3b82f6").Return(mockRow)
 	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
@@ -155,13 +155,13 @@ func (suite *TagsHandlerTestSuite) TestCreateTagDefaultColor() {
 		Name: "Work",
 		// No color specified
 	}
-	
+
 	body, _ := json.Marshal(req)
 	httpReq := httptest.NewRequest("POST", "/tags", bytes.NewBuffer(body))
 	httpReq.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := suite.app.Test(httpReq)
-	
+
 	suite.NoError(err)
 	suite.Equal(201, resp.StatusCode)
 }
@@ -171,20 +171,20 @@ func (suite *TagsHandlerTestSuite) TestCreateTagInvalidColor() {
 		Name:  "Work",
 		Color: "invalid-color",
 	}
-	
+
 	body, _ := json.Marshal(req)
 	httpReq := httptest.NewRequest("POST", "/tags", bytes.NewBuffer(body))
 	httpReq.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := suite.app.Test(httpReq)
-	
+
 	suite.NoError(err)
 	suite.Equal(400, resp.StatusCode)
 }
 
 func (suite *TagsHandlerTestSuite) TestCreateTagDuplicate() {
 	mockRow := &MockRow{}
-	
+
 	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), suite.userID, mock.Anything, "#3b82f6").Return(mockRow)
 	mockRow.On("Scan", mock.Anything).Return(errors.New("duplicate key value violates unique constraint"))
 
@@ -192,13 +192,13 @@ func (suite *TagsHandlerTestSuite) TestCreateTagDuplicate() {
 		Name:  "Work",
 		Color: "#3b82f6",
 	}
-	
+
 	body, _ := json.Marshal(req)
 	httpReq := httptest.NewRequest("POST", "/tags", bytes.NewBuffer(body))
 	httpReq.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := suite.app.Test(httpReq)
-	
+
 	suite.NoError(err)
 	suite.Equal(409, resp.StatusCode)
 }
@@ -207,12 +207,12 @@ func (suite *TagsHandlerTestSuite) TestDeleteTagSuccess() {
 	tagID := uuid.New()
 	mockResult := &MockResult{}
 	mockResult.On("RowsAffected").Return(int64(1))
-	
+
 	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), tagID, suite.userID).Return(mockResult, nil)
 
 	req := httptest.NewRequest("DELETE", "/tags/"+tagID.String(), nil)
 	resp, err := suite.app.Test(req)
-	
+
 	suite.NoError(err)
 	suite.Equal(200, resp.StatusCode)
 
@@ -226,12 +226,12 @@ func (suite *TagsHandlerTestSuite) TestDeleteTagNotFound() {
 	tagID := uuid.New()
 	mockResult := &MockResult{}
 	mockResult.On("RowsAffected").Return(int64(0))
-	
+
 	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), tagID, suite.userID).Return(mockResult, nil)
 
 	req := httptest.NewRequest("DELETE", "/tags/"+tagID.String(), nil)
 	resp, err := suite.app.Test(req)
-	
+
 	suite.NoError(err)
 	suite.Equal(404, resp.StatusCode)
 }
@@ -268,13 +268,13 @@ func (suite *TagsHandlerTestSuite) TestAssignTagToNoteSuccess() {
 	req := AssignTagRequest{
 		TagID: tagID.String(),
 	}
-	
+
 	body, _ := json.Marshal(req)
 	httpReq := httptest.NewRequest("POST", "/notes/"+noteID.String()+"/tags", bytes.NewBuffer(body))
 	httpReq.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := suite.app.Test(httpReq)
-	
+
 	suite.NoError(err)
 	suite.Equal(200, resp.StatusCode)
 
@@ -298,13 +298,13 @@ func (suite *TagsHandlerTestSuite) TestAssignTagNoteNotFound() {
 	req := AssignTagRequest{
 		TagID: tagID.String(),
 	}
-	
+
 	body, _ := json.Marshal(req)
 	httpReq := httptest.NewRequest("POST", "/notes/"+noteID.String()+"/tags", bytes.NewBuffer(body))
 	httpReq.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := suite.app.Test(httpReq)
-	
+
 	suite.NoError(err)
 	suite.Equal(404, resp.StatusCode)
 }
@@ -315,12 +315,12 @@ func (suite *TagsHandlerTestSuite) TestRemoveTagFromNoteSuccess() {
 
 	mockResult := &MockResult{}
 	mockResult.On("RowsAffected").Return(int64(1))
-	
+
 	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), noteID, tagID, suite.userID).Return(mockResult, nil)
 
 	req := httptest.NewRequest("DELETE", "/notes/"+noteID.String()+"/tags/"+tagID.String(), nil)
 	resp, err := suite.app.Test(req)
-	
+
 	suite.NoError(err)
 	suite.Equal(200, resp.StatusCode)
 
@@ -371,7 +371,7 @@ func (suite *TagsHandlerTestSuite) TestGetNotesByTagSuccess() {
 
 	req := httptest.NewRequest("GET", "/tags/"+tagID.String()+"/notes", nil)
 	resp, err := suite.app.Test(req)
-	
+
 	suite.NoError(err)
 	suite.Equal(200, resp.StatusCode)
 

@@ -1,0 +1,342 @@
+# Production environment overrides
+
+# Production scaling for backend
+backend:
+  replicaCount: 3
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  
+  # Enable HPA for production
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 60
+    targetMemoryUtilizationPercentage: 70
+  
+  # Enable PDB for production
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+  
+  # Production node selection
+  nodeSelector:
+    node-role.kubernetes.io/worker: "true"
+  
+  # Production tolerations
+  tolerations:
+    - key: "node-role.kubernetes.io/worker"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+  
+  # Anti-affinity for high availability
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - leaflock-backend
+            topologyKey: kubernetes.io/hostname
+
+frontend:
+  replicaCount: 3
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  
+  # Enable HPA for production
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 60
+    targetMemoryUtilizationPercentage: 70
+  
+  # Enable PDB for production
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+  
+  # Production node selection
+  nodeSelector:
+    node-role.kubernetes.io/worker: "true"
+  
+  # Anti-affinity for high availability
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - leaflock-frontend
+            topologyKey: kubernetes.io/hostname
+
+# Production ingress with SSL termination
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+      add_header X-Frame-Options "DENY" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+  hosts:
+    - host: leaflock.app
+      paths:
+        - path: /
+          pathType: Prefix
+          service:
+            name: frontend
+            port: 80
+        - path: /api
+          pathType: Prefix
+          service:
+            name: backend
+            port: 8080
+  tls:
+    - secretName: leaflock-tls
+      hosts:
+        - leaflock.app
+
+# Production configuration
+config:
+  backend:
+    maxLoginAttempts: "3"
+    lockoutDuration: "30m"
+    sessionDuration: "12h"
+    corsOrigins: "https://leaflock.app"
+
+# Enable strict network policies in production
+networkPolicy:
+  enabled: true
+
+# PostgreSQL production configuration
+postgresql:
+  # Use existing secret for passwords
+  auth:
+    existingSecret: "leaflock-postgresql-prod"
+    secretKeys:
+      adminPasswordKey: "postgres-password"
+      userPasswordKey: "password"
+  
+  primary:
+    # Production resources
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+    
+    # Production storage
+    persistence:
+      size: 100Gi
+      storageClass: "fast-ssd"
+    
+    # Production node selection
+    nodeSelector:
+      node-role.kubernetes.io/database: "true"
+    
+    # Production tolerations
+    tolerations:
+      - key: "node-role.kubernetes.io/database"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+    
+    # Production PostgreSQL configuration
+    extendedConfiguration: |
+      # Connection settings
+      max_connections = 200
+      shared_buffers = 1GB
+      effective_cache_size = 3GB
+      work_mem = 8MB
+      maintenance_work_mem = 256MB
+      
+      # SSL settings (production)
+      ssl = on
+      ssl_ciphers = 'ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256'
+      ssl_prefer_server_ciphers = on
+      ssl_min_protocol_version = 'TLSv1.2'
+      
+      # WAL settings for performance
+      wal_level = replica
+      max_wal_size = 2GB
+      checkpoint_completion_target = 0.9
+      
+      # Performance tuning
+      random_page_cost = 1.1
+      effective_io_concurrency = 200
+      
+      # Logging (production level)
+      log_statement = 'ddl'
+      log_duration = on
+      log_connections = on
+      log_disconnections = on
+      log_line_prefix = '%t [%p-%l] %q%u@%d '
+      log_checkpoints = on
+      log_lock_waits = on
+      log_temp_files = 0
+      
+      # Extensions
+      shared_preload_libraries = 'pgcrypto,pg_stat_statements'
+      
+      # Security settings
+      password_encryption = 'scram-sha-256'
+      
+  # Enable metrics for production monitoring
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+# Redis production configuration
+redis:
+  # Use existing secret for passwords
+  auth:
+    existingSecret: "leaflock-redis-prod"
+    existingSecretPasswordKey: "redis-password"
+  
+  master:
+    # Production resources
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+    
+    # Production storage
+    persistence:
+      size: 20Gi
+      storageClass: "fast-ssd"
+    
+    # Production node selection
+    nodeSelector:
+      node-role.kubernetes.io/cache: "true"
+    
+    # Production tolerations
+    tolerations:
+      - key: "node-role.kubernetes.io/cache"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+    
+    # Production Redis configuration
+    configuration: |
+      # Network and connection
+      bind 0.0.0.0
+      port 6379
+      tcp-keepalive 300
+      timeout 0
+      
+      # Persistence settings
+      appendonly yes
+      appendfsync everysec
+      no-appendfsync-on-rewrite no
+      auto-aof-rewrite-percentage 100
+      auto-aof-rewrite-min-size 64mb
+      
+      # Security settings
+      rename-command FLUSHALL ""
+      rename-command FLUSHDB ""
+      rename-command DEBUG ""
+      rename-command CONFIG "CONFIG_b835729b3c0a5b2e4c7a1d8e9f0a2b3c"
+      rename-command SHUTDOWN "SHUTDOWN_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+      
+      # Memory management
+      maxmemory-policy volatile-lru
+      maxmemory-samples 10
+      
+      # Performance tuning
+      tcp-backlog 511
+      databases 1
+      
+      # Logging
+      loglevel notice
+      
+  # Enable metrics for production monitoring
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+# Enable monitoring in production
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    namespace: monitoring
+    interval: 15s
+  
+  prometheusRule:
+    enabled: true
+    namespace: monitoring
+    rules:
+      - alert: LeafLockBackendDown
+        expr: up{job="leaflock-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "LeafLock Backend is down"
+          description: "Backend service has been down for more than 1 minute"
+      
+      - alert: LeafLockFrontendDown
+        expr: up{job="leaflock-frontend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "LeafLock Frontend is down"
+          description: "Frontend service has been down for more than 1 minute"
+      
+      - alert: LeafLockHighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate in LeafLock"
+          description: "Error rate is above 10% for more than 2 minutes"
+
+# Production secrets (should be managed by external secret management)
+secrets:
+  # These should be base64 encoded and provided via external secret management
+  jwtSecret: ""  # Set via external-secrets or sealed-secrets
+  serverEncryptionKey: ""  # Set via external-secrets or sealed-secrets
+
+# Enable Pod Security Standards enforcement
+podSecurityStandards:
+  enforced: true
+  profile: restricted

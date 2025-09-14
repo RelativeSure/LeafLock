@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Secure Notes Development Environment Setup Script
+# LeafLock Development Environment Setup Script
 # This script automates the complete development environment setup
 
 set -euo pipefail
@@ -14,7 +14,7 @@ PURPLE='\033[0;35m'
 NC='\033[0m' # No Color
 
 # Configuration
-PROJECT_NAME="Secure Notes"
+PROJECT_NAME="LeafLock"
 MIN_NODE_VERSION="18"
 MIN_GO_VERSION="1.23"
 DOCKER_REQUIRED="yes"

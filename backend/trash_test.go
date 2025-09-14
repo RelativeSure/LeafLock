@@ -28,12 +28,12 @@ type TrashHandlerTestSuite struct {
 
 func (suite *TrashHandlerTestSuite) SetupTest() {
 	suite.mockDB = &MockDB{}
-	
+
 	// Generate test encryption key
 	key := make([]byte, 32)
 	rand.Read(key)
 	suite.crypto = NewCryptoService(key)
-	
+
 	suite.handler = &NotesHandler{
 		db:     suite.mockDB,
 		crypto: suite.crypto,
@@ -111,7 +111,7 @@ func (suite *TrashHandlerTestSuite) TestGetTrashSuccess() {
 	// Make request
 	req := httptest.NewRequest("GET", "/trash", nil)
 	resp, err := suite.app.Test(req)
-	
+
 	suite.NoError(err)
 	suite.Equal(200, resp.StatusCode)
 
@@ -133,7 +133,7 @@ func (suite *TrashHandlerTestSuite) TestGetTrashWorkspaceError() {
 
 	req := httptest.NewRequest("GET", "/trash", nil)
 	resp, err := suite.app.Test(req)
-	
+
 	suite.NoError(err)
 	suite.Equal(500, resp.StatusCode)
 }
@@ -142,14 +142,14 @@ func (suite *TrashHandlerTestSuite) TestRestoreNoteSuccess() {
 	noteID := uuid.New()
 	mockResult := &MockResult{}
 	mockResult.On("RowsAffected").Return(int64(1))
-	
+
 	suite.mockDB.On("Exec", mock.Anything, mock.MatchedBy(func(sql string) bool {
 		return contains(sql, "SET deleted_at = NULL")
 	}), noteID, suite.userID).Return(mockResult, nil)
 
 	req := httptest.NewRequest("PUT", "/trash/"+noteID.String()+"/restore", nil)
 	resp, err := suite.app.Test(req)
-	
+
 	suite.NoError(err)
 	suite.Equal(200, resp.StatusCode)
 
@@ -163,14 +163,14 @@ func (suite *TrashHandlerTestSuite) TestRestoreNoteNotFound() {
 	noteID := uuid.New()
 	mockResult := &MockResult{}
 	mockResult.On("RowsAffected").Return(int64(0))
-	
+
 	suite.mockDB.On("Exec", mock.Anything, mock.MatchedBy(func(sql string) bool {
 		return contains(sql, "SET deleted_at = NULL")
 	}), noteID, suite.userID).Return(mockResult, nil)
 
 	req := httptest.NewRequest("PUT", "/trash/"+noteID.String()+"/restore", nil)
 	resp, err := suite.app.Test(req)
-	
+
 	suite.NoError(err)
 	suite.Equal(404, resp.StatusCode)
 }
@@ -179,14 +179,14 @@ func (suite *TrashHandlerTestSuite) TestPermanentlyDeleteNoteSuccess() {
 	noteID := uuid.New()
 	mockResult := &MockResult{}
 	mockResult.On("RowsAffected").Return(int64(1))
-	
+
 	suite.mockDB.On("Exec", mock.Anything, mock.MatchedBy(func(sql string) bool {
 		return contains(sql, "DELETE FROM notes")
 	}), noteID, suite.userID).Return(mockResult, nil)
 
 	req := httptest.NewRequest("DELETE", "/trash/"+noteID.String(), nil)
 	resp, err := suite.app.Test(req)
-	
+
 	suite.NoError(err)
 	suite.Equal(200, resp.StatusCode)
 
@@ -200,14 +200,14 @@ func (suite *TrashHandlerTestSuite) TestPermanentlyDeleteNoteNotFound() {
 	noteID := uuid.New()
 	mockResult := &MockResult{}
 	mockResult.On("RowsAffected").Return(int64(0))
-	
+
 	suite.mockDB.On("Exec", mock.Anything, mock.MatchedBy(func(sql string) bool {
 		return contains(sql, "DELETE FROM notes")
 	}), noteID, suite.userID).Return(mockResult, nil)
 
 	req := httptest.NewRequest("DELETE", "/trash/"+noteID.String(), nil)
 	resp, err := suite.app.Test(req)
-	
+
 	suite.NoError(err)
 	suite.Equal(404, resp.StatusCode)
 }
@@ -216,7 +216,7 @@ func (suite *TrashHandlerTestSuite) TestInvalidNoteID() {
 	// Test restore with invalid note ID
 	req := httptest.NewRequest("PUT", "/trash/invalid-id/restore", nil)
 	resp, err := suite.app.Test(req)
-	
+
 	suite.NoError(err)
 	suite.Equal(400, resp.StatusCode)
 
@@ -229,17 +229,17 @@ func (suite *TrashHandlerTestSuite) TestInvalidNoteID() {
 func TestCleanupOldDeletedNotes(t *testing.T) {
 	// Test the function call structure
 	mockDB := &MockDB{}
-	
+
 	// Mock both cleanup functions since runCleanupTasks calls both
 	mockResult1 := &MockResult{}
 	mockResult1.On("RowsAffected").Return(int64(0))
 	mockResult2 := &MockResult{}
 	mockResult2.On("RowsAffected").Return(int64(0))
-	
+
 	ctx := context.Background()
 	mockDB.On("Exec", ctx, "SELECT cleanup_expired_sessions()").Return(mockResult1, nil)
 	mockDB.On("Exec", ctx, "SELECT cleanup_old_deleted_notes()").Return(mockResult2, nil)
-	
+
 	// Mock the count query for deleted notes
 	mockRow := &MockRow{}
 	mockDB.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
@@ -248,9 +248,9 @@ func TestCleanupOldDeletedNotes(t *testing.T) {
 	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
 		*args[0].(*int) = 0
 	}).Return(nil)
-	
+
 	runCleanupTasks(ctx, mockDB)
-	
+
 	// Verify both cleanup functions were called
 	mockDB.AssertCalled(t, "Exec", ctx, "SELECT cleanup_expired_sessions()")
 	mockDB.AssertCalled(t, "Exec", ctx, "SELECT cleanup_old_deleted_notes()")
@@ -259,16 +259,16 @@ func TestCleanupOldDeletedNotes(t *testing.T) {
 // Test background cleanup service
 func TestBackgroundCleanupService(t *testing.T) {
 	mockDB := &MockDB{}
-	
+
 	// Mock cleanup calls - setup multiple results since the function calls both cleanup functions
 	mockResult1 := &MockResult{}
 	mockResult1.On("RowsAffected").Return(int64(0))
 	mockResult2 := &MockResult{}
 	mockResult2.On("RowsAffected").Return(int64(0))
-	
+
 	mockDB.On("Exec", mock.Anything, "SELECT cleanup_expired_sessions()").Return(mockResult1, nil)
 	mockDB.On("Exec", mock.Anything, "SELECT cleanup_old_deleted_notes()").Return(mockResult2, nil)
-	
+
 	// Mock count query for deleted notes
 	mockRow := &MockRow{}
 	mockDB.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {

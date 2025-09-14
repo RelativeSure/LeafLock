@@ -1,0 +1,129 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "leaflock.frontend.deploymentName" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "leaflock.frontend.labels" . | nindent 4 }}
+    {{- if .Values.frontend.deployment.labels }}
+    {{- toYaml .Values.frontend.deployment.labels | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- include "leaflock.annotations" . | nindent 4 }}
+    {{- if .Values.frontend.deployment.annotations }}
+    {{- toYaml .Values.frontend.deployment.annotations | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: {{ .Values.frontend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "leaflock.frontend.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "leaflock.frontend.selectorLabels" . | nindent 8 }}
+        {{- if .Values.frontend.deployment.labels }}
+        {{- toYaml .Values.frontend.deployment.labels | nindent 8 }}
+        {{- end }}
+      annotations:
+        {{- include "leaflock.frontend.podAnnotations" . | nindent 8 }}
+    spec:
+      {{- include "leaflock.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "leaflock.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.frontend.podSecurityContext | nindent 8 }}
+      {{- if .Values.frontend.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.frontend.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.frontend.tolerations }}
+      tolerations:
+        {{- toYaml .Values.frontend.tolerations | nindent 8 }}
+      {{- end }}
+      {{- if .Values.frontend.affinity }}
+      affinity:
+        {{- toYaml .Values.frontend.affinity | nindent 8 }}
+      {{- end }}
+      initContainers:
+        # Wait for backend to be ready
+        {{- if .Values.backend.enabled }}
+        - name: wait-for-backend
+          image: curlimages/curl:8.16.0@sha256:463eaf6072688fe96ac64fa623fe73e1dbe25d8ad6c34404a669ad3ce1f104b6
+          command:
+            - sh
+            - -c
+            - |
+              until curl -f http://{{ include "leaflock.backend.serviceName" . }}:{{ .Values.backend.service.port }}/api/v1/health; do
+                echo "Waiting for backend to be ready..."
+                sleep 5
+              done
+          securityContext:
+            {{- toYaml .Values.frontend.securityContext | nindent 12 }}
+        {{- end }}
+      containers:
+        - name: frontend
+          image: {{ include "leaflock.frontend.image" . }}
+          imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.frontend.containerPort }}
+              protocol: TCP
+          {{- if .Values.frontend.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.frontend.livenessProbe.httpGet.path }}
+              port: {{ .Values.frontend.livenessProbe.httpGet.port }}
+            initialDelaySeconds: {{ .Values.frontend.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.frontend.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.frontend.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.frontend.livenessProbe.failureThreshold }}
+            successThreshold: {{ .Values.frontend.livenessProbe.successThreshold }}
+          {{- end }}
+          {{- if .Values.frontend.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.frontend.readinessProbe.httpGet.path }}
+              port: {{ .Values.frontend.readinessProbe.httpGet.port }}
+            initialDelaySeconds: {{ .Values.frontend.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.frontend.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.frontend.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.frontend.readinessProbe.failureThreshold }}
+            successThreshold: {{ .Values.frontend.readinessProbe.successThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.frontend.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.frontend.securityContext | nindent 12 }}
+          {{- if .Values.frontend.volumeMounts }}
+          volumeMounts:
+            {{- toYaml .Values.frontend.volumeMounts | nindent 12 }}
+            # Mount nginx configuration
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: nginx.conf
+              readOnly: true
+          {{- else }}
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: nginx.conf
+              readOnly: true
+          {{- end }}
+      volumes:
+        {{- if .Values.frontend.volumes }}
+        {{- toYaml .Values.frontend.volumes | nindent 8 }}
+        {{- else }}
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}
+        {{- end }}
+        # Nginx configuration from ConfigMap
+        - name: nginx-config
+          configMap:
+            name: {{ include "leaflock.configMapName" . }}
+            items:
+              - key: NGINX_CONFIG
+                path: nginx.conf
+{{- end }}

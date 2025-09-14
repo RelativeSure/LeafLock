@@ -4,6 +4,10 @@ FROM node:22-alpine@sha256:d2166de198f26e17e5a442f537754dd616ab069c47cc57b889310
 RUN apk --no-cache add git
 
 WORKDIR /app
+ARG VITE_API_URL
+ARG VITE_ENABLE_ADMIN_PANEL
+ENV VITE_API_URL=$VITE_API_URL \
+    VITE_ENABLE_ADMIN_PANEL=$VITE_ENABLE_ADMIN_PANEL
 
 # Install pnpm
 RUN npm install -g pnpm@10.15.1
@@ -30,7 +34,8 @@ RUN apk --no-cache add ca-certificates
 RUN rm -rf /usr/share/nginx/html/*
 
 # Copy custom nginx config
-COPY nginx.conf /etc/nginx/nginx.conf
+# Copy nginx template; resolve PORT at startup
+COPY nginx.conf.template /etc/nginx/nginx.conf.template
 
 # Copy built application
 COPY --from=builder /app/dist /usr/share/nginx/html
@@ -46,12 +51,12 @@ RUN touch /var/run/nginx.pid && chown -R nginx-user:nginx-user /var/run/nginx.pi
 # Use non-root user
 USER nginx-user
 
-# Expose port
-EXPOSE 8080
+# Default port if not provided by platform
+ENV PORT=8080
 
-# Health check
+# Health check (uses resolved PORT)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/ || exit 1
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Start nginx with PORT substitution
+CMD ["/bin/sh", "-c", ": \${PORT:=8080}; envsubst '$$PORT' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"]

@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: leaflock
+  labels:
+    app: leaflock
+spec:
+  containers:
+  - name: postgres
+    # Use fully qualified image reference to avoid unqualified registry resolution issues
+    image: docker.io/library/postgres:17-alpine
+    env:
+    - name: POSTGRES_PASSWORD
+      value: "ChangeThisSecurePassword123!"
+    - name: POSTGRES_DB
+      value: "notes"
+    - name: POSTGRES_USER
+      value: "postgres"
+    ports:
+    - containerPort: 5432
+      hostPort: 5432
+    volumeMounts:
+    - name: postgres-data
+      mountPath: /var/lib/postgresql/data
+      
+  - name: redis
+    # Use fully qualified image reference; keep tag-only for compatibility
+    image: docker.io/library/redis:8-alpine
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "ChangeThisRedisPassword123!"]
+    ports:
+    - containerPort: 6379
+      hostPort: 6379
+    volumeMounts:
+    - name: redis-data
+      mountPath: /data
+
+  volumes:
+  - name: postgres-data
+    emptyDir: {}
+  - name: redis-data
+    emptyDir: {}

@@ -2,15 +2,15 @@
 # Alternative to podman-compose using podman play kube
 
 # Generate pod spec
-cat > secure-notes-pod.yaml << 'YAML'
+cat > leaflock-pod.yaml << 'YAML'
 apiVersion: v1
 kind: Pod
 metadata:
-  name: secure-notes
+  name: leaflock
   labels:
-    app: secure-notes
+    app: leaflock
 spec:
-  hostname: secure-notes
+  hostname: leaflock
   restartPolicy: Always
   containers:
   - name: postgres
@@ -33,7 +33,7 @@ spec:
     - name: redis-data
       mountPath: /data
   - name: backend
-    image: localhost/secure-notes-backend:latest
+    image: localhost/leaflock-backend:latest
     ports:
     - containerPort: 8080
       hostPort: 8080
@@ -41,7 +41,7 @@ spec:
     - name: DATABASE_URL
       value: "postgres://postgres:ChangeMe123!@localhost:5432/notes?sslmode=require"
   - name: frontend
-    image: localhost/secure-notes-frontend:latest
+    image: localhost/leaflock-frontend:latest
     ports:
     - containerPort: 8080
       hostPort: 3000
@@ -55,4 +55,4 @@ spec:
 YAML
 
 # Play the kube file
-podman play kube secure-notes-pod.yaml
+podman play kube leaflock-pod.yaml

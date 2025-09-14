@@ -1,0 +1,23 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "leaflock.frontend.serviceName" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "leaflock.frontend.labels" . | nindent 4 }}
+  annotations:
+    {{- include "leaflock.annotations" . | nindent 4 }}
+    {{- if .Values.frontend.service.annotations }}
+    {{- toYaml .Values.frontend.service.annotations | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ .Values.frontend.service.type }}
+  ports:
+    - port: {{ .Values.frontend.service.port }}
+      targetPort: {{ .Values.frontend.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "leaflock.frontend.selectorLabels" . | nindent 4 }}
+{{- end }}

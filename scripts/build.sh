@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Secure Notes Build Script
+# LeafLock Build Script
 # Builds Docker images with proper tagging for all deployment targets
 
 set -euo pipefail
 
 # Configuration
-PROJECT_NAME="secure-notes"
+PROJECT_NAME="LeafLock"
 VERSION=${VERSION:-"$(git rev-parse --short HEAD)"}
 REGISTRY=${REGISTRY:-""}
 BUILD_PLATFORM=${BUILD_PLATFORM:-"linux/amd64"}

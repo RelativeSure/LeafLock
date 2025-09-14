@@ -1,6 +1,7 @@
 #!/bin/bash
+# Note: Prefer leaflock.sh health for common checks; this script provides detailed, standalone diagnostics.
 
-# Secure Notes Health Check and Monitoring Tool
+# LeafLock Health Check and Monitoring Tool
 # Comprehensive health monitoring for all deployment targets
 
 set -euo pipefail
@@ -255,10 +256,10 @@ test_docker_deployment() {
     
     # Check if containers are running
     local containers=(
-        "secure-notes-backend"
-        "secure-notes-frontend"
-        "secure-notes-postgres"
-        "secure-notes-redis"
+        "leaflock-backend"
+        "leaflock-frontend"
+        "leaflock-postgres"
+        "leaflock-redis"
     )
     
     for container in "${containers[@]}"; do
@@ -296,7 +297,7 @@ test_docker_deployment() {
 
 # Function to test Kubernetes deployment
 test_kubernetes_deployment() {
-    local namespace="${1:-secure-notes}"
+    local namespace="${1:-leaflock}"
     
     log_section "Kubernetes Deployment Health Checks"
     
@@ -329,8 +330,8 @@ test_kubernetes_deployment() {
     
     # Check deployments
     local deployments=(
-        "secure-notes-backend"
-        "secure-notes-frontend"
+        "leaflock-backend"
+        "leaflock-frontend"
     )
     
     for deployment in "${deployments[@]}"; do
@@ -389,8 +390,8 @@ test_kubernetes_deployment() {
     # Check services
     log_info "Checking services"
     local services=(
-        "secure-notes-backend"
-        "secure-notes-frontend"
+        "leaflock-backend"
+        "leaflock-frontend"
     )
     
     for service in "${services[@]}"; do
@@ -499,7 +500,7 @@ generate_health_report() {
     if [[ $FAILED_CHECKS -eq 0 ]]; then
         if [[ $WARNING_CHECKS -eq 0 ]]; then
             log_success "🎉 All systems are healthy!"
-            echo "Your Secure Notes application is running perfectly."
+            echo "Your LeafLock application is running perfectly."
         else
             log_warn "⚠️ Systems are operational with warnings"
             echo "Your application is running but some optimizations are recommended."
@@ -527,7 +528,7 @@ generate_health_report() {
 monitor_continuously() {
     local interval="${1:-30}"
     local deployment_type="${2:-docker}"
-    local namespace="${3:-secure-notes}"
+    local namespace="${3:-leaflock}"
     
     log_section "Continuous Monitoring (${interval}s intervals)"
     log_info "Press Ctrl+C to stop monitoring"
@@ -583,14 +584,14 @@ main() {
     
     case "$action" in
         full|all)
-            log_section "Comprehensive Health Check for Secure Notes"
+            log_section "Comprehensive Health Check for LeafLock"
             
             # Detect deployment type
             local deployment_type="unknown"
             
-            if docker ps &>/dev/null && docker ps | grep -q "secure-notes"; then
+            if docker ps &>/dev/null && docker ps | grep -q "leaflock"; then
                 deployment_type="docker"
-            elif command -v kubectl &>/dev/null && kubectl get ns secure-notes &>/dev/null; then
+            elif command -v kubectl &>/dev/null && kubectl get ns leaflock &>/dev/null; then
                 deployment_type="kubernetes"
             fi
             
@@ -602,7 +603,7 @@ main() {
                     test_docker_deployment
                     ;;
                 kubernetes)
-                    test_kubernetes_deployment "${1:-secure-notes}"
+                    test_kubernetes_deployment "${1:-leaflock}"
                     ;;
                 *)
                     log_warn "No deployment detected, testing endpoints only"
@@ -638,7 +639,7 @@ main() {
             ;;
             
         k8s|kubernetes)
-            test_kubernetes_deployment "${1:-secure-notes}"
+            test_kubernetes_deployment "${1:-leaflock}"
             generate_health_report
             ;;
             
@@ -650,7 +651,7 @@ main() {
         monitor)
             local interval="${1:-30}"
             local deployment_type="${2:-docker}"
-            local namespace="${3:-secure-notes}"
+            local namespace="${3:-leaflock}"
             monitor_continuously "$interval" "$deployment_type" "$namespace"
             ;;
             
@@ -675,7 +676,7 @@ Environment Variables:
 Examples:
   $0                          # Full health check
   $0 api                      # Test API only
-  $0 k8s secure-notes         # Test Kubernetes deployment
+  $0 k8s leaflock             # Test Kubernetes deployment
   $0 monitor 60 docker        # Monitor Docker deployment every 60s
   
   BACKEND_URL=https://api.example.com $0 api    # Test remote API

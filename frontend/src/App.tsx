@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import sodium from 'libsodium-wrappers';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Lock } from 'lucide-react';
+import { Lock, Shield, MessageSquare } from 'lucide-react';
 
 // shadcn/ui components
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import AdminPage from './AdminPage';
 
 // Types
 interface Note {
@@ -54,7 +55,7 @@ interface MarkdownRendererProps {
   content: string;
 }
 
-type ViewType = 'login' | 'notes' | 'editor' | 'unlock';
+type ViewType = 'login' | 'notes' | 'editor' | 'unlock' | 'admin';
 type EncryptionStatus = 'locked' | 'unlocked';
 type ThemeType = 'light' | 'dark' | 'system';
 
@@ -365,6 +366,13 @@ class SecureAPI {
   setToken(token: string): void {
     this.token = token;
     localStorage.setItem('secure_token', token);
+    // Derive and store current_user_id from JWT if possible
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1] || ''));
+      if (payload && typeof payload.user_id === 'string') {
+        localStorage.setItem('current_user_id', payload.user_id);
+      }
+    } catch {}
   }
 
   clearToken(): void {
@@ -407,6 +415,9 @@ class SecureAPI {
     if (response.token) {
       this.setToken(response.token);
     }
+    if (response.user_id) {
+      try { localStorage.setItem('current_user_id', response.user_id); } catch {}
+    }
     
     return response;
   }
@@ -419,6 +430,9 @@ class SecureAPI {
     
     if (response.token) {
       this.setToken(response.token);
+    }
+    if (response.user_id) {
+      try { localStorage.setItem('current_user_id', response.user_id); } catch {}
     }
     
     return response;
@@ -436,6 +450,75 @@ class SecureAPI {
         content_encrypted: encryptedContent
       })
     });
+  }
+  // Admin helpers
+  async adminHealth(): Promise<boolean> {
+    const r = await this.request('/admin/health')
+    return r && r.status === 'ok'
+  }
+  async adminSetAdmin(userId: string, admin: boolean): Promise<any> {
+    return this.request(`/admin/users/${userId}/admin`, {
+      method: 'PUT',
+      body: JSON.stringify({ admin })
+    })
+  }
+  async adminGetUserRoles(userId: string): Promise<any> {
+    return this.request(`/admin/users/${userId}/roles`)
+  }
+  async adminListUsers(params?: Record<string, string | number | boolean>): Promise<any> {
+    const query = new URLSearchParams()
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        if (v === undefined || v === null || v === '') continue
+        query.set(k, String(v))
+      }
+    }
+    const qs = query.toString()
+    return this.request(`/admin/users${qs ? `?${qs}` : ''}`)
+  }
+  async adminExportUsersCsv(params?: Record<string, string | number | boolean>): Promise<Blob> {
+    const query = new URLSearchParams()
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        if (v === undefined || v === null || v === '') continue
+        query.set(k, String(v))
+      }
+    }
+    const qs = query.toString()
+    const url = `${this.baseURL}/admin/users.csv${qs ? `?${qs}` : ''}`
+    const response = await fetch(url, { headers: { ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}) }, credentials: 'include', mode: 'cors' })
+    if (!response.ok) throw new Error(`Export failed: ${response.status}`)
+    return await response.blob()
+  }
+  async adminAssignRole(userId: string, role: string): Promise<any> {
+    return this.request(`/admin/users/${userId}/roles`, {
+      method: 'POST',
+      body: JSON.stringify({ role })
+    })
+  }
+  async adminRemoveRole(userId: string, role: string): Promise<any> {
+    return this.request(`/admin/users/${userId}/roles/${role}`, { method: 'DELETE' })
+  }
+  async adminBulkRole(action: 'assign'|'remove', role: string, filters: Record<string, any>): Promise<any> {
+    return this.request('/admin/users/roles/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ action, role, ...filters })
+    })
+  }
+  async adminBulkAdmin(action: 'grant'|'revoke', filters: Record<string, any>): Promise<any> {
+    return this.request('/admin/users/admin/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ action, ...filters })
+    })
+  }
+  async adminGetRegistration(): Promise<{ enabled: boolean }> {
+    return this.request('/admin/settings/registration')
+  }
+  async adminSetRegistration(enabled: boolean): Promise<{ enabled: boolean }> {
+    return this.request('/admin/settings/registration', {
+      method: 'PUT',
+      body: JSON.stringify({ enabled })
+    })
   }
 
   async getNotes(): Promise<Note[]> {
@@ -599,6 +682,11 @@ const ErrorBoundary: React.FC<ErrorBoundaryProps> = ({ error, onRetry, onDismiss
           </div>
         </div>
       </div>
+      <div className="text-center py-4 text-xs text-muted-foreground">
+        <a href="https://github.com/RelativeSure/notes/discussions" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:underline">
+          <MessageSquare className="w-3 h-3" /> Join GitHub Discussions
+        </a>
+      </div>
     </div>
   );
 };
@@ -607,7 +695,7 @@ const ErrorBoundary: React.FC<ErrorBoundaryProps> = ({ error, onRetry, onDismiss
 const OnboardingOverlay: React.FC<OnboardingOverlayProps> = ({ step, onNext, onPrev, onSkip, onComplete }) => {
   const onboardingSteps = [
     {
-      title: "Welcome to Secure Notes!",
+      title: "Welcome to LeafLock!",
       content: "Your notes are protected with end-to-end encryption. Only you can read your content, even we can't see it.",
       icon: (
         <svg className="w-12 h-12 text-blue-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -872,7 +960,11 @@ const ThemeToggle: React.FC = () => {
 };
 
 // Login Component with shadcn/ui
-const LoginView: React.FC = () => {
+interface LoginViewProps {
+  onAuthenticated?: () => void;
+}
+
+const LoginView: React.FC<LoginViewProps> = ({ onAuthenticated }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mfaCode, setMfaCode] = useState('');
@@ -937,8 +1029,8 @@ const LoginView: React.FC = () => {
         await cryptoService.setMasterKey(key);
         console.log('🔑 Master key derived and set');
         
-        // Navigate to main app (this would be handled by parent component)
-        window.location.reload(); // Temporary - should be handled by state management
+        // Notify parent we're authenticated without hard reload
+        onAuthenticated?.();
       } else {
         console.log('🔑 LOGIN MODE - Attempting login with email:', email);
         const response = await api.login(email, password, mfaCode);
@@ -968,8 +1060,8 @@ const LoginView: React.FC = () => {
         await cryptoService.setMasterKey(key);
         console.log('🔑 Master key derived and set');
         
-        // Navigate to main app (this would be handled by parent component)
-        window.location.reload(); // Temporary - should be handled by state management
+        // Notify parent we're authenticated without hard reload
+        onAuthenticated?.();
       }
     } catch (err) {
       console.error('💥 Authentication failed:', { 
@@ -1004,7 +1096,7 @@ const LoginView: React.FC = () => {
           <div className="flex items-center justify-center mb-4">
             <div className="flex items-center space-x-2">
               <Lock className="h-8 w-8 text-primary" />
-              <CardTitle className="text-2xl">Notes</CardTitle>
+              <CardTitle className="text-2xl">LeafLock</CardTitle>
             </div>
           </div>
           <CardDescription className="text-center">
@@ -1109,6 +1201,11 @@ const LoginView: React.FC = () => {
           </form>
         </CardContent>
       </Card>
+      <div className="mt-4 text-center text-sm text-muted-foreground">
+        <a href="https://github.com/RelativeSure/notes/discussions" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:underline">
+          <MessageSquare className="w-4 h-4" /> Join GitHub Discussions
+        </a>
+      </div>
     </div>
   );
 };
@@ -1128,6 +1225,7 @@ function SecureNotesApp() {
   const [notesError, setNotesError] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   console.log('🔄 SecureNotesApp render - initializing:', initializing, 'isAuthenticated:', isAuthenticated, 'currentView:', currentView);
 
@@ -1148,6 +1246,7 @@ function SecureNotesApp() {
     setSelectedNote(null);
     setError(null);
     setNotesError(null);
+    setIsAdmin(false);
     
     console.log('✅ Complete logout finished');
   }, []);
@@ -1157,12 +1256,47 @@ function SecureNotesApp() {
     api.setUnauthorizedCallback(handleLogout);
   }, [handleLogout]);
 
+  // Periodic admin re-check while authenticated
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let mounted = true;
+    const tick = async () => {
+      try {
+        const ok = await api.adminHealth();
+        if (!mounted) return;
+        if (ok !== isAdmin) {
+          setIsAdmin(!!ok);
+          if (!ok && currentView === 'admin') {
+            setCurrentView('notes');
+          }
+        }
+      } catch {
+        if (isAdmin && currentView === 'admin') {
+          setCurrentView('notes');
+        }
+        setIsAdmin(false);
+      }
+    };
+    const id = setInterval(tick, 15000);
+    tick();
+    return () => { mounted = false; clearInterval(id); };
+  }, [isAuthenticated, isAdmin, currentView]);
+
   useEffect(() => {
     // Check if user has a valid session
     const initializeApp = async () => {
       try {
         console.log('🚀 Starting app initialization...');
         const token = localStorage.getItem('secure_token');
+        // Backfill current_user_id from JWT if missing
+        if (token && !localStorage.getItem('current_user_id')) {
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1] || ''));
+            if (payload && typeof payload.user_id === 'string') {
+              localStorage.setItem('current_user_id', payload.user_id);
+            }
+          } catch {}
+        }
         if (token) {
           console.log('🔐 Found stored token, validating...');
           
@@ -1185,6 +1319,13 @@ function SecureNotesApp() {
           
           if (isValid) {
             console.log('✅ Token valid, checking encryption key...');
+            // Probe admin status via admin health endpoint (403 for non-admins)
+            try {
+              const adminOk = await api.adminHealth();
+              setIsAdmin(!!adminOk);
+            } catch {
+              setIsAdmin(false);
+            }
             
             // Check if we have the master key - if not, user needs to re-enter password
             if (!cryptoService.masterKey) {
@@ -1880,7 +2021,7 @@ function SecureNotesApp() {
     return (
       <div className="h-screen flex flex-col md:flex-row bg-background">
         <div className="md:hidden flex items-center justify-between bg-card border-b border-border px-4 py-3">
-          <h1 className="text-lg font-semibold text-foreground">Notes</h1>
+          <h1 className="text-lg font-semibold text-foreground">LeafLock</h1>
           <Button
             onClick={() => setCurrentView(currentView === 'notes' ? 'editor' : 'notes')}
             variant="ghost"
@@ -1907,7 +2048,7 @@ function SecureNotesApp() {
         <div className={`${currentView === 'notes' && !selectedNote ? 'hidden md:flex' : 'flex'} flex-1 flex-col`}>
           <header className="hidden md:flex bg-card border-b border-border px-6 py-3 items-center justify-between">
             <div className="flex items-center space-x-4">
-              <h1 className="text-lg font-semibold text-foreground">Notes</h1>
+              <h1 className="text-lg font-semibold text-foreground">LeafLock</h1>
             </div>
             
             <div className="flex items-center space-x-4">
@@ -1934,6 +2075,17 @@ function SecureNotesApp() {
                 {viewingTrash ? 'Exit Trash' : 'Trash'}
               </button>
               
+              {isAdmin && (
+                <button
+                  onClick={() => setCurrentView('admin')}
+                  className="text-gray-400 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded p-1"
+                  aria-label="Admin panel"
+                  title="Admin panel"
+                >
+                  <Shield className="w-5 h-5" />
+                </button>
+              )}
+
               <button
                 onClick={handleLogout}
                 className="text-gray-400 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded p-1"
@@ -1965,17 +2117,17 @@ function SecureNotesApp() {
     );
   };
 
-  // Security check: If encryption status is locked, force logout immediately
+  // Security check: Only force logout if locked in an unexpected view
   useEffect(() => {
-    if (!initializing && encryptionStatus === 'locked' && isAuthenticated) {
-      console.log('🚨 Security check: User is authenticated but locked - forcing logout');
+    if (!initializing && encryptionStatus === 'locked' && isAuthenticated && currentView !== 'unlock') {
+      console.log('🚨 Security check: Locked while authenticated outside unlock view - forcing logout');
       setIsAuthenticated(false);
       setCurrentView('login');
     }
-  }, [encryptionStatus, isAuthenticated, initializing]);
+  }, [encryptionStatus, isAuthenticated, initializing, currentView]);
 
   if (initializing) {
-    return <LoadingOverlay message="Starting Secure Notes" />;
+    return <LoadingOverlay message="Starting LeafLock" />;
   }
 
   // Unlock View - for when user is authenticated but master key is missing
@@ -2078,13 +2230,37 @@ function SecureNotesApp() {
 
   return (
     <>
-      {isAuthenticated && encryptionStatus === 'unlocked' ? (
-        <AppLayout />
+      {isAuthenticated && isAdmin && currentView === 'admin' ? (
+        <AdminPage api={api} onBack={() => setCurrentView('notes')} />
+      ) : isAuthenticated && encryptionStatus === 'unlocked' ? (
+        <>
+          <AppLayout />
+        </>
       ) : isAuthenticated && currentView === 'unlock' ? (
         <UnlockView />
       ) : (
-        <LoginView />
+        <LoginView
+          onAuthenticated={async () => {
+            // User has a valid token and master key; transition to notes
+            setIsAuthenticated(true);
+            setCurrentView('notes');
+            setEncryptionStatus('unlocked');
+            // Determine admin status
+            try {
+              const adminOk = await api.adminHealth();
+              setIsAdmin(!!adminOk);
+            } catch { setIsAdmin(false); }
+            try {
+              await loadNotes();
+            } catch (e) {
+              console.error('Failed to load notes after auth:', e);
+            }
+            const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+            if (!hasSeenOnboarding) setShowOnboarding(true);
+          }}
+        />
       )}
+      {/* Admin panel is now accessible via header icon for admins only */}
       {showOnboarding && isAuthenticated && encryptionStatus === 'unlocked' && (
         <OnboardingOverlay 
           step={onboardingStep}

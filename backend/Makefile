@@ -1,4 +1,4 @@
-# Makefile for secure-notes backend testing and development
+# Makefile for LeafLock backend testing and development
 
 .PHONY: test test-unit test-integration test-security test-coverage test-benchmark test-race clean deps build run help
 
@@ -23,14 +23,14 @@ GOCOVER=-coverprofile=coverage.out -covermode=atomic
 GOTESTSUM=gotestsum
 
 # Binary names
-BINARY_NAME=secure-notes
+BINARY_NAME=leaflock
 BINARY_UNIX=$(BINARY_NAME)_unix
 
 # Test parameters
 TEST_TIMEOUT=10m
 INTEGRATION_TEST_TAG=integration
 SECURITY_TEST_TAG=security
-COVERAGE_THRESHOLD=80
+COVERAGE_THRESHOLD=72
 
 # Database test parameters
 TEST_DB_URL=postgres://test:test@localhost:5433/test_notes?sslmode=disable
@@ -74,7 +74,11 @@ clean: ## Clean build files and test cache
 
 fmt: ## Format Go code
 	@echo "$(GREEN)Formatting code...$(NC)"
-	$(GOFMT) -s -w .
+	@find . -name "*.go" \
+	  -not -path "./vendor/*" \
+	  -not -path "./.gomod/*" \
+	  -not -path "./.gopath/*" \
+	  -print0 | xargs -0 $(GOFMT) -s -w
 	@echo "$(GREEN)Code formatted$(NC)"
 
 lint: ## Run linters

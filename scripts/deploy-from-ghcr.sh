@@ -158,7 +158,7 @@ show_status() {
 
 # Main deployment function
 main() {
-    echo "🚀 Deploying Secure Notes from GitHub Container Registry"
+    echo "🚀 Deploying LeafLock from GitHub Container Registry"
     echo "================================================="
     echo "Repository: $GITHUB_REPOSITORY"
     echo "Version: $VERSION"

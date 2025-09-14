@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Comprehensive Testing Suite for Secure Notes Application
+# Comprehensive Testing Suite for LeafLock Application
 # This script runs all tests (frontend, backend, integration, security) in parallel
 
 set -e  # Exit on any error
@@ -231,7 +231,7 @@ run_build_tests() {
     # Docker Build Test (if Docker is available)
     if command -v docker &> /dev/null; then
         TESTS_TOTAL=$((TESTS_TOTAL + 1))
-        run_test "docker-build" "docker build -t secure-notes-test ."
+        run_test "docker-build" "docker build -t leaflock-test ."
     else
         print_status "WARNING" "Docker not available, skipping Docker build test"
         TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
@@ -291,7 +291,7 @@ generate_report() {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Secure Notes - Test Report</title>
+    <title>LeafLock - Test Report</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
         .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
@@ -306,7 +306,7 @@ generate_report() {
 </head>
 <body>
     <div class="header">
-        <h1>Secure Notes - Test Suite Report</h1>
+        <h1>LeafLock - Test Suite Report</h1>
         <p>Generated: $(date)</p>
         <p>Duration: $SECONDS seconds</p>
     </div>
@@ -355,7 +355,7 @@ EOF
 main() {
     local start_time=$(date +%s)
     
-    print_status "INFO" "Starting Comprehensive Test Suite for Secure Notes"
+    print_status "INFO" "Starting Comprehensive Test Suite for LeafLock"
     print_status "INFO" "=============================================="
     
     # Parse command line arguments

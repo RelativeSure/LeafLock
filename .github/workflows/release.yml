@@ -307,6 +307,20 @@ jobs:
             ---
             
             🤖 *This release was created automatically by [GitHub Actions](https://github.com/${{ github.repository }}/actions)*
+            
+            ---
+            
+            ## 🧑‍💻 Community
+            - 🐛 Report bugs: https://github.com/${{ github.repository }}/issues/new?template=bug_report.md
+            - 💡 Request features: https://github.com/${{ github.repository }}/issues/new?template=feature_request.md
+            - 📝 Docs improvements: https://github.com/${{ github.repository }}/issues/new?template=docs_improvement.md
+            - 💬 Discussions (Q&A/ideas/design): https://github.com/${{ github.repository }}/discussions
+
+            ---
+
+            ## 🚄 Railway Deploy (Manual)
+            - Run the manual Railway deploy workflow from Actions: https://github.com/${{ github.repository }}/actions/workflows/railway-deploy.yml
+            - Choose target (backend|frontend|both) and environment. Requires repository secret `RAILWAY_TOKEN`.
           draft: false
           prerelease: ${{ contains(needs.version-calculation.outputs.next_version, '-rc.') }}
 
@@ -374,6 +388,7 @@ jobs:
             - Updated VERSION file (if exists)
             
             **This PR can be auto-merged safely.**
+          labels: chore, automation
           branch: version-bump-${{ needs.version-calculation.outputs.next_version }}
           delete-branch: true
 
@@ -391,6 +406,7 @@ jobs:
           echo "- [📋 View Release](https://github.com/${{ github.repository }}/releases/tag/${{ needs.version-calculation.outputs.next_version }})" >> $GITHUB_STEP_SUMMARY
           echo "- [📦 View Packages](https://github.com/${{ github.repository }}/pkgs/container)" >> $GITHUB_STEP_SUMMARY
           echo "- [🔄 Build Workflow](https://github.com/${{ github.repository }}/actions/workflows/build-containers.yml)" >> $GITHUB_STEP_SUMMARY
+          echo "- [🚄 Railway Deploy (Manual)](https://github.com/${{ github.repository }}/actions/workflows/railway-deploy.yml)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🚀 Next Steps:" >> $GITHUB_STEP_SUMMARY
           echo "1. ✅ **Release created and tagged**" >> $GITHUB_STEP_SUMMARY

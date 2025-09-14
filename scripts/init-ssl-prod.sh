@@ -11,7 +11,7 @@ CERT_DIR="/var/lib/postgresql"
 SSL_CERT_DIR="/var/lib/postgresql/ssl-certs"
 CERT_FILE="$CERT_DIR/server.crt"
 KEY_FILE="$CERT_DIR/server.key"
-DOMAIN="${SSL_DOMAIN:-secure-notes.local}"
+DOMAIN="${SSL_DOMAIN:-leaflock.app}"
 POSTGRES_UID=999
 POSTGRES_GID=999
 

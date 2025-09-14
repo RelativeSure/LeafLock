@@ -1,9 +1,10 @@
 #!/bin/bash
+# Note: Prefer leaflock.sh docker:* for common workflows; this script scaffolds container files for advanced setups.
 # setup-docker.sh - Complete setup script for Docker deployment
 
 set -e
 
-echo "🔐 Secure Notes - Docker Setup"
+echo "🔐 LeafLock - Docker Setup"
 echo "=============================="
 
 # Colors for output
@@ -40,7 +41,7 @@ generate_env_file() {
     ENCRYPTION_KEY=$(openssl rand -base64 32 | tr -d "\n")
     
     cat > .env << EOF
-# Secure Notes Environment Variables
+# LeafLock Environment Variables
 # Generated: $(date)
 
 # Database
@@ -96,7 +97,7 @@ COPY . .
 # Build the binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-w -s" \
-    -o secure-notes-backend \
+    -o leaflock-backend \
     main.go
 
 # Final stage
@@ -106,14 +107,14 @@ FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /etc/passwd /etc/passwd
-COPY --from=builder /build/secure-notes-backend /app/
+COPY --from=builder /build/leaflock-backend /app/
 
 # Use non-root user
 USER appuser
 
 EXPOSE 8080
 
-ENTRYPOINT ["/app/secure-notes-backend"]
+ENTRYPOINT ["/app/leaflock-backend"]
 EOF
     
     echo -e "${GREEN}✅ Backend Dockerfile created${NC}"
@@ -273,7 +274,7 @@ create_frontend_package() {
     
     cat > frontend/package.json << 'EOF'
 {
-  "name": "secure-notes-frontend",
+  "name": "leaflock-frontend",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -312,7 +313,7 @@ create_backend_gomod() {
     echo -e "${BLUE}Creating backend go.mod...${NC}"
     
     cat > backend/go.mod << 'EOF'
-module secure-notes
+module leaflock
 
 go 1.21
 
@@ -369,7 +370,7 @@ help: ## Show this help message
 
 up: ## Start all services
 	docker compose up -d
-	@echo "✅ Secure Notes is running!"
+	@echo "✅ LeafLock is running!"
 	@echo "📝 Frontend: http://localhost:3000"
 	@echo "🔌 Backend API: http://localhost:8080"
 	@echo "📊 View logs: make logs"
@@ -424,7 +425,7 @@ EOF
 # Main setup function
 main() {
     echo ""
-    echo -e "${BLUE}🚀 Starting Secure Notes Docker Setup${NC}"
+echo -e "${BLUE}🚀 Starting LeafLock Docker Setup${NC}"
     echo "======================================="
     echo ""
     
