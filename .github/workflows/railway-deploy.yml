@@ -1,0 +1,84 @@
+name: 🚄 Railway Deploy (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Which service to deploy"
+        required: true
+        default: "both"
+        type: choice
+        options:
+          - backend
+          - frontend
+          - both
+      vite_enable_admin_panel:
+        description: "Enable admin panel on frontend (VITE_ENABLE_ADMIN_PANEL)"
+        required: false
+        default: "true"
+      enable_registration:
+        description: "Backend ENABLE_REGISTRATION (true/false)"
+        required: false
+        default: "false"
+      environment:
+        description: "Railway environment (e.g., production, staging, dev)"
+        required: false
+        default: "production"
+
+jobs:
+  deploy:
+    name: Deploy to Railway
+    runs-on: ubuntu-latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Install Railway CLI
+        run: npm i -g @railway/cli
+
+      - name: Verify Railway auth
+        run: railway whoami || echo "Proceeding with token-based auth"
+
+      - name: Select Railway environment
+        run: |
+          if [ -n "${{ github.event.inputs.environment }}" ]; then
+            echo "Selecting Railway environment: ${{ github.event.inputs.environment }}"
+            railway environment ${{ github.event.inputs.environment }} || echo "Environment may be selected per-service if needed."
+          fi
+
+      - name: Deploy backend
+        if: ${{ github.event.inputs.target == 'backend' || github.event.inputs.target == 'both' }}
+        working-directory: backend
+        env:
+          ENABLE_REGISTRATION: ${{ github.event.inputs.enable_registration }}
+        run: |
+          echo "Deploying backend..."
+          if [ -n "${{ github.event.inputs.environment }}" ]; then railway environment ${{ github.event.inputs.environment }} || true; fi
+          railway variables set ENABLE_REGISTRATION=$ENABLE_REGISTRATION --service backend || true
+          railway up --service backend --root .
+
+      - name: Deploy frontend
+        if: ${{ github.event.inputs.target == 'frontend' || github.event.inputs.target == 'both' }}
+        working-directory: frontend
+        env:
+          VITE_ENABLE_ADMIN_PANEL: ${{ github.event.inputs.vite_enable_admin_panel }}
+        run: |
+          echo "Deploying frontend..."
+          if [ -n "${{ github.event.inputs.environment }}" ]; then railway environment ${{ github.event.inputs.environment }} || true; fi
+          railway variables set VITE_ENABLE_ADMIN_PANEL=$VITE_ENABLE_ADMIN_PANEL --service frontend || true
+          railway up --service frontend --root .
+
+      - name: Summary
+        run: |
+          echo "## Railway Deploy" >> $GITHUB_STEP_SUMMARY
+          echo "Target: ${{ github.event.inputs.target }}" >> $GITHUB_STEP_SUMMARY
+          echo "Admin panel: ${{ github.event.inputs.vite_enable_admin_panel }}" >> $GITHUB_STEP_SUMMARY
+          echo "Enable registration: ${{ github.event.inputs.enable_registration }}" >> $GITHUB_STEP_SUMMARY
+          echo "Environment: ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY

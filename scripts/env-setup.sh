@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Secure Notes Environment Configuration Setup
+# LeafLock Environment Configuration Setup
 # Validates, generates, and manages environment configurations for all deployment targets
 
 set -euo pipefail
@@ -294,7 +294,7 @@ generate_environment() {
     
     # Create environment file
     cat > "$output_file" <<EOF
-# Secure Notes - $environment Environment Configuration
+# LeafLock - $environment Environment Configuration
 # Generated: $(date)
 # WARNING: Keep this file secure and never commit to version control!
 

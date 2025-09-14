@@ -167,6 +167,15 @@ jobs:
           echo "Installing dependencies..."
           pnpm install --frozen-lockfile
 
+          # Lint and typecheck
+          echo "Running lint and typecheck..."
+          pnpm run lint
+          pnpm run typecheck
+
+          # Run unit tests
+          echo "Running unit tests..."
+          pnpm run test -- --run
+
           # Build frontend
           echo "Building frontend..."
           pnpm run build

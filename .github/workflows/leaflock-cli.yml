@@ -1,0 +1,22 @@
+name: 🧰 LeafLock CLI (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "leaflock.sh command (e.g., icons, test, docker:build)"
+        required: true
+        default: "help"
+
+jobs:
+  run-cli:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Run leaflock.sh
+        run: |
+          chmod +x ./leaflock.sh || true
+          echo "Running: ./leaflock.sh ${{ github.event.inputs.command }}"
+          ./leaflock.sh ${{ github.event.inputs.command }}

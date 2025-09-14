@@ -1,0 +1,370 @@
+=== RUN   TestCryptoService
+=== RUN   TestCryptoService/EncryptDecrypt
+=== RUN   TestCryptoService/EncryptEmptyData
+=== RUN   TestCryptoService/DecryptInvalidData
+=== RUN   TestCryptoService/DecryptTooShort
+--- PASS: TestCryptoService (0.00s)
+    --- PASS: TestCryptoService/EncryptDecrypt (0.00s)
+    --- PASS: TestCryptoService/EncryptEmptyData (0.00s)
+    --- PASS: TestCryptoService/DecryptInvalidData (0.00s)
+    --- PASS: TestCryptoService/DecryptTooShort (0.00s)
+=== RUN   TestPasswordHashing
+=== RUN   TestPasswordHashing/HashPassword
+=== RUN   TestPasswordHashing/VerifyPassword
+=== RUN   TestPasswordHashing/VerifyInvalidHash
+=== RUN   TestPasswordHashing/ConstantTimeComparison
+--- PASS: TestPasswordHashing (0.27s)
+    --- PASS: TestPasswordHashing/HashPassword (0.06s)
+    --- PASS: TestPasswordHashing/VerifyPassword (0.12s)
+    --- PASS: TestPasswordHashing/VerifyInvalidHash (0.00s)
+    --- PASS: TestPasswordHashing/ConstantTimeComparison (0.09s)
+=== RUN   TestConfig
+=== RUN   TestConfig/LoadConfigWithDefaults
+2025/09/14 17:19:38 Generated new JWT secret
+2025/09/14 17:19:38 Generated new server encryption key
+=== RUN   TestConfig/LoadConfigWithEnvironment
+--- PASS: TestConfig (0.00s)
+    --- PASS: TestConfig/LoadConfigWithDefaults (0.00s)
+    --- PASS: TestConfig/LoadConfigWithEnvironment (0.00s)
+=== RUN   TestJWTMiddleware
+=== RUN   TestJWTMiddleware/ValidToken
+=== RUN   TestJWTMiddleware/MissingToken
+=== RUN   TestJWTMiddleware/InvalidToken
+=== RUN   TestJWTMiddleware/ExpiredToken
+--- PASS: TestJWTMiddleware (0.00s)
+    --- PASS: TestJWTMiddleware/ValidToken (0.00s)
+    --- PASS: TestJWTMiddleware/MissingToken (0.00s)
+    --- PASS: TestJWTMiddleware/InvalidToken (0.00s)
+    --- PASS: TestJWTMiddleware/ExpiredToken (0.00s)
+=== RUN   TestAuthHandlerSuite
+=== RUN   TestAuthHandlerSuite/TestLoginAccountLocked
+=== RUN   TestAuthHandlerSuite/TestLoginInvalidCredentials
+=== RUN   TestAuthHandlerSuite/TestLoginSuccess
+=== RUN   TestAuthHandlerSuite/TestRegisterDuplicateEmail
+=== RUN   TestAuthHandlerSuite/TestRegisterSuccess
+=== RUN   TestAuthHandlerSuite/TestRegisterWeakPassword
+--- PASS: TestAuthHandlerSuite (0.20s)
+    --- PASS: TestAuthHandlerSuite/TestLoginAccountLocked (0.00s)
+    --- PASS: TestAuthHandlerSuite/TestLoginInvalidCredentials (0.00s)
+    --- PASS: TestAuthHandlerSuite/TestLoginSuccess (0.10s)
+    --- PASS: TestAuthHandlerSuite/TestRegisterDuplicateEmail (0.05s)
+    --- PASS: TestAuthHandlerSuite/TestRegisterSuccess (0.04s)
+    --- PASS: TestAuthHandlerSuite/TestRegisterWeakPassword (0.00s)
+=== RUN   TestSetupDatabase_InvalidConnection
+2025/09/14 17:19:38 Note: Database might already exist: failed to connect to `user=postgres database=postgres`: 127.0.0.1:1 (127.0.0.1): dial error: dial tcp 127.0.0.1:1: socket: operation not permitted
+2025/09/14 17:19:38 Running database migrations...
+--- PASS: TestSetupDatabase_InvalidConnection (0.00s)
+=== RUN   TestRegister_Disabled
+--- PASS: TestRegister_Disabled (0.00s)
+=== RUN   TestNotesHandlerSuite
+=== RUN   TestNotesHandlerSuite/TestCreateNoteInvalidData
+=== RUN   TestNotesHandlerSuite/TestCreateNoteSuccess
+=== RUN   TestNotesHandlerSuite/TestDeleteNoteSuccess
+=== RUN   TestNotesHandlerSuite/TestGetNoteNotFound
+=== RUN   TestNotesHandlerSuite/TestGetNoteSuccess
+=== RUN   TestNotesHandlerSuite/TestGetNotesSuccess
+=== RUN   TestNotesHandlerSuite/TestUpdateNoteNotFound
+=== RUN   TestNotesHandlerSuite/TestUpdateNoteSuccess
+--- PASS: TestNotesHandlerSuite (0.05s)
+    --- PASS: TestNotesHandlerSuite/TestCreateNoteInvalidData (0.00s)
+    --- PASS: TestNotesHandlerSuite/TestCreateNoteSuccess (0.03s)
+    --- PASS: TestNotesHandlerSuite/TestDeleteNoteSuccess (0.00s)
+    --- PASS: TestNotesHandlerSuite/TestGetNoteNotFound (0.00s)
+    --- PASS: TestNotesHandlerSuite/TestGetNoteSuccess (0.00s)
+    --- PASS: TestNotesHandlerSuite/TestGetNotesSuccess (0.00s)
+    --- PASS: TestNotesHandlerSuite/TestUpdateNoteNotFound (0.01s)
+    --- PASS: TestNotesHandlerSuite/TestUpdateNoteSuccess (0.01s)
+=== RUN   TestDatabaseIntegrationSuite
+    main_test.go:758: Skipping integration test in short mode
+--- SKIP: TestDatabaseIntegrationSuite (0.00s)
+=== RUN   TestSQLInjectionPrevention
+    notes_test.go:679: Skipping integration test in short mode
+--- SKIP: TestSQLInjectionPrevention (0.00s)
+=== RUN   TestRateLimitingBypass
+=== RUN   TestRateLimitingBypass/RateLimit_Attempt_1
+=== RUN   TestRateLimitingBypass/RateLimit_Attempt_2
+=== RUN   TestRateLimitingBypass/RateLimit_Attempt_3
+=== RUN   TestRateLimitingBypass/RateLimit_Attempt_4
+=== RUN   TestRateLimitingBypass/RateLimit_Attempt_5
+=== RUN   TestRateLimitingBypass/RateLimit_Attempt_6
+=== RUN   TestRateLimitingBypass/RateLimit_Attempt_7
+=== RUN   TestRateLimitingBypass/RateLimit_Attempt_8
+=== RUN   TestRateLimitingBypass/RateLimit_Attempt_9
+=== RUN   TestRateLimitingBypass/RateLimit_Attempt_10
+--- PASS: TestRateLimitingBypass (0.00s)
+    --- PASS: TestRateLimitingBypass/RateLimit_Attempt_1 (0.00s)
+    --- PASS: TestRateLimitingBypass/RateLimit_Attempt_2 (0.00s)
+    --- PASS: TestRateLimitingBypass/RateLimit_Attempt_3 (0.00s)
+    --- PASS: TestRateLimitingBypass/RateLimit_Attempt_4 (0.00s)
+    --- PASS: TestRateLimitingBypass/RateLimit_Attempt_5 (0.00s)
+    --- PASS: TestRateLimitingBypass/RateLimit_Attempt_6 (0.00s)
+    --- PASS: TestRateLimitingBypass/RateLimit_Attempt_7 (0.00s)
+    --- PASS: TestRateLimitingBypass/RateLimit_Attempt_8 (0.00s)
+    --- PASS: TestRateLimitingBypass/RateLimit_Attempt_9 (0.00s)
+    --- PASS: TestRateLimitingBypass/RateLimit_Attempt_10 (0.00s)
+=== RUN   TestEncryptionKeyRotation
+--- PASS: TestEncryptionKeyRotation (0.00s)
+=== RUN   TestSecuritySuite
+=== RUN   TestSecuritySuite/TestCORSSecurity
+=== RUN   TestSecuritySuite/TestCORSSecurity/ValidOrigin
+=== RUN   TestSecuritySuite/TestCORSSecurity/InvalidOrigin
+=== RUN   TestSecuritySuite/TestEncryptionSecurity
+=== RUN   TestSecuritySuite/TestEncryptionSecurity/NonceUniqueness
+=== RUN   TestSecuritySuite/TestEncryptionSecurity/CiphertextIntegrity
+=== RUN   TestSecuritySuite/TestEncryptionSecurity/KeySeparation
+=== RUN   TestSecuritySuite/TestEncryptionSecurity/CiphertextRandomness
+=== RUN   TestSecuritySuite/TestInformationDisclosure
+=== RUN   TestSecuritySuite/TestInformationDisclosure/ErrorMessages
+=== RUN   TestSecuritySuite/TestInformationDisclosure/ServerHeaders
+=== RUN   TestSecuritySuite/TestInputValidation
+=== RUN   TestSecuritySuite/TestInputValidation/OversizedInput
+=== RUN   TestSecuritySuite/TestInputValidation/InvalidJSON
+=== RUN   TestSecuritySuite/TestInputValidation/NullBytes
+=== RUN   TestSecuritySuite/TestInputValidation/UnicodeHandling
+=== RUN   TestSecuritySuite/TestInputValidation/UnicodeHandling/Unicode_test@例え.テスト
+=== RUN   TestSecuritySuite/TestInputValidation/UnicodeHandling/Unicode_тест@пример.рф
+=== RUN   TestSecuritySuite/TestInputValidation/UnicodeHandling/Unicode_test@مثال.شبكة
+=== RUN   TestSecuritySuite/TestInputValidation/UnicodeHandling/Unicode_🔒secure@🌍.com
+=== RUN   TestSecuritySuite/TestInputValidation/UnicodeHandling/Unicode_test@tëst.cøm
+=== RUN   TestSecuritySuite/TestJWTSecurity
+=== RUN   TestSecuritySuite/TestJWTSecurity/ValidJWT
+=== RUN   TestSecuritySuite/TestJWTSecurity/ExpiredJWT
+=== RUN   TestSecuritySuite/TestJWTSecurity/TamperedJWT
+=== RUN   TestSecuritySuite/TestJWTSecurity/WeakSigningMethod
+=== RUN   TestSecuritySuite/TestJWTSecurity/MissingRequiredClaims
+=== RUN   TestSecuritySuite/TestPasswordSecurity
+=== RUN   TestSecuritySuite/TestPasswordSecurity/TimingAttackResistance
+=== RUN   TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection
+=== RUN   TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_123456
+=== RUN   TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_password
+=== RUN   TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_qwerty
+=== RUN   TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_abc123
+=== RUN   TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_password123
+=== RUN   TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_admin
+=== RUN   TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_letmein
+=== RUN   TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_welcome
+=== RUN   TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_monkey
+=== RUN   TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_1234567890
+=== RUN   TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_password1
+=== RUN   TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_Password
+=== RUN   TestSecuritySuite/TestPasswordSecurity/StrongPasswordAcceptance
+=== RUN   TestSecuritySuite/TestPasswordSecurity/StrongPasswordAcceptance/StrongPassword_MySecureP@ssw0rd2024!
+=== RUN   TestSecuritySuite/TestPasswordSecurity/StrongPasswordAcceptance/StrongPassword_C0mpl3x&Str0ng#P@ssw0rd
+=== RUN   TestSecuritySuite/TestPasswordSecurity/StrongPasswordAcceptance/StrongPassword_Ungu3ssable!P@ssw0rd123
+=== RUN   TestSecuritySuite/TestPasswordSecurity/StrongPasswordAcceptance/StrongPassword_S@f3&S3cur3P@ssw0rd!
+=== RUN   TestSecuritySuite/TestPasswordSecurity/StrongPasswordAcceptance/StrongPassword_MyL0ng&C0mpl3xP@ssw0rd2024
+=== RUN   TestSecuritySuite/TestRateLimiting
+=== RUN   TestSecuritySuite/TestRateLimiting/LoginAttemptLimiting
+=== RUN   TestSecuritySuite/TestSQLInjectionPrevention
+=== RUN   TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_'_OR_'1'='1
+=== RUN   TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_'_OR_1=1_--
+=== RUN   TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_';_DROP_TABLE_users;_--
+=== RUN   TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_'_UNION_SELECT_password_FROM_users_--
+=== RUN   TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_admin'--
+=== RUN   TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_1'_OR_'1'='1'_/*
+=== RUN   TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_1'_WAITFOR_DELAY_'00:00:05'_--
+=== RUN   TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_1';_EXEC_xp_cmdshell('dir');_--
+=== RUN   TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_'_OR_SLEEP(5)_--
+=== RUN   TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_'_OR_(SELECT_COUNT(*)_FROM_users)_>_0_--
+=== RUN   TestSecuritySuite/TestSecurityHeaders
+=== RUN   TestSecuritySuite/TestXSSPrevention
+=== RUN   TestSecuritySuite/TestXSSPrevention/XSS_<script>alert('xss')</script>
+=== RUN   TestSecuritySuite/TestXSSPrevention/XSS_javascript:alert('xss')
+=== RUN   TestSecuritySuite/TestXSSPrevention/XSS_<img_src=x_onerror=alert('xss')>
+=== RUN   TestSecuritySuite/TestXSSPrevention/XSS_<svg_onload=alert('xss')>
+=== RUN   TestSecuritySuite/TestXSSPrevention/XSS_'><script>alert(String.fromCharCode(88,83,83))</script>
+=== RUN   TestSecuritySuite/TestXSSPrevention/XSS_"><script>alert(/xss/)</script>
+=== RUN   TestSecuritySuite/TestXSSPrevention/XSS_<iframe_src="javascript:alert('xss')">
+=== RUN   TestSecuritySuite/TestXSSPrevention/XSS_<object_data="javascript:alert('xss')">
+=== RUN   TestSecuritySuite/TestXSSPrevention/XSS_<embed_src="javascript:alert('xss')">
+=== RUN   TestSecuritySuite/TestXSSPrevention/XSS_<link_rel="stylesheet"_href="javascript:alert('xss')">
+--- PASS: TestSecuritySuite (0.41s)
+    --- PASS: TestSecuritySuite/TestCORSSecurity (0.00s)
+        --- PASS: TestSecuritySuite/TestCORSSecurity/ValidOrigin (0.00s)
+        --- PASS: TestSecuritySuite/TestCORSSecurity/InvalidOrigin (0.00s)
+    --- PASS: TestSecuritySuite/TestEncryptionSecurity (0.00s)
+        --- PASS: TestSecuritySuite/TestEncryptionSecurity/NonceUniqueness (0.00s)
+        --- PASS: TestSecuritySuite/TestEncryptionSecurity/CiphertextIntegrity (0.00s)
+        --- PASS: TestSecuritySuite/TestEncryptionSecurity/KeySeparation (0.00s)
+        --- PASS: TestSecuritySuite/TestEncryptionSecurity/CiphertextRandomness (0.00s)
+    --- PASS: TestSecuritySuite/TestInformationDisclosure (0.00s)
+        --- PASS: TestSecuritySuite/TestInformationDisclosure/ErrorMessages (0.00s)
+        --- PASS: TestSecuritySuite/TestInformationDisclosure/ServerHeaders (0.00s)
+    --- PASS: TestSecuritySuite/TestInputValidation (0.00s)
+        --- PASS: TestSecuritySuite/TestInputValidation/OversizedInput (0.00s)
+        --- PASS: TestSecuritySuite/TestInputValidation/InvalidJSON (0.00s)
+        --- PASS: TestSecuritySuite/TestInputValidation/NullBytes (0.00s)
+        --- PASS: TestSecuritySuite/TestInputValidation/UnicodeHandling (0.00s)
+            --- PASS: TestSecuritySuite/TestInputValidation/UnicodeHandling/Unicode_test@例え.テスト (0.00s)
+            --- PASS: TestSecuritySuite/TestInputValidation/UnicodeHandling/Unicode_тест@пример.рф (0.00s)
+            --- PASS: TestSecuritySuite/TestInputValidation/UnicodeHandling/Unicode_test@مثال.شبكة (0.00s)
+            --- PASS: TestSecuritySuite/TestInputValidation/UnicodeHandling/Unicode_🔒secure@🌍.com (0.00s)
+            --- PASS: TestSecuritySuite/TestInputValidation/UnicodeHandling/Unicode_test@tëst.cøm (0.00s)
+    --- PASS: TestSecuritySuite/TestJWTSecurity (0.00s)
+        --- PASS: TestSecuritySuite/TestJWTSecurity/ValidJWT (0.00s)
+        --- PASS: TestSecuritySuite/TestJWTSecurity/ExpiredJWT (0.00s)
+        --- PASS: TestSecuritySuite/TestJWTSecurity/TamperedJWT (0.00s)
+        --- PASS: TestSecuritySuite/TestJWTSecurity/WeakSigningMethod (0.00s)
+        --- PASS: TestSecuritySuite/TestJWTSecurity/MissingRequiredClaims (0.00s)
+    --- PASS: TestSecuritySuite/TestPasswordSecurity (0.40s)
+        --- PASS: TestSecuritySuite/TestPasswordSecurity/TimingAttackResistance (0.09s)
+        --- PASS: TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection (0.00s)
+            --- PASS: TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_123456 (0.00s)
+            --- PASS: TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_password (0.00s)
+            --- PASS: TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_qwerty (0.00s)
+            --- PASS: TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_abc123 (0.00s)
+            --- PASS: TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_password123 (0.00s)
+            --- PASS: TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_admin (0.00s)
+            --- PASS: TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_letmein (0.00s)
+            --- PASS: TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_welcome (0.00s)
+            --- PASS: TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_monkey (0.00s)
+            --- PASS: TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_1234567890 (0.00s)
+            --- PASS: TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_password1 (0.00s)
+            --- PASS: TestSecuritySuite/TestPasswordSecurity/WeakPasswordRejection/WeakPassword_Password (0.00s)
+        --- PASS: TestSecuritySuite/TestPasswordSecurity/StrongPasswordAcceptance (0.30s)
+            --- PASS: TestSecuritySuite/TestPasswordSecurity/StrongPasswordAcceptance/StrongPassword_MySecureP@ssw0rd2024! (0.06s)
+            --- PASS: TestSecuritySuite/TestPasswordSecurity/StrongPasswordAcceptance/StrongPassword_C0mpl3x&Str0ng#P@ssw0rd (0.06s)
+            --- PASS: TestSecuritySuite/TestPasswordSecurity/StrongPasswordAcceptance/StrongPassword_Ungu3ssable!P@ssw0rd123 (0.06s)
+            --- PASS: TestSecuritySuite/TestPasswordSecurity/StrongPasswordAcceptance/StrongPassword_S@f3&S3cur3P@ssw0rd! (0.06s)
+            --- PASS: TestSecuritySuite/TestPasswordSecurity/StrongPasswordAcceptance/StrongPassword_MyL0ng&C0mpl3xP@ssw0rd2024 (0.06s)
+    --- PASS: TestSecuritySuite/TestRateLimiting (0.00s)
+        --- PASS: TestSecuritySuite/TestRateLimiting/LoginAttemptLimiting (0.00s)
+    --- PASS: TestSecuritySuite/TestSQLInjectionPrevention (0.00s)
+        --- PASS: TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_'_OR_'1'='1 (0.00s)
+        --- PASS: TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_'_OR_1=1_-- (0.00s)
+        --- PASS: TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_';_DROP_TABLE_users;_-- (0.00s)
+        --- PASS: TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_'_UNION_SELECT_password_FROM_users_-- (0.00s)
+        --- PASS: TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_admin'-- (0.00s)
+        --- PASS: TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_1'_OR_'1'='1'_/* (0.00s)
+        --- PASS: TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_1'_WAITFOR_DELAY_'00:00:05'_-- (0.00s)
+        --- PASS: TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_1';_EXEC_xp_cmdshell('dir');_-- (0.00s)
+        --- PASS: TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_'_OR_SLEEP(5)_-- (0.00s)
+        --- PASS: TestSecuritySuite/TestSQLInjectionPrevention/SQLInjection_'_OR_(SELECT_COUNT(*)_FROM_users)_>_0_-- (0.00s)
+    --- PASS: TestSecuritySuite/TestSecurityHeaders (0.00s)
+    --- PASS: TestSecuritySuite/TestXSSPrevention (0.00s)
+        --- PASS: TestSecuritySuite/TestXSSPrevention/XSS_<script>alert('xss')</script> (0.00s)
+        --- PASS: TestSecuritySuite/TestXSSPrevention/XSS_javascript:alert('xss') (0.00s)
+        --- PASS: TestSecuritySuite/TestXSSPrevention/XSS_<img_src=x_onerror=alert('xss')> (0.00s)
+        --- PASS: TestSecuritySuite/TestXSSPrevention/XSS_<svg_onload=alert('xss')> (0.00s)
+        --- PASS: TestSecuritySuite/TestXSSPrevention/XSS_'><script>alert(String.fromCharCode(88,83,83))</script> (0.00s)
+        --- PASS: TestSecuritySuite/TestXSSPrevention/XSS_"><script>alert(/xss/)</script> (0.00s)
+        --- PASS: TestSecuritySuite/TestXSSPrevention/XSS_<iframe_src="javascript:alert('xss')"> (0.00s)
+        --- PASS: TestSecuritySuite/TestXSSPrevention/XSS_<object_data="javascript:alert('xss')"> (0.00s)
+        --- PASS: TestSecuritySuite/TestXSSPrevention/XSS_<embed_src="javascript:alert('xss')"> (0.00s)
+        --- PASS: TestSecuritySuite/TestXSSPrevention/XSS_<link_rel="stylesheet"_href="javascript:alert('xss')"> (0.00s)
+=== RUN   TestVulnerabilityAssessment
+=== RUN   TestVulnerabilityAssessment/OWASP_Top_10_Coverage
+    security_test.go:711: Vulnerability coverage includes: [Injection Broken Authentication Sensitive Data Exposure XML External Entities (XXE) Broken Access Control Security Misconfiguration Cross-Site Scripting (XSS) Insecure Deserialization Using Components with Known Vulnerabilities Insufficient Logging & Monitoring]
+--- PASS: TestVulnerabilityAssessment (0.00s)
+    --- PASS: TestVulnerabilityAssessment/OWASP_Top_10_Coverage (0.00s)
+=== RUN   TestPenetrationTesting
+=== RUN   TestPenetrationTesting/AuthenticationBypass
+=== RUN   TestPenetrationTesting/AuthenticationBypass/BypassAttempt_0
+=== RUN   TestPenetrationTesting/AuthenticationBypass/BypassAttempt_1
+=== RUN   TestPenetrationTesting/AuthenticationBypass/BypassAttempt_2
+=== RUN   TestPenetrationTesting/AuthenticationBypass/BypassAttempt_3
+=== RUN   TestPenetrationTesting/AuthenticationBypass/BypassAttempt_4
+=== RUN   TestPenetrationTesting/AuthenticationBypass/BypassAttempt_5
+=== RUN   TestPenetrationTesting/AuthenticationBypass/BypassAttempt_6
+=== RUN   TestPenetrationTesting/DirectoryTraversal
+=== RUN   TestPenetrationTesting/DirectoryTraversal/Traversal_../../../etc/passwd
+=== RUN   TestPenetrationTesting/DirectoryTraversal/Traversal_..\..\..\windows\system32\config\sam
+=== RUN   TestPenetrationTesting/DirectoryTraversal/Traversal_....//....//....//etc/passwd
+=== RUN   TestPenetrationTesting/DirectoryTraversal/Traversal_%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd
+=== RUN   TestPenetrationTesting/DirectoryTraversal/Traversal_..%252f..%252f..%252fetc%252fpasswd
+--- PASS: TestPenetrationTesting (0.00s)
+    --- PASS: TestPenetrationTesting/AuthenticationBypass (0.00s)
+        --- PASS: TestPenetrationTesting/AuthenticationBypass/BypassAttempt_0 (0.00s)
+        --- PASS: TestPenetrationTesting/AuthenticationBypass/BypassAttempt_1 (0.00s)
+        --- PASS: TestPenetrationTesting/AuthenticationBypass/BypassAttempt_2 (0.00s)
+        --- PASS: TestPenetrationTesting/AuthenticationBypass/BypassAttempt_3 (0.00s)
+        --- PASS: TestPenetrationTesting/AuthenticationBypass/BypassAttempt_4 (0.00s)
+        --- PASS: TestPenetrationTesting/AuthenticationBypass/BypassAttempt_5 (0.00s)
+        --- PASS: TestPenetrationTesting/AuthenticationBypass/BypassAttempt_6 (0.00s)
+    --- PASS: TestPenetrationTesting/DirectoryTraversal (0.00s)
+        --- PASS: TestPenetrationTesting/DirectoryTraversal/Traversal_../../../etc/passwd (0.00s)
+        --- PASS: TestPenetrationTesting/DirectoryTraversal/Traversal_..\..\..\windows\system32\config\sam (0.00s)
+        --- PASS: TestPenetrationTesting/DirectoryTraversal/Traversal_....//....//....//etc/passwd (0.00s)
+        --- PASS: TestPenetrationTesting/DirectoryTraversal/Traversal_%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd (0.00s)
+        --- PASS: TestPenetrationTesting/DirectoryTraversal/Traversal_..%252f..%252f..%252fetc%252fpasswd (0.00s)
+=== RUN   TestIsValidHexColor
+=== RUN   TestIsValidHexColor/#000000
+=== RUN   TestIsValidHexColor/#FFFFFF
+=== RUN   TestIsValidHexColor/#3b82f6
+=== RUN   TestIsValidHexColor/#3B82F6
+=== RUN   TestIsValidHexColor/#123ABC
+=== RUN   TestIsValidHexColor/000000
+=== RUN   TestIsValidHexColor/#00000
+=== RUN   TestIsValidHexColor/#0000000
+=== RUN   TestIsValidHexColor/#GGGGGG
+=== RUN   TestIsValidHexColor/#12345G
+=== RUN   TestIsValidHexColor/#00
+=== RUN   TestIsValidHexColor/red
+--- PASS: TestIsValidHexColor (0.00s)
+    --- PASS: TestIsValidHexColor/#000000 (0.00s)
+    --- PASS: TestIsValidHexColor/#FFFFFF (0.00s)
+    --- PASS: TestIsValidHexColor/#3b82f6 (0.00s)
+    --- PASS: TestIsValidHexColor/#3B82F6 (0.00s)
+    --- PASS: TestIsValidHexColor/#123ABC (0.00s)
+    --- PASS: TestIsValidHexColor/000000 (0.00s)
+    --- PASS: TestIsValidHexColor/#00000 (0.00s)
+    --- PASS: TestIsValidHexColor/#0000000 (0.00s)
+    --- PASS: TestIsValidHexColor/#GGGGGG (0.00s)
+    --- PASS: TestIsValidHexColor/#12345G (0.00s)
+    --- PASS: TestIsValidHexColor/#00 (0.00s)
+    --- PASS: TestIsValidHexColor/red (0.00s)
+=== RUN   TestTagsHandlerSuite
+=== RUN   TestTagsHandlerSuite/TestAssignTagNoteNotFound
+=== RUN   TestTagsHandlerSuite/TestAssignTagToNoteSuccess
+=== RUN   TestTagsHandlerSuite/TestCreateTagDefaultColor
+=== RUN   TestTagsHandlerSuite/TestCreateTagDuplicate
+=== RUN   TestTagsHandlerSuite/TestCreateTagInvalidColor
+=== RUN   TestTagsHandlerSuite/TestCreateTagSuccess
+=== RUN   TestTagsHandlerSuite/TestDeleteTagNotFound
+=== RUN   TestTagsHandlerSuite/TestDeleteTagSuccess
+=== RUN   TestTagsHandlerSuite/TestGetNotesByTagSuccess
+=== RUN   TestTagsHandlerSuite/TestGetTagsSuccess
+=== RUN   TestTagsHandlerSuite/TestRemoveTagFromNoteSuccess
+--- PASS: TestTagsHandlerSuite (0.00s)
+    --- PASS: TestTagsHandlerSuite/TestAssignTagNoteNotFound (0.00s)
+    --- PASS: TestTagsHandlerSuite/TestAssignTagToNoteSuccess (0.00s)
+    --- PASS: TestTagsHandlerSuite/TestCreateTagDefaultColor (0.00s)
+    --- PASS: TestTagsHandlerSuite/TestCreateTagDuplicate (0.00s)
+    --- PASS: TestTagsHandlerSuite/TestCreateTagInvalidColor (0.00s)
+    --- PASS: TestTagsHandlerSuite/TestCreateTagSuccess (0.00s)
+    --- PASS: TestTagsHandlerSuite/TestDeleteTagNotFound (0.00s)
+    --- PASS: TestTagsHandlerSuite/TestDeleteTagSuccess (0.00s)
+    --- PASS: TestTagsHandlerSuite/TestGetNotesByTagSuccess (0.00s)
+    --- PASS: TestTagsHandlerSuite/TestGetTagsSuccess (0.00s)
+    --- PASS: TestTagsHandlerSuite/TestRemoveTagFromNoteSuccess (0.00s)
+=== RUN   TestCleanupOldDeletedNotes
+2025/09/14 17:19:39 🧹 Running scheduled cleanup tasks...
+2025/09/14 17:19:39 ✅ Cleaned up expired sessions
+2025/09/14 17:19:39 ✅ Cleaned up old deleted notes
+2025/09/14 17:19:39 🎯 Cleanup tasks completed successfully
+--- PASS: TestCleanupOldDeletedNotes (0.00s)
+=== RUN   TestBackgroundCleanupService
+2025/09/14 17:19:39 🧹 Running scheduled cleanup tasks...
+2025/09/14 17:19:39 ✅ Cleaned up expired sessions
+2025/09/14 17:19:39 ✅ Cleaned up old deleted notes
+2025/09/14 17:19:39 🗑️ Permanently deleted 5 notes older than 30 days
+2025/09/14 17:19:39 🎯 Cleanup tasks completed successfully
+--- PASS: TestBackgroundCleanupService (0.00s)
+=== RUN   TestTrashHandlerSuite
+=== RUN   TestTrashHandlerSuite/TestGetTrashSuccess
+=== RUN   TestTrashHandlerSuite/TestGetTrashWorkspaceError
+=== RUN   TestTrashHandlerSuite/TestInvalidNoteID
+=== RUN   TestTrashHandlerSuite/TestPermanentlyDeleteNoteNotFound
+=== RUN   TestTrashHandlerSuite/TestPermanentlyDeleteNoteSuccess
+=== RUN   TestTrashHandlerSuite/TestRestoreNoteNotFound
+=== RUN   TestTrashHandlerSuite/TestRestoreNoteSuccess
+--- PASS: TestTrashHandlerSuite (0.00s)
+    --- PASS: TestTrashHandlerSuite/TestGetTrashSuccess (0.00s)
+    --- PASS: TestTrashHandlerSuite/TestGetTrashWorkspaceError (0.00s)
+    --- PASS: TestTrashHandlerSuite/TestInvalidNoteID (0.00s)
+    --- PASS: TestTrashHandlerSuite/TestPermanentlyDeleteNoteNotFound (0.00s)
+    --- PASS: TestTrashHandlerSuite/TestPermanentlyDeleteNoteSuccess (0.00s)
+    --- PASS: TestTrashHandlerSuite/TestRestoreNoteNotFound (0.00s)
+    --- PASS: TestTrashHandlerSuite/TestRestoreNoteSuccess (0.00s)
+PASS
+ok  	secure-notes	0.945s

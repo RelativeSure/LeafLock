@@ -68,7 +68,7 @@ describe('End-to-End User Flows', () => {
       render(<SecureNotesApp />);
 
       // Step 1: Register a new account
-      expect(screen.getByText('Secure Notes')).toBeInTheDocument();
+      expect(screen.getByText('LeafLock')).toBeInTheDocument();
       
       await user.click(screen.getByText(/need an account\? register/i));
       

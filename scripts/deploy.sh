@@ -1,6 +1,7 @@
 #!/bin/bash
+# Note: Prefer leaflock.sh k8s:deploy or docker:up for common flows. This script is a legacy orchestrator kept for specific pipelines.
 
-# Secure Notes Master Deployment Script
+# LeafLock Master Deployment Script
 # One-command deployment for all environments and platforms
 
 set -euo pipefail
@@ -84,7 +85,7 @@ check_dependencies() {
 
 # Function to show deployment options
 show_deployment_menu() {
-    echo -e "${CYAN}🎯 Secure Notes Deployment Options${NC}"
+    echo -e "${CYAN}🎯 LeafLock Deployment Options${NC}"
     echo
     echo "Choose your deployment target:"
     echo
@@ -195,7 +196,7 @@ deploy_docker() {
 # Function to deploy Kubernetes
 deploy_kubernetes() {
     local environment="${1:-dev}"
-    local domain="${2:-secure-notes.local}"
+    local domain="${2:-leaflock.app}"
     
     log_deploy "Starting Kubernetes deployment ($environment)..."
     

@@ -1,0 +1,156 @@
+# Development environment overrides
+
+# Reduce resource requirements for development
+backend:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  
+  # Disable HPA in development
+  autoscaling:
+    enabled: false
+  
+  # Disable PDB in development
+  podDisruptionBudget:
+    enabled: false
+
+frontend:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+  
+  # Disable HPA in development
+  autoscaling:
+    enabled: false
+  
+  # Disable PDB in development
+  podDisruptionBudget:
+    enabled: false
+
+# Development ingress with local domain
+ingress:
+  enabled: true
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+  hosts:
+    - host: leaflock.dev.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service:
+            name: frontend
+            port: 80
+        - path: /api
+          pathType: Prefix
+          service:
+            name: backend
+            port: 8080
+  tls: []  # No TLS in development
+
+# Development configuration
+config:
+  backend:
+    corsOrigins: "http://leaflock.dev.local,http://localhost:3000"
+
+# PostgreSQL development configuration
+postgresql:
+  auth:
+    postgresPassword: "dev-postgres-password"
+    password: "dev-notes-password"
+  
+  primary:
+    # Reduce resources for development
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    
+    # Smaller storage for development
+    persistence:
+      size: 5Gi
+    
+    # Development PostgreSQL configuration
+    extendedConfiguration: |
+      # Connection settings
+      max_connections = 50
+      shared_buffers = 128MB
+      effective_cache_size = 512MB
+      work_mem = 2MB
+      maintenance_work_mem = 32MB
+      
+      # Disable SSL in development
+      ssl = off
+      
+      # Reduced logging for development
+      log_statement = 'none'
+      log_duration = off
+      log_connections = off
+      log_disconnections = off
+      
+      # Extensions
+      shared_preload_libraries = 'pgcrypto'
+
+# Redis development configuration
+redis:
+  auth:
+    password: "dev-redis-password"
+  
+  master:
+    # Reduce resources for development
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+    
+    # Smaller storage for development
+    persistence:
+      size: 2Gi
+    
+    # Development Redis configuration
+    configuration: |
+      # Network and connection
+      bind 0.0.0.0
+      port 6379
+      
+      # Disable persistence in development for faster startup
+      appendonly no
+      
+      # Less restrictive security for development
+      # (keeping rename commands for debugging)
+      
+      # Memory management
+      maxmemory-policy allkeys-lru
+      
+      # Reduced logging
+      loglevel warning
+
+# Disable network policies in development for easier debugging
+networkPolicy:
+  enabled: false
+
+# Disable monitoring in development
+monitoring:
+  enabled: false
+
+# Development secrets (these should be overridden with proper values)
+secrets:
+  jwtSecret: "ZGV2LWp3dC1zZWNyZXQtY2hhbmdlLW1lLWluLXByb2R1Y3Rpb24tZm9yLXNlY3VyaXR5"
+  serverEncryptionKey: "ZGV2LXNlcnZlci1rZXktY2hhbmdlLW1lLWluLXByb2R1Y3Rpb24="

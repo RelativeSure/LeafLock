@@ -4,52 +4,36 @@ services:
   # PostgreSQL with automatic SSL setup
   postgres:
     image: postgres:15-alpine
-    container_name: secure-notes-postgres
+    container_name: leaflock-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}
       POSTGRES_DB: notes
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
-    command:
-      - postgres
-      - -c
-      - shared_preload_libraries=pgcrypto
-      - -c
-      - max_connections=100
-      - -c
-      - shared_buffers=256MB
-      - -c
-      - effective_cache_size=512MB
-      - -c
-      - maintenance_work_mem=64MB
-      - -c
-      - checkpoint_completion_target=0.7
-      - -c
-      - wal_buffers=16MB
-      - -c
-      - default_statistics_target=100
+    command: ["postgres"]
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - secure-notes-network
+      - leaflock-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1 -p 5432"]
+      interval: 5s
       timeout: 5s
-      retries: 5
+      start_period: 30s
+      retries: 20
     restart: unless-stopped
 
   # Redis for session management
   redis:
     image: redis:7-alpine
-    container_name: secure-notes-redis
+    container_name: leaflock-redis
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-ChangeThisRedisPassword123!}
     volumes:
       - redis_data:/data
     networks:
-      - secure-notes-network
+      - leaflock-network
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$REDIS_PASSWORD\" --no-auth-warning PING | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -60,7 +44,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: secure-notes-backend
+    container_name: leaflock-backend
     environment:
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}@postgres:5432/notes?sslmode=disable
       REDIS_URL: redis:6379
@@ -68,16 +52,21 @@ services:
       JWT_SECRET: ${JWT_SECRET:-ChangeThisToRandom64CharStringForProductionUsePlease!}
       SERVER_ENCRYPTION_KEY: ${SERVER_ENCRYPTION_KEY:-ChangeThisToRandom32CharString!}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost,https://localhost}
+      ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
+      ADMIN_USER_IDS_FILE: /run/config/notes.env
+      APP_ENV: ${APP_ENV:-development}
       PORT: 8080
     ports:
       - "8080:8080"
+    volumes:
+      - ./.env:/run/config/notes.env:ro
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     networks:
-      - secure-notes-network
+      - leaflock-network
     healthcheck:
       disable: true
     restart: unless-stopped
@@ -89,13 +78,14 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
-    container_name: secure-notes-frontend
+        VITE_ENABLE_ADMIN_PANEL: ${VITE_ENABLE_ADMIN_PANEL:-false}
+    container_name: leaflock-frontend
     ports:
       - "3000:80"
     depends_on:
       - backend
     networks:
-      - secure-notes-network
+      - leaflock-network
     healthcheck:
       test: ["CMD-SHELL", "pidof nginx > /dev/null || exit 1"]
       interval: 30s
@@ -106,7 +96,7 @@ services:
   # Nginx reverse proxy (optional - for production-like setup)
   nginx:
     image: nginx:alpine
-    container_name: secure-notes-nginx
+    container_name: leaflock-nginx
     ports:
       - "80:80"
       - "443:443"
@@ -116,7 +106,7 @@ services:
       - backend
       - frontend
     networks:
-      - secure-notes-network
+      - leaflock-network
     restart: unless-stopped
 
 
@@ -127,7 +117,7 @@ volumes:
     driver: local
 
 networks:
-  secure-notes-network:
+  leaflock-network:
     driver: bridge
     ipam:
       config:

@@ -2,17 +2,21 @@
 package main
 
 import (
-	"context"
-	"crypto/rand"
-	"crypto/subtle"
-	"database/sql"
-	"encoding/base64"
-	"encoding/hex"
-	"fmt"
-	"log"
-	"os"
-	"strings"
-	"time"
+    "context"
+    "crypto/rand"
+    "crypto/subtle"
+    "database/sql"
+    "encoding/base64"
+    "encoding/hex"
+    "fmt"
+    "log"
+    "os"
+    "strings"
+    "time"
+    "bufio"
+    "bytes"
+    "sync/atomic"
+    "strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -56,6 +60,26 @@ CREATE TABLE IF NOT EXISTS users (
     failed_attempts INT DEFAULT 0,
     locked_until TIMESTAMPTZ
 );
+
+-- Ensure admin flag exists
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false;
+
+-- RBAC roles
+CREATE TABLE IF NOT EXISTS roles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT UNIQUE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS user_roles (
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, role_id)
+);
+
+-- Seed default roles
+INSERT INTO roles (name)
+SELECT r FROM (VALUES ('admin'), ('user'), ('moderator'), ('auditor')) AS v(r)
+ON CONFLICT (name) DO NOTHING;
 
 -- Workspace table
 CREATE TABLE IF NOT EXISTS workspaces (
@@ -231,6 +255,25 @@ CREATE INDEX IF NOT EXISTS idx_search_keyword ON search_index(keyword_hash);
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 
+-- App settings key-value store
+CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE OR REPLACE FUNCTION update_settings_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_app_settings_updated_at') THEN
+        CREATE TRIGGER update_app_settings_updated_at BEFORE UPDATE ON app_settings
+        FOR EACH ROW EXECUTE FUNCTION update_settings_updated_at();
+    END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action, created_at DESC);
 
@@ -254,7 +297,11 @@ type Config struct {
 	MaxLoginAttempts int
 	LockoutDuration  time.Duration
 	SessionDuration  time.Duration
+	Environment      string
 }
+
+// Runtime feature toggles (in-memory; initialized from env at startup)
+var regEnabled atomic.Int32
 
 func LoadConfig() *Config {
 	// Generate secure random keys if not provided
@@ -290,6 +337,7 @@ func LoadConfig() *Config {
 		MaxLoginAttempts: 5,
 		LockoutDuration:  15 * time.Minute,
 		SessionDuration:  24 * time.Hour,
+		Environment:      getEnvOrDefault("APP_ENV", "development"),
 	}
 }
 
@@ -303,6 +351,171 @@ func getEnvOrDefault(key, defaultValue string) string {
 // Crypto Service for server-side encryption
 type CryptoService struct {
 	serverKey []byte
+}
+
+// RBAC helpers
+func HasRole(ctx context.Context, db Database, userID uuid.UUID, role string) bool {
+    // Admins always pass
+    var isAdmin bool
+    if err := db.QueryRow(ctx, "SELECT is_admin FROM users WHERE id = $1", userID).Scan(&isAdmin); err == nil && isAdmin {
+        return true
+    }
+    if strings.ToLower(role) == "admin" {
+        if isUserInAdminAllowlist(userID.String()) {
+            return true
+        }
+    }
+	// Check user_roles
+	var exists bool
+	_ = db.QueryRow(ctx, `
+        SELECT EXISTS (
+            SELECT 1 FROM user_roles ur
+            JOIN roles r ON ur.role_id = r.id
+            WHERE ur.user_id = $1 AND r.name = $2
+        )`, userID, role).Scan(&exists)
+	return exists
+}
+
+// --- Dynamic admin allowlist with hot-reload support ---
+var adminAllowlist atomic.Value // holds map[string]struct{}
+
+func init() {
+    adminAllowlist.Store(make(map[string]struct{}))
+}
+
+func currentAllowlist() map[string]struct{} {
+    v := adminAllowlist.Load()
+    if v == nil {
+        return map[string]struct{}{}
+    }
+    return v.(map[string]struct{})
+}
+
+func isUserInAdminAllowlist(userID string) bool {
+    if _, ok := currentAllowlist()[strings.TrimSpace(userID)]; ok {
+        return true
+    }
+    // Backward-compat: also check process env in case watcher not configured
+    envAdmins := strings.Split(os.Getenv("ADMIN_USER_IDS"), ",")
+    for _, a := range envAdmins {
+        if strings.TrimSpace(a) == strings.TrimSpace(userID) {
+            return true
+        }
+    }
+    return false
+}
+
+func loadAllowlistFromSources(envList string, filePath string) (map[string]struct{}, string) {
+    m := make(map[string]struct{})
+    var buf bytes.Buffer
+    // include env first
+    if envList != "" {
+        buf.WriteString("ENV:")
+        buf.WriteString(envList)
+        buf.WriteString("\n")
+        for _, a := range strings.Split(envList, ",") {
+            a = strings.TrimSpace(a)
+            if a != "" {
+                m[a] = struct{}{}
+            }
+        }
+    }
+    // include file if present
+    if filePath != "" {
+        if f, err := os.Open(filePath); err == nil {
+            defer f.Close()
+            scanner := bufio.NewScanner(f)
+            for scanner.Scan() {
+                line := strings.TrimSpace(scanner.Text())
+                if line == "" || strings.HasPrefix(line, "#") { continue }
+                if strings.HasPrefix(line, "ADMIN_USER_IDS=") {
+                    val := strings.TrimSpace(strings.TrimPrefix(line, "ADMIN_USER_IDS="))
+                    // strip quotes if present
+                    val = strings.Trim(val, "\"'")
+                    buf.WriteString("FILE:")
+                    buf.WriteString(val)
+                    buf.WriteString("\n")
+                    for _, a := range strings.Split(val, ",") {
+                        a = strings.TrimSpace(a)
+                        if a != "" {
+                            m[a] = struct{}{}
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return m, buf.String()
+}
+
+func startAdminAllowlistRefresher() {
+    filePath := strings.TrimSpace(os.Getenv("ADMIN_USER_IDS_FILE"))
+    // initial load
+    m, _ := loadAllowlistFromSources(os.Getenv("ADMIN_USER_IDS"), filePath)
+    adminAllowlist.Store(m)
+    go func() {
+        var lastSig string
+        ticker := time.NewTicker(5 * time.Second)
+        defer ticker.Stop()
+        for range ticker.C {
+            m, sig := loadAllowlistFromSources(os.Getenv("ADMIN_USER_IDS"), filePath)
+            if sig != lastSig {
+                adminAllowlist.Store(m)
+                lastSig = sig
+                log.Printf("🔄 Admin allowlist reloaded (%d entries)", len(m))
+            }
+        }
+    }()
+}
+
+func RequireRole(db Database, role string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		v := c.Locals("user_id")
+		if v == nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
+		}
+		var uid uuid.UUID
+		switch t := v.(type) {
+		case uuid.UUID:
+			uid = t
+		case string:
+			parsed, err := uuid.Parse(t)
+			if err != nil {
+				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Forbidden"})
+			}
+			uid = parsed
+		default:
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Forbidden"})
+		}
+		if !HasRole(c.Context(), db, uid, role) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Forbidden"})
+		}
+		return c.Next()
+	}
+}
+
+// helper: return nil if sql.NullTime is invalid
+func nilIfInvalid(t sql.NullTime) any {
+    if t.Valid {
+        return t.Time
+    }
+    return nil
+}
+
+func csvEscape(s string) string {
+    // Escape quotes and wrap in quotes if needed
+    if strings.ContainsAny(s, ",\n\r\"") {
+        s = strings.ReplaceAll(s, "\"", "\"\"")
+        return "\"" + s + "\""
+    }
+    return s
+}
+
+func formatNullTime(t sql.NullTime) string {
+    if t.Valid {
+        return t.Time.Format(time.RFC3339)
+    }
+    return ""
 }
 
 func NewCryptoService(key []byte) *CryptoService {
@@ -423,11 +636,10 @@ type LoginRequest struct {
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
-	// Check if registration is enabled
-	enableRegistration := getEnvOrDefault("ENABLE_REGISTRATION", "true")
-	if enableRegistration != "true" {
-		return c.Status(403).JSON(fiber.Map{"error": "Registration is currently disabled"})
-	}
+    // Check if registration is enabled (runtime toggle)
+    if regEnabled.Load() != 1 {
+        return c.Status(403).JSON(fiber.Map{"error": "Registration is currently disabled"})
+    }
 
 	var req RegisterRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -660,8 +872,8 @@ func (h *AuthHandler) logAudit(ctx context.Context, userID uuid.UUID, action, re
 
 // Notes Handler
 type NotesHandler struct {
-	db     Database
-	crypto *CryptoService
+    db     Database
+    crypto *CryptoService
 }
 
 type CreateNoteRequest struct {
@@ -692,7 +904,7 @@ func (h *NotesHandler) GetNotes(c *fiber.Ctx) error {
 		WHERE workspace_id = $1 AND deleted_at IS NULL
 		ORDER BY updated_at DESC`,
 		workspaceID)
-	
+
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch notes"})
 	}
@@ -893,7 +1105,7 @@ func (h *NotesHandler) GetTrash(c *fiber.Ctx) error {
 		WHERE workspace_id = $1 AND deleted_at IS NOT NULL
 		ORDER BY deleted_at DESC`,
 		workspaceID)
-	
+
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch trash"})
 	}
@@ -1002,7 +1214,7 @@ func (h *TagsHandler) GetTags(c *fiber.Ctx) error {
 		WHERE user_id = $1
 		ORDER BY name_encrypted ASC`,
 		userID)
-	
+
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch tags"})
 	}
@@ -1221,7 +1433,7 @@ func (h *TagsHandler) GetNotesByTag(c *fiber.Ctx) error {
 		WHERE t.id = $1 AND w.owner_id = $2 AND n.deleted_at IS NULL
 		ORDER BY n.updated_at DESC`,
 		tagID, userID)
-	
+
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch notes"})
 	}
@@ -1281,23 +1493,23 @@ func JWTMiddleware(secret []byte) fiber.Handler {
 		}
 
 		claims := parsed.Claims.(jwt.MapClaims)
-		
+
 		// Safely extract user_id claim
 		userIDClaim, exists := claims["user_id"]
 		if !exists {
 			return c.Status(401).JSON(fiber.Map{"error": "Missing user_id claim"})
 		}
-		
+
 		userIDStr, ok := userIDClaim.(string)
 		if !ok {
 			return c.Status(401).JSON(fiber.Map{"error": "Invalid user_id claim type"})
 		}
-		
+
 		userID, err := uuid.Parse(userIDStr)
 		if err != nil {
 			return c.Status(401).JSON(fiber.Map{"error": "Invalid user_id format"})
 		}
-		
+
 		c.Locals("user_id", userID)
 
 		return c.Next()
@@ -1325,7 +1537,7 @@ func startCleanupService(db Database) {
 
 func runCleanupTasks(ctx context.Context, db Database) {
 	log.Println("🧹 Running scheduled cleanup tasks...")
-	
+
 	// Clean up expired sessions
 	result1, err1 := db.Exec(ctx, "SELECT cleanup_expired_sessions()")
 	if err1 != nil {
@@ -1345,21 +1557,24 @@ func runCleanupTasks(ctx context.Context, db Database) {
 	// Get count of deleted notes
 	var deletedCount int
 	db.QueryRow(ctx, "SELECT COUNT(*) FROM notes WHERE deleted_at < NOW() - INTERVAL '30 days' AND deleted_at IS NOT NULL").Scan(&deletedCount)
-	
+
 	if deletedCount > 0 {
 		log.Printf("🗑️ Permanently deleted %d notes older than 30 days", deletedCount)
 	}
 
 	log.Println("🎯 Cleanup tasks completed successfully")
-	
+
 	// Prevent unused variable warnings
 	_ = result1
 	_ = result2
 }
 
 func main() {
-	// Load configuration
-	config := LoadConfig()
+    // Load configuration
+    config := LoadConfig()
+
+    // Initialize runtime toggle from env (default true)
+    if strings.ToLower(strings.TrimSpace(getEnvOrDefault("ENABLE_REGISTRATION", "true"))) == "true" { regEnabled.Store(1) } else { regEnabled.Store(0) }
 
 	// Setup database with automatic migrations
 	db, err := SetupDatabase(config.DatabaseURL)
@@ -1379,7 +1594,10 @@ func main() {
 	// Initialize crypto service
 	crypto := NewCryptoService(config.EncryptionKey)
 
-	// Create Fiber app with security middleware
+    // Start dynamic admin allowlist refresher (hot-reloads from file if mounted)
+    startAdminAllowlistRefresher()
+
+    // Create Fiber app with security middleware
 	app := fiber.New(fiber.Config{
 		DisableStartupMessage: false,
 		BodyLimit:             512 * 1024, // 512KB body size limit
@@ -1430,7 +1648,19 @@ func main() {
 
 	// Public routes
 	api := app.Group("/api/v1")
-	api.Post("/auth/register", authHandler.Register)
+	// Registration rate limiting when not running locally
+	if env := strings.ToLower(strings.TrimSpace(config.Environment)); env != "development" && env != "local" {
+		regLimiter := limiter.New(limiter.Config{
+			Max:        5,
+			Expiration: 1 * time.Minute,
+			KeyGenerator: func(c *fiber.Ctx) string {
+				return c.IP()
+			},
+		})
+		api.Post("/auth/register", regLimiter, authHandler.Register)
+	} else {
+		api.Post("/auth/register", authHandler.Register)
+	}
 	api.Post("/auth/login", authHandler.Login)
 
 	// Health checks
@@ -1472,28 +1702,610 @@ func main() {
 
 	// Protected routes
 	protected := api.Group("/", JWTMiddleware(config.JWTSecret))
-	
+
 	// Notes endpoints
 	protected.Get("/notes", notesHandler.GetNotes)
 	protected.Get("/notes/:id", notesHandler.GetNote)
 	protected.Post("/notes", notesHandler.CreateNote)
 	protected.Put("/notes/:id", notesHandler.UpdateNote)
 	protected.Delete("/notes/:id", notesHandler.DeleteNote)
-	
+
 	// Trash endpoints
 	protected.Get("/trash", notesHandler.GetTrash)
 	protected.Put("/trash/:id/restore", notesHandler.RestoreNote)
 	protected.Delete("/trash/:id", notesHandler.PermanentlyDeleteNote)
-	
+
 	// Tags endpoints
 	protected.Get("/tags", tagsHandler.GetTags)
 	protected.Post("/tags", tagsHandler.CreateTag)
 	protected.Delete("/tags/:id", tagsHandler.DeleteTag)
 	protected.Get("/tags/:id/notes", tagsHandler.GetNotesByTag)
-	
+
 	// Note-tag assignment endpoints
 	protected.Post("/notes/:id/tags", tagsHandler.AssignTagToNote)
 	protected.Delete("/notes/:id/tags/:tag_id", tagsHandler.RemoveTagFromNote)
+
+	// Admin-only Swagger docs (JWT + RBAC admin)
+	docs := api.Group("/docs", JWTMiddleware(config.JWTSecret), RequireRole(db, "admin"))
+	docs.Get("/", swaggerUIHandler)
+	docs.Get("/openapi.json", swaggerJSONHandler)
+
+    // Seed app_settings.registration_enabled from env if missing
+    func() {
+        ctx := context.Background()
+        val := "false"; if regEnabled.Load() == 1 { val = "true" }
+        _, _ = db.Exec(ctx, `INSERT INTO app_settings(key, value) VALUES('registration_enabled', $1)
+                             ON CONFLICT (key) DO NOTHING`, val)
+        // If present, load from DB to override runtime
+        var dbVal string
+        if err := db.QueryRow(ctx, `SELECT value FROM app_settings WHERE key='registration_enabled'`).Scan(&dbVal); err == nil {
+            if strings.ToLower(strings.TrimSpace(dbVal)) == "true" { regEnabled.Store(1) } else { regEnabled.Store(0) }
+        }
+    }()
+
+    // Admin API (RBAC)
+    admin := api.Group("/admin", JWTMiddleware(config.JWTSecret), RequireRole(db, "admin"))
+    admin.Get("/health", func(c *fiber.Ctx) error { return c.JSON(fiber.Map{"status": "ok"}) })
+
+    // Registration setting endpoints
+    admin.Get("/settings/registration", func(c *fiber.Ctx) error {
+        // Prefer DB value if present
+        var dbVal string
+        if err := db.QueryRow(c.Context(), `SELECT value FROM app_settings WHERE key='registration_enabled'`).Scan(&dbVal); err == nil {
+            if strings.ToLower(strings.TrimSpace(dbVal)) == "true" { regEnabled.Store(1) } else { regEnabled.Store(0) }
+        }
+        return c.JSON(fiber.Map{"enabled": regEnabled.Load() == 1})
+    })
+    admin.Put("/settings/registration", func(c *fiber.Ctx) error {
+        var body struct{ Enabled bool `json:"enabled"` }
+        if err := c.BodyParser(&body); err != nil {
+            return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+        }
+        if body.Enabled { regEnabled.Store(1) } else { regEnabled.Store(0) }
+        // Persist to DB
+        val := "false"; if regEnabled.Load() == 1 { val = "true" }
+        _, _ = db.Exec(c.Context(), `INSERT INTO app_settings(key, value) VALUES('registration_enabled', $1)
+                  ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, val)
+        return c.JSON(fiber.Map{"enabled": regEnabled.Load() == 1})
+    })
+
+    // List users with basic metadata for admin UI (supports q, limit, offset)
+	admin.Get("/users", func(c *fiber.Ctx) error {
+        ctx := c.Context()
+
+        // Parse query params
+        q := strings.TrimSpace(c.Query("q"))
+        limit := 25
+        offset := 0
+        if v := strings.TrimSpace(c.Query("limit")); v != "" {
+            if n, err := strconv.Atoi(v); err == nil {
+                if n < 1 {
+                    n = 1
+                }
+                if n > 100 {
+                    n = 100
+                }
+                limit = n
+            }
+        }
+        if v := strings.TrimSpace(c.Query("offset")); v != "" {
+            if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+                offset = n
+            }
+        }
+
+        // Additional filters
+		role := strings.TrimSpace(c.Query("role"))
+		rolesParam := strings.TrimSpace(c.Query("roles")) // comma-separated
+		var rolesList []string
+		if rolesParam != "" {
+			for _, r := range strings.Split(rolesParam, ",") {
+				r = strings.TrimSpace(r)
+				if r != "" {
+					rolesList = append(rolesList, r)
+				}
+			}
+		}
+        adminParam := strings.ToLower(strings.TrimSpace(c.Query("admin"))) // "true" | "false" | ""
+        regFrom := strings.TrimSpace(c.Query("reg_from"))
+        regTo := strings.TrimSpace(c.Query("reg_to"))
+        lastFrom := strings.TrimSpace(c.Query("last_from"))
+        lastTo := strings.TrimSpace(c.Query("last_to"))
+        hasLogin := strings.ToLower(strings.TrimSpace(c.Query("has_login"))) == "true"
+        hasIP := strings.ToLower(strings.TrimSpace(c.Query("has_ip"))) == "true"
+
+        sort := strings.ToLower(strings.TrimSpace(c.Query("sort")))
+        order := strings.ToUpper(strings.TrimSpace(c.Query("order")))
+        if order != "ASC" && order != "DESC" { order = "DESC" }
+        switch sort {
+        case "email", "created_at", "last_login", "is_admin":
+            // ok
+        default:
+            sort = "created_at"
+        }
+
+        // Build dynamic WHERE
+        var conds []string
+        var args []any
+        add := func(clause string, val any) { conds = append(conds, clause); args = append(args, val) }
+
+        if q != "" {
+            add("LOWER(email) LIKE $%d", "%"+strings.ToLower(q)+"%")
+        }
+		if role != "" {
+			add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = $%d)", role)
+		}
+		if len(rolesList) > 0 {
+			// any of the roles
+			add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = ANY($%d))", rolesList)
+		}
+        if adminParam == "true" {
+            conds = append(conds, "is_admin = TRUE")
+        } else if adminParam == "false" {
+            conds = append(conds, "is_admin = FALSE")
+        }
+        if regFrom != "" {
+            add("created_at >= $%d", regFrom)
+        }
+        if regTo != "" {
+            add("created_at <= $%d", regTo)
+        }
+        if lastFrom != "" {
+            add("last_login >= $%d", lastFrom)
+        }
+        if lastTo != "" {
+            add("last_login <= $%d", lastTo)
+        }
+        if hasLogin {
+            conds = append(conds, "last_login IS NOT NULL")
+        }
+        if hasIP {
+            conds = append(conds, "EXISTS (SELECT 1 FROM sessions s WHERE s.user_id = users.id)")
+        }
+
+        // Build WHERE with right placeholders
+        where := ""
+        if len(conds) > 0 {
+            // Replace $%d with actual placeholder numbers
+            n := 1
+            parts := make([]string, 0, len(conds))
+            for _, cnd := range conds {
+                if strings.Contains(cnd, "$%d") {
+                    cnd = fmt.Sprintf(cnd, n)
+                    n++
+                }
+                parts = append(parts, cnd)
+            }
+            where = "WHERE " + strings.Join(parts, " AND ")
+        }
+
+        // Query rows
+		rows, err := db.Query(ctx, fmt.Sprintf(`
+			SELECT id, email_encrypted, created_at, last_login, is_admin
+			FROM users
+			%s
+			ORDER BY %s %s
+			LIMIT %d OFFSET %d`, where, sort, order, limit, offset), args...)
+        if err != nil {
+            return c.Status(500).JSON(fiber.Map{"error": "query failed"})
+        }
+        defer rows.Close()
+
+        type userRow struct {
+            ID       uuid.UUID
+            EmailEnc []byte
+            Created  time.Time
+            Last     sql.NullTime
+            IsAdmin  bool
+        }
+        var users []userRow
+        var userIDs []uuid.UUID
+        for rows.Next() {
+            var r userRow
+            if err := rows.Scan(&r.ID, &r.EmailEnc, &r.Created, &r.Last, &r.IsAdmin); err == nil {
+                users = append(users, r)
+                userIDs = append(userIDs, r.ID)
+            }
+        }
+
+        // Total count with same filter
+        var total int
+        // Total count
+        if where != "" {
+            _ = db.QueryRow(ctx, fmt.Sprintf(`SELECT COUNT(*) FROM users %s`, where), args...).Scan(&total)
+        } else {
+            _ = db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&total)
+        }
+
+        // Load roles only for returned users
+        rolesByUser := make(map[uuid.UUID][]string)
+        if len(userIDs) > 0 {
+            // Build IN clause
+            params := []any{}
+            placeholders := []string{}
+            for i, id := range userIDs {
+                params = append(params, id)
+                placeholders = append(placeholders, "$"+strconv.Itoa(i+1))
+            }
+            roleSQL := `SELECT ur.user_id, r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id IN (` + strings.Join(placeholders, ",") + `)`
+            if rrows, err := db.Query(ctx, roleSQL, params...); err == nil {
+                defer rrows.Close()
+                for rrows.Next() {
+                    var uid uuid.UUID
+                    var name string
+                    if err := rrows.Scan(&uid, &name); err == nil {
+                        rolesByUser[uid] = append(rolesByUser[uid], name)
+                    }
+                }
+            }
+        }
+
+        // Build response with decrypted fields and last/registration IPs
+        var result []map[string]any
+        for _, u := range users {
+            // decrypt email
+            email := ""
+            if len(u.EmailEnc) > 0 {
+                if pt, err := crypto.Decrypt(u.EmailEnc); err == nil {
+                    email = string(pt)
+                }
+            }
+
+            // registration IP from audit log
+            var regIPEnc []byte
+            _ = db.QueryRow(ctx, `SELECT ip_address_encrypted FROM audit_log WHERE user_id=$1 AND action='user.registered' ORDER BY created_at ASC LIMIT 1`, u.ID).Scan(&regIPEnc)
+            regIP := ""
+            if len(regIPEnc) > 0 {
+                if pt, err := crypto.Decrypt(regIPEnc); err == nil {
+                    regIP = string(pt)
+                }
+            }
+
+            // last used IP from most recent session
+            var lastIPEnc []byte
+            _ = db.QueryRow(ctx, `SELECT ip_address_encrypted FROM sessions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1`, u.ID).Scan(&lastIPEnc)
+            lastIP := ""
+            if len(lastIPEnc) > 0 {
+                if pt, err := crypto.Decrypt(lastIPEnc); err == nil {
+                    lastIP = string(pt)
+                }
+            }
+
+            roles := rolesByUser[u.ID]
+            if u.IsAdmin {
+                roles = append(roles, "admin")
+            }
+
+            result = append(result, fiber.Map{
+                "user_id":        u.ID,
+                "email":          email,
+                "is_admin":       u.IsAdmin,
+                "roles":          roles,
+                "created_at":     u.Created,
+                "last_login":     nilIfInvalid(u.Last),
+                "registration_ip": regIP,
+                "last_ip":        lastIP,
+            })
+        }
+
+		return c.JSON(fiber.Map{"users": result, "total": total, "limit": limit, "offset": offset, "q": q})
+	})
+
+	// CSV export with same filters
+	admin.Get("/users.csv", func(c *fiber.Ctx) error {
+		// Reuse the JSON handler by calling it internally would require refactor; instead duplicate minimal logic
+		ctx := context.Background()
+		// Collect filters
+		q := strings.TrimSpace(c.Query("q"))
+		role := strings.TrimSpace(c.Query("role"))
+		rolesParam := strings.TrimSpace(c.Query("roles"))
+		var rolesList []string
+		if rolesParam != "" { for _, r := range strings.Split(rolesParam, ",") { r = strings.TrimSpace(r); if r != "" { rolesList = append(rolesList, r) } } }
+		adminParam := strings.ToLower(strings.TrimSpace(c.Query("admin")))
+		regFrom := strings.TrimSpace(c.Query("reg_from"))
+		regTo := strings.TrimSpace(c.Query("reg_to"))
+		lastFrom := strings.TrimSpace(c.Query("last_from"))
+		lastTo := strings.TrimSpace(c.Query("last_to"))
+		hasLogin := strings.ToLower(strings.TrimSpace(c.Query("has_login"))) == "true"
+		hasIP := strings.ToLower(strings.TrimSpace(c.Query("has_ip"))) == "true"
+		sort := strings.ToLower(strings.TrimSpace(c.Query("sort")))
+		order := strings.ToUpper(strings.TrimSpace(c.Query("order")))
+		if order != "ASC" && order != "DESC" { order = "DESC" }
+		switch sort { case "email","created_at","last_login","is_admin": default: sort = "created_at" }
+		// Build WHERE
+		var conds []string; var args []any
+		add := func(clause string, val any){ conds = append(conds, clause); args = append(args, val) }
+		if q != "" { add("LOWER(email) LIKE $%d", "%"+strings.ToLower(q)+"%") }
+		if role != "" { add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = $%d)", role) }
+		if len(rolesList) > 0 { add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = ANY($%d))", rolesList) }
+		if adminParam == "true" { conds = append(conds, "is_admin = TRUE") } else if adminParam == "false" { conds = append(conds, "is_admin = FALSE") }
+		if regFrom != "" { add("created_at >= $%d", regFrom) }
+		if regTo != "" { add("created_at <= $%d", regTo) }
+		if lastFrom != "" { add("last_login >= $%d", lastFrom) }
+		if lastTo != "" { add("last_login <= $%d", lastTo) }
+		if hasLogin { conds = append(conds, "last_login IS NOT NULL") }
+		if hasIP { conds = append(conds, "EXISTS (SELECT 1 FROM sessions s WHERE s.user_id = users.id)") }
+		where := ""; if len(conds) > 0 { n := 1; parts := make([]string,0,len(conds)); for _, cnd := range conds { if strings.Contains(cnd, "$%d") { cnd = fmt.Sprintf(cnd, n); n++ } ; parts = append(parts, cnd) } ; where = "WHERE "+strings.Join(parts, " AND ") }
+		// Query
+		rows, err := db.Query(ctx, fmt.Sprintf(`
+			SELECT id, email_encrypted, created_at, last_login, is_admin
+			FROM users
+			%s
+			ORDER BY %s %s`, where, sort, order), args...)
+		if err != nil { return c.Status(500).JSON(fiber.Map{"error":"query failed"}) }
+		defer rows.Close()
+		type userRow struct{ ID uuid.UUID; EmailEnc []byte; Created time.Time; Last sql.NullTime; IsAdmin bool }
+		var buf bytes.Buffer
+		buf.WriteString("user_id,email,is_admin,roles,created_at,last_login,registration_ip,last_ip\n")
+		for rows.Next() {
+			var r userRow; if err := rows.Scan(&r.ID,&r.EmailEnc,&r.Created,&r.Last,&r.IsAdmin); err!=nil { continue }
+			email := ""; if len(r.EmailEnc)>0 { if pt,err := crypto.Decrypt(r.EmailEnc); err==nil { email=string(pt) } }
+			var regIPEnc []byte; _ = db.QueryRow(ctx, `SELECT ip_address_encrypted FROM audit_log WHERE user_id=$1 AND action='user.registered' ORDER BY created_at ASC LIMIT 1`, r.ID).Scan(&regIPEnc)
+			regIP := ""; if len(regIPEnc)>0 { if pt,err := crypto.Decrypt(regIPEnc); err==nil { regIP=string(pt) } }
+			var lastIPEnc []byte; _ = db.QueryRow(ctx, `SELECT ip_address_encrypted FROM sessions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1`, r.ID).Scan(&lastIPEnc)
+			lastIP := ""; if len(lastIPEnc)>0 { if pt,err := crypto.Decrypt(lastIPEnc); err==nil { lastIP=string(pt) } }
+			// roles
+			roles := []string{}
+			rr, _ := db.Query(ctx, `SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = $1`, r.ID)
+			for rr.Next() { var name string; if err := rr.Scan(&name); err==nil { roles = append(roles, name) } }
+			if r.IsAdmin { roles = append(roles, "admin") }
+			// write CSV row
+			buf.WriteString(fmt.Sprintf("%s,%s,%t,\"%s\",%s,%s,%s,%s\n",
+				r.ID.String(),
+				csvEscape(email),
+				r.IsAdmin,
+				strings.Join(roles, ";"),
+				r.Created.Format(time.RFC3339),
+				formatNullTime(r.Last),
+				csvEscape(regIP),
+				csvEscape(lastIP),
+			))
+		}
+		c.Set(fiber.HeaderContentType, "text/csv; charset=utf-8")
+		c.Set(fiber.HeaderContentDisposition, "attachment; filename=users.csv")
+		return c.Send(buf.Bytes())
+	})
+	admin.Put("/users/:id/admin", func(c *fiber.Ctx) error {
+		id, err := uuid.Parse(c.Params("id"))
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "invalid id"})
+		}
+		var body struct {
+			Admin bool `json:"admin"`
+		}
+		if err := c.BodyParser(&body); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "bad request"})
+		}
+		_, err = db.Exec(c.Context(), "UPDATE users SET is_admin = $1 WHERE id = $2", body.Admin, id)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "update failed"})
+		}
+		return c.JSON(fiber.Map{"ok": true})
+	})
+
+	admin.Get("/roles", func(c *fiber.Ctx) error {
+		rows, err := db.Query(c.Context(), "SELECT name FROM roles ORDER BY name")
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "query failed"})
+		}
+		defer rows.Close()
+		var list []string
+		for rows.Next() {
+			var name string
+			if err := rows.Scan(&name); err == nil {
+				list = append(list, name)
+			}
+		}
+		return c.JSON(fiber.Map{"roles": list})
+	})
+
+	admin.Get("/users/:id/roles", func(c *fiber.Ctx) error {
+		id, err := uuid.Parse(c.Params("id"))
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "invalid id"})
+		}
+		rows, err := db.Query(c.Context(), `SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = $1`, id)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "query failed"})
+		}
+		defer rows.Close()
+		var list []string
+		for rows.Next() {
+			var name string
+			if err := rows.Scan(&name); err == nil {
+				list = append(list, name)
+			}
+		}
+		return c.JSON(fiber.Map{"roles": list})
+	})
+
+	admin.Post("/users/:id/roles", func(c *fiber.Ctx) error {
+		id, err := uuid.Parse(c.Params("id"))
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "invalid id"})
+		}
+		var body struct {
+			Role string `json:"role"`
+		}
+		if err := c.BodyParser(&body); err != nil || body.Role == "" {
+			return c.Status(400).JSON(fiber.Map{"error": "bad request"})
+		}
+		var roleID uuid.UUID
+		if err := db.QueryRow(c.Context(), "SELECT id FROM roles WHERE name=$1", body.Role).Scan(&roleID); err != nil {
+			return c.Status(404).JSON(fiber.Map{"error": "role not found"})
+		}
+		if _, err := db.Exec(c.Context(), "INSERT INTO user_roles (user_id, role_id) VALUES ($1,$2) ON CONFLICT DO NOTHING", id, roleID); err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "assign failed"})
+		}
+		return c.JSON(fiber.Map{"ok": true})
+	})
+
+	admin.Delete("/users/:id/roles/:role", func(c *fiber.Ctx) error {
+		id, err := uuid.Parse(c.Params("id"))
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "invalid id"})
+		}
+		role := c.Params("role")
+		var roleID uuid.UUID
+		if err := db.QueryRow(c.Context(), "SELECT id FROM roles WHERE name=$1", role).Scan(&roleID); err != nil {
+			return c.Status(404).JSON(fiber.Map{"error": "role not found"})
+		}
+		if _, err := db.Exec(c.Context(), "DELETE FROM user_roles WHERE user_id=$1 AND role_id=$2", id, roleID); err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "remove failed"})
+		}
+		return c.JSON(fiber.Map{"ok": true})
+	})
+
+	// Bulk assign/remove roles to users matching filters
+	admin.Post("/users/roles/bulk", func(c *fiber.Ctx) error {
+		type bulkReq struct {
+			Role   string `json:"role"`
+			Action string `json:"action"` // "assign" or "remove"
+			Q        string `json:"q"`
+			RoleOne  string `json:"role_filter"`
+			Roles    []string `json:"roles"`
+			Admin    string `json:"admin"`
+			RegFrom  string `json:"reg_from"`
+			RegTo    string `json:"reg_to"`
+			LastFrom string `json:"last_from"`
+			LastTo   string `json:"last_to"`
+			HasLogin bool   `json:"has_login"`
+			HasIP    bool   `json:"has_ip"`
+		}
+		var req bulkReq
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "bad request"})
+		}
+		if strings.TrimSpace(req.Role) == "" {
+			return c.Status(400).JSON(fiber.Map{"error": "role required"})
+		}
+		if req.Action != "assign" && req.Action != "remove" {
+			return c.Status(400).JSON(fiber.Map{"error": "invalid action"})
+		}
+
+		// Lookup role id
+		var roleID uuid.UUID
+		if err := db.QueryRow(c.Context(), "SELECT id FROM roles WHERE name=$1", req.Role).Scan(&roleID); err != nil {
+			return c.Status(404).JSON(fiber.Map{"error": "role not found"})
+		}
+
+		// Build WHERE conditions similar to list endpoint
+		ctx := context.Background()
+		var conds []string
+		var args []any
+		add := func(clause string, val any) { conds = append(conds, clause); args = append(args, val) }
+
+		if q := strings.TrimSpace(req.Q); q != "" { add("LOWER(email) LIKE $%d", "%"+strings.ToLower(q)+"%") }
+		if rf := strings.TrimSpace(req.RoleOne); rf != "" { add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = $%d)", rf) }
+		if len(req.Roles) > 0 { add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = ANY($%d))", req.Roles) }
+		if strings.ToLower(strings.TrimSpace(req.Admin)) == "true" { conds = append(conds, "is_admin = TRUE") }
+		if strings.ToLower(strings.TrimSpace(req.Admin)) == "false" { conds = append(conds, "is_admin = FALSE") }
+		if v := strings.TrimSpace(req.RegFrom); v != "" { add("created_at >= $%d", v) }
+		if v := strings.TrimSpace(req.RegTo); v != "" { add("created_at <= $%d", v) }
+		if v := strings.TrimSpace(req.LastFrom); v != "" { add("last_login >= $%d", v) }
+		if v := strings.TrimSpace(req.LastTo); v != "" { add("last_login <= $%d", v) }
+		if req.HasLogin { conds = append(conds, "last_login IS NOT NULL") }
+		if req.HasIP { conds = append(conds, "EXISTS (SELECT 1 FROM sessions s WHERE s.user_id = users.id)") }
+
+		where := ""
+		if len(conds) > 0 {
+			n := 1
+			parts := make([]string, 0, len(conds))
+			for _, cnd := range conds {
+				if strings.Contains(cnd, "$%d") { cnd = fmt.Sprintf(cnd, n); n++ }
+				parts = append(parts, cnd)
+			}
+			where = "WHERE " + strings.Join(parts, " AND ")
+		}
+
+		var affected int64
+		if req.Action == "assign" {
+			// Insert for all matching users
+			sql := fmt.Sprintf(`
+				INSERT INTO user_roles (user_id, role_id)
+				SELECT u.id, $1 FROM users u
+				%s
+				AND NOT EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_id = $1)`, where)
+			params := make([]interface{}, 0, 1+len(args))
+			params = append(params, roleID)
+			for _, a := range args { params = append(params, a) }
+			ct, err := db.Exec(ctx, sql, params...)
+			if err != nil { return c.Status(500).JSON(fiber.Map{"error": "assign failed"}) }
+			affected = ct.RowsAffected()
+		} else {
+			// Delete for all matching users
+			sql := fmt.Sprintf(`
+				DELETE FROM user_roles ur USING users u
+				%s AND ur.user_id = u.id AND ur.role_id = $1`, where)
+			params := make([]interface{}, 0, 1+len(args))
+			params = append(params, roleID)
+			for _, a := range args { params = append(params, a) }
+			ct, err := db.Exec(ctx, sql, params...)
+			if err != nil { return c.Status(500).JSON(fiber.Map{"error": "remove failed"}) }
+			affected = ct.RowsAffected()
+		}
+
+		return c.JSON(fiber.Map{"ok": true, "affected": affected})
+	})
+
+	// Bulk grant/revoke is_admin to users matching filters
+	admin.Post("/users/admin/bulk", func(c *fiber.Ctx) error {
+		type bulkReq struct {
+			Action   string `json:"action"` // "grant" or "revoke"
+			Q        string `json:"q"`
+			RoleOne  string `json:"role_filter"`
+			Roles    []string `json:"roles"`
+			Admin    string `json:"admin"`
+			RegFrom  string `json:"reg_from"`
+			RegTo    string `json:"reg_to"`
+			LastFrom string `json:"last_from"`
+			LastTo   string `json:"last_to"`
+			HasLogin bool   `json:"has_login"`
+			HasIP    bool   `json:"has_ip"`
+		}
+		var req bulkReq
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "bad request"})
+		}
+		if req.Action != "grant" && req.Action != "revoke" {
+			return c.Status(400).JSON(fiber.Map{"error": "invalid action"})
+		}
+
+		ctx := c.Context()
+		var conds []string
+		var args []any
+		add := func(clause string, val any) { conds = append(conds, clause); args = append(args, val) }
+
+		if q := strings.TrimSpace(req.Q); q != "" { add("LOWER(email) LIKE $%d", "%"+strings.ToLower(q)+"%") }
+		if rf := strings.TrimSpace(req.RoleOne); rf != "" { add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = $%d)", rf) }
+		if len(req.Roles) > 0 { add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = ANY($%d))", req.Roles) }
+		if strings.ToLower(strings.TrimSpace(req.Admin)) == "true" { conds = append(conds, "is_admin = TRUE") }
+		if strings.ToLower(strings.TrimSpace(req.Admin)) == "false" { conds = append(conds, "is_admin = FALSE") }
+		if v := strings.TrimSpace(req.RegFrom); v != "" { add("created_at >= $%d", v) }
+		if v := strings.TrimSpace(req.RegTo); v != "" { add("created_at <= $%d", v) }
+		if v := strings.TrimSpace(req.LastFrom); v != "" { add("last_login >= $%d", v) }
+		if v := strings.TrimSpace(req.LastTo); v != "" { add("last_login <= $%d", v) }
+		if req.HasLogin { conds = append(conds, "last_login IS NOT NULL") }
+		if req.HasIP { conds = append(conds, "EXISTS (SELECT 1 FROM sessions s WHERE s.user_id = users.id)") }
+
+		where := ""
+		if len(conds) > 0 {
+			n := 1
+			parts := make([]string, 0, len(conds))
+			for _, cnd := range conds {
+				if strings.Contains(cnd, "$%d") { cnd = fmt.Sprintf(cnd, n); n++ }
+				parts = append(parts, cnd)
+			}
+			where = "WHERE " + strings.Join(parts, " AND ")
+		}
+
+		set := "FALSE"
+		if req.Action == "grant" { set = "TRUE" }
+		sql := fmt.Sprintf("UPDATE users SET is_admin = %s %s", set, where)
+		ct, err := db.Exec(ctx, sql, args...)
+		if err != nil { return c.Status(500).JSON(fiber.Map{"error": "bulk admin update failed"}) }
+		return c.JSON(fiber.Map{"ok": true, "affected": ct.RowsAffected()})
+	})
 
 	// Start background cleanup service
 	startCleanupService(db)

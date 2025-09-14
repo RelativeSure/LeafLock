@@ -278,9 +278,9 @@ fi
 # Test backend container build
 echo "  🏗️  Testing backend container build..."
 cd backend
-if $CONTAINER_CMD build -t secure-notes-backend-test -f Dockerfile . >/dev/null 2>&1; then
+if $CONTAINER_CMD build -t leaflock-backend-test -f Dockerfile . >/dev/null 2>&1; then
     echo -e "    \033[0;32m✓ Backend container builds successfully\033[0m"
-    $CONTAINER_CMD rmi secure-notes-backend-test >/dev/null 2>&1 || true
+    $CONTAINER_CMD rmi leaflock-backend-test >/dev/null 2>&1 || true
 else
     echo -e "    \033[0;31m❌ Backend container build failed\033[0m"
     exit 1
@@ -290,9 +290,9 @@ cd ..
 # Test frontend container build
 echo "  🎨 Testing frontend container build..."
 cd frontend
-if $CONTAINER_CMD build -t secure-notes-frontend-test -f Dockerfile . >/dev/null 2>&1; then
+if $CONTAINER_CMD build -t leaflock-frontend-test -f Dockerfile . >/dev/null 2>&1; then
     echo -e "    \033[0;32m✓ Frontend container builds successfully\033[0m"
-    $CONTAINER_CMD rmi secure-notes-frontend-test >/dev/null 2>&1 || true
+    $CONTAINER_CMD rmi leaflock-frontend-test >/dev/null 2>&1 || true
 else
     echo -e "    \033[0;31m❌ Frontend container build failed\033[0m"
     exit 1
@@ -491,7 +491,7 @@ EOF
         exit 1
     fi
     
-    log_info "Setting up comprehensive Git hooks for Secure Notes project..."
+    log_info "Setting up comprehensive Git hooks for LeafLock project..."
     
     create_pre_commit_hook
     create_pre_push_hook

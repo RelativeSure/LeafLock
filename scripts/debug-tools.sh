@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Development Debugging and Error Analysis Tools
-# Comprehensive debugging utilities for Secure Notes application
+# Comprehensive debugging utilities for LeafLock application
 
 set -euo pipefail
 
@@ -15,7 +15,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # Configuration
-LOG_DIR="/tmp/secure-notes-debug"
+LOG_DIR="/tmp/leaflock-debug"
 DEBUG_PORT=2345
 PPROF_PORT=6060
 
@@ -75,13 +75,13 @@ health_check() {
     # Check database connectivity
     log_info "Checking database connectivity..."
     if command -v podman >/dev/null 2>&1; then
-        if podman exec secure-notes-postgres pg_isready -U postgres >/dev/null 2>&1; then
+        if podman exec leaflock-postgres pg_isready -U postgres >/dev/null 2>&1; then
             log_success "PostgreSQL is ready"
         else
             log_error "PostgreSQL connection failed"
         fi
         
-        if podman exec secure-notes-redis redis-cli ping >/dev/null 2>&1; then
+        if podman exec leaflock-redis redis-cli ping >/dev/null 2>&1; then
             log_success "Redis is ready"
         else
             log_error "Redis connection failed"
@@ -97,7 +97,7 @@ analyze_logs() {
     log_info "Analyzing backend logs for errors..."
     if command -v podman >/dev/null 2>&1; then
         # Get recent backend logs
-        podman logs --tail=100 secure-notes-backend 2>/dev/null | tee "$LOG_DIR/backend-recent.log" | {
+        podman logs --tail=100 leaflock-backend 2>/dev/null | tee "$LOG_DIR/backend-recent.log" | {
             error_count=$(grep -i "error\|panic\|fatal" | wc -l)
             warn_count=$(grep -i "warn" | wc -l)
             
@@ -115,13 +115,13 @@ analyze_logs() {
     # System logs
     log_info "Checking system logs for issues..."
     if [ -f /var/log/syslog ]; then
-        grep -i "secure-notes\|docker\|podman" /var/log/syslog | tail -10 > "$LOG_DIR/system.log" || true
+        grep -i "leaflock\|docker\|podman" /var/log/syslog | tail -10 > "$LOG_DIR/system.log" || true
     fi
     
     # Development logs
-    if [ -f /tmp/secure-notes-dev.log ]; then
+    if [ -f /tmp/leaflock-dev.log ]; then
         log_info "Analyzing development logs..."
-        tail -100 /tmp/secure-notes-dev.log > "$LOG_DIR/development.log"
+        tail -100 /tmp/leaflock-dev.log > "$LOG_DIR/development.log"
         
         error_count=$(grep -i "error\|failed\|exception" "$LOG_DIR/development.log" | wc -l)
         if [ "$error_count" -gt 0 ]; then
@@ -178,16 +178,16 @@ database_debug() {
         log_info "PostgreSQL diagnostics..."
         
         # Connection count
-        conn_count=$(podman exec secure-notes-postgres psql -U postgres -d notes -t -c "SELECT count(*) FROM pg_stat_activity;" 2>/dev/null || echo "0")
+        conn_count=$(podman exec leaflock-postgres psql -U postgres -d notes -t -c "SELECT count(*) FROM pg_stat_activity;" 2>/dev/null || echo "0")
         log_info "Active connections: $conn_count"
         
         # Database size
-        db_size=$(podman exec secure-notes-postgres psql -U postgres -d notes -t -c "SELECT pg_size_pretty(pg_database_size('notes'));" 2>/dev/null || echo "unknown")
+        db_size=$(podman exec leaflock-postgres psql -U postgres -d notes -t -c "SELECT pg_size_pretty(pg_database_size('notes'));" 2>/dev/null || echo "unknown")
         log_info "Database size: $db_size"
         
         # Recent queries
         log_info "Getting slow query statistics..."
-        podman exec secure-notes-postgres psql -U postgres -d notes -c "
+        podman exec leaflock-postgres psql -U postgres -d notes -c "
             SELECT query, mean_time, calls, total_time 
             FROM pg_stat_statements 
             ORDER BY mean_time DESC 
@@ -197,13 +197,13 @@ database_debug() {
         log_info "Redis diagnostics..."
         
         # Redis info
-        redis_info=$(podman exec secure-notes-redis redis-cli info memory 2>/dev/null || echo "failed")
+        redis_info=$(podman exec leaflock-redis redis-cli info memory 2>/dev/null || echo "failed")
         if [[ "$redis_info" != "failed" ]]; then
             echo "$redis_info" | grep -E "used_memory_human|maxmemory_human" || true
         fi
         
         # Session count
-        session_count=$(podman exec secure-notes-redis redis-cli eval "return #redis.call('keys', 'session:*')" 0 2>/dev/null || echo "0")
+        session_count=$(podman exec leaflock-redis redis-cli eval "return #redis.call('keys', 'session:*')" 0 2>/dev/null || echo "0")
         log_info "Active sessions: $session_count"
     fi
 }
@@ -329,7 +329,7 @@ generate_report() {
     report_file="$LOG_DIR/debug-report-$(date +%Y%m%d-%H%M%S).txt"
     
     {
-        echo "Secure Notes Debug Report"
+        echo "LeafLock Debug Report"
         echo "Generated: $(date)"
         echo "System: $(uname -a)"
         echo "=========================="

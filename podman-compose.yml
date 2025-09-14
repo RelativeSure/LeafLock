@@ -5,7 +5,7 @@ services:
   # PostgreSQL with automatic SSL setup - Podman optimized
   postgres:
     image: docker.io/library/postgres:17-alpine@sha256:d5f196a551b5cef1c70853c6dd588f456d16ca4ea733e3f31c75bc1ae2f65f3f
-    container_name: secure-notes-postgres
+    container_name: leaflock-postgres
     hostname: postgres
     environment:
       POSTGRES_USER: postgres
@@ -28,7 +28,7 @@ services:
       - postgres_data:/var/lib/postgresql/data:Z  # :Z for SELinux
       - ./init-ssl.sh:/docker-entrypoint-initdb.d/00-init-ssl.sh:ro,Z
     networks:
-      - secure-notes
+      - leaflock
     security_opt:
       - label=disable  # For rootless podman
     healthcheck:
@@ -41,13 +41,13 @@ services:
   # Redis for session management - Podman optimized
   redis:
     image: docker.io/library/redis:8-alpine@sha256:987c376c727652f99625c7d205a1cba3cb2c53b92b0b62aade2bd48ee1593232
-    container_name: secure-notes-redis
+    container_name: leaflock-redis
     hostname: redis
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-ChangeThisRedisPassword123!}
     volumes:
       - redis_data:/data:Z
     networks:
-      - secure-notes
+      - leaflock
     security_opt:
       - label=disable
     healthcheck:
@@ -62,8 +62,8 @@ services:
     build:
       context: ./backend
       dockerfile: Containerfile  # Podman prefers Containerfile
-    image: localhost/secure-notes-backend:latest
-    container_name: secure-notes-backend
+    image: localhost/leaflock-backend:latest
+    container_name: leaflock-backend
     hostname: backend
     environment:
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}@postgres:5432/notes?sslmode=require
@@ -81,7 +81,7 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - secure-notes
+      - leaflock
     security_opt:
       - label=disable
       - no-new-privileges:true
@@ -106,15 +106,15 @@ services:
       dockerfile: Containerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
-    image: localhost/secure-notes-frontend:latest
-    container_name: secure-notes-frontend
+    image: localhost/leaflock-frontend:latest
+    container_name: leaflock-frontend
     hostname: frontend
     ports:
       - "3000:8080"  # Rootless podman uses high ports
     depends_on:
       - backend
     networks:
-      - secure-notes
+      - leaflock
     security_opt:
       - label=disable
       - no-new-privileges:true
@@ -140,7 +140,7 @@ volumes:
     driver: local
 
 networks:
-  secure-notes:
+  leaflock:
     driver: bridge
 
 ---
@@ -148,11 +148,11 @@ networks:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: secure-notes-pod
+  name: leaflock-pod
   labels:
-    app: secure-notes
+    app: leaflock
 spec:
-  hostname: secure-notes
+  hostname: leaflock
   restartPolicy: Always
   containers:
   - name: postgres
@@ -219,7 +219,7 @@ spec:
         cpu: "50m"
         
   - name: backend
-    image: localhost/secure-notes-backend:latest
+    image: localhost/leaflock-backend:latest
     env:
     - name: DATABASE_URL
       value: "postgres://postgres:ChangeThisSecurePassword123!@localhost:5432/notes?sslmode=require"
@@ -258,7 +258,7 @@ spec:
         cpu: "100m"
         
   - name: frontend
-    image: localhost/secure-notes-frontend:latest
+    image: localhost/leaflock-frontend:latest
     ports:
     - containerPort: 8080
       hostPort: 3000

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Error Handler and Recovery Script
-# Automated error detection and recovery for Secure Notes development
+# Automated error detection and recovery for LeafLock development
 
 set -euo pipefail
 
@@ -14,8 +14,8 @@ PURPLE='\033[0;35m'
 NC='\033[0m'
 
 # Configuration
-ERROR_LOG="/tmp/secure-notes-errors.log"
-RECOVERY_LOG="/tmp/secure-notes-recovery.log"
+ERROR_LOG="/tmp/leaflock-errors.log"
+RECOVERY_LOG="/tmp/leaflock-recovery.log"
 MAX_RETRIES=3
 RETRY_DELAY=5
 
@@ -120,7 +120,7 @@ recover_backend() {
     log_recovery "Attempting backend recovery..."
     
     # Check if backend process is running
-    if pgrep -f "secure-notes\|go run main.go" >/dev/null; then
+    if pgrep -f "leaflock\|go run main.go" >/dev/null; then
         log_info "Backend process is running"
     else
         log_warning "Backend process not found"
@@ -132,7 +132,7 @@ recover_backend() {
             
             # Kill any existing processes
             pkill -f "go run main.go" || true
-            pkill -f "secure-notes" || true
+            pkill -f "leaflock" || true
             
             # Rebuild and start
             if retry_command "go build -o app main.go" "Backend build"; then
@@ -227,15 +227,15 @@ recover_database() {
     
     if command -v podman >/dev/null 2>&1; then
         # Check PostgreSQL
-        if podman exec secure-notes-postgres pg_isready -U postgres >/dev/null 2>&1; then
+        if podman exec leaflock-postgres pg_isready -U postgres >/dev/null 2>&1; then
             log_success "PostgreSQL is ready"
         else
             log_warning "PostgreSQL not ready, attempting recovery..."
             
             # Try to restart PostgreSQL container
-            if retry_command "podman restart secure-notes-postgres" "PostgreSQL restart"; then
+            if retry_command "podman restart leaflock-postgres" "PostgreSQL restart"; then
                 sleep 5
-                if podman exec secure-notes-postgres pg_isready -U postgres >/dev/null 2>&1; then
+                if podman exec leaflock-postgres pg_isready -U postgres >/dev/null 2>&1; then
                     log_success "PostgreSQL recovered"
                 else
                     log_error "PostgreSQL recovery failed"
@@ -247,15 +247,15 @@ recover_database() {
         fi
         
         # Check Redis
-        if podman exec secure-notes-redis redis-cli ping >/dev/null 2>&1; then
+        if podman exec leaflock-redis redis-cli ping >/dev/null 2>&1; then
             log_success "Redis is ready"
         else
             log_warning "Redis not ready, attempting recovery..."
             
             # Try to restart Redis container
-            if retry_command "podman restart secure-notes-redis" "Redis restart"; then
+            if retry_command "podman restart leaflock-redis" "Redis restart"; then
                 sleep 5
-                if podman exec secure-notes-redis redis-cli ping >/dev/null 2>&1; then
+                if podman exec leaflock-redis redis-cli ping >/dev/null 2>&1; then
                     log_success "Redis recovered"
                 else
                     log_error "Redis recovery failed"
@@ -278,15 +278,15 @@ recover_containers() {
     
     if command -v podman >/dev/null 2>&1; then
         # Check pod status
-        if podman pod exists secure-notes 2>/dev/null; then
-            pod_status=$(podman pod inspect secure-notes --format "{{.State}}")
+        if podman pod exists leaflock 2>/dev/null; then
+            pod_status=$(podman pod inspect leaflock --format "{{.State}}")
             
             if [ "$pod_status" = "Running" ]; then
                 log_success "Pod is running"
             else
                 log_warning "Pod is not running, attempting restart..."
                 
-                if retry_command "podman pod restart secure-notes" "Pod restart"; then
+                if retry_command "podman pod restart leaflock" "Pod restart"; then
                     log_success "Pod restarted"
                     sleep 10  # Wait for services to start
                 else
@@ -478,7 +478,7 @@ monitor_errors() {
         
         # Check for high error rates in logs
         if command -v podman >/dev/null 2>&1; then
-            error_count=$(podman logs --tail=50 secure-notes-backend 2>/dev/null | grep -i "error\|panic\|fatal" | wc -l)
+            error_count=$(podman logs --tail=50 leaflock-backend 2>/dev/null | grep -i "error\|panic\|fatal" | wc -l)
             if [ "$error_count" -gt 5 ]; then
                 log_warning "High error rate detected in backend logs ($error_count errors)"
             fi

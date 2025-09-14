@@ -1,4 +1,5 @@
 #!/bin/bash
+# Note: Prefer leaflock.sh docker:* for local runs. This script runs a custom dev hot-reload loop.
 
 # Development File Watcher and Hot Reload Script
 # Provides intelligent file watching with hot reload for both backend and frontend
@@ -17,7 +18,7 @@ NC='\033[0m'
 # Configuration
 BACKEND_DIR="backend"
 FRONTEND_DIR="frontend"
-LOG_FILE="/tmp/secure-notes-dev.log"
+LOG_FILE="/tmp/leaflock-dev.log"
 
 # PIDs for process management
 BACKEND_PID=""
@@ -110,7 +111,7 @@ setup_dev_database() {
     
     # Check if containers are running
     if command -v podman &> /dev/null; then
-        if ! podman pod exists secure-notes 2>/dev/null; then
+        if ! podman pod exists leaflock 2>/dev/null; then
             log_info "Starting development services with Podman..."
             make up &>/dev/null || {
                 log_warning "Failed to start services automatically"
@@ -198,9 +199,9 @@ pkill -f "go run main.go" 2>/dev/null || true
 sleep 0.5
 
 # Build and run
-if go build -o /tmp/secure-notes-dev .; then
+if go build -o /tmp/leaflock-dev .; then
     echo "✅ Backend build successful, starting server..."
-    /tmp/secure-notes-dev &
+    /tmp/leaflock-dev &
     echo $! > /tmp/backend.pid
     echo "🚀 Backend server restarted"
 else
@@ -211,8 +212,8 @@ EOF
     
     # Start initial backend
     log_backend "Starting initial backend server..."
-    if go build -o /tmp/secure-notes-dev .; then
-        /tmp/secure-notes-dev &
+    if go build -o /tmp/leaflock-dev .; then
+        /tmp/leaflock-dev &
         BACKEND_PID=$!
         echo $BACKEND_PID > /tmp/backend.pid
         log_success "Backend server started (PID: $BACKEND_PID)"
@@ -360,7 +361,7 @@ main() {
 
 # Help message
 show_help() {
-    echo "Secure Notes Development Hot Reload Server"
+    echo "LeafLock Development Hot Reload Server"
     echo
     echo "Usage: $0 [options]"
     echo

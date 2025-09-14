@@ -1,7 +1,8 @@
 #!/bin/bash
+# Note: Prefer leaflock.sh test to run this end-to-end test automation.
 
 # Automated Testing and Validation Workflow
-# Comprehensive test automation for Secure Notes development
+# Comprehensive test automation for LeafLock development
 
 set -euo pipefail
 
@@ -15,7 +16,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # Configuration
-TEST_RESULTS_DIR="/tmp/secure-notes-test-results"
+TEST_RESULTS_DIR="/tmp/leaflock-test-results"
 COVERAGE_THRESHOLD=80
 PERFORMANCE_THRESHOLD=1000  # ms
 PARALLEL_JOBS=4
@@ -386,10 +387,10 @@ run_build_tests() {
     # Backend build
     log_info "Testing backend build..."
     cd backend
-    if go build -o /tmp/secure-notes-test . > "$TEST_RESULTS_DIR/backend-build.log" 2>&1; then
+    if go build -o /tmp/leaflock-test . > "$TEST_RESULTS_DIR/backend-build.log" 2>&1; then
         test_results[backend_build]="PASS"
         log_success "Backend build passed"
-        rm -f /tmp/secure-notes-test
+        rm -f /tmp/leaflock-test
     else
         test_results[backend_build]="FAIL"
         log_error "Backend build failed"
@@ -440,9 +441,9 @@ run_container_tests() {
     # Test backend container build
     log_info "Testing backend container build..."
     cd backend
-    if $CONTAINER_CMD build -t secure-notes-backend-test -f Dockerfile . > "$TEST_RESULTS_DIR/backend-container.log" 2>&1; then
+    if $CONTAINER_CMD build -t leaflock-backend-test -f Dockerfile . > "$TEST_RESULTS_DIR/backend-container.log" 2>&1; then
         log_success "Backend container build passed"
-        $CONTAINER_CMD rmi secure-notes-backend-test >/dev/null 2>&1 || true
+        $CONTAINER_CMD rmi leaflock-backend-test >/dev/null 2>&1 || true
     else
         test_results[container_build]="FAIL"
         log_error "Backend container build failed"
@@ -455,9 +456,9 @@ run_container_tests() {
     # Test frontend container build
     log_info "Testing frontend container build..."
     cd frontend
-    if $CONTAINER_CMD build -t secure-notes-frontend-test -f Dockerfile . > "$TEST_RESULTS_DIR/frontend-container.log" 2>&1; then
+    if $CONTAINER_CMD build -t leaflock-frontend-test -f Dockerfile . > "$TEST_RESULTS_DIR/frontend-container.log" 2>&1; then
         log_success "Frontend container build passed"
-        $CONTAINER_CMD rmi secure-notes-frontend-test >/dev/null 2>&1 || true
+        $CONTAINER_CMD rmi leaflock-frontend-test >/dev/null 2>&1 || true
         test_results[container_build]="PASS"
     else
         test_results[container_build]="FAIL"
@@ -509,7 +510,7 @@ generate_test_report() {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Secure Notes Test Report</title>
+    <title>LeafLock Test Report</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
         .header { background: #f5f5f5; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
@@ -526,7 +527,7 @@ generate_test_report() {
 <body>
 EOF
         echo "<div class='header'>"
-        echo "<h1>🧪 Secure Notes Test Report</h1>"
+        echo "<h1>🧪 LeafLock Test Report</h1>"
         echo "<p>Generated: $(date)</p>"
         echo "<p>System: $(uname -a)</p>"
         echo "</div>"

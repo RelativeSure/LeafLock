@@ -1,0 +1,1616 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>secure-notes: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">secure-notes/main.go (73.1%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">// main.go - Complete secure backend with automatic PostgreSQL setup
+package main
+
+import (
+        "context"
+        "crypto/rand"
+        "crypto/subtle"
+        "database/sql"
+        "encoding/base64"
+        "encoding/hex"
+        "fmt"
+        "log"
+        "os"
+        "strings"
+        "time"
+
+        "github.com/gofiber/fiber/v2"
+        "github.com/gofiber/fiber/v2/middleware/cors"
+        "github.com/gofiber/fiber/v2/middleware/helmet"
+        "github.com/gofiber/fiber/v2/middleware/limiter"
+        "github.com/gofiber/fiber/v2/middleware/logger"
+        "github.com/gofiber/fiber/v2/middleware/recover"
+        "github.com/golang-jwt/jwt/v5"
+        "github.com/google/uuid"
+        "github.com/jackc/pgx/v5"
+        "github.com/jackc/pgx/v5/pgconn"
+        "github.com/jackc/pgx/v5/pgxpool"
+        _ "github.com/jackc/pgx/v5/stdlib"
+        "github.com/redis/go-redis/v9"
+        "golang.org/x/crypto/argon2"
+        "golang.org/x/crypto/chacha20poly1305"
+)
+
+// AUTOMATIC DATABASE SETUP - Runs migrations on startup
+const DatabaseSchema = `
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+
+-- Users table with encrypted fields
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email TEXT UNIQUE NOT NULL,
+    email_encrypted BYTEA NOT NULL, -- Encrypted email for privacy
+    password_hash TEXT NOT NULL, -- Argon2id hash
+    salt BYTEA NOT NULL,
+    master_key_encrypted BYTEA NOT NULL, -- User's encrypted master key
+    public_key BYTEA, -- For sharing encrypted notes
+    private_key_encrypted BYTEA, -- Encrypted with user's derived key
+    mfa_secret_encrypted BYTEA, -- Encrypted TOTP secret
+    mfa_enabled BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    last_login TIMESTAMPTZ,
+    failed_attempts INT DEFAULT 0,
+    locked_until TIMESTAMPTZ
+);
+
+-- Workspace table
+CREATE TABLE IF NOT EXISTS workspaces (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name_encrypted BYTEA NOT NULL, -- Encrypted workspace name
+    owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    encryption_key_encrypted BYTEA NOT NULL, -- Workspace key encrypted with owner's key
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Notes table with full encryption
+CREATE TABLE IF NOT EXISTS notes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+    title_encrypted BYTEA NOT NULL, -- Encrypted title
+    content_encrypted BYTEA NOT NULL, -- Encrypted content
+    content_hash BYTEA NOT NULL, -- For integrity verification
+    parent_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    position INT DEFAULT 0,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+    version INT DEFAULT 1
+);
+
+-- Encrypted search index (searchable encryption)
+CREATE TABLE IF NOT EXISTS search_index (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    keyword_hash BYTEA NOT NULL, -- HMAC of keyword
+    position INT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Collaboration table for shared notes
+CREATE TABLE IF NOT EXISTS collaborations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    permission TEXT CHECK (permission IN ('read', 'write', 'admin')),
+    key_encrypted BYTEA NOT NULL, -- Note key encrypted with user's public key
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(note_id, user_id)
+);
+
+-- Session management with encryption
+CREATE TABLE IF NOT EXISTS sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    token_hash BYTEA NOT NULL UNIQUE, -- SHA-256 hash of session token
+    ip_address_encrypted BYTEA,
+    user_agent_encrypted BYTEA,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Audit log for security
+CREATE TABLE IF NOT EXISTS audit_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id),
+    action TEXT NOT NULL,
+    resource_type TEXT,
+    resource_id UUID,
+    ip_address_encrypted BYTEA,
+    user_agent_encrypted BYTEA,
+    metadata JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- File attachments with encryption
+CREATE TABLE IF NOT EXISTS attachments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    filename_encrypted BYTEA NOT NULL,
+    content_encrypted BYTEA NOT NULL, -- Store encrypted files in DB for simplicity
+    mime_type TEXT,
+    size_bytes BIGINT,
+    checksum BYTEA NOT NULL, -- SHA-256 of encrypted content
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Encryption keys rotation table
+CREATE TABLE IF NOT EXISTS key_rotations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    old_key_hash BYTEA NOT NULL,
+    new_key_hash BYTEA NOT NULL,
+    items_rotated INT DEFAULT 0,
+    completed BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+);
+
+-- Tags table for organizing notes
+CREATE TABLE IF NOT EXISTS tags (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    name_encrypted BYTEA NOT NULL, -- Encrypted tag name
+    color VARCHAR(7) DEFAULT '#3b82f6', -- Hex color code
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, name_encrypted) -- Prevent duplicate tag names per user
+);
+
+-- Junction table for note-tag relationships
+CREATE TABLE IF NOT EXISTS note_tags (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    tag_id UUID REFERENCES tags(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(note_id, tag_id) -- Prevent duplicate assignments
+);
+
+-- Functions for automatic updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Apply updated_at triggers
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_users_updated_at') THEN
+        CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users 
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_workspaces_updated_at') THEN
+        CREATE TRIGGER update_workspaces_updated_at BEFORE UPDATE ON workspaces 
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_notes_updated_at') THEN
+        CREATE TRIGGER update_notes_updated_at BEFORE UPDATE ON notes 
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_tags_updated_at') THEN
+        CREATE TRIGGER update_tags_updated_at BEFORE UPDATE ON tags 
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
+
+-- Session cleanup function
+CREATE OR REPLACE FUNCTION cleanup_expired_sessions()
+RETURNS void AS $$
+BEGIN
+    DELETE FROM sessions WHERE expires_at &lt; NOW();
+END;
+$$ LANGUAGE plpgsql;
+
+-- Cleanup old deleted notes function (30 days)
+CREATE OR REPLACE FUNCTION cleanup_old_deleted_notes()
+RETURNS void AS $$
+BEGIN
+    DELETE FROM notes WHERE deleted_at IS NOT NULL AND deleted_at &lt; NOW() - INTERVAL '30 days';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_notes_workspace ON notes(workspace_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_notes_parent ON notes(parent_id);
+CREATE INDEX IF NOT EXISTS idx_notes_created ON notes(created_by, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_search_keyword ON search_index(keyword_hash);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
+
+CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action, created_at DESC);
+
+-- Tags indexes
+CREATE INDEX IF NOT EXISTS idx_tags_user ON tags(user_id);
+CREATE INDEX IF NOT EXISTS idx_note_tags_note ON note_tags(note_id);
+CREATE INDEX IF NOT EXISTS idx_note_tags_tag ON note_tags(tag_id);
+
+-- Note: Cleanup jobs run automatically via background service every 24 hours
+`
+
+// Configuration with secure defaults
+type Config struct {
+        DatabaseURL      string
+        RedisURL         string
+        RedisPassword    string
+        JWTSecret        []byte
+        EncryptionKey    []byte
+        Port             string
+        AllowedOrigins   []string
+        MaxLoginAttempts int
+        LockoutDuration  time.Duration
+        SessionDuration  time.Duration
+}
+
+func LoadConfig() *Config <span class="cov2" title="2">{
+        // Generate secure random keys if not provided
+        jwtSecret := os.Getenv("JWT_SECRET")
+        if jwtSecret == "" </span><span class="cov1" title="1">{
+                key := make([]byte, 64)
+                rand.Read(key)
+                jwtSecret = base64.StdEncoding.EncodeToString(key)
+                log.Println("Generated new JWT secret")
+        }</span>
+
+        <span class="cov2" title="2">encKey := os.Getenv("SERVER_ENCRYPTION_KEY")
+        if encKey == "" </span><span class="cov1" title="1">{
+                key := make([]byte, 32)
+                rand.Read(key)
+                encKey = base64.StdEncoding.EncodeToString(key)
+                log.Println("Generated new server encryption key")
+        }</span>
+
+        <span class="cov2" title="2">dbURL := os.Getenv("DATABASE_URL")
+        if dbURL == "" </span><span class="cov1" title="1">{
+                dbURL = "postgres://postgres:postgres@localhost:5432/notes?sslmode=disable"
+        }</span>
+
+        <span class="cov2" title="2">return &amp;Config{
+                DatabaseURL:      dbURL,
+                RedisURL:         getEnvOrDefault("REDIS_URL", "localhost:6379"),
+                RedisPassword:    os.Getenv("REDIS_PASSWORD"),
+                JWTSecret:        []byte(jwtSecret),
+                EncryptionKey:    []byte(encKey),
+                Port:             getEnvOrDefault("PORT", "8080"),
+                AllowedOrigins:   strings.Split(getEnvOrDefault("CORS_ORIGINS", "https://localhost:3000"), ","),
+                MaxLoginAttempts: 5,
+                LockoutDuration:  15 * time.Minute,
+                SessionDuration:  24 * time.Hour,
+        }</span>
+}
+
+func getEnvOrDefault(key, defaultValue string) string <span class="cov5" title="10">{
+        if value := os.Getenv(key); value != "" </span><span class="cov1" title="1">{
+                return value
+        }</span>
+        <span class="cov4" title="9">return defaultValue</span>
+}
+
+// Crypto Service for server-side encryption
+type CryptoService struct {
+        serverKey []byte
+}
+
+func NewCryptoService(key []byte) *CryptoService <span class="cov7" title="39">{
+        return &amp;CryptoService{serverKey: key}
+}</span>
+
+func (c *CryptoService) Encrypt(plaintext []byte) ([]byte, error) <span class="cov10" title="143">{
+        aead, err := chacha20poly1305.NewX(c.serverKey[:32])
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov10" title="143">nonce := make([]byte, aead.NonceSize())
+        if _, err := rand.Read(nonce); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov10" title="143">ciphertext := aead.Seal(nil, nonce, plaintext, nil)
+        return append(nonce, ciphertext...), nil</span>
+}
+
+func (c *CryptoService) Decrypt(ciphertext []byte) ([]byte, error) <span class="cov5" title="11">{
+        aead, err := chacha20poly1305.NewX(c.serverKey[:32])
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov5" title="11">if len(ciphertext) &lt; aead.NonceSize() </span><span class="cov2" title="2">{
+                return nil, fmt.Errorf("ciphertext too short")
+        }</span>
+
+        <span class="cov4" title="9">nonce := ciphertext[:aead.NonceSize()]
+        ciphertext = ciphertext[aead.NonceSize():]
+
+        return aead.Open(nil, nonce, ciphertext, nil)</span>
+}
+
+// Secure password hashing with Argon2id
+func HashPassword(password string, salt []byte) string <span class="cov5" title="12">{
+        hash := argon2.IDKey([]byte(password), salt, 3, 64*1024, 4, 32)
+        b64Salt := base64.RawStdEncoding.EncodeToString(salt)
+        b64Hash := base64.RawStdEncoding.EncodeToString(hash)
+        return fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
+                argon2.Version, 64*1024, 3, 4, b64Salt, b64Hash)
+}</span>
+
+func VerifyPassword(password, encodedHash string) bool <span class="cov5" title="13">{
+        parts := strings.Split(encodedHash, "$")
+        if len(parts) != 6 </span><span class="cov1" title="1">{
+                return false
+        }</span>
+
+        <span class="cov5" title="12">salt, _ := base64.RawStdEncoding.DecodeString(parts[4])
+        hash, _ := base64.RawStdEncoding.DecodeString(parts[5])
+
+        comparisonHash := argon2.IDKey([]byte(password), salt, 3, 64*1024, 4, 32)
+        return subtle.ConstantTimeCompare(hash, comparisonHash) == 1</span>
+}
+
+// Database setup and migration runner
+func SetupDatabase(dbURL string) (*pgxpool.Pool, error) <span class="cov1" title="1">{
+        // Connect to postgres to create database if needed
+        tempURL := strings.Replace(dbURL, "/notes", "/postgres", 1)
+        db, err := sql.Open("pgx", tempURL)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to connect to postgres: %w", err)
+        }</span>
+        <span class="cov1" title="1">defer db.Close()
+
+        // Create database if not exists
+        _, err = db.Exec("CREATE DATABASE notes")
+        if err != nil &amp;&amp; !strings.Contains(err.Error(), "already exists") </span><span class="cov1" title="1">{
+                log.Printf("Note: Database might already exist: %v", err)
+        }</span>
+
+        // Connect to the actual database
+        <span class="cov1" title="1">ctx := context.Background()
+        pool, err := pgxpool.New(ctx, dbURL)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to connect to database: %w", err)
+        }</span>
+
+        // Run migrations
+        <span class="cov1" title="1">log.Println("Running database migrations...")
+        _, err = pool.Exec(ctx, DatabaseSchema)
+        if err != nil </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("failed to run migrations: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">log.Println("Database setup completed successfully")
+        return pool, nil</span>
+}
+
+// Database interface for dependency injection and testing
+type Database interface {
+        QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row
+        Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
+        Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error)
+        Begin(ctx context.Context) (pgx.Tx, error)
+}
+
+// Auth handlers
+type AuthHandler struct {
+        db     Database
+        crypto *CryptoService
+        config *Config
+}
+
+type RegisterRequest struct {
+        Email    string `json:"email" validate:"required,email"`
+        Password string `json:"password" validate:"required,min=12"`
+}
+
+type LoginRequest struct {
+        Email    string `json:"email" validate:"required,email"`
+        Password string `json:"password" validate:"required"`
+        MFACode  string `json:"mfa_code,omitempty"`
+}
+
+func (h *AuthHandler) Register(c *fiber.Ctx) error <span class="cov3" title="4">{
+        // Check if registration is enabled
+        enableRegistration := getEnvOrDefault("ENABLE_REGISTRATION", "true")
+        if enableRegistration != "true" </span><span class="cov1" title="1">{
+                return c.Status(403).JSON(fiber.Map{"error": "Registration is currently disabled"})
+        }</span>
+
+        <span class="cov2" title="3">var req RegisterRequest
+        if err := c.BodyParser(&amp;req); err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+        }</span>
+
+        // Validate password requirements
+        <span class="cov2" title="3">if len(req.Password) &lt; 12 </span><span class="cov1" title="1">{
+                return c.Status(400).JSON(fiber.Map{"error": "Password must be at least 12 characters long"})
+        }</span>
+
+        // Generate salt and hash password
+        <span class="cov2" title="2">salt := make([]byte, 32)
+        rand.Read(salt)
+        passwordHash := HashPassword(req.Password, salt)
+
+        // Generate user's master encryption key
+        masterKey := make([]byte, 32)
+        rand.Read(masterKey)
+
+        // Derive key from password to encrypt master key
+        userKey := argon2.IDKey([]byte(req.Password), salt, 1, 64*1024, 4, 32)
+
+        // Encrypt master key with user's derived key
+        aead, _ := chacha20poly1305.NewX(userKey)
+        nonce := make([]byte, aead.NonceSize())
+        rand.Read(nonce)
+        encryptedMasterKey := aead.Seal(nonce, nonce, masterKey, nil)
+
+        // Encrypt email for storage
+        encryptedEmail, _ := h.crypto.Encrypt([]byte(req.Email))
+
+        // Start transaction
+        ctx := context.Background()
+        tx, err := h.db.Begin(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Database error"})
+        }</span>
+        <span class="cov2" title="2">defer tx.Rollback(ctx)
+
+        // Create user
+        var userID uuid.UUID
+        err = tx.QueryRow(ctx, `
+        INSERT INTO users (email, email_encrypted, password_hash, salt, master_key_encrypted)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id`,
+                req.Email, encryptedEmail, passwordHash, salt, encryptedMasterKey,
+        ).Scan(&amp;userID)
+
+        if err != nil </span><span class="cov1" title="1">{
+                if strings.Contains(err.Error(), "duplicate") </span><span class="cov1" title="1">{
+                        return c.Status(409).JSON(fiber.Map{"error": "Email already registered"})
+                }</span>
+                <span class="cov0" title="0">return c.Status(500).JSON(fiber.Map{"error": "Registration failed"})</span>
+        }
+
+        // Create default workspace
+        <span class="cov1" title="1">workspaceName, _ := h.crypto.Encrypt([]byte("My Workspace"))
+        workspaceKey := make([]byte, 32)
+        rand.Read(workspaceKey)
+
+        // Encrypt workspace key with user's master key
+        encryptedWorkspaceKey, _ := h.crypto.Encrypt(workspaceKey)
+
+        var workspaceID uuid.UUID
+        err = tx.QueryRow(ctx, `
+        INSERT INTO workspaces (name_encrypted, owner_id, encryption_key_encrypted)
+        VALUES ($1, $2, $3)
+        RETURNING id`,
+                workspaceName, userID, encryptedWorkspaceKey,
+        ).Scan(&amp;workspaceID)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Failed to create workspace"})
+        }</span>
+
+        // Commit transaction
+        <span class="cov1" title="1">if err = tx.Commit(ctx); err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Registration failed"})
+        }</span>
+
+        // Log audit event
+        <span class="cov1" title="1">h.logAudit(ctx, userID, "user.registered", "user", userID, c)
+
+        // Generate session token
+        token, err := h.generateToken(userID)
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Token generation failed"})
+        }</span>
+
+        <span class="cov1" title="1">return c.Status(201).JSON(fiber.Map{
+                "message":      "Registration successful",
+                "token":        token,
+                "user_id":      userID,
+                "workspace_id": workspaceID,
+        })</span>
+}
+
+func (h *AuthHandler) Login(c *fiber.Ctx) error <span class="cov5" title="13">{
+        var req LoginRequest
+        if err := c.BodyParser(&amp;req); err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+        }</span>
+
+        <span class="cov5" title="13">ctx := context.Background()
+
+        // Get user
+        var userID uuid.UUID
+        var passwordHash string
+        var failedAttempts int
+        var lockedUntil *time.Time
+        var mfaEnabled bool
+        var mfaSecret []byte
+
+        err := h.db.QueryRow(ctx, `
+        SELECT id, password_hash, failed_attempts, locked_until, mfa_enabled, mfa_secret_encrypted
+        FROM users WHERE email = $1`,
+                req.Email,
+        ).Scan(&amp;userID, &amp;passwordHash, &amp;failedAttempts, &amp;lockedUntil, &amp;mfaEnabled, &amp;mfaSecret)
+
+        if err != nil </span><span class="cov5" title="11">{
+                return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
+        }</span>
+
+        // Check if account is locked
+        <span class="cov2" title="2">if lockedUntil != nil &amp;&amp; lockedUntil.After(time.Now()) </span><span class="cov1" title="1">{
+                return c.Status(403).JSON(fiber.Map{"error": "Account locked. Try again later."})
+        }</span>
+
+        // Verify password
+        <span class="cov1" title="1">if !VerifyPassword(req.Password, passwordHash) </span><span class="cov0" title="0">{
+                // Increment failed attempts
+                failedAttempts++
+                if failedAttempts &gt;= h.config.MaxLoginAttempts </span><span class="cov0" title="0">{
+                        lockUntil := time.Now().Add(h.config.LockoutDuration)
+                        h.db.Exec(ctx, `
+                UPDATE users SET failed_attempts = $1, locked_until = $2 
+                WHERE id = $3`,
+                                failedAttempts, lockUntil, userID,
+                        )
+                        h.logAudit(ctx, userID, "login.locked", "user", userID, c)
+                        return c.Status(403).JSON(fiber.Map{"error": "Account locked due to too many failed attempts"})
+                }</span>
+
+                <span class="cov0" title="0">h.db.Exec(ctx, `UPDATE users SET failed_attempts = $1 WHERE id = $2`, failedAttempts, userID)
+                h.logAudit(ctx, userID, "login.failed", "user", userID, c)
+                return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})</span>
+        }
+
+        // Verify MFA if enabled
+        <span class="cov1" title="1">if mfaEnabled </span><span class="cov0" title="0">{
+                if req.MFACode == "" </span><span class="cov0" title="0">{
+                        return c.Status(200).JSON(fiber.Map{"mfa_required": true})
+                }</span>
+                // Verify TOTP code here (implement TOTP verification)
+        }
+
+        // Reset failed attempts and update last login
+        <span class="cov1" title="1">h.db.Exec(ctx, `
+        UPDATE users SET failed_attempts = 0, locked_until = NULL, last_login = NOW() 
+        WHERE id = $1`,
+                userID,
+        )
+
+        // Generate session
+        sessionToken := make([]byte, 32)
+        rand.Read(sessionToken)
+        sessionTokenStr := hex.EncodeToString(sessionToken)
+
+        // Hash token for storage
+        tokenHash := argon2.IDKey(sessionToken, []byte("session"), 1, 64*1024, 4, 32)
+
+        // Encrypt IP and user agent
+        encryptedIP, _ := h.crypto.Encrypt([]byte(c.IP()))
+        encryptedUA, _ := h.crypto.Encrypt([]byte(c.Get("User-Agent")))
+
+        // Store session
+        _, err = h.db.Exec(ctx, `
+        INSERT INTO sessions (user_id, token_hash, ip_address_encrypted, user_agent_encrypted, expires_at)
+        VALUES ($1, $2, $3, $4, $5)`,
+                userID, tokenHash, encryptedIP, encryptedUA, time.Now().Add(h.config.SessionDuration),
+        )
+
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Session creation failed"})
+        }</span>
+
+        // Log successful login
+        <span class="cov1" title="1">h.logAudit(ctx, userID, "login.success", "user", userID, c)
+
+        // Generate JWT token
+        token, err := h.generateToken(userID)
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Token generation failed"})
+        }</span>
+
+        // Get workspace
+        <span class="cov1" title="1">var workspaceID uuid.UUID
+        h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&amp;workspaceID)
+
+        return c.JSON(fiber.Map{
+                "token":        token,
+                "session":      sessionTokenStr,
+                "user_id":      userID,
+                "workspace_id": workspaceID,
+        })</span>
+}
+
+func (h *AuthHandler) generateToken(userID uuid.UUID) (string, error) <span class="cov2" title="2">{
+        claims := jwt.MapClaims{
+                "user_id": userID.String(),
+                "exp":     time.Now().Add(24 * time.Hour).Unix(),
+                "iat":     time.Now().Unix(),
+        }
+
+        token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+        return token.SignedString(h.config.JWTSecret)
+}</span>
+
+func (h *AuthHandler) logAudit(ctx context.Context, userID uuid.UUID, action, resourceType string, resourceID uuid.UUID, c *fiber.Ctx) <span class="cov2" title="2">{
+        encryptedIP, _ := h.crypto.Encrypt([]byte(c.IP()))
+        encryptedUA, _ := h.crypto.Encrypt([]byte(c.Get("User-Agent")))
+
+        h.db.Exec(ctx, `
+        INSERT INTO audit_log (user_id, action, resource_type, resource_id, ip_address_encrypted, user_agent_encrypted)
+        VALUES ($1, $2, $3, $4, $5, $6)`,
+                userID, action, resourceType, resourceID, encryptedIP, encryptedUA,
+        )
+}</span>
+
+// Notes Handler
+type NotesHandler struct {
+        db     Database
+        crypto *CryptoService
+}
+
+type CreateNoteRequest struct {
+        TitleEncrypted   string `json:"title_encrypted" validate:"required"`
+        ContentEncrypted string `json:"content_encrypted" validate:"required"`
+}
+
+type UpdateNoteRequest struct {
+        TitleEncrypted   string `json:"title_encrypted" validate:"required"`
+        ContentEncrypted string `json:"content_encrypted" validate:"required"`
+}
+
+func (h *NotesHandler) GetNotes(c *fiber.Ctx) error <span class="cov1" title="1">{
+        userID := c.Locals("user_id").(uuid.UUID)
+        ctx := context.Background()
+
+        // Get user's default workspace
+        var workspaceID uuid.UUID
+        err := h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&amp;workspaceID)
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Failed to get workspace"})
+        }</span>
+
+        // Get notes from workspace
+        <span class="cov1" title="1">rows, err := h.db.Query(ctx, `
+                SELECT id, title_encrypted, content_encrypted, created_at, updated_at
+                FROM notes 
+                WHERE workspace_id = $1 AND deleted_at IS NULL
+                ORDER BY updated_at DESC`,
+                workspaceID)
+        
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch notes"})
+        }</span>
+        <span class="cov1" title="1">defer rows.Close()
+
+        notes := []fiber.Map{}
+        for rows.Next() </span><span class="cov2" title="2">{
+                var id uuid.UUID
+                var titleEnc, contentEnc []byte
+                var createdAt, updatedAt time.Time
+
+                if err := rows.Scan(&amp;id, &amp;titleEnc, &amp;contentEnc, &amp;createdAt, &amp;updatedAt); err != nil </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+
+                <span class="cov2" title="2">notes = append(notes, fiber.Map{
+                        "id":                id,
+                        "title_encrypted":   base64.StdEncoding.EncodeToString(titleEnc),
+                        "content_encrypted": base64.StdEncoding.EncodeToString(contentEnc),
+                        "created_at":        createdAt,
+                        "updated_at":        updatedAt,
+                })</span>
+        }
+
+        <span class="cov1" title="1">return c.JSON(fiber.Map{"notes": notes})</span>
+}
+
+func (h *NotesHandler) GetNote(c *fiber.Ctx) error <span class="cov2" title="2">{
+        userID := c.Locals("user_id").(uuid.UUID)
+        noteID, err := uuid.Parse(c.Params("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+        }</span>
+
+        <span class="cov2" title="2">ctx := context.Background()
+        var id uuid.UUID
+        var titleEnc, contentEnc []byte
+        var createdAt, updatedAt time.Time
+
+        err = h.db.QueryRow(ctx, `
+                SELECT n.id, n.title_encrypted, n.content_encrypted, n.created_at, n.updated_at
+                FROM notes n
+                JOIN workspaces w ON n.workspace_id = w.id
+                WHERE n.id = $1 AND w.owner_id = $2 AND n.deleted_at IS NULL`,
+                noteID, userID).Scan(&amp;id, &amp;titleEnc, &amp;contentEnc, &amp;createdAt, &amp;updatedAt)
+
+        if err != nil </span><span class="cov1" title="1">{
+                return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+        }</span>
+
+        <span class="cov1" title="1">return c.JSON(fiber.Map{
+                "id":                id,
+                "title_encrypted":   base64.StdEncoding.EncodeToString(titleEnc),
+                "content_encrypted": base64.StdEncoding.EncodeToString(contentEnc),
+                "created_at":        createdAt,
+                "updated_at":        updatedAt,
+        })</span>
+}
+
+func (h *NotesHandler) CreateNote(c *fiber.Ctx) error <span class="cov2" title="2">{
+        userID := c.Locals("user_id").(uuid.UUID)
+        var req CreateNoteRequest
+        if err := c.BodyParser(&amp;req); err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+        }</span>
+
+        <span class="cov2" title="2">ctx := context.Background()
+
+        // Get user's default workspace
+        var workspaceID uuid.UUID
+        err := h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&amp;workspaceID)
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Failed to get workspace"})
+        }</span>
+
+        // Decode encrypted data
+        <span class="cov2" title="2">titleEnc, err := base64.StdEncoding.DecodeString(req.TitleEncrypted)
+        if err != nil </span><span class="cov1" title="1">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid title encryption"})
+        }</span>
+
+        <span class="cov1" title="1">contentEnc, err := base64.StdEncoding.DecodeString(req.ContentEncrypted)
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid content encryption"})
+        }</span>
+
+        // Create content hash for integrity
+        <span class="cov1" title="1">contentHash := argon2.IDKey(contentEnc, []byte("integrity"), 1, 64*1024, 4, 32)
+
+        // Create note
+        var noteID uuid.UUID
+        err = h.db.QueryRow(ctx, `
+                INSERT INTO notes (workspace_id, title_encrypted, content_encrypted, content_hash, created_by)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING id`,
+                workspaceID, titleEnc, contentEnc, contentHash, userID).Scan(&amp;noteID)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Failed to create note"})
+        }</span>
+
+        <span class="cov1" title="1">return c.Status(201).JSON(fiber.Map{
+                "id":      noteID,
+                "message": "Note created successfully",
+        })</span>
+}
+
+func (h *NotesHandler) UpdateNote(c *fiber.Ctx) error <span class="cov2" title="2">{
+        userID := c.Locals("user_id").(uuid.UUID)
+        noteID, err := uuid.Parse(c.Params("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+        }</span>
+
+        <span class="cov2" title="2">var req UpdateNoteRequest
+        if err := c.BodyParser(&amp;req); err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+        }</span>
+
+        <span class="cov2" title="2">ctx := context.Background()
+
+        // Decode encrypted data
+        titleEnc, err := base64.StdEncoding.DecodeString(req.TitleEncrypted)
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid title encryption"})
+        }</span>
+
+        <span class="cov2" title="2">contentEnc, err := base64.StdEncoding.DecodeString(req.ContentEncrypted)
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid content encryption"})
+        }</span>
+
+        // Create content hash for integrity
+        <span class="cov2" title="2">contentHash := argon2.IDKey(contentEnc, []byte("integrity"), 1, 64*1024, 4, 32)
+
+        // Update note
+        result, err := h.db.Exec(ctx, `
+                UPDATE notes 
+                SET title_encrypted = $1, content_encrypted = $2, content_hash = $3, updated_at = NOW()
+                FROM workspaces w
+                WHERE notes.id = $4 AND notes.workspace_id = w.id AND w.owner_id = $5 AND notes.deleted_at IS NULL`,
+                titleEnc, contentEnc, contentHash, noteID, userID)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Failed to update note"})
+        }</span>
+
+        <span class="cov2" title="2">if result.RowsAffected() == 0 </span><span class="cov1" title="1">{
+                return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+        }</span>
+
+        <span class="cov1" title="1">return c.JSON(fiber.Map{"message": "Note updated successfully"})</span>
+}
+
+func (h *NotesHandler) DeleteNote(c *fiber.Ctx) error <span class="cov1" title="1">{
+        userID := c.Locals("user_id").(uuid.UUID)
+        noteID, err := uuid.Parse(c.Params("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+        }</span>
+
+        <span class="cov1" title="1">ctx := context.Background()
+
+        // Soft delete the note
+        result, err := h.db.Exec(ctx, `
+                UPDATE notes 
+                SET deleted_at = NOW()
+                FROM workspaces w
+                WHERE notes.id = $1 AND notes.workspace_id = w.id AND w.owner_id = $2 AND notes.deleted_at IS NULL`,
+                noteID, userID)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Failed to delete note"})
+        }</span>
+
+        <span class="cov1" title="1">if result.RowsAffected() == 0 </span><span class="cov0" title="0">{
+                return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+        }</span>
+
+        <span class="cov1" title="1">return c.JSON(fiber.Map{"message": "Note moved to trash successfully"})</span>
+}
+
+func (h *NotesHandler) GetTrash(c *fiber.Ctx) error <span class="cov2" title="2">{
+        userID := c.Locals("user_id").(uuid.UUID)
+        ctx := context.Background()
+
+        // Get user's default workspace
+        var workspaceID uuid.UUID
+        err := h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&amp;workspaceID)
+        if err != nil </span><span class="cov1" title="1">{
+                return c.Status(500).JSON(fiber.Map{"error": "Failed to get workspace"})
+        }</span>
+
+        // Get deleted notes from workspace
+        <span class="cov1" title="1">rows, err := h.db.Query(ctx, `
+                SELECT id, title_encrypted, content_encrypted, deleted_at, updated_at
+                FROM notes 
+                WHERE workspace_id = $1 AND deleted_at IS NOT NULL
+                ORDER BY deleted_at DESC`,
+                workspaceID)
+        
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch trash"})
+        }</span>
+        <span class="cov1" title="1">defer rows.Close()
+
+        trashedNotes := []fiber.Map{}
+        for rows.Next() </span><span class="cov2" title="2">{
+                var id uuid.UUID
+                var titleEnc, contentEnc []byte
+                var deletedAt, updatedAt time.Time
+
+                if err := rows.Scan(&amp;id, &amp;titleEnc, &amp;contentEnc, &amp;deletedAt, &amp;updatedAt); err != nil </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+
+                <span class="cov2" title="2">trashedNotes = append(trashedNotes, fiber.Map{
+                        "id":                id,
+                        "title_encrypted":   base64.StdEncoding.EncodeToString(titleEnc),
+                        "content_encrypted": base64.StdEncoding.EncodeToString(contentEnc),
+                        "deleted_at":        deletedAt,
+                        "updated_at":        updatedAt,
+                })</span>
+        }
+
+        <span class="cov1" title="1">return c.JSON(fiber.Map{"notes": trashedNotes})</span>
+}
+
+func (h *NotesHandler) RestoreNote(c *fiber.Ctx) error <span class="cov2" title="3">{
+        userID := c.Locals("user_id").(uuid.UUID)
+        noteID, err := uuid.Parse(c.Params("id"))
+        if err != nil </span><span class="cov1" title="1">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+        }</span>
+
+        <span class="cov2" title="2">ctx := context.Background()
+
+        // Restore the note (set deleted_at to NULL)
+        result, err := h.db.Exec(ctx, `
+                UPDATE notes 
+                SET deleted_at = NULL, updated_at = NOW()
+                FROM workspaces w
+                WHERE notes.id = $1 AND notes.workspace_id = w.id AND w.owner_id = $2 AND notes.deleted_at IS NOT NULL`,
+                noteID, userID)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Failed to restore note"})
+        }</span>
+
+        <span class="cov2" title="2">if result.RowsAffected() == 0 </span><span class="cov1" title="1">{
+                return c.Status(404).JSON(fiber.Map{"error": "Note not found in trash"})
+        }</span>
+
+        <span class="cov1" title="1">return c.JSON(fiber.Map{"message": "Note restored successfully"})</span>
+}
+
+func (h *NotesHandler) PermanentlyDeleteNote(c *fiber.Ctx) error <span class="cov2" title="2">{
+        userID := c.Locals("user_id").(uuid.UUID)
+        noteID, err := uuid.Parse(c.Params("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+        }</span>
+
+        <span class="cov2" title="2">ctx := context.Background()
+
+        // Permanently delete the note
+        result, err := h.db.Exec(ctx, `
+                DELETE FROM notes 
+                USING workspaces w
+                WHERE notes.id = $1 AND notes.workspace_id = w.id AND w.owner_id = $2 AND notes.deleted_at IS NOT NULL`,
+                noteID, userID)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Failed to permanently delete note"})
+        }</span>
+
+        <span class="cov2" title="2">if result.RowsAffected() == 0 </span><span class="cov1" title="1">{
+                return c.Status(404).JSON(fiber.Map{"error": "Note not found in trash"})
+        }</span>
+
+        <span class="cov1" title="1">return c.JSON(fiber.Map{"message": "Note permanently deleted successfully"})</span>
+}
+
+// Tags Handler
+type TagsHandler struct {
+        db     Database
+        crypto *CryptoService
+}
+
+type CreateTagRequest struct {
+        Name  string `json:"name" validate:"required"`
+        Color string `json:"color,omitempty"`
+}
+
+type AssignTagRequest struct {
+        TagID string `json:"tag_id" validate:"required"`
+}
+
+func (h *TagsHandler) GetTags(c *fiber.Ctx) error <span class="cov1" title="1">{
+        userID := c.Locals("user_id").(uuid.UUID)
+        ctx := context.Background()
+
+        // Get user's tags
+        rows, err := h.db.Query(ctx, `
+                SELECT id, name_encrypted, color, created_at, updated_at
+                FROM tags 
+                WHERE user_id = $1
+                ORDER BY name_encrypted ASC`,
+                userID)
+        
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch tags"})
+        }</span>
+        <span class="cov1" title="1">defer rows.Close()
+
+        tags := []fiber.Map{}
+        for rows.Next() </span><span class="cov2" title="2">{
+                var id uuid.UUID
+                var nameEnc []byte
+                var color string
+                var createdAt, updatedAt time.Time
+
+                if err := rows.Scan(&amp;id, &amp;nameEnc, &amp;color, &amp;createdAt, &amp;updatedAt); err != nil </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+
+                // Decrypt tag name
+                <span class="cov2" title="2">name, err := h.crypto.Decrypt(nameEnc)
+                if err != nil </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+
+                <span class="cov2" title="2">tags = append(tags, fiber.Map{
+                        "id":         id,
+                        "name":       string(name),
+                        "color":      color,
+                        "created_at": createdAt,
+                        "updated_at": updatedAt,
+                })</span>
+        }
+
+        <span class="cov1" title="1">return c.JSON(fiber.Map{"tags": tags})</span>
+}
+
+func (h *TagsHandler) CreateTag(c *fiber.Ctx) error <span class="cov3" title="4">{
+        userID := c.Locals("user_id").(uuid.UUID)
+        var req CreateTagRequest
+        if err := c.BodyParser(&amp;req); err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+        }</span>
+
+        // Validate color format (if provided)
+        <span class="cov3" title="4">if req.Color != "" &amp;&amp; !isValidHexColor(req.Color) </span><span class="cov1" title="1">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid color format"})
+        }</span>
+
+        // Set default color if not provided
+        <span class="cov2" title="3">if req.Color == "" </span><span class="cov1" title="1">{
+                req.Color = "#3b82f6"
+        }</span>
+
+        // Encrypt tag name
+        <span class="cov2" title="3">encryptedName, err := h.crypto.Encrypt([]byte(req.Name))
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt tag name"})
+        }</span>
+
+        <span class="cov2" title="3">ctx := context.Background()
+
+        // Create tag
+        var tagID uuid.UUID
+        err = h.db.QueryRow(ctx, `
+                INSERT INTO tags (user_id, name_encrypted, color)
+                VALUES ($1, $2, $3)
+                RETURNING id`,
+                userID, encryptedName, req.Color).Scan(&amp;tagID)
+
+        if err != nil </span><span class="cov1" title="1">{
+                if strings.Contains(err.Error(), "duplicate") </span><span class="cov1" title="1">{
+                        return c.Status(409).JSON(fiber.Map{"error": "Tag with this name already exists"})
+                }</span>
+                <span class="cov0" title="0">return c.Status(500).JSON(fiber.Map{"error": "Failed to create tag"})</span>
+        }
+
+        <span class="cov2" title="2">return c.Status(201).JSON(fiber.Map{
+                "id":      tagID,
+                "message": "Tag created successfully",
+        })</span>
+}
+
+func (h *TagsHandler) DeleteTag(c *fiber.Ctx) error <span class="cov2" title="2">{
+        userID := c.Locals("user_id").(uuid.UUID)
+        tagID, err := uuid.Parse(c.Params("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid tag ID"})
+        }</span>
+
+        <span class="cov2" title="2">ctx := context.Background()
+
+        // Delete tag (this will cascade delete note_tags relationships)
+        result, err := h.db.Exec(ctx, `
+                DELETE FROM tags 
+                WHERE id = $1 AND user_id = $2`,
+                tagID, userID)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Failed to delete tag"})
+        }</span>
+
+        <span class="cov2" title="2">if result.RowsAffected() == 0 </span><span class="cov1" title="1">{
+                return c.Status(404).JSON(fiber.Map{"error": "Tag not found"})
+        }</span>
+
+        <span class="cov1" title="1">return c.JSON(fiber.Map{"message": "Tag deleted successfully"})</span>
+}
+
+func (h *TagsHandler) AssignTagToNote(c *fiber.Ctx) error <span class="cov2" title="2">{
+        userID := c.Locals("user_id").(uuid.UUID)
+        noteID, err := uuid.Parse(c.Params("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+        }</span>
+
+        <span class="cov2" title="2">var req AssignTagRequest
+        if err := c.BodyParser(&amp;req); err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+        }</span>
+
+        <span class="cov2" title="2">tagID, err := uuid.Parse(req.TagID)
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid tag ID"})
+        }</span>
+
+        <span class="cov2" title="2">ctx := context.Background()
+
+        // Verify note belongs to user
+        var noteExists bool
+        err = h.db.QueryRow(ctx, `
+                SELECT true FROM notes n
+                JOIN workspaces w ON n.workspace_id = w.id
+                WHERE n.id = $1 AND w.owner_id = $2 AND n.deleted_at IS NULL`,
+                noteID, userID).Scan(&amp;noteExists)
+
+        if err != nil </span><span class="cov1" title="1">{
+                return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+        }</span>
+
+        // Verify tag belongs to user
+        <span class="cov1" title="1">var tagExists bool
+        err = h.db.QueryRow(ctx, `
+                SELECT true FROM tags WHERE id = $1 AND user_id = $2`,
+                tagID, userID).Scan(&amp;tagExists)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(404).JSON(fiber.Map{"error": "Tag not found"})
+        }</span>
+
+        // Assign tag to note
+        <span class="cov1" title="1">_, err = h.db.Exec(ctx, `
+                INSERT INTO note_tags (note_id, tag_id)
+                VALUES ($1, $2)
+                ON CONFLICT (note_id, tag_id) DO NOTHING`,
+                noteID, tagID)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Failed to assign tag"})
+        }</span>
+
+        <span class="cov1" title="1">return c.JSON(fiber.Map{"message": "Tag assigned successfully"})</span>
+}
+
+func (h *TagsHandler) RemoveTagFromNote(c *fiber.Ctx) error <span class="cov1" title="1">{
+        userID := c.Locals("user_id").(uuid.UUID)
+        noteID, err := uuid.Parse(c.Params("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+        }</span>
+
+        <span class="cov1" title="1">tagID, err := uuid.Parse(c.Params("tag_id"))
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid tag ID"})
+        }</span>
+
+        <span class="cov1" title="1">ctx := context.Background()
+
+        // Remove tag assignment (with user verification)
+        result, err := h.db.Exec(ctx, `
+                DELETE FROM note_tags 
+                USING notes n, workspaces w, tags t
+                WHERE note_tags.note_id = n.id 
+                AND note_tags.tag_id = t.id
+                AND n.workspace_id = w.id
+                AND note_tags.note_id = $1 
+                AND note_tags.tag_id = $2
+                AND w.owner_id = $3 
+                AND t.user_id = $3`,
+                noteID, tagID, userID)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Failed to remove tag"})
+        }</span>
+
+        <span class="cov1" title="1">if result.RowsAffected() == 0 </span><span class="cov0" title="0">{
+                return c.Status(404).JSON(fiber.Map{"error": "Tag assignment not found"})
+        }</span>
+
+        <span class="cov1" title="1">return c.JSON(fiber.Map{"message": "Tag removed successfully"})</span>
+}
+
+func (h *TagsHandler) GetNotesByTag(c *fiber.Ctx) error <span class="cov1" title="1">{
+        userID := c.Locals("user_id").(uuid.UUID)
+        tagID, err := uuid.Parse(c.Params("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(400).JSON(fiber.Map{"error": "Invalid tag ID"})
+        }</span>
+
+        <span class="cov1" title="1">ctx := context.Background()
+
+        // Get notes with this tag
+        rows, err := h.db.Query(ctx, `
+                SELECT n.id, n.title_encrypted, n.content_encrypted, n.created_at, n.updated_at
+                FROM notes n
+                JOIN workspaces w ON n.workspace_id = w.id
+                JOIN note_tags nt ON n.id = nt.note_id
+                JOIN tags t ON nt.tag_id = t.id
+                WHERE t.id = $1 AND w.owner_id = $2 AND n.deleted_at IS NULL
+                ORDER BY n.updated_at DESC`,
+                tagID, userID)
+        
+        if err != nil </span><span class="cov0" title="0">{
+                return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch notes"})
+        }</span>
+        <span class="cov1" title="1">defer rows.Close()
+
+        notes := []fiber.Map{}
+        for rows.Next() </span><span class="cov2" title="2">{
+                var id uuid.UUID
+                var titleEnc, contentEnc []byte
+                var createdAt, updatedAt time.Time
+
+                if err := rows.Scan(&amp;id, &amp;titleEnc, &amp;contentEnc, &amp;createdAt, &amp;updatedAt); err != nil </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+
+                <span class="cov2" title="2">notes = append(notes, fiber.Map{
+                        "id":                id,
+                        "title_encrypted":   base64.StdEncoding.EncodeToString(titleEnc),
+                        "content_encrypted": base64.StdEncoding.EncodeToString(contentEnc),
+                        "created_at":        createdAt,
+                        "updated_at":        updatedAt,
+                })</span>
+        }
+
+        <span class="cov1" title="1">return c.JSON(fiber.Map{"notes": notes})</span>
+}
+
+func isValidHexColor(color string) bool <span class="cov5" title="15">{
+        if len(color) != 7 || color[0] != '#' </span><span class="cov4" title="6">{
+                return false
+        }</span>
+        <span class="cov4" title="9">for i := 1; i &lt; 7; i++ </span><span class="cov8" title="49">{
+                c := color[i]
+                if !((c &gt;= '0' &amp;&amp; c &lt;= '9') || (c &gt;= 'A' &amp;&amp; c &lt;= 'F') || (c &gt;= 'a' &amp;&amp; c &lt;= 'f')) </span><span class="cov2" title="2">{
+                        return false
+                }</span>
+        }
+        <span class="cov4" title="7">return true</span>
+}
+
+// JWT Middleware
+func JWTMiddleware(secret []byte) fiber.Handler <span class="cov5" title="12">{
+        return func(c *fiber.Ctx) error </span><span class="cov6" title="18">{
+                token := c.Get("Authorization")
+                if token == "" </span><span class="cov3" title="5">{
+                        return c.Status(401).JSON(fiber.Map{"error": "Missing authorization"})
+                }</span>
+
+                <span class="cov5" title="13">token = strings.TrimPrefix(token, "Bearer ")
+
+                parsed, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) </span><span class="cov4" title="8">{
+                        return secret, nil
+                }</span>)
+
+                <span class="cov5" title="13">if err != nil || !parsed.Valid </span><span class="cov4" title="9">{
+                        return c.Status(401).JSON(fiber.Map{"error": "Invalid token"})
+                }</span>
+
+                <span class="cov3" title="4">claims := parsed.Claims.(jwt.MapClaims)
+                
+                // Safely extract user_id claim
+                userIDClaim, exists := claims["user_id"]
+                if !exists </span><span class="cov1" title="1">{
+                        return c.Status(401).JSON(fiber.Map{"error": "Missing user_id claim"})
+                }</span>
+                
+                <span class="cov2" title="3">userIDStr, ok := userIDClaim.(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return c.Status(401).JSON(fiber.Map{"error": "Invalid user_id claim type"})
+                }</span>
+                
+                <span class="cov2" title="3">userID, err := uuid.Parse(userIDStr)
+                if err != nil </span><span class="cov0" title="0">{
+                        return c.Status(401).JSON(fiber.Map{"error": "Invalid user_id format"})
+                }</span>
+                
+                <span class="cov2" title="3">c.Locals("user_id", userID)
+
+                return c.Next()</span>
+        }
+}
+
+// Background cleanup service that runs every 24 hours
+func startCleanupService(db Database) <span class="cov0" title="0">{
+        go func() </span><span class="cov0" title="0">{
+                ctx := context.Background()
+                ticker := time.NewTicker(24 * time.Hour)
+                defer ticker.Stop()
+
+                // Run initial cleanup
+                runCleanupTasks(ctx, db)
+
+                for </span><span class="cov0" title="0">{
+                        select </span>{
+                        case &lt;-ticker.C:<span class="cov0" title="0">
+                                runCleanupTasks(ctx, db)</span>
+                        }
+                }
+        }()
+}
+
+func runCleanupTasks(ctx context.Context, db Database) <span class="cov2" title="2">{
+        log.Println("🧹 Running scheduled cleanup tasks...")
+        
+        // Clean up expired sessions
+        result1, err1 := db.Exec(ctx, "SELECT cleanup_expired_sessions()")
+        if err1 != nil </span><span class="cov0" title="0">{
+                log.Printf("⚠️ Failed to cleanup expired sessions: %v", err1)
+        }</span> else<span class="cov2" title="2"> {
+                log.Println("✅ Cleaned up expired sessions")
+        }</span>
+
+        // Clean up old deleted notes (30+ days)
+        <span class="cov2" title="2">result2, err2 := db.Exec(ctx, "SELECT cleanup_old_deleted_notes()")
+        if err2 != nil </span><span class="cov0" title="0">{
+                log.Printf("⚠️ Failed to cleanup old deleted notes: %v", err2)
+        }</span> else<span class="cov2" title="2"> {
+                log.Println("✅ Cleaned up old deleted notes")
+        }</span>
+
+        // Get count of deleted notes
+        <span class="cov2" title="2">var deletedCount int
+        db.QueryRow(ctx, "SELECT COUNT(*) FROM notes WHERE deleted_at &lt; NOW() - INTERVAL '30 days' AND deleted_at IS NOT NULL").Scan(&amp;deletedCount)
+        
+        if deletedCount &gt; 0 </span><span class="cov1" title="1">{
+                log.Printf("🗑️ Permanently deleted %d notes older than 30 days", deletedCount)
+        }</span>
+
+        <span class="cov2" title="2">log.Println("🎯 Cleanup tasks completed successfully")
+        
+        // Prevent unused variable warnings
+        _ = result1
+        _ = result2</span>
+}
+
+func main() <span class="cov0" title="0">{
+        // Load configuration
+        config := LoadConfig()
+
+        // Setup database with automatic migrations
+        db, err := SetupDatabase(config.DatabaseURL)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("Database setup failed:", err)
+        }</span>
+        <span class="cov0" title="0">defer db.Close()
+
+        // Setup Redis
+        rdb := redis.NewClient(&amp;redis.Options{
+                Addr:     config.RedisURL,
+                Password: config.RedisPassword,
+                DB:       0, // use default DB
+        })
+        defer rdb.Close()
+
+        // Initialize crypto service
+        crypto := NewCryptoService(config.EncryptionKey)
+
+        // Create Fiber app with security middleware
+        app := fiber.New(fiber.Config{
+                DisableStartupMessage: false,
+                BodyLimit:             512 * 1024, // 512KB body size limit
+                ErrorHandler: func(c *fiber.Ctx, err error) error </span><span class="cov0" title="0">{
+                        code := fiber.StatusInternalServerError
+                        if e, ok := err.(*fiber.Error); ok </span><span class="cov0" title="0">{
+                                code = e.Code
+                        }</span>
+                        <span class="cov0" title="0">return c.Status(code).JSON(fiber.Map{"error": err.Error()})</span>
+                },
+        })
+
+        // Security middleware
+        <span class="cov0" title="0">app.Use(recover.New())
+        app.Use(logger.New())
+        app.Use(helmet.New(helmet.Config{
+                XSSProtection:         "1; mode=block",
+                ContentTypeNosniff:    "nosniff",
+                XFrameOptions:         "DENY",
+                HSTSMaxAge:            31536000,
+                ContentSecurityPolicy: "default-src 'self'",
+                ReferrerPolicy:        "strict-origin-when-cross-origin",
+        }))
+
+        // CORS
+        app.Use(cors.New(cors.Config{
+                AllowOrigins:     strings.Join(config.AllowedOrigins, ","),
+                AllowCredentials: true,
+                AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+                AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
+        }))
+
+        // Rate limiting
+        app.Use(limiter.New(limiter.Config{
+                Max:        100,
+                Expiration: 1 * time.Minute,
+                KeyGenerator: func(c *fiber.Ctx) string </span><span class="cov0" title="0">{
+                        return c.IP()
+                }</span>,
+        }))
+
+        // Initialize handlers
+        <span class="cov0" title="0">authHandler := &amp;AuthHandler{
+                db:     db,
+                crypto: crypto,
+                config: config,
+        }
+
+        // Public routes
+        api := app.Group("/api/v1")
+        api.Post("/auth/register", authHandler.Register)
+        api.Post("/auth/login", authHandler.Login)
+
+        // Health checks
+        api.Get("/health", func(c *fiber.Ctx) error </span><span class="cov0" title="0">{
+                return c.JSON(fiber.Map{"status": "healthy", "encryption": "enabled"})
+        }</span>)
+
+        <span class="cov0" title="0">api.Get("/ready", func(c *fiber.Ctx) error </span><span class="cov0" title="0">{
+                ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+                defer cancel()
+
+                if err := db.Ping(ctx); err != nil </span><span class="cov0" title="0">{
+                        return c.Status(503).JSON(fiber.Map{"status": "not ready", "db": "down"})
+                }</span>
+
+                <span class="cov0" title="0">if err := rdb.Ping(ctx).Err(); err != nil </span><span class="cov0" title="0">{
+                        return c.Status(503).JSON(fiber.Map{"status": "not ready", "redis": "down"})
+                }</span>
+
+                <span class="cov0" title="0">return c.JSON(fiber.Map{
+                        "status":     "ready",
+                        "db":         "connected",
+                        "redis":      "connected",
+                        "encryption": "active",
+                })</span>
+        })
+
+        // Notes handlers
+        <span class="cov0" title="0">notesHandler := &amp;NotesHandler{
+                db:     db,
+                crypto: crypto,
+        }
+
+        // Tags handlers
+        tagsHandler := &amp;TagsHandler{
+                db:     db,
+                crypto: crypto,
+        }
+
+        // Protected routes
+        protected := api.Group("/", JWTMiddleware(config.JWTSecret))
+        
+        // Notes endpoints
+        protected.Get("/notes", notesHandler.GetNotes)
+        protected.Get("/notes/:id", notesHandler.GetNote)
+        protected.Post("/notes", notesHandler.CreateNote)
+        protected.Put("/notes/:id", notesHandler.UpdateNote)
+        protected.Delete("/notes/:id", notesHandler.DeleteNote)
+        
+        // Trash endpoints
+        protected.Get("/trash", notesHandler.GetTrash)
+        protected.Put("/trash/:id/restore", notesHandler.RestoreNote)
+        protected.Delete("/trash/:id", notesHandler.PermanentlyDeleteNote)
+        
+        // Tags endpoints
+        protected.Get("/tags", tagsHandler.GetTags)
+        protected.Post("/tags", tagsHandler.CreateTag)
+        protected.Delete("/tags/:id", tagsHandler.DeleteTag)
+        protected.Get("/tags/:id/notes", tagsHandler.GetNotesByTag)
+        
+        // Note-tag assignment endpoints
+        protected.Post("/notes/:id/tags", tagsHandler.AssignTagToNote)
+        protected.Delete("/notes/:id/tags/:tag_id", tagsHandler.RemoveTagFromNote)
+
+        // Start background cleanup service
+        startCleanupService(db)
+
+        // Start server
+        log.Printf("Starting secure server on port %s with full encryption", config.Port)
+        log.Fatal(app.Listen(":" + config.Port))</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

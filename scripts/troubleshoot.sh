@@ -1,6 +1,7 @@
 #!/bin/bash
+# Note: Prefer leaflock.sh troubleshoot for quick checks; this script offers an in-depth interactive flow.
 
-# Secure Notes Troubleshooting Tool
+# LeafLock Troubleshooting Tool
 # Diagnoses and fixes common deployment issues
 
 set -euo pipefail
@@ -469,12 +470,12 @@ diagnose_service() {
             else
                 log_error "Backend health endpoint is not responding"
                 
-                if [[ "$deployment_type" == "docker" ]] || docker ps | grep -q secure-notes-backend; then
-                    log_fix "Check backend logs: docker logs secure-notes-backend"
+                if [[ "$deployment_type" == "docker" ]] || docker ps | grep -q leaflock-backend; then
+                    log_fix "Check backend logs: docker logs leaflock-backend"
                     log_fix "Restart backend: docker compose restart backend"
-                elif [[ "$deployment_type" == "k8s" ]] || kubectl get pods -n secure-notes | grep -q backend; then
-                    log_fix "Check backend logs: kubectl logs -l app=secure-notes-backend -n secure-notes"
-                    log_fix "Restart backend: kubectl rollout restart deployment/secure-notes-backend -n secure-notes"
+                elif [[ "$deployment_type" == "k8s" ]] || kubectl get pods -n leaflock | grep -q backend; then
+                    log_fix "Check backend logs: kubectl logs -l app=leaflock-backend -n leaflock"
+                    log_fix "Restart backend: kubectl rollout restart deployment/leaflock-backend -n leaflock"
                 else
                     log_fix "Check if backend service is running"
                 fi
@@ -489,12 +490,12 @@ diagnose_service() {
             else
                 log_error "Frontend is not responding"
                 
-                if [[ "$deployment_type" == "docker" ]] || docker ps | grep -q secure-notes-frontend; then
-                    log_fix "Check frontend logs: docker logs secure-notes-frontend"
+                if [[ "$deployment_type" == "docker" ]] || docker ps | grep -q leaflock-frontend; then
+                    log_fix "Check frontend logs: docker logs leaflock-frontend"
                     log_fix "Restart frontend: docker compose restart frontend"
-                elif [[ "$deployment_type" == "k8s" ]] || kubectl get pods -n secure-notes | grep -q frontend; then
-                    log_fix "Check frontend logs: kubectl logs -l app=secure-notes-frontend -n secure-notes"
-                    log_fix "Restart frontend: kubectl rollout restart deployment/secure-notes-frontend -n secure-notes"
+                elif [[ "$deployment_type" == "k8s" ]] || kubectl get pods -n leaflock | grep -q frontend; then
+                    log_fix "Check frontend logs: kubectl logs -l app=leaflock-frontend -n leaflock"
+                    log_fix "Restart frontend: kubectl rollout restart deployment/leaflock-frontend -n leaflock"
                 else
                     log_fix "Check if frontend service is running"
                 fi
@@ -521,8 +522,8 @@ diagnose_service() {
                 else
                     log_error "Cannot connect to database"
                     
-                    if docker ps | grep -q secure-notes-postgres; then
-                        log_fix "Check database logs: docker logs secure-notes-postgres"
+                    if docker ps | grep -q leaflock-postgres; then
+                        log_fix "Check database logs: docker logs leaflock-postgres"
                         log_fix "Check database status: docker compose exec postgres pg_isready"
                     else
                         log_fix "Database container may not be running"
@@ -543,8 +544,8 @@ diagnose_service() {
                 else
                     log_error "Cannot connect to Redis"
                     
-                    if docker ps | grep -q secure-notes-redis; then
-                        log_fix "Check Redis logs: docker logs secure-notes-redis"
+                    if docker ps | grep -q leaflock-redis; then
+                        log_fix "Check Redis logs: docker logs leaflock-redis"
                         log_fix "Check Redis status: docker compose exec redis redis-cli ping"
                     else
                         log_fix "Redis container may not be running"
@@ -570,7 +571,7 @@ generate_diagnostic_report() {
     log_section "Generating Diagnostic Report"
     
     {
-        echo "Secure Notes Diagnostic Report"
+        echo "LeafLock Diagnostic Report"
         echo "=============================="
         echo "Generated: $(date)"
         echo "User: $(whoami)"
@@ -639,7 +640,7 @@ quick_fixes() {
     
     echo "5. Database issues:"
     echo "   • Reset database: docker compose down -v && docker compose up -d"
-    echo "   • Check logs: docker logs secure-notes-postgres"
+    echo "   • Check logs: docker logs leaflock-postgres"
     echo "   • Connect manually: docker compose exec postgres psql -U postgres"
     echo
     

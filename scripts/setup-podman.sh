@@ -1,9 +1,10 @@
 #!/bin/bash
+# Note: Prefer leaflock.sh docker:* or k8s:deploy for common flows; this script is for Podman-focused setups.
 # setup-podman.sh - Complete Podman setup with rootless containers
 
 set -e
 
-echo "🔐 Secure Notes - Podman Setup (Rootless & Secure)"
+echo "🔐 LeafLock - Podman Setup (Rootless & Secure)"
 echo "=================================================="
 
 # Colors
@@ -127,7 +128,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-w -s -X main.version=1.0.0" \
     -trimpath \
-    -o secure-notes-backend \
+    -o leaflock-backend \
     main.go
 
 # Create minimal runtime image
@@ -137,7 +138,7 @@ FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /etc/passwd /etc/passwd
-COPY --from=builder /build/secure-notes-backend /app/secure-notes-backend
+COPY --from=builder /build/leaflock-backend /app/leaflock-backend
 
 # Use non-root user
 USER appuser:appuser
@@ -149,7 +150,7 @@ EXPOSE 8080
 LABEL io.containers.capabilities="drop=ALL"
 LABEL io.containers.seccomp="runtime/default"
 
-ENTRYPOINT ["/app/secure-notes-backend"]
+ENTRYPOINT ["/app/leaflock-backend"]
 EOF
     
     echo -e "${GREEN}✅ Backend Containerfile created${NC}"
@@ -255,9 +256,9 @@ create_systemd_service() {
     
     mkdir -p ~/.config/systemd/user/
     
-    cat > ~/.config/systemd/user/secure-notes.service << EOF
+    cat > ~/.config/systemd/user/leaflock.service << EOF
 [Unit]
-Description=Secure Notes Podman Application
+Description=LeafLock Podman Application
 After=network-online.target
 Wants=network-online.target
 
@@ -266,10 +267,10 @@ Type=simple
 Environment="PODMAN_SYSTEMD_UNIT=%n"
 Restart=on-failure
 TimeoutStopSec=70
-ExecStartPre=/usr/bin/podman pod create --name secure-notes-pod -p 8080:8080 -p 3000:3000
-ExecStart=/usr/bin/podman-compose -f %h/secure-notes/podman-compose.yml up
-ExecStop=/usr/bin/podman-compose -f %h/secure-notes/podman-compose.yml down
-ExecStopPost=/usr/bin/podman pod rm secure-notes-pod
+ExecStartPre=/usr/bin/podman pod create --name leaflock-pod -p 8080:8080 -p 3000:3000
+ExecStart=/usr/bin/podman-compose -f %h/leaflock/podman-compose.yml up
+ExecStop=/usr/bin/podman-compose -f %h/leaflock/podman-compose.yml down
+ExecStopPost=/usr/bin/podman pod rm leaflock-pod
 
 [Install]
 WantedBy=default.target
@@ -279,8 +280,8 @@ EOF
     systemctl --user daemon-reload
     
     echo -e "${GREEN}✅ Systemd service created${NC}"
-    echo "Enable auto-start: systemctl --user enable secure-notes.service"
-    echo "Start service: systemctl --user start secure-notes.service"
+    echo "Enable auto-start: systemctl --user enable leaflock.service"
+    echo "Start service: systemctl --user start leaflock.service"
 }
 
 # Generate Kubernetes YAML from Podman
@@ -289,16 +290,16 @@ generate_kube_yaml() {
     
     # Create pod first
     podman pod create \
-        --name secure-notes \
+        --name leaflock \
         --publish 8080:8080 \
         --publish 3000:3000 \
-        --label app=secure-notes
+        --label app=leaflock
     
     # Generate Kubernetes YAML (will be created dynamically by Makefile when needed)
     echo "Kubernetes YAML can be generated with: make kube"
     
     echo -e "${GREEN}✅ Kubernetes setup configured${NC}"
-    echo "Deploy with: make up (will generate secure-notes-kube.yaml automatically)"
+    echo "Deploy with: make up (will generate leaflock-kube.yaml automatically)"
 }
 
 # Create Makefile for Podman
@@ -319,67 +320,67 @@ help: ## Show help
 
 up: ## Start with podman-compose
 ifeq ($(COMPOSE_CMD),podman_kube_play)
-	@if [ ! -f secure-notes-kube.yaml ]; then $(MAKE) kube; fi
-	podman play kube secure-notes-kube.yaml
+	@if [ ! -f leaflock-kube.yaml ]; then $(MAKE) kube; fi
+	podman play kube leaflock-kube.yaml
 else
 	podman-compose up -d
 endif
-	@echo "✅ Secure Notes is running!"
+	@echo "✅ LeafLock is running!"
 	@echo "📝 Frontend: http://localhost:3000"
 	@echo "🔌 Backend: http://localhost:8080"
 
 down: ## Stop all containers
 ifeq ($(COMPOSE_CMD),podman_kube_play)
-	@if [ -f secure-notes-kube.yaml ]; then podman play kube --down secure-notes-kube.yaml; fi
+	@if [ -f leaflock-kube.yaml ]; then podman play kube --down leaflock-kube.yaml; fi
 else
 	podman-compose down
 endif
 
 restart: ## Restart all containers
 ifeq ($(COMPOSE_CMD),podman_kube_play)
-	@if [ ! -f secure-notes-kube.yaml ]; then $(MAKE) kube; fi
-	podman play kube --replace secure-notes-kube.yaml
+	@if [ ! -f leaflock-kube.yaml ]; then $(MAKE) kube; fi
+	podman play kube --replace leaflock-kube.yaml
 else
 	podman-compose restart
 endif
 
 logs: ## View logs
-	podman logs -f secure-notes-backend
+	podman logs -f leaflock-backend
 
 clean: ## Clean everything
-	podman pod rm -f secure-notes || true
+	podman pod rm -f leaflock || true
 	podman volume prune -f
 
 build: ## Build containers
-	podman build -t localhost/secure-notes-backend:latest -f backend/Containerfile backend/
-	podman build -t localhost/secure-notes-frontend:latest -f frontend/Containerfile frontend/
+	podman build -t localhost/leaflock-backend:latest -f backend/Containerfile backend/
+	podman build -t localhost/leaflock-frontend:latest -f frontend/Containerfile frontend/
 
 rootless-setup: ## Setup rootless podman
 	@./setup-podman.sh setup_rootless
 
 systemd: ## Setup systemd service
-	systemctl --user enable --now secure-notes.service
+	systemctl --user enable --now leaflock.service
 
 status: ## Check status
 	podman pod ps
 	podman ps -a --pod
 
 kube: ## Generate Kubernetes YAML
-	podman generate kube secure-notes > secure-notes-kube.yaml
-	@echo "Generated: secure-notes-kube.yaml"
+	podman generate kube leaflock > leaflock-kube.yaml
+	@echo "Generated: leaflock-kube.yaml"
 
 security-scan: ## Security scan containers
-	podman image scan localhost/secure-notes-backend:latest
-	podman image scan localhost/secure-notes-frontend:latest
+	podman image scan localhost/leaflock-backend:latest
+	podman image scan localhost/leaflock-frontend:latest
 
 export: ## Export as OCI archive
-	podman save -o secure-notes-backend.tar localhost/secure-notes-backend:latest
-	podman save -o secure-notes-frontend.tar localhost/secure-notes-frontend:latest
+	podman save -o leaflock-backend.tar localhost/leaflock-backend:latest
+	podman save -o leaflock-frontend.tar localhost/leaflock-frontend:latest
 	@echo "✅ Images exported"
 
 import: ## Import from OCI archive
-	podman load -i secure-notes-backend.tar
-	podman load -i secure-notes-frontend.tar
+	podman load -i leaflock-backend.tar
+	podman load -i leaflock-frontend.tar
 	@echo "✅ Images imported"
 EOF
     
@@ -395,15 +396,15 @@ create_kube_play_script() {
 # Alternative to podman-compose using podman play kube
 
 # Generate pod spec
-cat > secure-notes-pod.yaml << 'YAML'
+cat > leaflock-pod.yaml << 'YAML'
 apiVersion: v1
 kind: Pod
 metadata:
-  name: secure-notes
+  name: leaflock
   labels:
-    app: secure-notes
+    app: leaflock
 spec:
-  hostname: secure-notes
+  hostname: leaflock
   restartPolicy: Always
   containers:
   - name: postgres
@@ -426,7 +427,7 @@ spec:
     - name: redis-data
       mountPath: /data
   - name: backend
-    image: localhost/secure-notes-backend:latest
+    image: localhost/leaflock-backend:latest
     ports:
     - containerPort: 8080
       hostPort: 8080
@@ -434,7 +435,7 @@ spec:
     - name: DATABASE_URL
       value: "postgres://postgres:ChangeMe123!@localhost:5432/notes?sslmode=require"
   - name: frontend
-    image: localhost/secure-notes-frontend:latest
+    image: localhost/leaflock-frontend:latest
     ports:
     - containerPort: 8080
       hostPort: 3000
@@ -448,7 +449,7 @@ spec:
 YAML
 
 # Play the kube file
-podman play kube secure-notes-pod.yaml
+podman play kube leaflock-pod.yaml
 EOF
     
     chmod +x podman-kube-play.sh
@@ -458,7 +459,7 @@ EOF
 # Main setup function
 main() {
     echo ""
-    echo -e "${BLUE}🚀 Starting Secure Notes Podman Setup${NC}"
+echo -e "${BLUE}🚀 Starting LeafLock Podman Setup${NC}"
     echo "======================================="
     echo ""
     

@@ -38,7 +38,7 @@ describe('SecureNotesApp', () => {
     it('renders login form by default', () => {
       render(<SecureNotesApp />);
       
-      expect(screen.getByText('Secure Notes')).toBeInTheDocument();
+      expect(screen.getByText('LeafLock')).toBeInTheDocument();
       expect(screen.getByText(/End-to-end encrypted/)).toBeInTheDocument();
       expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/password/i)).toBeInTheDocument();

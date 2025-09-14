@@ -1,4 +1,4 @@
-module secure-notes
+module leaflock
 
 go 1.24
 

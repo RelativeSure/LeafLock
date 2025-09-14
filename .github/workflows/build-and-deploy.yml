@@ -74,7 +74,10 @@ jobs:
       - name: Build frontend
         working-directory: frontend
         run: |
-          pnpm install --frozen-lockfile
+          pnpm install --no-frozen-lockfile
+          pnpm run lint
+          pnpm run typecheck
+          pnpm run test -- --run
           pnpm run build
 
       - name: Run integration tests

@@ -20,7 +20,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-w -s -X main.version=1.0.0" \
     -trimpath \
-    -o secure-notes-backend \
+    -o leaflock-backend \
     main.go
 
 # Create minimal runtime image
@@ -30,7 +30,7 @@ FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /etc/passwd /etc/passwd
-COPY --from=builder /build/secure-notes-backend /app/secure-notes-backend
+COPY --from=builder /build/leaflock-backend /app/leaflock-backend
 
 # Use non-root user
 USER appuser:appuser
@@ -41,4 +41,4 @@ EXPOSE 8080
 # Security labels for Podman
 LABEL io.containers.seccomp="runtime/default"
 
-ENTRYPOINT ["/app/secure-notes-backend"]
+ENTRYPOINT ["/app/leaflock-backend"]
