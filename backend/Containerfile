@@ -23,6 +23,17 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -o leaflock-backend \
     main.go
 
+# Ensure binary is executable in builder layer
+RUN chmod +x /build/leaflock-backend
+
+# Build entrypoint wrapper that sets defaults and execs the main binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-w -s" \
+    -trimpath \
+    -o /build/entrypoint \
+    ./entrypoint.go && \
+    chmod +x /build/entrypoint
+
 # Create minimal runtime image
 FROM scratch
 
@@ -30,7 +41,9 @@ FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /etc/passwd /etc/passwd
-COPY --from=builder /build/leaflock-backend /app/leaflock-backend
+# Copy binaries with explicit execute permissions
+COPY --from=builder --chmod=0755 /build/leaflock-backend /app/leaflock-backend
+COPY --from=builder --chmod=0755 /build/entrypoint /app/entrypoint
 
 # Use non-root user
 USER appuser:appuser
@@ -41,4 +54,5 @@ EXPOSE 8080
 # Security labels for Podman
 LABEL io.containers.seccomp="runtime/default"
 
-ENTRYPOINT ["/app/leaflock-backend"]
+ENV BACKEND_BINARY=/app/leaflock-backend
+ENTRYPOINT ["/app/entrypoint"]
