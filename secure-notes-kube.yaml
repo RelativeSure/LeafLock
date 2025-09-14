@@ -23,7 +23,7 @@ spec:
       mountPath: /var/lib/postgresql/data
       
   - name: redis
-    image: redis:7-alpine@sha256:bb186d083732f669da90be8b0f975a37812b15e913465bb14d845db72a4e3e08
+    image: redis:8-alpine@sha256:987c376c727652f99625c7d205a1cba3cb2c53b92b0b62aade2bd48ee1593232
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "ChangeThisRedisPassword123!"]
     ports:
     - containerPort: 6379
