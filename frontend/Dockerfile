@@ -37,6 +37,9 @@ RUN rm -rf /usr/share/nginx/html/*
 # Copy nginx template; resolve PORT at startup
 COPY nginx.conf.template /etc/nginx/nginx.conf.template
 
+# Copy entrypoint script and ensure it is executable
+COPY --chmod=0755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
 # Copy built application
 COPY --from=builder /app/dist /usr/share/nginx/html
 
@@ -48,15 +51,20 @@ RUN addgroup -g 1001 -S nginx-user && \
 RUN chown -R nginx-user:nginx-user /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx/conf.d
 RUN touch /var/run/nginx.pid && chown -R nginx-user:nginx-user /var/run/nginx.pid
 
-# Use non-root user
+# Use non-root user for runtime
 USER nginx-user
 
 # Default port if not provided by platform
 ENV PORT=8080
 
+# Document the listening port for platforms that read EXPOSE
+EXPOSE 8080
+
 # Health check (uses resolved PORT)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/ || exit 1
 
-# Start nginx with PORT substitution
-CMD ["/bin/sh", "-c", ": \${PORT:=8080}; envsubst '$$PORT' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"]
+# Explicit entrypoint to generate config then start nginx
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+
+# No CMD needed; entrypoint launches nginx

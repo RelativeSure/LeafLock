@@ -18,6 +18,17 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -a -installsuffix cgo \
     -o main .
 
+# Ensure the binary is executable in the builder layer (belt-and-suspenders)
+RUN chmod +x /app/main
+
+# Build a tiny entrypoint that sets defaults and execs the binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags='-w -s -extldflags "-static"' \
+    -trimpath \
+    -o /app/entrypoint \
+    ./entrypoint.go && \
+    chmod +x /app/entrypoint
+
 # Final stage - minimal runtime
 FROM scratch
 
@@ -31,8 +42,9 @@ COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
 
-# Copy the binary
-COPY --from=builder /app/main /app/main
+# Copy the binaries with explicit execute permissions
+COPY --from=builder --chmod=0755 /app/main /app/main
+COPY --from=builder --chmod=0755 /app/entrypoint /app/entrypoint
 
 # Set user to non-root
 USER nobody:nogroup
@@ -42,5 +54,6 @@ EXPOSE 8080
 
 # Health check will be handled by docker-compose
 
-# Run the binary
-ENTRYPOINT ["/app/main"]
+# Explicit entrypoint wrapper handles env defaults then execs main
+ENV BACKEND_BINARY=/app/main
+ENTRYPOINT ["/app/entrypoint"]
