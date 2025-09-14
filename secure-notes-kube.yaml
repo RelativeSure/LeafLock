@@ -7,7 +7,7 @@ metadata:
 spec:
   containers:
   - name: postgres
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:dfcf0459185089e88a43197975780f5a3078acd5ece84824a14c9d6fbbab02d0
     env:
     - name: POSTGRES_PASSWORD
       value: "ChangeThisSecurePassword123!"
@@ -23,7 +23,7 @@ spec:
       mountPath: /var/lib/postgresql/data
       
   - name: redis
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:bb186d083732f669da90be8b0f975a37812b15e913465bb14d845db72a4e3e08
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "ChangeThisRedisPassword123!"]
     ports:
     - containerPort: 6379
