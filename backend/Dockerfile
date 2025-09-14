@@ -26,7 +26,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags='-w -s -extldflags "-static"' \
     -trimpath \
     -o /app/entrypoint \
-    ./entrypoint.go && \
+    ./cmd/entrypoint && \
     chmod +x /app/entrypoint
 
 # Final stage - minimal runtime

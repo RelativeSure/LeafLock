@@ -21,7 +21,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-w -s -X main.version=1.0.0" \
     -trimpath \
     -o leaflock-backend \
-    main.go
+    .
 
 # Ensure binary is executable in builder layer
 RUN chmod +x /build/leaflock-backend
@@ -31,7 +31,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-w -s" \
     -trimpath \
     -o /build/entrypoint \
-    ./entrypoint.go && \
+    ./cmd/entrypoint && \
     chmod +x /build/entrypoint
 
 # Create minimal runtime image
