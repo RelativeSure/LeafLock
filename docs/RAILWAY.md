@@ -97,6 +97,44 @@ Required GitHub Secrets
 
 Alternatively, you can pass the `project_id` when clicking “Run workflow”.
 
+## Using Railpack/Nixpacks (no Docker)
+
+If you prefer Railway’s default builders, create two services from this repo and set explicit build/start commands.
+
+### Backend (Go)
+
+- Service root: `backend/`
+- Builder: Nixpacks (or Railpack)
+- Commands
+  - Install: (leave blank)
+  - Build: `go build -o app .`
+  - Start: `./app`
+- Environment variables
+  - Provided by plugins: `DATABASE_URL`, `REDIS_URL`, `REDIS_PASSWORD`
+  - Set manually:
+    - `JWT_SECRET`: 64‑byte base64 random (see below)
+    - `SERVER_ENCRYPTION_KEY`: 32‑byte base64 random (see below)
+    - `ENABLE_REGISTRATION`: `false` (recommended for prod; toggle in Admin)
+    - `CORS_ORIGINS`: include your frontend domain(s), e.g. `https://leaflock.app,https://<frontend>.up.railway.app`
+
+### Frontend (Vite + React)
+
+- Service root: `frontend/`
+- Builder: Nixpacks (or Railpack)
+- Commands (serve built assets via Vite preview)
+  - Install: `corepack enable && pnpm i --frozen-lockfile`
+  - Build: `pnpm build`
+  - Start: `pnpm preview --host 0.0.0.0 --port $PORT`
+- Environment variables
+  - `VITE_API_URL`: `https://<your-backend>.up.railway.app`
+  - `VITE_ENABLE_ADMIN_PANEL`: `true` (optional)
+
+Notes
+- Do not deploy the repo root as a single service. Always set the root to `backend/` and `frontend/` respectively.
+- Using Vite preview avoids needing Nginx; it binds to `$PORT` directly.
+- If you attach a custom frontend domain, add it to backend `CORS_ORIGINS`.
+
+
 ### Deploy Button (Template)
 
 You can also use Railway's deploy button to start from this repository template. You may still need to adjust service roots (backend/, frontend/) in the Railway UI after creation.
