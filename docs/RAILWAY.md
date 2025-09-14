@@ -91,6 +91,12 @@ You can deploy to Railway from a manual GitHub Action run:
 
 This workflow only runs when manually triggered (workflow_dispatch); it does not run on push.
 
+Required GitHub Secrets
+- RAILWAY_TOKEN (recommended: Project Token from Railway Project → Settings → Tokens)
+- Optional: RAILWAY_PROJECT_ID (Project → Settings → Developer → Project ID)
+
+Alternatively, you can pass the `project_id` when clicking “Run workflow”.
+
 ### Deploy Button (Template)
 
 You can also use Railway's deploy button to start from this repository template. You may still need to adjust service roots (backend/, frontend/) in the Railway UI after creation.

@@ -63,6 +63,15 @@ jobs:
             echo "Note: RAILWAY_PROJECT_ID not provided; relying on CLI defaults or previous link."
           fi
 
+      - name: Debug - List Railway projects and environments
+        run: |
+          echo "Listing projects..."
+          railway projects || true
+          if [ -n "$RAILWAY_PROJECT_ID" ]; then
+            echo "Listing environments for project $RAILWAY_PROJECT_ID..."
+            railway environments --project "$RAILWAY_PROJECT_ID" || true
+          fi
+
       - name: Deploy backend
         if: ${{ github.event.inputs.target == 'backend' || github.event.inputs.target == 'both' }}
         working-directory: backend
@@ -74,10 +83,10 @@ jobs:
           echo "Deploying backend..."
           # Set variables (new CLI expects --set as option, not subcommand)
           if [ -n "$ENABLE_REGISTRATION" ]; then
-            railway variables --service backend --environment "$RAILWAY_ENVIRONMENT" --set ENABLE_REGISTRATION=$ENABLE_REGISTRATION || true
+            railway variables --project "$RAILWAY_PROJECT_ID" --service backend --environment "$RAILWAY_ENVIRONMENT" --set ENABLE_REGISTRATION=$ENABLE_REGISTRATION || true
           fi
-          # CI deploy with explicit env/service (requires RAILWAY_TOKEN and RAILWAY_PROJECT_ID)
-          railway up --ci || railway up --service backend
+          # Deploy backend explicitly targeting project+environment+service
+          railway up --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT" --service backend
 
       - name: Deploy frontend
         if: ${{ github.event.inputs.target == 'frontend' || github.event.inputs.target == 'both' }}
@@ -89,9 +98,9 @@ jobs:
         run: |
           echo "Deploying frontend..."
           if [ -n "$VITE_ENABLE_ADMIN_PANEL" ]; then
-            railway variables --service frontend --environment "$RAILWAY_ENVIRONMENT" --set VITE_ENABLE_ADMIN_PANEL=$VITE_ENABLE_ADMIN_PANEL || true
+            railway variables --project "$RAILWAY_PROJECT_ID" --service frontend --environment "$RAILWAY_ENVIRONMENT" --set VITE_ENABLE_ADMIN_PANEL=$VITE_ENABLE_ADMIN_PANEL || true
           fi
-          railway up --ci || railway up --service frontend
+          railway up --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT" --service frontend
 
       - name: Summary
         run: |
