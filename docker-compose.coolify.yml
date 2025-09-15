@@ -1,0 +1,140 @@
+# docker-compose.coolify.yml - LeafLock deployment for Coolify
+# This file is optimized for Coolify deployment with proper health checks,
+# environment variable validation, and service dependencies.
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: leaflock-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Please set POSTGRES_PASSWORD in Coolify environment variables}
+      POSTGRES_DB: leaflock
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - leaflock-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h localhost -p 5432"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    restart: unless-stopped
+    # Don't expose ports - internal service only
+    # ports:
+    #   - "5432:5432"
+
+  # Redis Cache for Sessions
+  redis:
+    image: redis:7-alpine
+    container_name: leaflock-redis
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Please set REDIS_PASSWORD in Coolify environment variables}"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - leaflock-network
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"${REDIS_PASSWORD}\" --no-auth-warning ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    # Don't expose ports - internal service only
+    # ports:
+    #   - "6379:6379"
+
+  # Go Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: leaflock-backend
+    environment:
+      # Database Configuration
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?}@postgres:5432/leaflock?sslmode=disable
+      
+      # Redis Configuration
+      REDIS_URL: redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?}
+      
+      # Security Keys (CRITICAL: Must be set in Coolify UI)
+      JWT_SECRET: ${JWT_SECRET:?Please set JWT_SECRET (64 chars) in Coolify environment variables}
+      SERVER_ENCRYPTION_KEY: ${SERVER_ENCRYPTION_KEY:?Please set SERVER_ENCRYPTION_KEY (32 chars) in Coolify environment variables}
+      
+      # CORS and API Configuration
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      PORT: 8080
+      
+      # Application Settings
+      APP_ENV: ${APP_ENV:-production}
+      ENABLE_REGISTRATION: ${ENABLE_REGISTRATION:-true}
+      
+      # Admin Configuration (Optional)
+      ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - leaflock-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/v1/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    restart: unless-stopped
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Build-time environment variables
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+        VITE_ENABLE_ADMIN_PANEL: ${VITE_ENABLE_ADMIN_PANEL:-false}
+    container_name: leaflock-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - leaflock-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  leaflock-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+
+# Coolify Deployment Notes:
+# 1. Set all required environment variables in Coolify UI
+# 2. Use strong, randomly generated passwords and keys
+# 3. Configure domain and SSL in Coolify for the frontend service
+# 4. Monitor logs during deployment: docker compose logs -f
+# 5. Health endpoints:
+#    - Backend: http://your-backend:8080/api/v1/health
+#    - Frontend: http://your-frontend/
