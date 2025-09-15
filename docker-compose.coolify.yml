@@ -76,8 +76,9 @@ services:
       
       # Admin Configuration (Optional)
       ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
-    ports:
-      - "8080:8080"
+    # Backend is internal-only - no external port exposure
+    # ports:
+    #   - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
