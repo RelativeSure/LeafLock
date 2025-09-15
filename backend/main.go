@@ -17,6 +17,9 @@ import (
     "bytes"
     "sync/atomic"
     "strconv"
+    "net"
+    neturl "net/url"
+    "regexp"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -321,10 +324,16 @@ func LoadConfig() *Config {
 		log.Println("Generated new server encryption key")
 	}
 
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		dbURL = "postgres://postgres:postgres@localhost:5432/notes?sslmode=disable"
-	}
+    dbURL := os.Getenv("DATABASE_URL")
+    if dbURL == "" {
+        // Try Coolify-provided Postgres envs first
+        if built := buildDatabaseURLFromEnv(); built != "" {
+            dbURL = built
+        } else {
+            // Safe local default for dev
+            dbURL = "postgres://postgres:postgres@localhost:5432/notes?sslmode=disable"
+        }
+    }
 
 	return &Config{
 		DatabaseURL:      dbURL,
@@ -346,6 +355,30 @@ func getEnvOrDefault(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// Build a postgres URL from common env vars (Coolify/Postgres add-on style)
+// Recognized: POSTGRESQL_HOST, POSTGRESQL_PORT, POSTGRESQL_USER, POSTGRESQL_PASSWORD, POSTGRESQL_DATABASE, POSTGRESQL_SSLMODE
+func buildDatabaseURLFromEnv() string {
+    host := strings.TrimSpace(os.Getenv("POSTGRESQL_HOST"))
+    user := strings.TrimSpace(os.Getenv("POSTGRESQL_USER"))
+    pass := os.Getenv("POSTGRESQL_PASSWORD") // may contain spaces/specials
+    db := strings.TrimSpace(os.Getenv("POSTGRESQL_DATABASE"))
+    if host == "" || user == "" || db == "" {
+        return ""
+    }
+    port := getEnvOrDefault("POSTGRESQL_PORT", "5432")
+    sslmode := getEnvOrDefault("POSTGRESQL_SSLMODE", "disable")
+    u := &neturl.URL{
+        Scheme: "postgres",
+        User:   neturl.UserPassword(user, pass),
+        Host:   net.JoinHostPort(host, port),
+        Path:   "/" + db,
+    }
+    q := neturl.Values{}
+    q.Set("sslmode", sslmode)
+    u.RawQuery = q.Encode()
+    return u.String()
 }
 
 // Crypto Service for server-side encryption
@@ -577,36 +610,64 @@ func VerifyPassword(password, encodedHash string) bool {
 
 // Database setup and migration runner
 func SetupDatabase(dbURL string) (*pgxpool.Pool, error) {
-	// Connect to postgres to create database if needed
-	tempURL := strings.Replace(dbURL, "/notes", "/postgres", 1)
-	db, err := sql.Open("pgx", tempURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
-	}
-	defer db.Close()
+    // Parse URL to detect DB name and construct an admin URL pointing to 'postgres'
+    adminURL, dbName := adminURLAndDBName(dbURL)
 
-	// Create database if not exists
-	_, err = db.Exec("CREATE DATABASE notes")
-	if err != nil && !strings.Contains(err.Error(), "already exists") {
-		log.Printf("Note: Database might already exist: %v", err)
-	}
+    // Create database if not exists (skip if dbName is empty or 'postgres')
+    if dbName != "" && dbName != "postgres" {
+        adminDB, err := sql.Open("pgx", adminURL)
+        if err != nil {
+            return nil, fmt.Errorf("failed to connect to postgres: %w", err)
+        }
+        // Best effort ensure DB exists
+        if safe, ok := safePgIdent(dbName); ok {
+            if _, err := adminDB.Exec("CREATE DATABASE " + safe); err != nil && !strings.Contains(strings.ToLower(err.Error()), "already exists") {
+                log.Printf("Note: CREATE DATABASE may have failed (continuing if it exists): %v", err)
+            }
+        } else {
+            log.Printf("Warning: Database name '%s' contains unsupported characters; skipping CREATE DATABASE step", dbName)
+        }
+        _ = adminDB.Close()
+    }
 
-	// Connect to the actual database
-	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, dbURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
-	}
+    // Connect to the actual database
+    ctx := context.Background()
+    pool, err := pgxpool.New(ctx, dbURL)
+    if err != nil {
+        return nil, fmt.Errorf("failed to connect to database: %w", err)
+    }
 
-	// Run migrations
-	log.Println("Running database migrations...")
-	_, err = pool.Exec(ctx, DatabaseSchema)
-	if err != nil {
-		return nil, fmt.Errorf("failed to run migrations: %w", err)
-	}
+    // Run migrations
+    log.Println("Running database migrations...")
+    if _, err := pool.Exec(ctx, DatabaseSchema); err != nil {
+        return nil, fmt.Errorf("failed to run migrations: %w", err)
+    }
 
-	log.Println("Database setup completed successfully")
-	return pool, nil
+    log.Println("Database setup completed successfully")
+    return pool, nil
+}
+
+// Build an admin URL pointing to the 'postgres' database and return the target db name.
+func adminURLAndDBName(dbURL string) (string, string) {
+    u, err := neturl.Parse(dbURL)
+    if err != nil {
+        return dbURL, ""
+    }
+    // Extract db name from path
+    dbName := strings.TrimPrefix(u.Path, "/")
+    // Point to 'postgres' db for admin tasks
+    u.Path = "/postgres"
+    return u.String(), dbName
+}
+
+var identRe = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
+
+// Quote/validate identifier safely for CREATE DATABASE
+func safePgIdent(name string) (string, bool) {
+    if identRe.MatchString(name) {
+        return name, true
+    }
+    return "", false
 }
 
 // Database interface for dependency injection and testing
