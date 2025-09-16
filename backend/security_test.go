@@ -58,7 +58,8 @@ func (suite *SecurityTestSuite) SetupTest() {
 		c.Set("X-Content-Type-Options", "nosniff")
 		c.Set("X-Frame-Options", "DENY")
 		c.Set("X-XSS-Protection", "1; mode=block")
-		c.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		// HSTS temporarily disabled while Cloudflare configuration is investigated.
+		// c.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		return c.Next()
 	})
 
@@ -586,7 +587,7 @@ func (suite *SecurityTestSuite) TestSecurityHeaders() {
 	assert.Equal(suite.T(), "nosniff", resp.Header.Get("X-Content-Type-Options"))
 	assert.Equal(suite.T(), "DENY", resp.Header.Get("X-Frame-Options"))
 	assert.Equal(suite.T(), "1; mode=block", resp.Header.Get("X-XSS-Protection"))
-	assert.Contains(suite.T(), resp.Header.Get("Strict-Transport-Security"), "max-age=31536000")
+	assert.Empty(suite.T(), resp.Header.Get("Strict-Transport-Security"))
 }
 
 // CORS Security Tests
