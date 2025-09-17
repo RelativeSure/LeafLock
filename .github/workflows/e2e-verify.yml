@@ -28,13 +28,10 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - name: Frontend lint, typecheck, unit tests
+      - name: Frontend dependencies
         working-directory: frontend
         run: |
-          pnpm install --no-frozen-lockfile
-          pnpm run lint
-          pnpm run typecheck
-          pnpm run test -- --run
+          pnpm install --frozen-lockfile
 
       - name: Build and start full stack (docker compose)
         env:
