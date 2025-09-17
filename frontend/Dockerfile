@@ -54,11 +54,12 @@ RUN touch /var/run/nginx.pid && chown -R nginx-user:nginx-user /var/run/nginx.pi
 # Use non-root user for runtime
 USER nginx-user
 
-# Default port if not provided by platform
-ENV PORT=8080
+# Default port to 80 for standard web service deployment
+# Can be overridden by platform environment variables
+ENV PORT=80
 
 # Document the listening port for platforms that read EXPOSE
-EXPOSE 8080
+EXPOSE 80
 
 # Health check (uses resolved PORT)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
