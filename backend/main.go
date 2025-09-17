@@ -1637,7 +1637,12 @@ func main() {
 	config := LoadConfig()
 
 	// Initialize runtime toggle from env (default true)
-	if strings.ToLower(strings.TrimSpace(getEnvOrDefault("ENABLE_REGISTRATION", "true"))) == "true" {
+	envRegRaw, envRegExplicit := os.LookupEnv("ENABLE_REGISTRATION")
+	envRegValue := strings.ToLower(strings.TrimSpace(envRegRaw))
+	if !envRegExplicit || envRegValue == "" {
+		envRegValue = "true"
+	}
+	if envRegValue == "true" {
 		regEnabled.Store(1)
 	} else {
 		regEnabled.Store(0)
@@ -1812,22 +1817,27 @@ func main() {
 	docs.Get("/", swaggerUIHandler)
 	docs.Get("/openapi.json", swaggerJSONHandler)
 
-	// Seed app_settings.registration_enabled from env if missing
+	// Seed app_settings.registration_enabled from env; env overrides DB
 	func() {
 		ctx := context.Background()
 		val := "false"
 		if regEnabled.Load() == 1 {
 			val = "true"
 		}
-		_, _ = db.Exec(ctx, `INSERT INTO app_settings(key, value) VALUES('registration_enabled', $1)
-                             ON CONFLICT (key) DO NOTHING`, val)
-		// If present, load from DB to override runtime
-		var dbVal string
-		if err := db.QueryRow(ctx, `SELECT value FROM app_settings WHERE key='registration_enabled'`).Scan(&dbVal); err == nil {
-			if strings.ToLower(strings.TrimSpace(dbVal)) == "true" {
-				regEnabled.Store(1)
-			} else {
-				regEnabled.Store(0)
+		if envRegExplicit {
+			_, _ = db.Exec(ctx, `INSERT INTO app_settings(key, value) VALUES('registration_enabled', $1)
+                                 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, val)
+		} else {
+			_, _ = db.Exec(ctx, `INSERT INTO app_settings(key, value) VALUES('registration_enabled', $1)
+                                 ON CONFLICT (key) DO NOTHING`, val)
+			// If present, load from DB to override runtime when env isn't forcing a value
+			var dbVal string
+			if err := db.QueryRow(ctx, `SELECT value FROM app_settings WHERE key='registration_enabled'`).Scan(&dbVal); err == nil {
+				if strings.ToLower(strings.TrimSpace(dbVal)) == "true" {
+					regEnabled.Store(1)
+				} else {
+					regEnabled.Store(0)
+				}
 			}
 		}
 	}()

@@ -9,6 +9,7 @@ vendor/
 # Build outputs
 backend/main
 backend/app
+backend/.gocache/
 frontend/dist/
 frontend/build/
 
