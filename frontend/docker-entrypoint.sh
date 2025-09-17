@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-# Default port if not provided by platform
-: "${PORT:=8080}"
+# Default port to 80 for standard web service deployment
+: "${PORT:=80}"
 
 # Render nginx config to a writable location
 # Require BACKEND_INTERNAL_URL (e.g., http://backend:8080). Fail fast if missing.

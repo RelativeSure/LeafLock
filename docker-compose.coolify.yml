@@ -100,13 +100,16 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # Build-time environment variables
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+        # Build-time environment variables for frontend API connection
+        # Use your actual domain instead of localhost for Coolify deployment
+        VITE_API_URL: ${VITE_API_URL:-https://leaflock.app/api/v1}
         VITE_ENABLE_ADMIN_PANEL: ${VITE_ENABLE_ADMIN_PANEL:-false}
     container_name: leaflock-frontend
     environment:
       # Runtime environment variables for frontend
       BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8080}
+      # Set port to 80 to match Coolify port mapping expectations
+      PORT: 80
     ports:
       - "3000:80"
     depends_on:
