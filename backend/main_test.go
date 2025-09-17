@@ -478,6 +478,12 @@ type AuthHandlerTestSuite struct {
 func (suite *AuthHandlerTestSuite) SetupTest() {
 	suite.mockDB = &MockDB{}
 
+	// Ensure registration toggle is enabled for auth tests
+	regEnabled.Store(1)
+	suite.T().Cleanup(func() {
+		regEnabled.Store(0)
+	})
+
 	// Generate test encryption key
 	key := make([]byte, 32)
 	rand.Read(key)

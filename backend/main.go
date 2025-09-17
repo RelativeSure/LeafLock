@@ -2,24 +2,24 @@
 package main
 
 import (
-    "context"
-    "crypto/rand"
-    "crypto/subtle"
-    "database/sql"
-    "encoding/base64"
-    "encoding/hex"
-    "fmt"
-    "log"
-    "os"
-    "strings"
-    "time"
-    "bufio"
-    "bytes"
-    "sync/atomic"
-    "strconv"
-    "net"
-    neturl "net/url"
-    "regexp"
+	"bufio"
+	"bytes"
+	"context"
+	"crypto/rand"
+	"crypto/subtle"
+	"database/sql"
+	"encoding/base64"
+	"encoding/hex"
+	"fmt"
+	"log"
+	"net"
+	neturl "net/url"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
+	"sync/atomic"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -324,16 +324,16 @@ func LoadConfig() *Config {
 		log.Println("Generated new server encryption key")
 	}
 
-    dbURL := os.Getenv("DATABASE_URL")
-    if dbURL == "" {
-        // Try Coolify-provided Postgres envs first
-        if built := buildDatabaseURLFromEnv(); built != "" {
-            dbURL = built
-        } else {
-            // Safe local default for dev
-            dbURL = "postgres://postgres:postgres@localhost:5432/notes?sslmode=disable"
-        }
-    }
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		// Try Coolify-provided Postgres envs first
+		if built := buildDatabaseURLFromEnv(); built != "" {
+			dbURL = built
+		} else {
+			// Safe local default for dev
+			dbURL = "postgres://postgres:postgres@localhost:5432/notes?sslmode=disable"
+		}
+	}
 
 	return &Config{
 		DatabaseURL:      dbURL,
@@ -360,25 +360,25 @@ func getEnvOrDefault(key, defaultValue string) string {
 // Build a postgres URL from common env vars (Coolify/Postgres add-on style)
 // Recognized: POSTGRESQL_HOST, POSTGRESQL_PORT, POSTGRESQL_USER, POSTGRESQL_PASSWORD, POSTGRESQL_DATABASE, POSTGRESQL_SSLMODE
 func buildDatabaseURLFromEnv() string {
-    host := strings.TrimSpace(os.Getenv("POSTGRESQL_HOST"))
-    user := strings.TrimSpace(os.Getenv("POSTGRESQL_USER"))
-    pass := os.Getenv("POSTGRESQL_PASSWORD") // may contain spaces/specials
-    db := strings.TrimSpace(os.Getenv("POSTGRESQL_DATABASE"))
-    if host == "" || user == "" || db == "" {
-        return ""
-    }
-    port := getEnvOrDefault("POSTGRESQL_PORT", "5432")
-    sslmode := getEnvOrDefault("POSTGRESQL_SSLMODE", "disable")
-    u := &neturl.URL{
-        Scheme: "postgres",
-        User:   neturl.UserPassword(user, pass),
-        Host:   net.JoinHostPort(host, port),
-        Path:   "/" + db,
-    }
-    q := neturl.Values{}
-    q.Set("sslmode", sslmode)
-    u.RawQuery = q.Encode()
-    return u.String()
+	host := strings.TrimSpace(os.Getenv("POSTGRESQL_HOST"))
+	user := strings.TrimSpace(os.Getenv("POSTGRESQL_USER"))
+	pass := os.Getenv("POSTGRESQL_PASSWORD") // may contain spaces/specials
+	db := strings.TrimSpace(os.Getenv("POSTGRESQL_DATABASE"))
+	if host == "" || user == "" || db == "" {
+		return ""
+	}
+	port := getEnvOrDefault("POSTGRESQL_PORT", "5432")
+	sslmode := getEnvOrDefault("POSTGRESQL_SSLMODE", "disable")
+	u := &neturl.URL{
+		Scheme: "postgres",
+		User:   neturl.UserPassword(user, pass),
+		Host:   net.JoinHostPort(host, port),
+		Path:   "/" + db,
+	}
+	q := neturl.Values{}
+	q.Set("sslmode", sslmode)
+	u.RawQuery = q.Encode()
+	return u.String()
 }
 
 // Crypto Service for server-side encryption
@@ -388,16 +388,16 @@ type CryptoService struct {
 
 // RBAC helpers
 func HasRole(ctx context.Context, db Database, userID uuid.UUID, role string) bool {
-    // Admins always pass
-    var isAdmin bool
-    if err := db.QueryRow(ctx, "SELECT is_admin FROM users WHERE id = $1", userID).Scan(&isAdmin); err == nil && isAdmin {
-        return true
-    }
-    if strings.ToLower(role) == "admin" {
-        if isUserInAdminAllowlist(userID.String()) {
-            return true
-        }
-    }
+	// Admins always pass
+	var isAdmin bool
+	if err := db.QueryRow(ctx, "SELECT is_admin FROM users WHERE id = $1", userID).Scan(&isAdmin); err == nil && isAdmin {
+		return true
+	}
+	if strings.ToLower(role) == "admin" {
+		if isUserInAdminAllowlist(userID.String()) {
+			return true
+		}
+	}
 	// Check user_roles
 	var exists bool
 	_ = db.QueryRow(ctx, `
@@ -413,92 +413,94 @@ func HasRole(ctx context.Context, db Database, userID uuid.UUID, role string) bo
 var adminAllowlist atomic.Value // holds map[string]struct{}
 
 func init() {
-    adminAllowlist.Store(make(map[string]struct{}))
+	adminAllowlist.Store(make(map[string]struct{}))
 }
 
 func currentAllowlist() map[string]struct{} {
-    v := adminAllowlist.Load()
-    if v == nil {
-        return map[string]struct{}{}
-    }
-    return v.(map[string]struct{})
+	v := adminAllowlist.Load()
+	if v == nil {
+		return map[string]struct{}{}
+	}
+	return v.(map[string]struct{})
 }
 
 func isUserInAdminAllowlist(userID string) bool {
-    if _, ok := currentAllowlist()[strings.TrimSpace(userID)]; ok {
-        return true
-    }
-    // Backward-compat: also check process env in case watcher not configured
-    envAdmins := strings.Split(os.Getenv("ADMIN_USER_IDS"), ",")
-    for _, a := range envAdmins {
-        if strings.TrimSpace(a) == strings.TrimSpace(userID) {
-            return true
-        }
-    }
-    return false
+	if _, ok := currentAllowlist()[strings.TrimSpace(userID)]; ok {
+		return true
+	}
+	// Backward-compat: also check process env in case watcher not configured
+	envAdmins := strings.Split(os.Getenv("ADMIN_USER_IDS"), ",")
+	for _, a := range envAdmins {
+		if strings.TrimSpace(a) == strings.TrimSpace(userID) {
+			return true
+		}
+	}
+	return false
 }
 
 func loadAllowlistFromSources(envList string, filePath string) (map[string]struct{}, string) {
-    m := make(map[string]struct{})
-    var buf bytes.Buffer
-    // include env first
-    if envList != "" {
-        buf.WriteString("ENV:")
-        buf.WriteString(envList)
-        buf.WriteString("\n")
-        for _, a := range strings.Split(envList, ",") {
-            a = strings.TrimSpace(a)
-            if a != "" {
-                m[a] = struct{}{}
-            }
-        }
-    }
-    // include file if present
-    if filePath != "" {
-        if f, err := os.Open(filePath); err == nil {
-            defer f.Close()
-            scanner := bufio.NewScanner(f)
-            for scanner.Scan() {
-                line := strings.TrimSpace(scanner.Text())
-                if line == "" || strings.HasPrefix(line, "#") { continue }
-                if strings.HasPrefix(line, "ADMIN_USER_IDS=") {
-                    val := strings.TrimSpace(strings.TrimPrefix(line, "ADMIN_USER_IDS="))
-                    // strip quotes if present
-                    val = strings.Trim(val, "\"'")
-                    buf.WriteString("FILE:")
-                    buf.WriteString(val)
-                    buf.WriteString("\n")
-                    for _, a := range strings.Split(val, ",") {
-                        a = strings.TrimSpace(a)
-                        if a != "" {
-                            m[a] = struct{}{}
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return m, buf.String()
+	m := make(map[string]struct{})
+	var buf bytes.Buffer
+	// include env first
+	if envList != "" {
+		buf.WriteString("ENV:")
+		buf.WriteString(envList)
+		buf.WriteString("\n")
+		for _, a := range strings.Split(envList, ",") {
+			a = strings.TrimSpace(a)
+			if a != "" {
+				m[a] = struct{}{}
+			}
+		}
+	}
+	// include file if present
+	if filePath != "" {
+		if f, err := os.Open(filePath); err == nil {
+			defer f.Close()
+			scanner := bufio.NewScanner(f)
+			for scanner.Scan() {
+				line := strings.TrimSpace(scanner.Text())
+				if line == "" || strings.HasPrefix(line, "#") {
+					continue
+				}
+				if strings.HasPrefix(line, "ADMIN_USER_IDS=") {
+					val := strings.TrimSpace(strings.TrimPrefix(line, "ADMIN_USER_IDS="))
+					// strip quotes if present
+					val = strings.Trim(val, "\"'")
+					buf.WriteString("FILE:")
+					buf.WriteString(val)
+					buf.WriteString("\n")
+					for _, a := range strings.Split(val, ",") {
+						a = strings.TrimSpace(a)
+						if a != "" {
+							m[a] = struct{}{}
+						}
+					}
+				}
+			}
+		}
+	}
+	return m, buf.String()
 }
 
 func startAdminAllowlistRefresher() {
-    filePath := strings.TrimSpace(os.Getenv("ADMIN_USER_IDS_FILE"))
-    // initial load
-    m, _ := loadAllowlistFromSources(os.Getenv("ADMIN_USER_IDS"), filePath)
-    adminAllowlist.Store(m)
-    go func() {
-        var lastSig string
-        ticker := time.NewTicker(5 * time.Second)
-        defer ticker.Stop()
-        for range ticker.C {
-            m, sig := loadAllowlistFromSources(os.Getenv("ADMIN_USER_IDS"), filePath)
-            if sig != lastSig {
-                adminAllowlist.Store(m)
-                lastSig = sig
-                log.Printf("🔄 Admin allowlist reloaded (%d entries)", len(m))
-            }
-        }
-    }()
+	filePath := strings.TrimSpace(os.Getenv("ADMIN_USER_IDS_FILE"))
+	// initial load
+	m, _ := loadAllowlistFromSources(os.Getenv("ADMIN_USER_IDS"), filePath)
+	adminAllowlist.Store(m)
+	go func() {
+		var lastSig string
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			m, sig := loadAllowlistFromSources(os.Getenv("ADMIN_USER_IDS"), filePath)
+			if sig != lastSig {
+				adminAllowlist.Store(m)
+				lastSig = sig
+				log.Printf("🔄 Admin allowlist reloaded (%d entries)", len(m))
+			}
+		}
+	}()
 }
 
 func RequireRole(db Database, role string) fiber.Handler {
@@ -529,26 +531,26 @@ func RequireRole(db Database, role string) fiber.Handler {
 
 // helper: return nil if sql.NullTime is invalid
 func nilIfInvalid(t sql.NullTime) any {
-    if t.Valid {
-        return t.Time
-    }
-    return nil
+	if t.Valid {
+		return t.Time
+	}
+	return nil
 }
 
 func csvEscape(s string) string {
-    // Escape quotes and wrap in quotes if needed
-    if strings.ContainsAny(s, ",\n\r\"") {
-        s = strings.ReplaceAll(s, "\"", "\"\"")
-        return "\"" + s + "\""
-    }
-    return s
+	// Escape quotes and wrap in quotes if needed
+	if strings.ContainsAny(s, ",\n\r\"") {
+		s = strings.ReplaceAll(s, "\"", "\"\"")
+		return "\"" + s + "\""
+	}
+	return s
 }
 
 func formatNullTime(t sql.NullTime) string {
-    if t.Valid {
-        return t.Time.Format(time.RFC3339)
-    }
-    return ""
+	if t.Valid {
+		return t.Time.Format(time.RFC3339)
+	}
+	return ""
 }
 
 func NewCryptoService(key []byte) *CryptoService {
@@ -610,64 +612,64 @@ func VerifyPassword(password, encodedHash string) bool {
 
 // Database setup and migration runner
 func SetupDatabase(dbURL string) (*pgxpool.Pool, error) {
-    // Parse URL to detect DB name and construct an admin URL pointing to 'postgres'
-    adminURL, dbName := adminURLAndDBName(dbURL)
+	// Parse URL to detect DB name and construct an admin URL pointing to 'postgres'
+	adminURL, dbName := adminURLAndDBName(dbURL)
 
-    // Create database if not exists (skip if dbName is empty or 'postgres')
-    if dbName != "" && dbName != "postgres" {
-        adminDB, err := sql.Open("pgx", adminURL)
-        if err != nil {
-            return nil, fmt.Errorf("failed to connect to postgres: %w", err)
-        }
-        // Best effort ensure DB exists
-        if safe, ok := safePgIdent(dbName); ok {
-            if _, err := adminDB.Exec("CREATE DATABASE " + safe); err != nil && !strings.Contains(strings.ToLower(err.Error()), "already exists") {
-                log.Printf("Note: CREATE DATABASE may have failed (continuing if it exists): %v", err)
-            }
-        } else {
-            log.Printf("Warning: Database name '%s' contains unsupported characters; skipping CREATE DATABASE step", dbName)
-        }
-        _ = adminDB.Close()
-    }
+	// Create database if not exists (skip if dbName is empty or 'postgres')
+	if dbName != "" && dbName != "postgres" {
+		adminDB, err := sql.Open("pgx", adminURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to postgres: %w", err)
+		}
+		// Best effort ensure DB exists
+		if safe, ok := safePgIdent(dbName); ok {
+			if _, err := adminDB.Exec("CREATE DATABASE " + safe); err != nil && !strings.Contains(strings.ToLower(err.Error()), "already exists") {
+				log.Printf("Note: CREATE DATABASE may have failed (continuing if it exists): %v", err)
+			}
+		} else {
+			log.Printf("Warning: Database name '%s' contains unsupported characters; skipping CREATE DATABASE step", dbName)
+		}
+		_ = adminDB.Close()
+	}
 
-    // Connect to the actual database
-    ctx := context.Background()
-    pool, err := pgxpool.New(ctx, dbURL)
-    if err != nil {
-        return nil, fmt.Errorf("failed to connect to database: %w", err)
-    }
+	// Connect to the actual database
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, dbURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
 
-    // Run migrations
-    log.Println("Running database migrations...")
-    if _, err := pool.Exec(ctx, DatabaseSchema); err != nil {
-        return nil, fmt.Errorf("failed to run migrations: %w", err)
-    }
+	// Run migrations
+	log.Println("Running database migrations...")
+	if _, err := pool.Exec(ctx, DatabaseSchema); err != nil {
+		return nil, fmt.Errorf("failed to run migrations: %w", err)
+	}
 
-    log.Println("Database setup completed successfully")
-    return pool, nil
+	log.Println("Database setup completed successfully")
+	return pool, nil
 }
 
 // Build an admin URL pointing to the 'postgres' database and return the target db name.
 func adminURLAndDBName(dbURL string) (string, string) {
-    u, err := neturl.Parse(dbURL)
-    if err != nil {
-        return dbURL, ""
-    }
-    // Extract db name from path
-    dbName := strings.TrimPrefix(u.Path, "/")
-    // Point to 'postgres' db for admin tasks
-    u.Path = "/postgres"
-    return u.String(), dbName
+	u, err := neturl.Parse(dbURL)
+	if err != nil {
+		return dbURL, ""
+	}
+	// Extract db name from path
+	dbName := strings.TrimPrefix(u.Path, "/")
+	// Point to 'postgres' db for admin tasks
+	u.Path = "/postgres"
+	return u.String(), dbName
 }
 
 var identRe = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
 
 // Quote/validate identifier safely for CREATE DATABASE
 func safePgIdent(name string) (string, bool) {
-    if identRe.MatchString(name) {
-        return name, true
-    }
-    return "", false
+	if identRe.MatchString(name) {
+		return name, true
+	}
+	return "", false
 }
 
 // Database interface for dependency injection and testing
@@ -697,10 +699,10 @@ type LoginRequest struct {
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
-    // Check if registration is enabled (runtime toggle)
-    if regEnabled.Load() != 1 {
-        return c.Status(403).JSON(fiber.Map{"error": "Registration is currently disabled"})
-    }
+	// Check if registration is enabled (runtime toggle)
+	if regEnabled.Load() != 1 {
+		return c.Status(403).JSON(fiber.Map{"error": "Registration is currently disabled"})
+	}
 
 	var req RegisterRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -933,8 +935,8 @@ func (h *AuthHandler) logAudit(ctx context.Context, userID uuid.UUID, action, re
 
 // Notes Handler
 type NotesHandler struct {
-    db     Database
-    crypto *CryptoService
+	db     Database
+	crypto *CryptoService
 }
 
 type CreateNoteRequest struct {
@@ -1631,11 +1633,15 @@ func runCleanupTasks(ctx context.Context, db Database) {
 }
 
 func main() {
-    // Load configuration
-    config := LoadConfig()
+	// Load configuration
+	config := LoadConfig()
 
-    // Initialize runtime toggle from env (default true)
-    if strings.ToLower(strings.TrimSpace(getEnvOrDefault("ENABLE_REGISTRATION", "true"))) == "true" { regEnabled.Store(1) } else { regEnabled.Store(0) }
+	// Initialize runtime toggle from env (default true)
+	if strings.ToLower(strings.TrimSpace(getEnvOrDefault("ENABLE_REGISTRATION", "true"))) == "true" {
+		regEnabled.Store(1)
+	} else {
+		regEnabled.Store(0)
+	}
 
 	// Setup database with automatic migrations
 	db, err := SetupDatabase(config.DatabaseURL)
@@ -1655,10 +1661,10 @@ func main() {
 	// Initialize crypto service
 	crypto := NewCryptoService(config.EncryptionKey)
 
-    // Start dynamic admin allowlist refresher (hot-reloads from file if mounted)
-    startAdminAllowlistRefresher()
+	// Start dynamic admin allowlist refresher (hot-reloads from file if mounted)
+	startAdminAllowlistRefresher()
 
-    // Create Fiber app with security middleware
+	// Create Fiber app with security middleware
 	app := fiber.New(fiber.Config{
 		DisableStartupMessage: false,
 		BodyLimit:             512 * 1024, // 512KB body size limit
@@ -1679,6 +1685,7 @@ func main() {
 		ContentTypeNosniff:    "nosniff",
 		XFrameOptions:         "DENY",
 		HSTSMaxAge:            31536000,
+		HSTSPreloadEnabled:    true,
 		ContentSecurityPolicy: "default-src 'self'",
 		ReferrerPolicy:        "strict-origin-when-cross-origin",
 	}))
@@ -1791,71 +1798,91 @@ func main() {
 	docs.Get("/", swaggerUIHandler)
 	docs.Get("/openapi.json", swaggerJSONHandler)
 
-    // Seed app_settings.registration_enabled from env if missing
-    func() {
-        ctx := context.Background()
-        val := "false"; if regEnabled.Load() == 1 { val = "true" }
-        _, _ = db.Exec(ctx, `INSERT INTO app_settings(key, value) VALUES('registration_enabled', $1)
+	// Seed app_settings.registration_enabled from env if missing
+	func() {
+		ctx := context.Background()
+		val := "false"
+		if regEnabled.Load() == 1 {
+			val = "true"
+		}
+		_, _ = db.Exec(ctx, `INSERT INTO app_settings(key, value) VALUES('registration_enabled', $1)
                              ON CONFLICT (key) DO NOTHING`, val)
-        // If present, load from DB to override runtime
-        var dbVal string
-        if err := db.QueryRow(ctx, `SELECT value FROM app_settings WHERE key='registration_enabled'`).Scan(&dbVal); err == nil {
-            if strings.ToLower(strings.TrimSpace(dbVal)) == "true" { regEnabled.Store(1) } else { regEnabled.Store(0) }
-        }
-    }()
+		// If present, load from DB to override runtime
+		var dbVal string
+		if err := db.QueryRow(ctx, `SELECT value FROM app_settings WHERE key='registration_enabled'`).Scan(&dbVal); err == nil {
+			if strings.ToLower(strings.TrimSpace(dbVal)) == "true" {
+				regEnabled.Store(1)
+			} else {
+				regEnabled.Store(0)
+			}
+		}
+	}()
 
-    // Admin API (RBAC)
-    admin := api.Group("/admin", JWTMiddleware(config.JWTSecret), RequireRole(db, "admin"))
-    admin.Get("/health", func(c *fiber.Ctx) error { return c.JSON(fiber.Map{"status": "ok"}) })
+	// Admin API (RBAC)
+	admin := api.Group("/admin", JWTMiddleware(config.JWTSecret), RequireRole(db, "admin"))
+	admin.Get("/health", func(c *fiber.Ctx) error { return c.JSON(fiber.Map{"status": "ok"}) })
 
-    // Registration setting endpoints
-    admin.Get("/settings/registration", func(c *fiber.Ctx) error {
-        // Prefer DB value if present
-        var dbVal string
-        if err := db.QueryRow(c.Context(), `SELECT value FROM app_settings WHERE key='registration_enabled'`).Scan(&dbVal); err == nil {
-            if strings.ToLower(strings.TrimSpace(dbVal)) == "true" { regEnabled.Store(1) } else { regEnabled.Store(0) }
-        }
-        return c.JSON(fiber.Map{"enabled": regEnabled.Load() == 1})
-    })
-    admin.Put("/settings/registration", func(c *fiber.Ctx) error {
-        var body struct{ Enabled bool `json:"enabled"` }
-        if err := c.BodyParser(&body); err != nil {
-            return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
-        }
-        if body.Enabled { regEnabled.Store(1) } else { regEnabled.Store(0) }
-        // Persist to DB
-        val := "false"; if regEnabled.Load() == 1 { val = "true" }
-        _, _ = db.Exec(c.Context(), `INSERT INTO app_settings(key, value) VALUES('registration_enabled', $1)
+	// Registration setting endpoints
+	admin.Get("/settings/registration", func(c *fiber.Ctx) error {
+		// Prefer DB value if present
+		var dbVal string
+		if err := db.QueryRow(c.Context(), `SELECT value FROM app_settings WHERE key='registration_enabled'`).Scan(&dbVal); err == nil {
+			if strings.ToLower(strings.TrimSpace(dbVal)) == "true" {
+				regEnabled.Store(1)
+			} else {
+				regEnabled.Store(0)
+			}
+		}
+		return c.JSON(fiber.Map{"enabled": regEnabled.Load() == 1})
+	})
+	admin.Put("/settings/registration", func(c *fiber.Ctx) error {
+		var body struct {
+			Enabled bool `json:"enabled"`
+		}
+		if err := c.BodyParser(&body); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+		}
+		if body.Enabled {
+			regEnabled.Store(1)
+		} else {
+			regEnabled.Store(0)
+		}
+		// Persist to DB
+		val := "false"
+		if regEnabled.Load() == 1 {
+			val = "true"
+		}
+		_, _ = db.Exec(c.Context(), `INSERT INTO app_settings(key, value) VALUES('registration_enabled', $1)
                   ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, val)
-        return c.JSON(fiber.Map{"enabled": regEnabled.Load() == 1})
-    })
+		return c.JSON(fiber.Map{"enabled": regEnabled.Load() == 1})
+	})
 
-    // List users with basic metadata for admin UI (supports q, limit, offset)
+	// List users with basic metadata for admin UI (supports q, limit, offset)
 	admin.Get("/users", func(c *fiber.Ctx) error {
-        ctx := c.Context()
+		ctx := c.Context()
 
-        // Parse query params
-        q := strings.TrimSpace(c.Query("q"))
-        limit := 25
-        offset := 0
-        if v := strings.TrimSpace(c.Query("limit")); v != "" {
-            if n, err := strconv.Atoi(v); err == nil {
-                if n < 1 {
-                    n = 1
-                }
-                if n > 100 {
-                    n = 100
-                }
-                limit = n
-            }
-        }
-        if v := strings.TrimSpace(c.Query("offset")); v != "" {
-            if n, err := strconv.Atoi(v); err == nil && n >= 0 {
-                offset = n
-            }
-        }
+		// Parse query params
+		q := strings.TrimSpace(c.Query("q"))
+		limit := 25
+		offset := 0
+		if v := strings.TrimSpace(c.Query("limit")); v != "" {
+			if n, err := strconv.Atoi(v); err == nil {
+				if n < 1 {
+					n = 1
+				}
+				if n > 100 {
+					n = 100
+				}
+				limit = n
+			}
+		}
+		if v := strings.TrimSpace(c.Query("offset")); v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+				offset = n
+			}
+		}
 
-        // Additional filters
+		// Additional filters
 		role := strings.TrimSpace(c.Query("role"))
 		rolesParam := strings.TrimSpace(c.Query("roles")) // comma-separated
 		var rolesList []string
@@ -1867,32 +1894,34 @@ func main() {
 				}
 			}
 		}
-        adminParam := strings.ToLower(strings.TrimSpace(c.Query("admin"))) // "true" | "false" | ""
-        regFrom := strings.TrimSpace(c.Query("reg_from"))
-        regTo := strings.TrimSpace(c.Query("reg_to"))
-        lastFrom := strings.TrimSpace(c.Query("last_from"))
-        lastTo := strings.TrimSpace(c.Query("last_to"))
-        hasLogin := strings.ToLower(strings.TrimSpace(c.Query("has_login"))) == "true"
-        hasIP := strings.ToLower(strings.TrimSpace(c.Query("has_ip"))) == "true"
+		adminParam := strings.ToLower(strings.TrimSpace(c.Query("admin"))) // "true" | "false" | ""
+		regFrom := strings.TrimSpace(c.Query("reg_from"))
+		regTo := strings.TrimSpace(c.Query("reg_to"))
+		lastFrom := strings.TrimSpace(c.Query("last_from"))
+		lastTo := strings.TrimSpace(c.Query("last_to"))
+		hasLogin := strings.ToLower(strings.TrimSpace(c.Query("has_login"))) == "true"
+		hasIP := strings.ToLower(strings.TrimSpace(c.Query("has_ip"))) == "true"
 
-        sort := strings.ToLower(strings.TrimSpace(c.Query("sort")))
-        order := strings.ToUpper(strings.TrimSpace(c.Query("order")))
-        if order != "ASC" && order != "DESC" { order = "DESC" }
-        switch sort {
-        case "email", "created_at", "last_login", "is_admin":
-            // ok
-        default:
-            sort = "created_at"
-        }
+		sort := strings.ToLower(strings.TrimSpace(c.Query("sort")))
+		order := strings.ToUpper(strings.TrimSpace(c.Query("order")))
+		if order != "ASC" && order != "DESC" {
+			order = "DESC"
+		}
+		switch sort {
+		case "email", "created_at", "last_login", "is_admin":
+			// ok
+		default:
+			sort = "created_at"
+		}
 
-        // Build dynamic WHERE
-        var conds []string
-        var args []any
-        add := func(clause string, val any) { conds = append(conds, clause); args = append(args, val) }
+		// Build dynamic WHERE
+		var conds []string
+		var args []any
+		add := func(clause string, val any) { conds = append(conds, clause); args = append(args, val) }
 
-        if q != "" {
-            add("LOWER(email) LIKE $%d", "%"+strings.ToLower(q)+"%")
-        }
+		if q != "" {
+			add("LOWER(email) LIKE $%d", "%"+strings.ToLower(q)+"%")
+		}
 		if role != "" {
 			add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = $%d)", role)
 		}
@@ -1900,154 +1929,154 @@ func main() {
 			// any of the roles
 			add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = ANY($%d))", rolesList)
 		}
-        if adminParam == "true" {
-            conds = append(conds, "is_admin = TRUE")
-        } else if adminParam == "false" {
-            conds = append(conds, "is_admin = FALSE")
-        }
-        if regFrom != "" {
-            add("created_at >= $%d", regFrom)
-        }
-        if regTo != "" {
-            add("created_at <= $%d", regTo)
-        }
-        if lastFrom != "" {
-            add("last_login >= $%d", lastFrom)
-        }
-        if lastTo != "" {
-            add("last_login <= $%d", lastTo)
-        }
-        if hasLogin {
-            conds = append(conds, "last_login IS NOT NULL")
-        }
-        if hasIP {
-            conds = append(conds, "EXISTS (SELECT 1 FROM sessions s WHERE s.user_id = users.id)")
-        }
+		if adminParam == "true" {
+			conds = append(conds, "is_admin = TRUE")
+		} else if adminParam == "false" {
+			conds = append(conds, "is_admin = FALSE")
+		}
+		if regFrom != "" {
+			add("created_at >= $%d", regFrom)
+		}
+		if regTo != "" {
+			add("created_at <= $%d", regTo)
+		}
+		if lastFrom != "" {
+			add("last_login >= $%d", lastFrom)
+		}
+		if lastTo != "" {
+			add("last_login <= $%d", lastTo)
+		}
+		if hasLogin {
+			conds = append(conds, "last_login IS NOT NULL")
+		}
+		if hasIP {
+			conds = append(conds, "EXISTS (SELECT 1 FROM sessions s WHERE s.user_id = users.id)")
+		}
 
-        // Build WHERE with right placeholders
-        where := ""
-        if len(conds) > 0 {
-            // Replace $%d with actual placeholder numbers
-            n := 1
-            parts := make([]string, 0, len(conds))
-            for _, cnd := range conds {
-                if strings.Contains(cnd, "$%d") {
-                    cnd = fmt.Sprintf(cnd, n)
-                    n++
-                }
-                parts = append(parts, cnd)
-            }
-            where = "WHERE " + strings.Join(parts, " AND ")
-        }
+		// Build WHERE with right placeholders
+		where := ""
+		if len(conds) > 0 {
+			// Replace $%d with actual placeholder numbers
+			n := 1
+			parts := make([]string, 0, len(conds))
+			for _, cnd := range conds {
+				if strings.Contains(cnd, "$%d") {
+					cnd = fmt.Sprintf(cnd, n)
+					n++
+				}
+				parts = append(parts, cnd)
+			}
+			where = "WHERE " + strings.Join(parts, " AND ")
+		}
 
-        // Query rows
+		// Query rows
 		rows, err := db.Query(ctx, fmt.Sprintf(`
 			SELECT id, email_encrypted, created_at, last_login, is_admin
 			FROM users
 			%s
 			ORDER BY %s %s
 			LIMIT %d OFFSET %d`, where, sort, order, limit, offset), args...)
-        if err != nil {
-            return c.Status(500).JSON(fiber.Map{"error": "query failed"})
-        }
-        defer rows.Close()
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "query failed"})
+		}
+		defer rows.Close()
 
-        type userRow struct {
-            ID       uuid.UUID
-            EmailEnc []byte
-            Created  time.Time
-            Last     sql.NullTime
-            IsAdmin  bool
-        }
-        var users []userRow
-        var userIDs []uuid.UUID
-        for rows.Next() {
-            var r userRow
-            if err := rows.Scan(&r.ID, &r.EmailEnc, &r.Created, &r.Last, &r.IsAdmin); err == nil {
-                users = append(users, r)
-                userIDs = append(userIDs, r.ID)
-            }
-        }
+		type userRow struct {
+			ID       uuid.UUID
+			EmailEnc []byte
+			Created  time.Time
+			Last     sql.NullTime
+			IsAdmin  bool
+		}
+		var users []userRow
+		var userIDs []uuid.UUID
+		for rows.Next() {
+			var r userRow
+			if err := rows.Scan(&r.ID, &r.EmailEnc, &r.Created, &r.Last, &r.IsAdmin); err == nil {
+				users = append(users, r)
+				userIDs = append(userIDs, r.ID)
+			}
+		}
 
-        // Total count with same filter
-        var total int
-        // Total count
-        if where != "" {
-            _ = db.QueryRow(ctx, fmt.Sprintf(`SELECT COUNT(*) FROM users %s`, where), args...).Scan(&total)
-        } else {
-            _ = db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&total)
-        }
+		// Total count with same filter
+		var total int
+		// Total count
+		if where != "" {
+			_ = db.QueryRow(ctx, fmt.Sprintf(`SELECT COUNT(*) FROM users %s`, where), args...).Scan(&total)
+		} else {
+			_ = db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&total)
+		}
 
-        // Load roles only for returned users
-        rolesByUser := make(map[uuid.UUID][]string)
-        if len(userIDs) > 0 {
-            // Build IN clause
-            params := []any{}
-            placeholders := []string{}
-            for i, id := range userIDs {
-                params = append(params, id)
-                placeholders = append(placeholders, "$"+strconv.Itoa(i+1))
-            }
-            roleSQL := `SELECT ur.user_id, r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id IN (` + strings.Join(placeholders, ",") + `)`
-            if rrows, err := db.Query(ctx, roleSQL, params...); err == nil {
-                defer rrows.Close()
-                for rrows.Next() {
-                    var uid uuid.UUID
-                    var name string
-                    if err := rrows.Scan(&uid, &name); err == nil {
-                        rolesByUser[uid] = append(rolesByUser[uid], name)
-                    }
-                }
-            }
-        }
+		// Load roles only for returned users
+		rolesByUser := make(map[uuid.UUID][]string)
+		if len(userIDs) > 0 {
+			// Build IN clause
+			params := []any{}
+			placeholders := []string{}
+			for i, id := range userIDs {
+				params = append(params, id)
+				placeholders = append(placeholders, "$"+strconv.Itoa(i+1))
+			}
+			roleSQL := `SELECT ur.user_id, r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id IN (` + strings.Join(placeholders, ",") + `)`
+			if rrows, err := db.Query(ctx, roleSQL, params...); err == nil {
+				defer rrows.Close()
+				for rrows.Next() {
+					var uid uuid.UUID
+					var name string
+					if err := rrows.Scan(&uid, &name); err == nil {
+						rolesByUser[uid] = append(rolesByUser[uid], name)
+					}
+				}
+			}
+		}
 
-        // Build response with decrypted fields and last/registration IPs
-        var result []map[string]any
-        for _, u := range users {
-            // decrypt email
-            email := ""
-            if len(u.EmailEnc) > 0 {
-                if pt, err := crypto.Decrypt(u.EmailEnc); err == nil {
-                    email = string(pt)
-                }
-            }
+		// Build response with decrypted fields and last/registration IPs
+		var result []map[string]any
+		for _, u := range users {
+			// decrypt email
+			email := ""
+			if len(u.EmailEnc) > 0 {
+				if pt, err := crypto.Decrypt(u.EmailEnc); err == nil {
+					email = string(pt)
+				}
+			}
 
-            // registration IP from audit log
-            var regIPEnc []byte
-            _ = db.QueryRow(ctx, `SELECT ip_address_encrypted FROM audit_log WHERE user_id=$1 AND action='user.registered' ORDER BY created_at ASC LIMIT 1`, u.ID).Scan(&regIPEnc)
-            regIP := ""
-            if len(regIPEnc) > 0 {
-                if pt, err := crypto.Decrypt(regIPEnc); err == nil {
-                    regIP = string(pt)
-                }
-            }
+			// registration IP from audit log
+			var regIPEnc []byte
+			_ = db.QueryRow(ctx, `SELECT ip_address_encrypted FROM audit_log WHERE user_id=$1 AND action='user.registered' ORDER BY created_at ASC LIMIT 1`, u.ID).Scan(&regIPEnc)
+			regIP := ""
+			if len(regIPEnc) > 0 {
+				if pt, err := crypto.Decrypt(regIPEnc); err == nil {
+					regIP = string(pt)
+				}
+			}
 
-            // last used IP from most recent session
-            var lastIPEnc []byte
-            _ = db.QueryRow(ctx, `SELECT ip_address_encrypted FROM sessions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1`, u.ID).Scan(&lastIPEnc)
-            lastIP := ""
-            if len(lastIPEnc) > 0 {
-                if pt, err := crypto.Decrypt(lastIPEnc); err == nil {
-                    lastIP = string(pt)
-                }
-            }
+			// last used IP from most recent session
+			var lastIPEnc []byte
+			_ = db.QueryRow(ctx, `SELECT ip_address_encrypted FROM sessions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1`, u.ID).Scan(&lastIPEnc)
+			lastIP := ""
+			if len(lastIPEnc) > 0 {
+				if pt, err := crypto.Decrypt(lastIPEnc); err == nil {
+					lastIP = string(pt)
+				}
+			}
 
-            roles := rolesByUser[u.ID]
-            if u.IsAdmin {
-                roles = append(roles, "admin")
-            }
+			roles := rolesByUser[u.ID]
+			if u.IsAdmin {
+				roles = append(roles, "admin")
+			}
 
-            result = append(result, fiber.Map{
-                "user_id":        u.ID,
-                "email":          email,
-                "is_admin":       u.IsAdmin,
-                "roles":          roles,
-                "created_at":     u.Created,
-                "last_login":     nilIfInvalid(u.Last),
-                "registration_ip": regIP,
-                "last_ip":        lastIP,
-            })
-        }
+			result = append(result, fiber.Map{
+				"user_id":         u.ID,
+				"email":           email,
+				"is_admin":        u.IsAdmin,
+				"roles":           roles,
+				"created_at":      u.Created,
+				"last_login":      nilIfInvalid(u.Last),
+				"registration_ip": regIP,
+				"last_ip":         lastIP,
+			})
+		}
 
 		return c.JSON(fiber.Map{"users": result, "total": total, "limit": limit, "offset": offset, "q": q})
 	})
@@ -2061,7 +2090,14 @@ func main() {
 		role := strings.TrimSpace(c.Query("role"))
 		rolesParam := strings.TrimSpace(c.Query("roles"))
 		var rolesList []string
-		if rolesParam != "" { for _, r := range strings.Split(rolesParam, ",") { r = strings.TrimSpace(r); if r != "" { rolesList = append(rolesList, r) } } }
+		if rolesParam != "" {
+			for _, r := range strings.Split(rolesParam, ",") {
+				r = strings.TrimSpace(r)
+				if r != "" {
+					rolesList = append(rolesList, r)
+				}
+			}
+		}
 		adminParam := strings.ToLower(strings.TrimSpace(c.Query("admin")))
 		regFrom := strings.TrimSpace(c.Query("reg_from"))
 		regTo := strings.TrimSpace(c.Query("reg_to"))
@@ -2071,45 +2107,121 @@ func main() {
 		hasIP := strings.ToLower(strings.TrimSpace(c.Query("has_ip"))) == "true"
 		sort := strings.ToLower(strings.TrimSpace(c.Query("sort")))
 		order := strings.ToUpper(strings.TrimSpace(c.Query("order")))
-		if order != "ASC" && order != "DESC" { order = "DESC" }
-		switch sort { case "email","created_at","last_login","is_admin": default: sort = "created_at" }
+		if order != "ASC" && order != "DESC" {
+			order = "DESC"
+		}
+		switch sort {
+		case "email", "created_at", "last_login", "is_admin":
+		default:
+			sort = "created_at"
+		}
 		// Build WHERE
-		var conds []string; var args []any
-		add := func(clause string, val any){ conds = append(conds, clause); args = append(args, val) }
-		if q != "" { add("LOWER(email) LIKE $%d", "%"+strings.ToLower(q)+"%") }
-		if role != "" { add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = $%d)", role) }
-		if len(rolesList) > 0 { add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = ANY($%d))", rolesList) }
-		if adminParam == "true" { conds = append(conds, "is_admin = TRUE") } else if adminParam == "false" { conds = append(conds, "is_admin = FALSE") }
-		if regFrom != "" { add("created_at >= $%d", regFrom) }
-		if regTo != "" { add("created_at <= $%d", regTo) }
-		if lastFrom != "" { add("last_login >= $%d", lastFrom) }
-		if lastTo != "" { add("last_login <= $%d", lastTo) }
-		if hasLogin { conds = append(conds, "last_login IS NOT NULL") }
-		if hasIP { conds = append(conds, "EXISTS (SELECT 1 FROM sessions s WHERE s.user_id = users.id)") }
-		where := ""; if len(conds) > 0 { n := 1; parts := make([]string,0,len(conds)); for _, cnd := range conds { if strings.Contains(cnd, "$%d") { cnd = fmt.Sprintf(cnd, n); n++ } ; parts = append(parts, cnd) } ; where = "WHERE "+strings.Join(parts, " AND ") }
+		var conds []string
+		var args []any
+		add := func(clause string, val any) { conds = append(conds, clause); args = append(args, val) }
+		if q != "" {
+			add("LOWER(email) LIKE $%d", "%"+strings.ToLower(q)+"%")
+		}
+		if role != "" {
+			add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = $%d)", role)
+		}
+		if len(rolesList) > 0 {
+			add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = ANY($%d))", rolesList)
+		}
+		if adminParam == "true" {
+			conds = append(conds, "is_admin = TRUE")
+		} else if adminParam == "false" {
+			conds = append(conds, "is_admin = FALSE")
+		}
+		if regFrom != "" {
+			add("created_at >= $%d", regFrom)
+		}
+		if regTo != "" {
+			add("created_at <= $%d", regTo)
+		}
+		if lastFrom != "" {
+			add("last_login >= $%d", lastFrom)
+		}
+		if lastTo != "" {
+			add("last_login <= $%d", lastTo)
+		}
+		if hasLogin {
+			conds = append(conds, "last_login IS NOT NULL")
+		}
+		if hasIP {
+			conds = append(conds, "EXISTS (SELECT 1 FROM sessions s WHERE s.user_id = users.id)")
+		}
+		where := ""
+		if len(conds) > 0 {
+			n := 1
+			parts := make([]string, 0, len(conds))
+			for _, cnd := range conds {
+				if strings.Contains(cnd, "$%d") {
+					cnd = fmt.Sprintf(cnd, n)
+					n++
+				}
+				parts = append(parts, cnd)
+			}
+			where = "WHERE " + strings.Join(parts, " AND ")
+		}
 		// Query
 		rows, err := db.Query(ctx, fmt.Sprintf(`
 			SELECT id, email_encrypted, created_at, last_login, is_admin
 			FROM users
 			%s
 			ORDER BY %s %s`, where, sort, order), args...)
-		if err != nil { return c.Status(500).JSON(fiber.Map{"error":"query failed"}) }
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "query failed"})
+		}
 		defer rows.Close()
-		type userRow struct{ ID uuid.UUID; EmailEnc []byte; Created time.Time; Last sql.NullTime; IsAdmin bool }
+		type userRow struct {
+			ID       uuid.UUID
+			EmailEnc []byte
+			Created  time.Time
+			Last     sql.NullTime
+			IsAdmin  bool
+		}
 		var buf bytes.Buffer
 		buf.WriteString("user_id,email,is_admin,roles,created_at,last_login,registration_ip,last_ip\n")
 		for rows.Next() {
-			var r userRow; if err := rows.Scan(&r.ID,&r.EmailEnc,&r.Created,&r.Last,&r.IsAdmin); err!=nil { continue }
-			email := ""; if len(r.EmailEnc)>0 { if pt,err := crypto.Decrypt(r.EmailEnc); err==nil { email=string(pt) } }
-			var regIPEnc []byte; _ = db.QueryRow(ctx, `SELECT ip_address_encrypted FROM audit_log WHERE user_id=$1 AND action='user.registered' ORDER BY created_at ASC LIMIT 1`, r.ID).Scan(&regIPEnc)
-			regIP := ""; if len(regIPEnc)>0 { if pt,err := crypto.Decrypt(regIPEnc); err==nil { regIP=string(pt) } }
-			var lastIPEnc []byte; _ = db.QueryRow(ctx, `SELECT ip_address_encrypted FROM sessions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1`, r.ID).Scan(&lastIPEnc)
-			lastIP := ""; if len(lastIPEnc)>0 { if pt,err := crypto.Decrypt(lastIPEnc); err==nil { lastIP=string(pt) } }
+			var r userRow
+			if err := rows.Scan(&r.ID, &r.EmailEnc, &r.Created, &r.Last, &r.IsAdmin); err != nil {
+				continue
+			}
+			email := ""
+			if len(r.EmailEnc) > 0 {
+				if pt, err := crypto.Decrypt(r.EmailEnc); err == nil {
+					email = string(pt)
+				}
+			}
+			var regIPEnc []byte
+			_ = db.QueryRow(ctx, `SELECT ip_address_encrypted FROM audit_log WHERE user_id=$1 AND action='user.registered' ORDER BY created_at ASC LIMIT 1`, r.ID).Scan(&regIPEnc)
+			regIP := ""
+			if len(regIPEnc) > 0 {
+				if pt, err := crypto.Decrypt(regIPEnc); err == nil {
+					regIP = string(pt)
+				}
+			}
+			var lastIPEnc []byte
+			_ = db.QueryRow(ctx, `SELECT ip_address_encrypted FROM sessions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1`, r.ID).Scan(&lastIPEnc)
+			lastIP := ""
+			if len(lastIPEnc) > 0 {
+				if pt, err := crypto.Decrypt(lastIPEnc); err == nil {
+					lastIP = string(pt)
+				}
+			}
 			// roles
 			roles := []string{}
 			rr, _ := db.Query(ctx, `SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = $1`, r.ID)
-			for rr.Next() { var name string; if err := rr.Scan(&name); err==nil { roles = append(roles, name) } }
-			if r.IsAdmin { roles = append(roles, "admin") }
+			for rr.Next() {
+				var name string
+				if err := rr.Scan(&name); err == nil {
+					roles = append(roles, name)
+				}
+			}
+			if r.IsAdmin {
+				roles = append(roles, "admin")
+			}
 			// write CSV row
 			buf.WriteString(fmt.Sprintf("%s,%s,%t,\"%s\",%s,%s,%s,%s\n",
 				r.ID.String(),
@@ -2220,18 +2332,18 @@ func main() {
 	// Bulk assign/remove roles to users matching filters
 	admin.Post("/users/roles/bulk", func(c *fiber.Ctx) error {
 		type bulkReq struct {
-			Role   string `json:"role"`
-			Action string `json:"action"` // "assign" or "remove"
-			Q        string `json:"q"`
-			RoleOne  string `json:"role_filter"`
+			Role     string   `json:"role"`
+			Action   string   `json:"action"` // "assign" or "remove"
+			Q        string   `json:"q"`
+			RoleOne  string   `json:"role_filter"`
 			Roles    []string `json:"roles"`
-			Admin    string `json:"admin"`
-			RegFrom  string `json:"reg_from"`
-			RegTo    string `json:"reg_to"`
-			LastFrom string `json:"last_from"`
-			LastTo   string `json:"last_to"`
-			HasLogin bool   `json:"has_login"`
-			HasIP    bool   `json:"has_ip"`
+			Admin    string   `json:"admin"`
+			RegFrom  string   `json:"reg_from"`
+			RegTo    string   `json:"reg_to"`
+			LastFrom string   `json:"last_from"`
+			LastTo   string   `json:"last_to"`
+			HasLogin bool     `json:"has_login"`
+			HasIP    bool     `json:"has_ip"`
 		}
 		var req bulkReq
 		if err := c.BodyParser(&req); err != nil {
@@ -2256,24 +2368,49 @@ func main() {
 		var args []any
 		add := func(clause string, val any) { conds = append(conds, clause); args = append(args, val) }
 
-		if q := strings.TrimSpace(req.Q); q != "" { add("LOWER(email) LIKE $%d", "%"+strings.ToLower(q)+"%") }
-		if rf := strings.TrimSpace(req.RoleOne); rf != "" { add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = $%d)", rf) }
-		if len(req.Roles) > 0 { add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = ANY($%d))", req.Roles) }
-		if strings.ToLower(strings.TrimSpace(req.Admin)) == "true" { conds = append(conds, "is_admin = TRUE") }
-		if strings.ToLower(strings.TrimSpace(req.Admin)) == "false" { conds = append(conds, "is_admin = FALSE") }
-		if v := strings.TrimSpace(req.RegFrom); v != "" { add("created_at >= $%d", v) }
-		if v := strings.TrimSpace(req.RegTo); v != "" { add("created_at <= $%d", v) }
-		if v := strings.TrimSpace(req.LastFrom); v != "" { add("last_login >= $%d", v) }
-		if v := strings.TrimSpace(req.LastTo); v != "" { add("last_login <= $%d", v) }
-		if req.HasLogin { conds = append(conds, "last_login IS NOT NULL") }
-		if req.HasIP { conds = append(conds, "EXISTS (SELECT 1 FROM sessions s WHERE s.user_id = users.id)") }
+		if q := strings.TrimSpace(req.Q); q != "" {
+			add("LOWER(email) LIKE $%d", "%"+strings.ToLower(q)+"%")
+		}
+		if rf := strings.TrimSpace(req.RoleOne); rf != "" {
+			add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = $%d)", rf)
+		}
+		if len(req.Roles) > 0 {
+			add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = ANY($%d))", req.Roles)
+		}
+		if strings.ToLower(strings.TrimSpace(req.Admin)) == "true" {
+			conds = append(conds, "is_admin = TRUE")
+		}
+		if strings.ToLower(strings.TrimSpace(req.Admin)) == "false" {
+			conds = append(conds, "is_admin = FALSE")
+		}
+		if v := strings.TrimSpace(req.RegFrom); v != "" {
+			add("created_at >= $%d", v)
+		}
+		if v := strings.TrimSpace(req.RegTo); v != "" {
+			add("created_at <= $%d", v)
+		}
+		if v := strings.TrimSpace(req.LastFrom); v != "" {
+			add("last_login >= $%d", v)
+		}
+		if v := strings.TrimSpace(req.LastTo); v != "" {
+			add("last_login <= $%d", v)
+		}
+		if req.HasLogin {
+			conds = append(conds, "last_login IS NOT NULL")
+		}
+		if req.HasIP {
+			conds = append(conds, "EXISTS (SELECT 1 FROM sessions s WHERE s.user_id = users.id)")
+		}
 
 		where := ""
 		if len(conds) > 0 {
 			n := 1
 			parts := make([]string, 0, len(conds))
 			for _, cnd := range conds {
-				if strings.Contains(cnd, "$%d") { cnd = fmt.Sprintf(cnd, n); n++ }
+				if strings.Contains(cnd, "$%d") {
+					cnd = fmt.Sprintf(cnd, n)
+					n++
+				}
 				parts = append(parts, cnd)
 			}
 			where = "WHERE " + strings.Join(parts, " AND ")
@@ -2289,9 +2426,13 @@ func main() {
 				AND NOT EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_id = $1)`, where)
 			params := make([]interface{}, 0, 1+len(args))
 			params = append(params, roleID)
-			for _, a := range args { params = append(params, a) }
+			for _, a := range args {
+				params = append(params, a)
+			}
 			ct, err := db.Exec(ctx, sql, params...)
-			if err != nil { return c.Status(500).JSON(fiber.Map{"error": "assign failed"}) }
+			if err != nil {
+				return c.Status(500).JSON(fiber.Map{"error": "assign failed"})
+			}
 			affected = ct.RowsAffected()
 		} else {
 			// Delete for all matching users
@@ -2300,9 +2441,13 @@ func main() {
 				%s AND ur.user_id = u.id AND ur.role_id = $1`, where)
 			params := make([]interface{}, 0, 1+len(args))
 			params = append(params, roleID)
-			for _, a := range args { params = append(params, a) }
+			for _, a := range args {
+				params = append(params, a)
+			}
 			ct, err := db.Exec(ctx, sql, params...)
-			if err != nil { return c.Status(500).JSON(fiber.Map{"error": "remove failed"}) }
+			if err != nil {
+				return c.Status(500).JSON(fiber.Map{"error": "remove failed"})
+			}
 			affected = ct.RowsAffected()
 		}
 
@@ -2312,17 +2457,17 @@ func main() {
 	// Bulk grant/revoke is_admin to users matching filters
 	admin.Post("/users/admin/bulk", func(c *fiber.Ctx) error {
 		type bulkReq struct {
-			Action   string `json:"action"` // "grant" or "revoke"
-			Q        string `json:"q"`
-			RoleOne  string `json:"role_filter"`
+			Action   string   `json:"action"` // "grant" or "revoke"
+			Q        string   `json:"q"`
+			RoleOne  string   `json:"role_filter"`
 			Roles    []string `json:"roles"`
-			Admin    string `json:"admin"`
-			RegFrom  string `json:"reg_from"`
-			RegTo    string `json:"reg_to"`
-			LastFrom string `json:"last_from"`
-			LastTo   string `json:"last_to"`
-			HasLogin bool   `json:"has_login"`
-			HasIP    bool   `json:"has_ip"`
+			Admin    string   `json:"admin"`
+			RegFrom  string   `json:"reg_from"`
+			RegTo    string   `json:"reg_to"`
+			LastFrom string   `json:"last_from"`
+			LastTo   string   `json:"last_to"`
+			HasLogin bool     `json:"has_login"`
+			HasIP    bool     `json:"has_ip"`
 		}
 		var req bulkReq
 		if err := c.BodyParser(&req); err != nil {
@@ -2337,34 +2482,63 @@ func main() {
 		var args []any
 		add := func(clause string, val any) { conds = append(conds, clause); args = append(args, val) }
 
-		if q := strings.TrimSpace(req.Q); q != "" { add("LOWER(email) LIKE $%d", "%"+strings.ToLower(q)+"%") }
-		if rf := strings.TrimSpace(req.RoleOne); rf != "" { add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = $%d)", rf) }
-		if len(req.Roles) > 0 { add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = ANY($%d))", req.Roles) }
-		if strings.ToLower(strings.TrimSpace(req.Admin)) == "true" { conds = append(conds, "is_admin = TRUE") }
-		if strings.ToLower(strings.TrimSpace(req.Admin)) == "false" { conds = append(conds, "is_admin = FALSE") }
-		if v := strings.TrimSpace(req.RegFrom); v != "" { add("created_at >= $%d", v) }
-		if v := strings.TrimSpace(req.RegTo); v != "" { add("created_at <= $%d", v) }
-		if v := strings.TrimSpace(req.LastFrom); v != "" { add("last_login >= $%d", v) }
-		if v := strings.TrimSpace(req.LastTo); v != "" { add("last_login <= $%d", v) }
-		if req.HasLogin { conds = append(conds, "last_login IS NOT NULL") }
-		if req.HasIP { conds = append(conds, "EXISTS (SELECT 1 FROM sessions s WHERE s.user_id = users.id)") }
+		if q := strings.TrimSpace(req.Q); q != "" {
+			add("LOWER(email) LIKE $%d", "%"+strings.ToLower(q)+"%")
+		}
+		if rf := strings.TrimSpace(req.RoleOne); rf != "" {
+			add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = $%d)", rf)
+		}
+		if len(req.Roles) > 0 {
+			add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = ANY($%d))", req.Roles)
+		}
+		if strings.ToLower(strings.TrimSpace(req.Admin)) == "true" {
+			conds = append(conds, "is_admin = TRUE")
+		}
+		if strings.ToLower(strings.TrimSpace(req.Admin)) == "false" {
+			conds = append(conds, "is_admin = FALSE")
+		}
+		if v := strings.TrimSpace(req.RegFrom); v != "" {
+			add("created_at >= $%d", v)
+		}
+		if v := strings.TrimSpace(req.RegTo); v != "" {
+			add("created_at <= $%d", v)
+		}
+		if v := strings.TrimSpace(req.LastFrom); v != "" {
+			add("last_login >= $%d", v)
+		}
+		if v := strings.TrimSpace(req.LastTo); v != "" {
+			add("last_login <= $%d", v)
+		}
+		if req.HasLogin {
+			conds = append(conds, "last_login IS NOT NULL")
+		}
+		if req.HasIP {
+			conds = append(conds, "EXISTS (SELECT 1 FROM sessions s WHERE s.user_id = users.id)")
+		}
 
 		where := ""
 		if len(conds) > 0 {
 			n := 1
 			parts := make([]string, 0, len(conds))
 			for _, cnd := range conds {
-				if strings.Contains(cnd, "$%d") { cnd = fmt.Sprintf(cnd, n); n++ }
+				if strings.Contains(cnd, "$%d") {
+					cnd = fmt.Sprintf(cnd, n)
+					n++
+				}
 				parts = append(parts, cnd)
 			}
 			where = "WHERE " + strings.Join(parts, " AND ")
 		}
 
 		set := "FALSE"
-		if req.Action == "grant" { set = "TRUE" }
+		if req.Action == "grant" {
+			set = "TRUE"
+		}
 		sql := fmt.Sprintf("UPDATE users SET is_admin = %s %s", set, where)
 		ct, err := db.Exec(ctx, sql, args...)
-		if err != nil { return c.Status(500).JSON(fiber.Map{"error": "bulk admin update failed"}) }
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "bulk admin update failed"})
+		}
 		return c.JSON(fiber.Map{"ok": true, "affected": ct.RowsAffected()})
 	})
 
