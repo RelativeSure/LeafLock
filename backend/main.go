@@ -1731,6 +1731,20 @@ func main() {
 	}
 	api.Post("/auth/login", authHandler.Login)
 
+	// Public registration status endpoint so the frontend can respect the toggle
+	api.Get("/auth/registration", func(c *fiber.Ctx) error {
+		// Refresh runtime toggle from DB if present
+		var dbVal string
+		if err := db.QueryRow(c.Context(), `SELECT value FROM app_settings WHERE key='registration_enabled'`).Scan(&dbVal); err == nil {
+			if strings.ToLower(strings.TrimSpace(dbVal)) == "true" {
+				regEnabled.Store(1)
+			} else {
+				regEnabled.Store(0)
+			}
+		}
+		return c.JSON(fiber.Map{"enabled": regEnabled.Load() == 1})
+	})
+
 	// Health checks
 	api.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "healthy", "encryption": "enabled"})

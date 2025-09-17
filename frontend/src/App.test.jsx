@@ -28,6 +28,7 @@ describe('SecureNotesApp', () => {
     vi.clearAllMocks();
     mockLocalStorage.clear();
     mockFetch.mockClear();
+    global.__LEAFLOCK_REGISTRATION__ = true;
   });
 
   afterEach(() => {
@@ -60,6 +61,14 @@ describe('SecureNotesApp', () => {
       // Switch back to login
       await user.click(screen.getByText(/already have an account\? login/i));
       expect(screen.getByRole('button', { name: /login securely/i })).toBeInTheDocument();
+    });
+
+    it('hides registration toggle when registration is disabled', () => {
+      global.__LEAFLOCK_REGISTRATION__ = false;
+      render(<SecureNotesApp />);
+
+      expect(screen.queryByText(/need an account\? register/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/registration is currently disabled/i)).toBeInTheDocument();
     });
 
     it('shows password strength indicator during registration', async () => {
