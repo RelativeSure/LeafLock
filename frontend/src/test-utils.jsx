@@ -50,6 +50,9 @@ Object.defineProperty(global, 'crypto', {
   writable: true
 });
 
+// Default frontend configuration overrides for tests
+global.__LEAFLOCK_REGISTRATION__ = true;
+
 // Test data factories
 export const createMockUser = (overrides = {}) => ({
   id: 'test-user-id',

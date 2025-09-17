@@ -438,6 +438,10 @@ class SecureAPI {
     return response;
   }
 
+  async getRegistrationStatus(): Promise<{ enabled: boolean }> {
+    return this.request('/auth/registration');
+  }
+
   async createNote(title: string, content: string): Promise<any> {
     // Encrypt note content before sending
     const encryptedTitle = await cryptoService.encryptData(title);
@@ -970,9 +974,42 @@ const LoginView: React.FC<LoginViewProps> = ({ onAuthenticated }) => {
   const [mfaCode, setMfaCode] = useState('');
   const [mfaRequired, setMfaRequired] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [registrationEnabled, setRegistrationEnabled] = useState(true);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    if (typeof window !== 'undefined' && (window as any).__LEAFLOCK_REGISTRATION__ !== undefined) {
+      const enabled = Boolean((window as any).__LEAFLOCK_REGISTRATION__);
+      setRegistrationEnabled(enabled);
+      if (!enabled) {
+        setIsRegistering(false);
+      }
+      return;
+    }
+
+    (async () => {
+      try {
+        const status = await api.getRegistrationStatus();
+        if (!isActive) return;
+        if (typeof status?.enabled === 'boolean') {
+          setRegistrationEnabled(status.enabled);
+          if (!status.enabled) {
+            setIsRegistering(false);
+          }
+        }
+      } catch (err) {
+        console.warn('⚠️ Failed to load registration status', err);
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const calculatePasswordStrength = (pwd: string): number => {
     let strength = 0;
@@ -1009,6 +1046,10 @@ const LoginView: React.FC<LoginViewProps> = ({ onAuthenticated }) => {
       console.log('✅ Sodium initialized');
 
       if (isRegistering) {
+        if (!registrationEnabled) {
+          setError('Registration is currently disabled');
+          return;
+        }
         console.log('🔄 REGISTRATION MODE - Validating inputs...');
         if (password.length < 12) {
           setError('Password must be at least 12 characters for registration');
@@ -1090,7 +1131,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onAuthenticated }) => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
@@ -1186,18 +1227,24 @@ const LoginView: React.FC<LoginViewProps> = ({ onAuthenticated }) => {
               {loading ? 'Processing...' : (isRegistering ? 'Create Account' : 'Login')}
             </Button>
 
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full"
-              onClick={() => {
-                setIsRegistering(!isRegistering);
-                setError(null);
-                setMfaRequired(false);
-              }}
-            >
-              {isRegistering ? 'Already have an account? Login' : 'Need an account? Register'}
-            </Button>
+            {registrationEnabled ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => {
+                  setIsRegistering(!isRegistering);
+                  setError(null);
+                  setMfaRequired(false);
+                }}
+              >
+                {isRegistering ? 'Already have an account? Login' : 'Need an account? Register'}
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center">
+                Registration is currently disabled
+              </p>
+            )}
           </form>
         </CardContent>
       </Card>
