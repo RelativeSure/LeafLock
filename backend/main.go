@@ -537,6 +537,22 @@ func nilIfInvalid(t sql.NullTime) any {
 	return nil
 }
 
+// clientIP returns the best-effort client address, honoring common proxy headers.
+func clientIP(c *fiber.Ctx) string {
+	if forwarded := c.Get("X-Forwarded-For"); forwarded != "" {
+		for _, part := range strings.Split(forwarded, ",") {
+			ip := strings.TrimSpace(part)
+			if ip != "" && strings.ToLower(ip) != "unknown" {
+				return ip
+			}
+		}
+	}
+	if realIP := strings.TrimSpace(c.Get("X-Real-IP")); realIP != "" {
+		return realIP
+	}
+	return c.IP()
+}
+
 func csvEscape(s string) string {
 	// Escape quotes and wrap in quotes if needed
 	if strings.ContainsAny(s, ",\n\r\"") {
@@ -876,7 +892,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	tokenHash := argon2.IDKey(sessionToken, []byte("session"), 1, 64*1024, 4, 32)
 
 	// Encrypt IP and user agent
-	encryptedIP, _ := h.crypto.Encrypt([]byte(c.IP()))
+	encryptedIP, _ := h.crypto.Encrypt([]byte(clientIP(c)))
 	encryptedUA, _ := h.crypto.Encrypt([]byte(c.Get("User-Agent")))
 
 	// Store session
@@ -923,7 +939,7 @@ func (h *AuthHandler) generateToken(userID uuid.UUID) (string, error) {
 }
 
 func (h *AuthHandler) logAudit(ctx context.Context, userID uuid.UUID, action, resourceType string, resourceID uuid.UUID, c *fiber.Ctx) {
-	encryptedIP, _ := h.crypto.Encrypt([]byte(c.IP()))
+	encryptedIP, _ := h.crypto.Encrypt([]byte(clientIP(c)))
 	encryptedUA, _ := h.crypto.Encrypt([]byte(c.Get("User-Agent")))
 
 	h.db.Exec(ctx, `
@@ -1708,7 +1724,7 @@ func main() {
 		Max:        100,
 		Expiration: 1 * time.Minute,
 		KeyGenerator: func(c *fiber.Ctx) string {
-			return c.IP()
+			return clientIP(c)
 		},
 	}))
 
@@ -1727,7 +1743,7 @@ func main() {
 			Max:        5,
 			Expiration: 1 * time.Minute,
 			KeyGenerator: func(c *fiber.Ctx) string {
-				return c.IP()
+				return clientIP(c)
 			},
 		})
 		api.Post("/auth/register", regLimiter, authHandler.Register)
@@ -2236,12 +2252,17 @@ func main() {
 			}
 			// roles
 			roles := []string{}
-			rr, _ := db.Query(ctx, `SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = $1`, r.ID)
-			for rr.Next() {
-				var name string
-				if err := rr.Scan(&name); err == nil {
-					roles = append(roles, name)
-				}
+			rr, err := db.Query(ctx, `SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = $1`, r.ID)
+			if err == nil {
+				func() {
+					defer rr.Close()
+					for rr.Next() {
+						var name string
+						if err := rr.Scan(&name); err == nil {
+							roles = append(roles, name)
+						}
+					}
+				}()
 			}
 			if r.IsAdmin {
 				roles = append(roles, "admin")
