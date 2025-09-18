@@ -411,9 +411,24 @@ func HasRole(ctx context.Context, db Database, userID uuid.UUID, role string) bo
 
 // --- Dynamic admin allowlist with hot-reload support ---
 var adminAllowlist atomic.Value // holds map[string]struct{}
+var privateIPBlocks []*net.IPNet
 
 func init() {
 	adminAllowlist.Store(make(map[string]struct{}))
+	blocks := []string{
+		"10.0.0.0/8",
+		"172.16.0.0/12",
+		"192.168.0.0/16",
+		"127.0.0.0/8",
+		"::1/128",
+		"fc00::/7",
+		"fe80::/10",
+	}
+	for _, cidr := range blocks {
+		if _, block, err := net.ParseCIDR(cidr); err == nil {
+			privateIPBlocks = append(privateIPBlocks, block)
+		}
+	}
 }
 
 func currentAllowlist() map[string]struct{} {
@@ -539,18 +554,56 @@ func nilIfInvalid(t sql.NullTime) any {
 
 // clientIP returns the best-effort client address, honoring common proxy headers.
 func clientIP(c *fiber.Ctx) string {
+	if cf := strings.TrimSpace(c.Get("CF-Connecting-IP")); cf != "" {
+		if ip := net.ParseIP(cf); ip != nil {
+			return cf
+		}
+	}
 	if forwarded := c.Get("X-Forwarded-For"); forwarded != "" {
+		var fallback string
 		for _, part := range strings.Split(forwarded, ",") {
 			ip := strings.TrimSpace(part)
-			if ip != "" && strings.ToLower(ip) != "unknown" {
+			if ip == "" || strings.ToLower(ip) == "unknown" {
+				continue
+			}
+			parsed := net.ParseIP(ip)
+			if parsed == nil {
+				continue
+			}
+			if isPublicIP(parsed) {
 				return ip
 			}
+			if fallback == "" {
+				fallback = ip
+			}
+		}
+		if fallback != "" {
+			return fallback
 		}
 	}
 	if realIP := strings.TrimSpace(c.Get("X-Real-IP")); realIP != "" {
-		return realIP
+		if ip := net.ParseIP(realIP); ip != nil {
+			return realIP
+		}
+	}
+	if clientIPHeader := strings.TrimSpace(c.Get("X-Client-IP")); clientIPHeader != "" {
+		if ip := net.ParseIP(clientIPHeader); ip != nil {
+			return clientIPHeader
+		}
 	}
 	return c.IP()
+}
+
+func isPublicIP(ip net.IP) bool {
+	if ip == nil || ip.IsLoopback() || ip.IsUnspecified() {
+		return false
+	}
+	for _, block := range privateIPBlocks {
+		if block.Contains(ip) {
+			return false
+		}
+	}
+	return true
 }
 
 func csvEscape(s string) string {
@@ -2102,19 +2155,28 @@ func main() {
 			}
 
 			roles := rolesByUser[u.ID]
-			if u.IsAdmin {
-				roles = append(roles, "admin")
+			allowlistedAdmin := isUserInAdminAllowlist(u.ID.String())
+			effectiveAdmin := u.IsAdmin || allowlistedAdmin
+			if effectiveAdmin {
+				seen := make(map[string]struct{}, len(roles))
+				for _, r := range roles {
+					seen[r] = struct{}{}
+				}
+				if _, ok := seen["admin"]; !ok {
+					roles = append(roles, "admin")
+				}
 			}
 
 			result = append(result, fiber.Map{
-				"user_id":         u.ID,
-				"email":           email,
-				"is_admin":        u.IsAdmin,
-				"roles":           roles,
-				"created_at":      u.Created,
-				"last_login":      nilIfInvalid(u.Last),
-				"registration_ip": regIP,
-				"last_ip":         lastIP,
+				"user_id":             u.ID,
+				"email":               email,
+				"is_admin":            effectiveAdmin,
+				"admin_via_allowlist": allowlistedAdmin,
+				"roles":               roles,
+				"created_at":          u.Created,
+				"last_login":          nilIfInvalid(u.Last),
+				"registration_ip":     regIP,
+				"last_ip":             lastIP,
 			})
 		}
 
@@ -2222,7 +2284,7 @@ func main() {
 			IsAdmin  bool
 		}
 		var buf bytes.Buffer
-		buf.WriteString("user_id,email,is_admin,roles,created_at,last_login,registration_ip,last_ip\n")
+		buf.WriteString("user_id,email,is_admin,admin_via_allowlist,roles,created_at,last_login,registration_ip,last_ip\n")
 		for rows.Next() {
 			var r userRow
 			if err := rows.Scan(&r.ID, &r.EmailEnc, &r.Created, &r.Last, &r.IsAdmin); err != nil {
@@ -2264,14 +2326,23 @@ func main() {
 					}
 				}()
 			}
-			if r.IsAdmin {
-				roles = append(roles, "admin")
+			allowlistedAdmin := isUserInAdminAllowlist(r.ID.String())
+			effectiveAdmin := r.IsAdmin || allowlistedAdmin
+			if effectiveAdmin {
+				seen := make(map[string]struct{}, len(roles))
+				for _, role := range roles {
+					seen[role] = struct{}{}
+				}
+				if _, ok := seen["admin"]; !ok {
+					roles = append(roles, "admin")
+				}
 			}
 			// write CSV row
-			buf.WriteString(fmt.Sprintf("%s,%s,%t,\"%s\",%s,%s,%s,%s\n",
+			buf.WriteString(fmt.Sprintf("%s,%s,%t,%t,\"%s\",%s,%s,%s,%s\n",
 				r.ID.String(),
 				csvEscape(email),
-				r.IsAdmin,
+				effectiveAdmin,
+				allowlistedAdmin,
 				strings.Join(roles, ";"),
 				r.Created.Format(time.RFC3339),
 				formatNullTime(r.Last),
