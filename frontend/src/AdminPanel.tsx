@@ -25,6 +25,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
   const [status, setStatus] = useState<StatusState>(null)
   const [userRoles, setUserRoles] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [quickEmail, setQuickEmail] = useState('')
+  const [quickBusy, setQuickBusy] = useState(false)
 
   useEffect(() => {
     try {
@@ -126,6 +128,32 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
     }
   }
 
+  const handleQuickGrant = async () => {
+    const email = quickEmail.trim()
+    if (!email) {
+      setFailure('Enter an email to grant admin access.')
+      return
+    }
+
+    setStatus(null)
+    setQuickBusy(true)
+    try {
+      const lookup = await api.adminListUsers({ q: email, limit: 1, offset: 0 })
+      const user = lookup.users?.[0]
+      if (!user) {
+        setFailure(`No user found matching "${email}"`)
+        return
+      }
+      await api.adminSetAdmin(user.user_id, true)
+      setSuccess(`Granted admin to ${user.email}.`)
+      setQuickEmail('')
+    } catch (e: any) {
+      setFailure(e?.message || 'Failed to grant admin by email')
+    } finally {
+      setQuickBusy(false)
+    }
+  }
+
   return (
     <Card className="mt-6">
       <CardHeader>
@@ -209,6 +237,34 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
               <span className="text-sm text-muted-foreground">(none)</span>
             )}
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="admin-quick-email">Quick grant by email</Label>
+          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+            <Input
+              id="admin-quick-email"
+              type="email"
+              inputMode="email"
+              placeholder="user@example.com"
+              value={quickEmail}
+              onChange={(e) => setQuickEmail(e.target.value)}
+              className="md:max-w-sm"
+              autoComplete="off"
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={quickBusy}
+              onClick={handleQuickGrant}
+            >
+              {quickBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Grant admin
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Useful for bootstrapping: enter an existing user’s email to elevate them immediately.
+          </p>
         </div>
       </CardContent>
     </Card>

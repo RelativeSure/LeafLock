@@ -308,6 +308,15 @@ helm install leaflock ./helm/leaflock
 
 - See `docs/ADMIN.md` for enabling admin in development and using the Admin Panel. The frontend only shows the admin icon for admin users; non‑admins never see it.
 
+#### Bootstrapping the first admin
+
+1. Sign up or log in so LeafLock creates a user account.
+2. Copy your user UUID (DevTools → Application → Local Storage → `current_user_id`).
+3. Set the `ADMIN_USER_IDS` environment variable to that UUID (comma-separated for multiple IDs) in your deployment.
+4. Restart the backend container/service so the allowlist reloads.
+
+Once an initial admin exists, use the in-app admin panel’s “Grant admin” helper to elevate additional accounts by email—no env changes required after the first promotion.
+
 ## 📊 Monitoring
 
 ### Health Checks
