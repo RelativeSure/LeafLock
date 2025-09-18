@@ -38,16 +38,23 @@ describe('AdminPanel', () => {
   })
 
   it('grants admin via quick email helper', async () => {
-    const mockApi = {
-      adminListUsers: vi.fn().mockResolvedValue({
+    const listUsers = vi.fn()
+    listUsers
+      .mockResolvedValueOnce({ users: [], total: 0 })
+      .mockResolvedValueOnce({
         users: [
           {
             user_id: '00000000-0000-0000-0000-000000000001',
             email: 'REDACTED_EMAIL',
+            is_admin: false,
           },
         ],
         total: 1,
-      }),
+      })
+      .mockResolvedValueOnce({ users: [], total: 0 })
+
+    const mockApi = {
+      adminListUsers: listUsers,
       adminSetAdmin: vi.fn().mockResolvedValue({ ok: true }),
       adminGetUserRoles: vi.fn().mockResolvedValue({ roles: [] }),
       adminAssignRole: vi.fn(),
@@ -56,11 +63,17 @@ describe('AdminPanel', () => {
 
     render(<AdminPanel api={mockApi} />)
 
-    const quickInput = await screen.findByPlaceholderText('user@example.com')
-    fireEvent.change(quickInput, { target: { value: 'REDACTED_EMAIL' } })
-    fireEvent.click(screen.getByText('Grant admin'))
+    const quickButton = await screen.findByText(/Grant admin by email/i)
+    fireEvent.click(quickButton)
 
-    await waitFor(() => expect(mockApi.adminListUsers).toHaveBeenCalledWith({ q: 'REDACTED_EMAIL', limit: 1, offset: 0 }))
+    const commandInput = await screen.findByPlaceholderText('Search users by email...')
+    fireEvent.input(commandInput, { target: { value: 'REDACTED_EMAIL' } })
+
+    await waitFor(() => expect(mockApi.adminListUsers).toHaveBeenLastCalledWith({ q: 'REDACTED_EMAIL', limit: 8, offset: 0 }))
+
+    const option = await screen.findByText('REDACTED_EMAIL')
+    fireEvent.click(option)
+
     await waitFor(() => expect(mockApi.adminSetAdmin).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001', true))
   })
 })
