@@ -29,25 +29,25 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     ./cmd/entrypoint && \
     chmod +x /app/entrypoint
 
-# Final stage - minimal runtime
-FROM scratch
+# Final stage - minimal runtime with shell support for health checks
+FROM alpine:3.20
 
-# Copy CA certificates for HTTPS
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+# Install runtime dependencies and curl so Docker health checks can probe HTTP
+RUN apk --no-cache add ca-certificates tzdata curl
 
-# Copy timezone data
-COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
-
-# Create non-root user structure
-COPY --from=builder /etc/passwd /etc/passwd
-COPY --from=builder /etc/group /etc/group
-
-# Copy the binaries with explicit execute permissions
+# Copy binaries from builder with explicit execute permissions
 COPY --from=builder --chmod=0755 /app/main /app/main
 COPY --from=builder --chmod=0755 /app/entrypoint /app/entrypoint
 
+# Create application user to avoid running as root
+RUN addgroup -g 1001 -S app && \
+    adduser -S -D -H -u 1001 -s /sbin/nologin -G app app
+
+# Ensure binary directory is owned by app user
+RUN chown -R app:app /app
+
 # Set user to non-root
-USER nobody:nogroup
+USER app
 
 # Expose port
 EXPOSE 8080
