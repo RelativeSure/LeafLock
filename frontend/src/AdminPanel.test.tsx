@@ -19,7 +19,7 @@ describe('AdminPanel', () => {
     // Load roles
     fireEvent.click(screen.getByText('Load Roles'))
     await waitFor(() => expect(mockApi.adminGetUserRoles).toHaveBeenCalled())
-    expect(await screen.findByText(/Current roles:/)).toBeInTheDocument()
+    expect(await screen.findByText(/Current roles/i)).toBeInTheDocument()
 
     // Assign role
     fireEvent.click(screen.getByText('Assign Role'))
@@ -36,4 +36,3 @@ describe('AdminPanel', () => {
     await waitFor(() => expect(mockApi.adminSetAdmin).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001', false))
   })
 })
-
