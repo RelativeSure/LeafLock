@@ -6,6 +6,7 @@ export type AdminUserOption = {
   user_id: string
   email: string
   is_admin?: boolean
+  admin_via_allowlist?: boolean
 }
 
 type AdminUserPickerProps = {
@@ -21,7 +22,11 @@ const AdminUserPicker: React.FC<AdminUserPickerProps> = ({ users, value, onChang
       items={users.map((u) => ({
         label: u.email,
         value: u.user_id,
-        rightSlot: u.is_admin ? <Badge variant="secondary">admin</Badge> : undefined,
+        rightSlot: u.is_admin ? (
+          <Badge variant="secondary">
+            admin{u.admin_via_allowlist ? ' • allowlist' : ''}
+          </Badge>
+        ) : undefined,
       }))}
       value={value}
       onChange={onChange}

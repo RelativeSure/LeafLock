@@ -21,6 +21,7 @@ type AdminUser = {
   user_id: string
   email: string
   is_admin: boolean
+  admin_via_allowlist?: boolean
   roles: string[]
   created_at?: string
   last_login?: string | null
@@ -418,7 +419,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ api, onBack }) => {
                     <CardDescription>{selected.email}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-1 text-sm text-muted-foreground">
-                    <div>Admin: {selected.is_admin ? 'Yes' : 'No'}</div>
+                    <div>
+                      Admin: {selected.is_admin ? 'Yes' : 'No'}
+                      {selected.admin_via_allowlist ? ' (allowlist override)' : ''}
+                    </div>
                     <div>Registered: {selected.created_at ? new Date(selected.created_at).toLocaleString() : '-'}</div>
                     <div>Last login: {selected.last_login ? new Date(selected.last_login).toLocaleString() : '-'}</div>
                   </CardContent>
@@ -451,7 +455,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ api, onBack }) => {
                   {users.map((u) => (
                     <TableRow key={u.user_id} className={u.user_id === selectedUserId ? 'bg-accent/30' : ''} onClick={() => setSelectedUserId(u.user_id)}>
                       <TableCell>{u.email}</TableCell>
-                      <TableCell>{u.is_admin ? <Badge>admin</Badge> : '-'}</TableCell>
+                      <TableCell>
+                        {u.is_admin ? (
+                          <Badge variant={u.admin_via_allowlist ? 'secondary' : 'default'}>
+                            admin{u.admin_via_allowlist ? ' • allowlist' : ''}
+                          </Badge>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
                       <TableCell className="space-x-1">
                         {u.roles?.length ? u.roles.map((r) => <Badge key={r} variant="secondary">{r}</Badge>) : <span className="text-muted-foreground">(none)</span>}
                       </TableCell>
