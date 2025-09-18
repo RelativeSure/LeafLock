@@ -5,6 +5,7 @@ import AdminPanel from './AdminPanel'
 describe('AdminPanel', () => {
   it('loads roles, assigns and removes roles, toggles admin', async () => {
     const mockApi = {
+      adminListUsers: vi.fn().mockResolvedValue({ users: [], total: 0 }),
       adminGetUserRoles: vi.fn().mockResolvedValue({ roles: ['user'] }),
       adminSetAdmin: vi.fn().mockResolvedValue({ ok: true }),
       adminAssignRole: vi.fn().mockResolvedValue({ ok: true }),
@@ -34,5 +35,32 @@ describe('AdminPanel', () => {
     await waitFor(() => expect(mockApi.adminSetAdmin).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001', true))
     fireEvent.click(screen.getByText('Revoke Admin'))
     await waitFor(() => expect(mockApi.adminSetAdmin).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001', false))
+  })
+
+  it('grants admin via quick email helper', async () => {
+    const mockApi = {
+      adminListUsers: vi.fn().mockResolvedValue({
+        users: [
+          {
+            user_id: '00000000-0000-0000-0000-000000000001',
+            email: 'mail@rasmusj.dk',
+          },
+        ],
+        total: 1,
+      }),
+      adminSetAdmin: vi.fn().mockResolvedValue({ ok: true }),
+      adminGetUserRoles: vi.fn().mockResolvedValue({ roles: [] }),
+      adminAssignRole: vi.fn(),
+      adminRemoveRole: vi.fn(),
+    }
+
+    render(<AdminPanel api={mockApi} />)
+
+    const quickInput = await screen.findByPlaceholderText('user@example.com')
+    fireEvent.change(quickInput, { target: { value: 'mail@rasmusj.dk' } })
+    fireEvent.click(screen.getByText('Grant admin'))
+
+    await waitFor(() => expect(mockApi.adminListUsers).toHaveBeenCalledWith({ q: 'mail@rasmusj.dk', limit: 1, offset: 0 }))
+    await waitFor(() => expect(mockApi.adminSetAdmin).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001', true))
   })
 })
