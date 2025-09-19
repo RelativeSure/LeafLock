@@ -1,7 +1,6 @@
 name = "docs-leaflock-app"
 main = "worker.js"
-compatibility_date = "2024-05-09"
-route = "docs.leaflock.app/*"
+compatibility_date = "2025-09-15"
 workers_dev = false
 
 [assets]
