@@ -1,20 +1,32 @@
 ---
 title: "LeafLock Documentation"
-summary: "Legal, privacy, and operational guidance for LeafLock operators."
+summary: "Comprehensive documentation for secure, end-to-end encrypted notes with zero-knowledge architecture."
 ---
 
-Welcome to the LeafLock documentation hub. This site aggregates policies, compliance
-statements, and operational guides so you can deploy LeafLock in alignment with
-international regulations and community standards.
+Welcome to LeafLock Documentation – your comprehensive guide to deploying, managing, and understanding LeafLock's secure notes platform. Whether you're a user seeking privacy information, an administrator managing instances, or a developer integrating with our APIs, you'll find everything you need here.
 
-## Featured Policies
+**LeafLock** is built with privacy by design, featuring end-to-end encryption and zero-knowledge architecture that ensures your notes remain secure and private.
 
-- Review the [Privacy Policy](/pages/privacy/) for details on data handling.
-- Understand your obligations under the [GDPR Compliance statement](/pages/gdpr/).
-- Familiarise yourself with the [LeafLock Community License](/pages/license/).
-- Read the [Terms of Use](/pages/terms/) before granting end-user access.
+## Quick Start
+
+🚀 **New to LeafLock?** Start with our [Privacy Policy](/pages/privacy-policy/) to understand how we protect your data.
+
+⚖️ **Legal Compliance?** Check our [GDPR Compliance](/pages/gdpr-compliance/) guide and [Global Compliance](/pages/global-compliance/) information.
+
+🔧 **System Administrator?** Begin with the [Admin Guide](/pages/admin-guide/) for user management and configuration.
+
+💻 **Developer?** Explore our [Developer Guide](/pages/developer-guide/) for APIs, testing, and technical documentation.
+
+## Key Features
+
+- **🔒 End-to-End Encryption**: Your notes are encrypted on your device before reaching our servers
+- **🔍 Zero-Knowledge Architecture**: We cannot read your notes even if we wanted to
+- **🌍 Global Compliance**: Built to meet GDPR, CCPA, and international privacy standards
+- **⚡ Open Source**: Transparent, auditable codebase you can trust
+- **🛡️ Security First**: Regular security audits and best practices implementation
 
 ## Need Help?
 
-Email the LeafLock team at [contact@leaflock.app](mailto:contact@leaflock.app) or consult
-additional guides in the repository `docs/` directory.
+📧 **Email**: [contact@leaflock.app](mailto:contact@leaflock.app)
+🐛 **Issues**: [GitHub Repository](https://github.com/RelativeSure/LeafLock)
+📚 **Documentation**: Browse the sections below or use the navigation menu

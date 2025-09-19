@@ -1,52 +1,104 @@
 ---
 title: "Global Compliance"
 slug: compliance
-summary: "Checklist for operating LeafLock in line with international legal frameworks."
+summary: "User rights and global compliance information for LeafLock users."
+weight: 50
+type: "page"
+layout: "single"
+toc: true
+categories:
+  - "Legal"
+  - "Privacy"
+tags:
+  - "compliance"
+  - "privacy"
+  - "international"
+  - "user-rights"
 menu:
   footer:
-    name: Compliance
+    name: "Compliance"
     weight: 50
+  main:
+    name: "Global Compliance"
+    weight: 50
+    parent: "legal"
 ---
 
 _Last updated: 2025-09-19_
 
-LeafLock is designed to help operators meet regulatory expectations across key
-jurisdictions, including the European Union, United States, United Kingdom, Canada, and
-Asia-Pacific regions. This overview summarises baseline controls and references additional
-resources.
+LeafLock is committed to protecting your privacy and meeting regulatory requirements
+across key jurisdictions, including the European Union, United States, United Kingdom,
+Canada, and Asia-Pacific regions. This document outlines your rights and how we comply
+with international privacy laws.
 
-## General Principles
-- **Transparency:** Publish privacy notices and terms that clearly explain data use,
-  incident handling, and user rights.
-- **Accountability:** Assign an internal point of contact for security, privacy, and
-  regulatory questions. Maintain records of processing activities and vendor assessments.
-- **Security by Design:** Follow secure coding practices, run automated vulnerability
-  scans, and perform regular penetration testing or bug bounty programs.
+## Your Privacy Rights
 
-## Regional Considerations
-- **European Union:** Comply with GDPR (see `docs/gdpr-compliance.md`) and ePrivacy
-  directives. Obtain explicit consent for non-essential cookies and marketing.
-- **United States:** Align with state privacy laws (e.g., CCPA/CPRA, CPA, VCDPA), sector
-  rules (HIPAA/GLBA), and export controls. Provide opt-out mechanisms where required.
-- **United Kingdom:** Mirror EU obligations under UK GDPR and Data Protection Act 2018.
-- **Canada:** Align with PIPEDA and provincial legislation for consent and breach
-  notifications. Store data in-region when contractual obligations require it.
-- **Asia-Pacific:** Review PDPA (Singapore), APP (Australia), and PIPL (China) for local
-  registration, cross-border transfer, and consent requirements.
+### European Union (GDPR)
+Under the General Data Protection Regulation (GDPR), you have the right to:
+- **Access**: Request a copy of your personal data we hold
+- **Rectification**: Correct inaccurate personal data
+- **Erasure**: Request deletion of your personal data ("right to be forgotten")
+- **Portability**: Receive your data in a machine-readable format
+- **Restriction**: Limit how we process your data
+- **Object**: Object to certain types of processing
+
+### United States
+Under state privacy laws (CCPA, CPRA, CPA, VCDPA), you may have the right to:
+- Know what personal information is collected and how it's used
+- Delete personal information we have about you
+- Opt-out of the sale or sharing of personal information
+- Non-discrimination for exercising your privacy rights
+
+### United Kingdom
+Under UK GDPR and Data Protection Act 2018, you have similar rights to EU users:
+- Access, rectification, erasure, portability, restriction, and objection rights
+- Right to withdraw consent where processing is based on consent
+
+### Canada
+Under PIPEDA and provincial legislation, you have the right to:
+- Know how your personal information is being used
+- Access your personal information
+- Request correction of errors
+- File complaints with privacy commissioners
+
+### Asia-Pacific
+- **Singapore (PDPA)**: Right to access and correct personal data
+- **Australia (APP)**: Right to access and correct personal information
+- **China (PIPL)**: Right to know, delete, correct, and port personal information
+
+## How We Protect Your Data
+
+### Security by Design
+- **End-to-end encryption**: Your notes are encrypted on your device before reaching our servers
+- **Zero-knowledge architecture**: We cannot read your notes even if we wanted to
+- **Secure authentication**: Industry-standard password hashing and secure session management
+- **Regular security audits**: Automated vulnerability scans and security testing
+
+### Data Minimization
+- We only collect data necessary to provide our service
+- Personal data is automatically deleted according to our retention policies
+- Analytics data is anonymized where possible
+
+### Transparency
+- Clear privacy notices explaining how we handle your data
+- Regular updates to our privacy documentation
+- Open-source codebase for security transparency
 
 ## Accessibility and Inclusion
-Ensure the deployed LeafLock UI meets WCAG 2.1 AA accessibility guidelines and supports
-multiple languages where required by law.
+LeafLock is designed to meet WCAG 2.1 AA accessibility guidelines and supports
+users with disabilities. We continuously work to improve accessibility and welcome
+feedback on how we can better serve all users.
 
-## Record Keeping and Auditing
-- Enable audit logging for administrative actions and API access.
-- Retain logs in accordance with legal retention schedules, segregated by environment.
-- Document change management and incident response procedures.
+## Data Transfers
+When your data is transferred outside your region, we implement appropriate safeguards
+such as Standard Contractual Clauses or rely on adequacy decisions to ensure your
+data remains protected.
 
 ## Incident Response
-- Maintain a runbook covering detection, containment, eradication, recovery, and
-  post-incident review.
-- Notify affected users and regulators according to regional timelines.
+In the unlikely event of a security incident affecting your personal data:
+- We will notify you promptly if your data may be at risk
+- We will notify relevant authorities within required timeframes
+- We will provide clear information about what happened and what we're doing about it
 
 ## Contact
 For compliance questions, email `contact@leaflock.app`.

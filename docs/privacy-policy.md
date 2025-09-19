@@ -2,10 +2,26 @@
 title: "Privacy Policy"
 slug: privacy
 summary: "How LeafLock collects, uses, and safeguards personal data across deployments."
+weight: 10
+type: "page"
+layout: "single"
+toc: true
+categories:
+  - "Legal"
+  - "Privacy"
+tags:
+  - "privacy"
+  - "data-collection"
+  - "personal-data"
+  - "user-rights"
 menu:
   footer:
-    name: Privacy
+    name: "Privacy"
     weight: 10
+  main:
+    name: "Privacy Policy"
+    weight: 10
+    parent: "legal"
 ---
 
 _Last updated: 2025-09-19_
