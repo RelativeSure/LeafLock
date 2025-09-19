@@ -40,10 +40,11 @@
         <h2>Browse Other {{ .Data.Plural | humanize }}</h2>
         <div class="taxonomy-list">
           {{ $currentTerm := .Title }}
-          {{ range .Site.Taxonomies.GetByName .Data.Plural }}
-            {{ if ne .Name $currentTerm }}
-              <a href="{{ .Page.RelPermalink }}" class="{{ .Data.Singular }}">
-                {{ .Name }} ({{ .Count }})
+          {{ $taxonomy := index .Site.Taxonomies .Data.Plural }}
+          {{ range $key, $value := $taxonomy }}
+            {{ if ne $key $currentTerm }}
+              <a href="{{ $value.Page.RelPermalink }}" class="{{ $.Data.Singular }}">
+                {{ $key }} ({{ $value.Count }})
               </a>
             {{ end }}
           {{ end }}
