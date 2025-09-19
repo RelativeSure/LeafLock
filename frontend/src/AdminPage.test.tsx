@@ -30,6 +30,7 @@ const createMockApi = (overrides: Partial<Record<keyof MockApi, any>> = {}): Moc
 const baseUser = {
   user_id: '00000000-0000-0000-0000-000000000001',
   email: 'mail@rasmusj.dk',
+  mfa_enabled: false,
   roles: [] as string[],
   created_at: '2025-09-17T12:10:11.000Z',
   last_login: '2025-09-18T13:39:35.000Z',
