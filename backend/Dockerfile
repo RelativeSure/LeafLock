@@ -30,7 +30,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     chmod +x /app/entrypoint
 
 # Final stage - minimal runtime with shell support for health checks
-FROM alpine:3.20
+FROM alpine:3.20@sha256:b3119ef930faabb6b7b976780c0c7a9c1aa24d0c75e9179ac10e6bc9ac080d0d
 
 # Install runtime dependencies and curl so Docker health checks can probe HTTP
 RUN apk --no-cache add ca-certificates tzdata curl
