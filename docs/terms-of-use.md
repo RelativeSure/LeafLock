@@ -2,10 +2,25 @@
 title: "Terms of Use"
 slug: terms
 summary: "Conditions governing access to the LeafLock platform and services."
+weight: 30
+type: "page"
+layout: "single"
+toc: true
+categories:
+  - "Legal"
+tags:
+  - "terms"
+  - "agreement"
+  - "service"
+  - "responsibilities"
 menu:
   footer:
-    name: Terms
-    weight: 40
+    name: "Terms"
+    weight: 30
+  main:
+    name: "Terms of Use"
+    weight: 30
+    parent: "legal"
 ---
 
 _Last updated: 2025-09-19_

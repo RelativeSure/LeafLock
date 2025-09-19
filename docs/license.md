@@ -2,10 +2,25 @@
 title: "LeafLock Community License v1.0"
 slug: license
 summary: "Source Available License - Not Open Source. Custom licence restricting monetised forks and defining contributor rights."
+weight: 70
+type: "page"
+layout: "single"
+toc: true
+categories:
+  - "Legal"
+tags:
+  - "license"
+  - "source-available"
+  - "community"
+  - "restrictions"
 menu:
   footer:
-    name: License
-    weight: 30
+    name: "License"
+    weight: 70
+  main:
+    name: "License"
+    weight: 70
+    parent: "legal"
 ---
 
 _Last updated: 2025-09-19_
