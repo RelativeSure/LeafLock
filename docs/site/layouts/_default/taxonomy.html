@@ -1,0 +1,54 @@
+{{ define "main" }}
+  <div class="content-wrapper">
+    <header>
+      <h1>{{ .Title }}</h1>
+      <p class="lead">{{ .Data.Plural | humanize }} in LeafLock Documentation</p>
+      <div class="meta">
+        <span>{{ len .Pages }} {{ if eq (len .Pages) 1 }}page{{ else }}pages{{ end }} in this {{ .Data.Singular }}</span>
+      </div>
+    </header>
+
+    <section class="taxonomy-listing">
+      {{ if .Pages }}
+        <ul class="list">
+          {{ range .Pages.ByWeight }}
+            <li>
+              <a href="{{ .RelPermalink }}">
+                <h3>{{ .LinkTitle }}</h3>
+                {{ with .Params.summary }}<p>{{ . }}</p>{{ end }}
+                <div class="meta">
+                  {{ with .Lastmod }}<span>📅 Updated {{ .Format "January 2, 2006" }}</span>{{ end }}
+                  {{ if .Params.tags }}
+                    <div class="taxonomy-list">
+                      {{ range first 3 .Params.tags }}
+                        <span class="tag">{{ . }}</span>
+                      {{ end }}
+                    </div>
+                  {{ end }}
+                </div>
+              </a>
+            </li>
+          {{ end }}
+        </ul>
+      {{ else }}
+        <p>No pages found in this {{ .Data.Singular }}.</p>
+      {{ end }}
+    </section>
+
+    {{ if .Site.Taxonomies }}
+      <aside class="related-taxonomies">
+        <h2>Browse Other {{ .Data.Plural | humanize }}</h2>
+        <div class="taxonomy-list">
+          {{ $currentTerm := .Title }}
+          {{ range .Site.Taxonomies.GetByName .Data.Plural }}
+            {{ if ne .Name $currentTerm }}
+              <a href="{{ .Page.RelPermalink }}" class="{{ .Data.Singular }}">
+                {{ .Name }} ({{ .Count }})
+              </a>
+            {{ end }}
+          {{ end }}
+        </div>
+      </aside>
+    {{ end }}
+  </div>
+{{ end }}

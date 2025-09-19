@@ -4,6 +4,7 @@ title = "LeafLock Documentation"
 pluralizeListTitles = false
 
 enableGitInfo = true
+enableRobotsTXT = true
 
 timeZone = "UTC"
 
@@ -12,11 +13,24 @@ timeZone = "UTC"
 
 [params]
   contactEmail = "contact@leaflock.app"
+  description = "Secure, end-to-end encrypted notes with zero-knowledge architecture"
+  author = "LeafLock Team"
+  keywords = ["secure notes", "encryption", "privacy", "end-to-end", "zero-knowledge"]
+  version = "1.0.0"
+
+  [params.social]
+    github = "https://github.com/RelativeSure/LeafLock"
+    email = "contact@leaflock.app"
 
 [markup]
   [markup.goldmark]
     [markup.goldmark.renderer]
       unsafe = true
+  [markup.highlight]
+    style = "github"
+    lineNos = true
+    lineNumbersInTable = false
+    tabWidth = 2
 
 [module]
   [[module.mounts]]
@@ -25,17 +39,32 @@ timeZone = "UTC"
     includeFiles = ["**.md"]
     excludeFiles = ["site/**"]
 
+[taxonomies]
+  category = "categories"
+  tag = "tags"
+
 [menu]
+  [[menu.main]]
+    name = "Home"
+    url = "/"
+    weight = 10
   [[menu.main]]
     name = "Documentation"
     url = "/pages/"
-    weight = 10
+    weight = 20
+    identifier = "documentation"
+  [[menu.main]]
+    name = "Legal"
+    url = "/categories/legal/"
+    weight = 30
+    identifier = "legal"
   [[menu.main]]
     name = "Repository"
     url = "https://github.com/RelativeSure/LeafLock"
-    weight = 20
+    weight = 40
 
 [outputs]
-  home = ["HTML", "RSS"]
-  section = ["HTML"]
+  home = ["HTML", "RSS", "JSON"]
+  section = ["HTML", "RSS"]
   page = ["HTML"]
+  taxonomy = ["HTML", "RSS"]
