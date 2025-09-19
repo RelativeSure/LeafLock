@@ -1,4 +1,10 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>kubearchitect/renovate-runner//.github/renovate.json5"]
+  "extends": ["github>kubearchitect/renovate-runner//.github/renovate.json5"],
+  prConcurrentLimit: 5,
+  prHourlyLimit: 10,
+  rebaseWhen: 'conflicted',
+  dependencyDashboard: true,
+  dependencyDashboardApproval: true,
+  ignoreTests: true
 }
