@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/subtle"
 	"database/sql"
 	"encoding/base64"
@@ -50,8 +51,9 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 -- Users table with encrypted fields
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email TEXT UNIQUE NOT NULL,
+    email_hash BYTEA UNIQUE NOT NULL, -- SHA-256 hash for unique constraint and GDPR lookups
     email_encrypted BYTEA NOT NULL, -- Encrypted email for privacy
+    email_search_hash BYTEA UNIQUE, -- Deterministic encryption for login lookups
     password_hash TEXT NOT NULL, -- Argon2id hash
     salt BYTEA NOT NULL,
     master_key_encrypted BYTEA NOT NULL, -- User's encrypted master key
@@ -68,6 +70,24 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Ensure admin flag exists
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false;
+
+-- Add new encryption columns for enhanced security
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_hash BYTEA UNIQUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_search_hash BYTEA UNIQUE;
+
+-- Encrypt audit log metadata field
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS metadata_encrypted BYTEA;
+
+-- GDPR compliance: Add table to store GDPR deletion keys for email recovery
+CREATE TABLE IF NOT EXISTS gdpr_keys (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email_hash BYTEA UNIQUE NOT NULL,
+    deletion_key BYTEA NOT NULL, -- Key to decrypt email for GDPR requests
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Remove plaintext email column (after data migration)
+-- ALTER TABLE users DROP COLUMN IF EXISTS email;
 
 -- RBAC roles
 CREATE TABLE IF NOT EXISTS roles (
@@ -682,6 +702,114 @@ func (c *CryptoService) Decrypt(ciphertext []byte) ([]byte, error) {
 	return aead.Open(nil, nonce, ciphertext, nil)
 }
 
+func (c *CryptoService) EncryptDeterministic(plaintext []byte, context string) ([]byte, error) {
+	h := sha256.New()
+	h.Write(c.serverKey[:32])
+	h.Write([]byte(context))
+	h.Write(plaintext)
+	deterministicKey := h.Sum(nil)[:32]
+
+	aead, err := chacha20poly1305.NewX(deterministicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	h2 := sha256.New()
+	h2.Write(deterministicKey)
+	h2.Write(plaintext)
+	nonce := h2.Sum(nil)[:aead.NonceSize()]
+
+	return aead.Seal(nil, nonce, plaintext, nil), nil
+}
+
+func (c *CryptoService) DecryptDeterministic(ciphertext []byte, context string, expectedPlaintext []byte) ([]byte, error) {
+	h := sha256.New()
+	h.Write(c.serverKey[:32])
+	h.Write([]byte(context))
+	h.Write(expectedPlaintext)
+	deterministicKey := h.Sum(nil)[:32]
+
+	aead, err := chacha20poly1305.NewX(deterministicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	h2 := sha256.New()
+	h2.Write(deterministicKey)
+	h2.Write(expectedPlaintext)
+	nonce := h2.Sum(nil)[:aead.NonceSize()]
+
+	return aead.Open(nil, nonce, ciphertext, nil)
+}
+
+func (c *CryptoService) EncryptWithKeyDerivation(plaintext []byte, keyType string) ([]byte, error) {
+	h := sha256.New()
+	h.Write(c.serverKey[:32])
+	h.Write([]byte("field:" + keyType))
+	fieldKey := h.Sum(nil)[:32]
+
+	aead, err := chacha20poly1305.NewX(fieldKey)
+	if err != nil {
+		return nil, err
+	}
+	nonce := make([]byte, aead.NonceSize())
+	if _, err := rand.Read(nonce); err != nil {
+		return nil, err
+	}
+	ciphertext := aead.Seal(nil, nonce, plaintext, nil)
+	return append(nonce, ciphertext...), nil
+}
+
+func (c *CryptoService) DecryptWithKeyDerivation(ciphertext []byte, keyType string) ([]byte, error) {
+	h := sha256.New()
+	h.Write(c.serverKey[:32])
+	h.Write([]byte("field:" + keyType))
+	fieldKey := h.Sum(nil)[:32]
+
+	aead, err := chacha20poly1305.NewX(fieldKey)
+	if err != nil {
+		return nil, err
+	}
+	if len(ciphertext) < aead.NonceSize() {
+		return nil, fmt.Errorf("ciphertext too short")
+	}
+	nonce := ciphertext[:aead.NonceSize()]
+	ciphertext = ciphertext[aead.NonceSize():]
+	return aead.Open(nil, nonce, ciphertext, nil)
+}
+
+func (c *CryptoService) EncryptWithGDPRKey(plaintext []byte, deletionKey []byte) ([]byte, error) {
+	aead, err := chacha20poly1305.NewX(deletionKey)
+	if err != nil {
+		return nil, err
+	}
+	nonce := make([]byte, aead.NonceSize())
+	if _, err := rand.Read(nonce); err != nil {
+		return nil, err
+	}
+	ciphertext := aead.Seal(nil, nonce, plaintext, nil)
+	return append(nonce, ciphertext...), nil
+}
+
+func (c *CryptoService) DecryptWithGDPRKey(ciphertext []byte, deletionKey []byte) ([]byte, error) {
+	aead, err := chacha20poly1305.NewX(deletionKey)
+	if err != nil {
+		return nil, err
+	}
+	if len(ciphertext) < aead.NonceSize() {
+		return nil, fmt.Errorf("ciphertext too short")
+	}
+	nonce := ciphertext[:aead.NonceSize()]
+	ciphertext = ciphertext[aead.NonceSize():]
+	return aead.Open(nil, nonce, ciphertext, nil)
+}
+
+func (c *CryptoService) HashEmail(email string) []byte {
+	h := sha256.New()
+	h.Write([]byte(strings.ToLower(email)))
+	return h.Sum(nil)
+}
+
 // Secure password hashing with Argon2id
 func HashPassword(password string, salt []byte) string {
 	hash := argon2.IDKey([]byte(password), salt, 3, 64*1024, 4, 32)
@@ -835,8 +963,23 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	}
 	encryptedMasterKey := aead.Seal(nonce, nonce, masterKey, nil)
 
-	// Encrypt email for storage
-	encryptedEmail, err := h.crypto.Encrypt([]byte(req.Email))
+	// Generate GDPR deletion key for email encryption
+	deletionKey := make([]byte, 32)
+	if _, err := rand.Read(deletionKey); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate credentials"})
+	}
+
+	// Create email hash for uniqueness and GDPR lookups
+	emailHash := h.crypto.HashEmail(req.Email)
+
+	// Encrypt email with GDPR key (allows recovery for deletion requests)
+	encryptedEmail, err := h.crypto.EncryptWithGDPRKey([]byte(req.Email), deletionKey)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to protect account data"})
+	}
+
+	// Create deterministic email hash for secure login lookups
+	emailSearchHash, err := h.crypto.EncryptDeterministic([]byte(strings.ToLower(req.Email)), "email_search")
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to protect account data"})
 	}
@@ -849,13 +992,23 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	}
 	defer tx.Rollback(ctx)
 
+	// Store GDPR deletion key
+	_, err = tx.Exec(ctx, `
+        INSERT INTO gdpr_keys (email_hash, deletion_key)
+        VALUES ($1, $2)`,
+		emailHash, deletionKey,
+	)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to setup account security"})
+	}
+
 	// Create user
 	var userID uuid.UUID
 	err = tx.QueryRow(ctx, `
-        INSERT INTO users (email, email_encrypted, password_hash, salt, master_key_encrypted)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO users (email_hash, email_encrypted, email_search_hash, password_hash, salt, master_key_encrypted)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING id`,
-		req.Email, encryptedEmail, passwordHash, salt, encryptedMasterKey,
+		emailHash, encryptedEmail, emailSearchHash, passwordHash, salt, encryptedMasterKey,
 	).Scan(&userID)
 
 	if err != nil {
@@ -923,7 +1076,13 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	ctx := context.Background()
 
-	// Get user
+	// Create deterministic hash for secure email lookup
+	emailSearchHash, err := h.crypto.EncryptDeterministic([]byte(strings.ToLower(req.Email)), "email_search")
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Authentication failed"})
+	}
+
+	// Get user using deterministic hash
 	var userID uuid.UUID
 	var passwordHash string
 	var failedAttempts int
@@ -931,10 +1090,10 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	var mfaEnabled bool
 	var mfaSecret []byte
 
-	err := h.db.QueryRow(ctx, `
+	err = h.db.QueryRow(ctx, `
         SELECT id, password_hash, failed_attempts, locked_until, mfa_enabled, mfa_secret_encrypted
-        FROM users WHERE email = $1`,
-		req.Email,
+        FROM users WHERE email_search_hash = $1`,
+		emailSearchHash,
 	).Scan(&userID, &passwordHash, &failedAttempts, &lockedUntil, &mfaEnabled, &mfaSecret)
 
 	if err != nil {
@@ -1080,10 +1239,24 @@ func (h *AuthHandler) BeginMFASetup(c *fiber.Ctx) error {
 		return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 	ctx := c.Context()
-	var email string
-	if err := h.db.QueryRow(ctx, `SELECT email FROM users WHERE id=$1`, uid).Scan(&email); err != nil {
+	var emailEnc []byte
+	var emailHash []byte
+	if err := h.db.QueryRow(ctx, `SELECT email_encrypted, email_hash FROM users WHERE id=$1`, uid).Scan(&emailEnc, &emailHash); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Unable to start MFA setup"})
 	}
+
+	// Get GDPR key to decrypt email for MFA setup
+	var deletionKey []byte
+	if err := h.db.QueryRow(ctx, `SELECT deletion_key FROM gdpr_keys WHERE email_hash = $1`, emailHash).Scan(&deletionKey); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Unable to start MFA setup"})
+	}
+
+	// Decrypt email for MFA setup
+	emailBytes, err := h.crypto.DecryptWithGDPRKey(emailEnc, deletionKey)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Unable to start MFA setup"})
+	}
+	email := string(emailBytes)
 	key, err := totp.Generate(totp.GenerateOpts{
 		Issuer:      "LeafLock",
 		AccountName: email,
@@ -2889,6 +3062,110 @@ func main() {
 			return c.Status(500).JSON(fiber.Map{"error": "bulk admin update failed"})
 		}
 		return c.JSON(fiber.Map{"ok": true, "affected": ct.RowsAffected()})
+	})
+
+	// GDPR compliance endpoints
+	api.Post("/gdpr/request", func(c *fiber.Ctx) error {
+		var req struct {
+			Email string `json:"email" validate:"required,email"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+		}
+
+		ctx := c.Context()
+		emailHash := crypto.HashEmail(req.Email)
+
+		// Get user data for GDPR export
+		var deletionKey []byte
+		err := db.QueryRow(ctx, `SELECT deletion_key FROM gdpr_keys WHERE email_hash = $1`, emailHash).Scan(&deletionKey)
+		if err != nil {
+			return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+		}
+
+		// Decrypt email to verify and get user data
+		var userID uuid.UUID
+		var emailEnc []byte
+		var createdAt time.Time
+		err = db.QueryRow(ctx, `
+			SELECT id, email_encrypted, created_at
+			FROM users WHERE email_hash = $1`, emailHash).Scan(&userID, &emailEnc, &createdAt)
+		if err != nil {
+			return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+		}
+
+		decryptedEmail, err := crypto.DecryptWithGDPRKey(emailEnc, deletionKey)
+		if err != nil || string(decryptedEmail) != req.Email {
+			return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+		}
+
+		// Return GDPR data export
+		return c.JSON(fiber.Map{
+			"user_id":    userID,
+			"email":      req.Email,
+			"created_at": createdAt,
+			"message":    "This is your complete data export. All note content is encrypted client-side and cannot be decrypted by the server.",
+		})
+	})
+
+	api.Delete("/gdpr/delete", func(c *fiber.Ctx) error {
+		var req struct {
+			Email string `json:"email" validate:"required,email"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+		}
+
+		ctx := c.Context()
+		emailHash := crypto.HashEmail(req.Email)
+
+		// Verify user exists and get deletion key
+		var deletionKey []byte
+		err := db.QueryRow(ctx, `SELECT deletion_key FROM gdpr_keys WHERE email_hash = $1`, emailHash).Scan(&deletionKey)
+		if err != nil {
+			return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+		}
+
+		// Get user ID for cascading deletes
+		var userID uuid.UUID
+		var emailEnc []byte
+		err = db.QueryRow(ctx, `SELECT id, email_encrypted FROM users WHERE email_hash = $1`, emailHash).Scan(&userID, &emailEnc)
+		if err != nil {
+			return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+		}
+
+		// Verify email match
+		decryptedEmail, err := crypto.DecryptWithGDPRKey(emailEnc, deletionKey)
+		if err != nil || string(decryptedEmail) != req.Email {
+			return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+		}
+
+		// Start transaction for complete deletion
+		tx, err := db.Begin(ctx)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Deletion failed"})
+		}
+		defer tx.Rollback(ctx)
+
+		// Delete user (cascades to notes, sessions, etc.)
+		_, err = tx.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Deletion failed"})
+		}
+
+		// Delete GDPR key
+		_, err = tx.Exec(ctx, `DELETE FROM gdpr_keys WHERE email_hash = $1`, emailHash)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Deletion failed"})
+		}
+
+		if err := tx.Commit(ctx); err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Deletion failed"})
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "All user data has been permanently deleted",
+		})
 	})
 
 	// Start background cleanup service
