@@ -1838,7 +1838,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onAuthenticated }) => {
         </a>
       </div>
 
-      <Footer />
+      <Footer variant="minimal" />
     </div>
   )
 }
