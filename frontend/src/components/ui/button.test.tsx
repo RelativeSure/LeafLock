@@ -6,7 +6,7 @@ import { Button } from './button'
 describe('Button Component', () => {
   it('renders with default props', () => {
     render(<Button>Click me</Button>)
-    
+
     const button = screen.getByRole('button', { name: /click me/i })
     expect(button).toBeInTheDocument()
     expect(button).toHaveClass('inline-flex', 'items-center', 'justify-center')
@@ -49,18 +49,18 @@ describe('Button Component', () => {
   it('handles click events', async () => {
     const user = userEvent.setup()
     const handleClick = vi.fn()
-    
+
     render(<Button onClick={handleClick}>Click me</Button>)
-    
+
     const button = screen.getByRole('button')
     await user.click(button)
-    
+
     expect(handleClick).toHaveBeenCalledTimes(1)
   })
 
   it('can be disabled', () => {
     render(<Button disabled>Disabled</Button>)
-    
+
     const button = screen.getByRole('button')
     expect(button).toBeDisabled()
     expect(button).toHaveClass('disabled:pointer-events-none', 'disabled:opacity-50')
@@ -68,16 +68,24 @@ describe('Button Component', () => {
 
   it('accepts custom className', () => {
     render(<Button className="custom-class">Custom</Button>)
-    
+
     const button = screen.getByRole('button')
     expect(button).toHaveClass('custom-class')
   })
 
   it('forwards ref properly', () => {
     let buttonRef: HTMLButtonElement | null = null
-    
-    render(<Button ref={(el) => { buttonRef = el }}>Ref test</Button>)
-    
+
+    render(
+      <Button
+        ref={(el) => {
+          buttonRef = el
+        }}
+      >
+        Ref test
+      </Button>
+    )
+
     expect(buttonRef).toBeInstanceOf(HTMLButtonElement)
     expect(buttonRef?.textContent).toBe('Ref test')
   })
@@ -88,7 +96,7 @@ describe('Button Component', () => {
         <a href="/test">Link Button</a>
       </Button>
     )
-    
+
     const link = screen.getByRole('link')
     expect(link).toBeInTheDocument()
     expect(link).toHaveAttribute('href', '/test')
@@ -96,8 +104,12 @@ describe('Button Component', () => {
   })
 
   it('combines variant and size classes correctly', () => {
-    render(<Button variant="outline" size="lg">Large Outline</Button>)
-    
+    render(
+      <Button variant="outline" size="lg">
+        Large Outline
+      </Button>
+    )
+
     const button = screen.getByRole('button')
     expect(button).toHaveClass('border', 'border-input') // outline variant
     expect(button).toHaveClass('h-11', 'px-8') // lg size
@@ -105,7 +117,7 @@ describe('Button Component', () => {
 
   it('applies hover and focus states', () => {
     render(<Button>Hover me</Button>)
-    
+
     const button = screen.getByRole('button')
     expect(button).toHaveClass('hover:bg-primary/90')
     expect(button).toHaveClass('focus-visible:outline-none', 'focus-visible:ring-2')
@@ -113,7 +125,7 @@ describe('Button Component', () => {
 
   it('has proper accessibility attributes', () => {
     render(<Button aria-label="Custom label">Icon only</Button>)
-    
+
     const button = screen.getByRole('button', { name: /custom label/i })
     expect(button).toBeInTheDocument()
   })
@@ -121,13 +133,13 @@ describe('Button Component', () => {
   it('handles keyboard navigation', async () => {
     const user = userEvent.setup()
     const handleClick = vi.fn()
-    
+
     render(<Button onClick={handleClick}>Keyboard test</Button>)
-    
+
     const button = screen.getByRole('button')
     button.focus()
     await user.keyboard('{Enter}')
-    
+
     expect(handleClick).toHaveBeenCalledTimes(1)
   })
 })

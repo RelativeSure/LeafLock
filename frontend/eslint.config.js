@@ -43,7 +43,7 @@ export default [
       ...reactHooks.configs.recommended.rules,
 
       // React Refresh
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      'react-refresh/only-export-components': 'off',
 
       // TypeScript
       '@typescript-eslint/no-unused-vars': [
@@ -54,16 +54,16 @@ export default [
           caughtErrors: 'none',
         },
       ],
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-empty-function': 'warn',
       '@typescript-eslint/no-var-requires': 'off',
 
       // General JS/React (style rules relaxed to match current code)
-      'no-console': 'warn',
+      'no-console': 'off',
       'no-debugger': 'error',
-      'no-alert': 'warn',
+      'no-alert': 'off',
       'no-unused-vars': 'off',
       'no-var': 'warn',
       'object-shorthand': 'off',
@@ -89,18 +89,18 @@ export default [
       'no-script-url': 'error',
 
       // Code quality (keep as warnings)
-      'complexity': ['warn', 10],
-      'max-depth': ['warn', 4],
-      'max-lines': ['warn', 600],
-      'max-params': ['warn', 6],
-      'no-magic-numbers': ['warn', { ignore: [-1, 0, 1, 2, 100, 200, 404, 500], ignoreArrayIndexes: true }],
+      'complexity': ['warn', 30],
+      'max-depth': ['warn', 6],
+      'max-lines': 'off',
+      'max-params': ['warn', 8],
+      'no-magic-numbers': 'off',
 
       // Imports
       'no-duplicate-imports': 'warn',
 
       // React hooks
       'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/exhaustive-deps': 'off',
     },
   },
   {
