@@ -33,6 +33,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/pquerna/otp"
+	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/chacha20poly1305"
@@ -290,28 +292,32 @@ CREATE INDEX IF NOT EXISTS idx_note_tags_tag ON note_tags(tag_id);
 
 // Configuration with secure defaults
 type Config struct {
-	DatabaseURL      string
-	RedisURL         string
-	RedisPassword    string
-	JWTSecret        []byte
-	EncryptionKey    []byte
-	Port             string
-	AllowedOrigins   []string
-	MaxLoginAttempts int
-	LockoutDuration  time.Duration
-	SessionDuration  time.Duration
-	Environment      string
+	DatabaseURL       string
+	RedisURL          string
+	RedisPassword     string
+	JWTSecret         []byte
+	EncryptionKey     []byte
+	Port              string
+	AllowedOrigins    []string
+	MaxLoginAttempts  int
+	LockoutDuration   time.Duration
+	SessionDuration   time.Duration
+	Environment       string
+	TrustProxyHeaders bool
 }
 
 // Runtime feature toggles (in-memory; initialized from env at startup)
 var regEnabled atomic.Int32
+var trustProxyHeaders atomic.Bool
 
 func LoadConfig() *Config {
 	// Generate secure random keys if not provided
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		key := make([]byte, 64)
-		rand.Read(key)
+		if _, err := rand.Read(key); err != nil {
+			log.Fatalf("failed to generate JWT secret: %v", err)
+		}
 		jwtSecret = base64.StdEncoding.EncodeToString(key)
 		log.Println("Generated new JWT secret")
 	}
@@ -319,7 +325,9 @@ func LoadConfig() *Config {
 	encKey := os.Getenv("SERVER_ENCRYPTION_KEY")
 	if encKey == "" {
 		key := make([]byte, 32)
-		rand.Read(key)
+		if _, err := rand.Read(key); err != nil {
+			log.Fatalf("failed to generate server encryption key: %v", err)
+		}
 		encKey = base64.StdEncoding.EncodeToString(key)
 		log.Println("Generated new server encryption key")
 	}
@@ -336,23 +344,37 @@ func LoadConfig() *Config {
 	}
 
 	return &Config{
-		DatabaseURL:      dbURL,
-		RedisURL:         getEnvOrDefault("REDIS_URL", "localhost:6379"),
-		RedisPassword:    os.Getenv("REDIS_PASSWORD"),
-		JWTSecret:        []byte(jwtSecret),
-		EncryptionKey:    []byte(encKey),
-		Port:             getEnvOrDefault("PORT", "8080"),
-		AllowedOrigins:   strings.Split(getEnvOrDefault("CORS_ORIGINS", "https://localhost:3000"), ","),
-		MaxLoginAttempts: 5,
-		LockoutDuration:  15 * time.Minute,
-		SessionDuration:  24 * time.Hour,
-		Environment:      getEnvOrDefault("APP_ENV", "development"),
+		DatabaseURL:       dbURL,
+		RedisURL:          getEnvOrDefault("REDIS_URL", "localhost:6379"),
+		RedisPassword:     os.Getenv("REDIS_PASSWORD"),
+		JWTSecret:         []byte(jwtSecret),
+		EncryptionKey:     []byte(encKey),
+		Port:              getEnvOrDefault("PORT", "8080"),
+		AllowedOrigins:    strings.Split(getEnvOrDefault("CORS_ORIGINS", "https://localhost:3000"), ","),
+		MaxLoginAttempts:  5,
+		LockoutDuration:   15 * time.Minute,
+		SessionDuration:   24 * time.Hour,
+		Environment:       getEnvOrDefault("APP_ENV", "development"),
+		TrustProxyHeaders: getEnvAsBool("TRUST_PROXY_HEADERS", false),
 	}
 }
 
 func getEnvOrDefault(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
+	}
+	return defaultValue
+}
+
+func getEnvAsBool(key string, defaultValue bool) bool {
+	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+		value = strings.ToLower(value)
+		if value == "true" || value == "1" || value == "yes" {
+			return true
+		}
+		if value == "false" || value == "0" || value == "no" {
+			return false
+		}
 	}
 	return defaultValue
 }
@@ -554,6 +576,9 @@ func nilIfInvalid(t sql.NullTime) any {
 
 // clientIP returns the best-effort client address, honoring common proxy headers.
 func clientIP(c *fiber.Ctx) string {
+	if !trustProxyHeaders.Load() {
+		return c.IP()
+	}
 	if cf := strings.TrimSpace(c.Get("CF-Connecting-IP")); cf != "" {
 		if ip := net.ParseIP(cf); ip != nil {
 			return cf
@@ -785,24 +810,36 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 
 	// Generate salt and hash password
 	salt := make([]byte, 32)
-	rand.Read(salt)
+	if _, err := rand.Read(salt); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate credentials"})
+	}
 	passwordHash := HashPassword(req.Password, salt)
 
 	// Generate user's master encryption key
 	masterKey := make([]byte, 32)
-	rand.Read(masterKey)
+	if _, err := rand.Read(masterKey); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate credentials"})
+	}
 
 	// Derive key from password to encrypt master key
 	userKey := argon2.IDKey([]byte(req.Password), salt, 1, 64*1024, 4, 32)
 
 	// Encrypt master key with user's derived key
-	aead, _ := chacha20poly1305.NewX(userKey)
+	aead, err := chacha20poly1305.NewX(userKey)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to initialize encryption"})
+	}
 	nonce := make([]byte, aead.NonceSize())
-	rand.Read(nonce)
+	if _, err := rand.Read(nonce); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to initialize encryption"})
+	}
 	encryptedMasterKey := aead.Seal(nonce, nonce, masterKey, nil)
 
 	// Encrypt email for storage
-	encryptedEmail, _ := h.crypto.Encrypt([]byte(req.Email))
+	encryptedEmail, err := h.crypto.Encrypt([]byte(req.Email))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to protect account data"})
+	}
 
 	// Start transaction
 	ctx := context.Background()
@@ -829,12 +866,20 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	}
 
 	// Create default workspace
-	workspaceName, _ := h.crypto.Encrypt([]byte("My Workspace"))
+	workspaceName, err := h.crypto.Encrypt([]byte("My Workspace"))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to set up workspace"})
+	}
 	workspaceKey := make([]byte, 32)
-	rand.Read(workspaceKey)
+	if _, err := rand.Read(workspaceKey); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to set up workspace"})
+	}
 
 	// Encrypt workspace key with user's master key
-	encryptedWorkspaceKey, _ := h.crypto.Encrypt(workspaceKey)
+	encryptedWorkspaceKey, err := h.crypto.Encrypt(workspaceKey)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to set up workspace"})
+	}
 
 	var workspaceID uuid.UUID
 	err = tx.QueryRow(ctx, `
@@ -923,10 +968,28 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	// Verify MFA if enabled
 	if mfaEnabled {
-		if req.MFACode == "" {
+		if strings.TrimSpace(req.MFACode) == "" {
 			return c.Status(200).JSON(fiber.Map{"mfa_required": true})
 		}
-		// Verify TOTP code here (implement TOTP verification)
+		if len(mfaSecret) == 0 {
+			log.Printf("mfa secret missing for user %s", userID)
+			return c.Status(500).JSON(fiber.Map{"error": "MFA validation failed"})
+		}
+		secretBytes, err := h.crypto.Decrypt(mfaSecret)
+		if err != nil {
+			log.Printf("failed to decrypt mfa secret for user %s: %v", userID, err)
+			return c.Status(500).JSON(fiber.Map{"error": "MFA validation failed"})
+		}
+		secret := strings.TrimSpace(string(secretBytes))
+		code := strings.TrimSpace(req.MFACode)
+		if secret == "" {
+			log.Printf("empty mfa secret for user %s", userID)
+			return c.Status(500).JSON(fiber.Map{"error": "MFA validation failed"})
+		}
+		if !totp.Validate(code, secret) {
+			h.logAudit(ctx, userID, "login.mfa_failed", "user", userID, c)
+			return c.Status(401).JSON(fiber.Map{"error": "Invalid MFA code"})
+		}
 	}
 
 	// Reset failed attempts and update last login
@@ -938,15 +1001,23 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	// Generate session
 	sessionToken := make([]byte, 32)
-	rand.Read(sessionToken)
+	if _, err := rand.Read(sessionToken); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Session creation failed"})
+	}
 	sessionTokenStr := hex.EncodeToString(sessionToken)
 
 	// Hash token for storage
 	tokenHash := argon2.IDKey(sessionToken, []byte("session"), 1, 64*1024, 4, 32)
 
 	// Encrypt IP and user agent
-	encryptedIP, _ := h.crypto.Encrypt([]byte(clientIP(c)))
-	encryptedUA, _ := h.crypto.Encrypt([]byte(c.Get("User-Agent")))
+	encryptedIP, err := h.crypto.Encrypt([]byte(clientIP(c)))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Session creation failed"})
+	}
+	encryptedUA, err := h.crypto.Encrypt([]byte(c.Get("User-Agent")))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Session creation failed"})
+	}
 
 	// Store session
 	_, err = h.db.Exec(ctx, `
@@ -980,6 +1051,147 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	})
 }
 
+type mfaCodeRequest struct {
+	Code string `json:"code"`
+}
+
+func (h *AuthHandler) GetMFAStatus(c *fiber.Ctx) error {
+	v := c.Locals("user_id")
+	uid, ok := v.(uuid.UUID)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+	var enabled bool
+	var hasSecret sql.NullBool
+	if err := h.db.QueryRow(c.Context(), `SELECT mfa_enabled, mfa_secret_encrypted IS NOT NULL FROM users WHERE id = $1`, uid).
+		Scan(&enabled, &hasSecret); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to load MFA status"})
+	}
+	return c.JSON(fiber.Map{
+		"enabled":    enabled,
+		"has_secret": hasSecret.Valid && hasSecret.Bool,
+	})
+}
+
+func (h *AuthHandler) BeginMFASetup(c *fiber.Ctx) error {
+	v := c.Locals("user_id")
+	uid, ok := v.(uuid.UUID)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+	ctx := c.Context()
+	var email string
+	if err := h.db.QueryRow(ctx, `SELECT email FROM users WHERE id=$1`, uid).Scan(&email); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Unable to start MFA setup"})
+	}
+	key, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      "LeafLock",
+		AccountName: email,
+		Period:      30,
+		Digits:      otp.DigitsSix,
+	})
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate MFA secret"})
+	}
+	secret := key.Secret()
+	encryptedSecret, err := h.crypto.Encrypt([]byte(secret))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to secure MFA secret"})
+	}
+	if _, err := h.db.Exec(ctx, `UPDATE users SET mfa_secret_encrypted = $1, mfa_enabled = FALSE WHERE id = $2`, encryptedSecret, uid); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to persist MFA secret"})
+	}
+	h.logAudit(ctx, uid, "mfa.setup_started", "user", uid, c)
+	return c.JSON(fiber.Map{
+		"secret":      secret,
+		"otpauth_url": key.URL(),
+		"issuer":      key.Issuer(),
+		"account":     key.AccountName(),
+	})
+}
+
+func (h *AuthHandler) EnableMFA(c *fiber.Ctx) error {
+	v := c.Locals("user_id")
+	uid, ok := v.(uuid.UUID)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+	var req mfaCodeRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	code := strings.TrimSpace(req.Code)
+	if code == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "MFA code required"})
+	}
+	ctx := c.Context()
+	var secretEnc []byte
+	if err := h.db.QueryRow(ctx, `SELECT mfa_secret_encrypted FROM users WHERE id = $1`, uid).Scan(&secretEnc); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "MFA secret not initialized"})
+	}
+	if len(secretEnc) == 0 {
+		return c.Status(400).JSON(fiber.Map{"error": "MFA secret not initialized"})
+	}
+	secretBytes, err := h.crypto.Decrypt(secretEnc)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to access MFA secret"})
+	}
+	secret := strings.TrimSpace(string(secretBytes))
+	if secret == "" {
+		return c.Status(500).JSON(fiber.Map{"error": "MFA secret invalid"})
+	}
+	if !totp.Validate(code, secret) {
+		h.logAudit(ctx, uid, "mfa.enable_failed", "user", uid, c)
+		return c.Status(401).JSON(fiber.Map{"error": "Invalid MFA code"})
+	}
+	if _, err := h.db.Exec(ctx, `UPDATE users SET mfa_enabled = TRUE WHERE id = $1`, uid); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to enable MFA"})
+	}
+	h.logAudit(ctx, uid, "mfa.enabled", "user", uid, c)
+	return c.JSON(fiber.Map{"enabled": true})
+}
+
+func (h *AuthHandler) DisableMFA(c *fiber.Ctx) error {
+	v := c.Locals("user_id")
+	uid, ok := v.(uuid.UUID)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+	var req mfaCodeRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	code := strings.TrimSpace(req.Code)
+	if code == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "MFA code required"})
+	}
+	ctx := c.Context()
+	var secretEnc []byte
+	if err := h.db.QueryRow(ctx, `SELECT mfa_secret_encrypted FROM users WHERE id = $1`, uid).Scan(&secretEnc); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "MFA not enabled"})
+	}
+	if len(secretEnc) == 0 {
+		return c.Status(400).JSON(fiber.Map{"error": "MFA not enabled"})
+	}
+	secretBytes, err := h.crypto.Decrypt(secretEnc)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to access MFA secret"})
+	}
+	secret := strings.TrimSpace(string(secretBytes))
+	if secret == "" {
+		return c.Status(500).JSON(fiber.Map{"error": "MFA secret invalid"})
+	}
+	if !totp.Validate(code, secret) {
+		h.logAudit(ctx, uid, "mfa.disable_failed", "user", uid, c)
+		return c.Status(401).JSON(fiber.Map{"error": "Invalid MFA code"})
+	}
+	if _, err := h.db.Exec(ctx, `UPDATE users SET mfa_enabled = FALSE, mfa_secret_encrypted = NULL WHERE id = $1`, uid); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to disable MFA"})
+	}
+	h.logAudit(ctx, uid, "mfa.disabled", "user", uid, c)
+	return c.JSON(fiber.Map{"enabled": false})
+}
+
 func (h *AuthHandler) generateToken(userID uuid.UUID) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id": userID.String(),
@@ -992,14 +1204,24 @@ func (h *AuthHandler) generateToken(userID uuid.UUID) (string, error) {
 }
 
 func (h *AuthHandler) logAudit(ctx context.Context, userID uuid.UUID, action, resourceType string, resourceID uuid.UUID, c *fiber.Ctx) {
-	encryptedIP, _ := h.crypto.Encrypt([]byte(clientIP(c)))
-	encryptedUA, _ := h.crypto.Encrypt([]byte(c.Get("User-Agent")))
+	encryptedIP, err := h.crypto.Encrypt([]byte(clientIP(c)))
+	if err != nil {
+		log.Printf("failed to encrypt audit log IP: %v", err)
+		encryptedIP = nil
+	}
+	encryptedUA, err := h.crypto.Encrypt([]byte(c.Get("User-Agent")))
+	if err != nil {
+		log.Printf("failed to encrypt audit log user agent: %v", err)
+		encryptedUA = nil
+	}
 
-	h.db.Exec(ctx, `
+	if _, err := h.db.Exec(ctx, `
         INSERT INTO audit_log (user_id, action, resource_type, resource_id, ip_address_encrypted, user_agent_encrypted)
         VALUES ($1, $2, $3, $4, $5, $6)`,
 		userID, action, resourceType, resourceID, encryptedIP, encryptedUA,
-	)
+	); err != nil {
+		log.Printf("failed to write audit log entry: %v", err)
+	}
 }
 
 // Notes Handler
@@ -1704,6 +1926,7 @@ func runCleanupTasks(ctx context.Context, db Database) {
 func main() {
 	// Load configuration
 	config := LoadConfig()
+	trustProxyHeaders.Store(config.TrustProxyHeaders)
 
 	// Initialize runtime toggle from env (default true)
 	envRegRaw, envRegExplicit := os.LookupEnv("ENABLE_REGISTRATION")
@@ -1858,6 +2081,12 @@ func main() {
 
 	// Protected routes
 	protected := api.Group("/", JWTMiddleware(config.JWTSecret))
+
+	// MFA endpoints
+	protected.Get("/auth/mfa/status", authHandler.GetMFAStatus)
+	protected.Post("/auth/mfa/setup", authHandler.BeginMFASetup)
+	protected.Post("/auth/mfa/enable", authHandler.EnableMFA)
+	protected.Post("/auth/mfa/disable", authHandler.DisableMFA)
 
 	// Notes endpoints
 	protected.Get("/notes", notesHandler.GetNotes)
@@ -2064,7 +2293,7 @@ func main() {
 
 		// Query rows
 		rows, err := db.Query(ctx, fmt.Sprintf(`
-			SELECT id, email_encrypted, created_at, last_login, is_admin
+			SELECT id, email_encrypted, created_at, last_login, is_admin, mfa_enabled
 			FROM users
 			%s
 			ORDER BY %s %s
@@ -2075,17 +2304,18 @@ func main() {
 		defer rows.Close()
 
 		type userRow struct {
-			ID       uuid.UUID
-			EmailEnc []byte
-			Created  time.Time
-			Last     sql.NullTime
-			IsAdmin  bool
+			ID         uuid.UUID
+			EmailEnc   []byte
+			Created    time.Time
+			Last       sql.NullTime
+			IsAdmin    bool
+			MFAEnabled bool
 		}
 		var users []userRow
 		var userIDs []uuid.UUID
 		for rows.Next() {
 			var r userRow
-			if err := rows.Scan(&r.ID, &r.EmailEnc, &r.Created, &r.Last, &r.IsAdmin); err == nil {
+			if err := rows.Scan(&r.ID, &r.EmailEnc, &r.Created, &r.Last, &r.IsAdmin, &r.MFAEnabled); err == nil {
 				users = append(users, r)
 				userIDs = append(userIDs, r.ID)
 			}
@@ -2172,6 +2402,7 @@ func main() {
 				"email":               email,
 				"is_admin":            effectiveAdmin,
 				"admin_via_allowlist": allowlistedAdmin,
+				"mfa_enabled":         u.MFAEnabled,
 				"roles":               roles,
 				"created_at":          u.Created,
 				"last_login":          nilIfInvalid(u.Last),
@@ -2268,7 +2499,7 @@ func main() {
 		}
 		// Query
 		rows, err := db.Query(ctx, fmt.Sprintf(`
-			SELECT id, email_encrypted, created_at, last_login, is_admin
+			SELECT id, email_encrypted, created_at, last_login, is_admin, mfa_enabled
 			FROM users
 			%s
 			ORDER BY %s %s`, where, sort, order), args...)
@@ -2277,17 +2508,18 @@ func main() {
 		}
 		defer rows.Close()
 		type userRow struct {
-			ID       uuid.UUID
-			EmailEnc []byte
-			Created  time.Time
-			Last     sql.NullTime
-			IsAdmin  bool
+			ID         uuid.UUID
+			EmailEnc   []byte
+			Created    time.Time
+			Last       sql.NullTime
+			IsAdmin    bool
+			MFAEnabled bool
 		}
 		var buf bytes.Buffer
-		buf.WriteString("user_id,email,is_admin,admin_via_allowlist,roles,created_at,last_login,registration_ip,last_ip\n")
+		buf.WriteString("user_id,email,is_admin,admin_via_allowlist,mfa_enabled,roles,created_at,last_login,registration_ip,last_ip\n")
 		for rows.Next() {
 			var r userRow
-			if err := rows.Scan(&r.ID, &r.EmailEnc, &r.Created, &r.Last, &r.IsAdmin); err != nil {
+			if err := rows.Scan(&r.ID, &r.EmailEnc, &r.Created, &r.Last, &r.IsAdmin, &r.MFAEnabled); err != nil {
 				continue
 			}
 			email := ""
@@ -2338,11 +2570,12 @@ func main() {
 				}
 			}
 			// write CSV row
-			buf.WriteString(fmt.Sprintf("%s,%s,%t,%t,\"%s\",%s,%s,%s,%s\n",
+			buf.WriteString(fmt.Sprintf("%s,%s,%t,%t,%t,\"%s\",%s,%s,%s,%s\n",
 				r.ID.String(),
 				csvEscape(email),
 				effectiveAdmin,
 				allowlistedAdmin,
+				r.MFAEnabled,
 				strings.Join(roles, ";"),
 				r.Created.Format(time.RFC3339),
 				formatNullTime(r.Last),

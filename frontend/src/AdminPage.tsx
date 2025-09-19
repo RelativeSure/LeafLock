@@ -31,22 +31,11 @@ import {
 } from '@/components/ui/dialog'
 import { MultiCombobox } from '@/components/ui/multi-combobox'
 import { Switch } from '@/components/ui/switch'
+import type { AdminUser } from '@/lib/schemas'
 
 type AdminPageProps = { api: any; onBack: () => void }
 
 const availableRoles = ['moderator', 'auditor']
-
-type AdminUser = {
-  user_id: string
-  email: string
-  is_admin: boolean
-  admin_via_allowlist?: boolean
-  roles: string[]
-  created_at?: string
-  last_login?: string | null
-  registration_ip?: string
-  last_ip?: string
-}
 
 const AdminPage: React.FC<AdminPageProps> = ({ api, onBack }) => {
   const [users, setUsers] = useState<AdminUser[]>([])
@@ -638,6 +627,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ api, onBack }) => {
                         Admin: {selected.is_admin ? 'Yes' : 'No'}
                         {selected.admin_via_allowlist ? ' (allowlist override)' : ''}
                       </div>
+                      <div>MFA: {selected.mfa_enabled ? 'Enabled' : 'Disabled'}</div>
                       <div>
                         Registered:{' '}
                         {selected.created_at ? new Date(selected.created_at).toLocaleString() : '-'}
@@ -668,6 +658,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ api, onBack }) => {
                     <TableRow>
                       <TableHead>Email</TableHead>
                       <TableHead>Admin</TableHead>
+                      <TableHead>MFA</TableHead>
                       <TableHead>Roles</TableHead>
                       <TableHead>Last Login</TableHead>
                     </TableRow>
@@ -687,6 +678,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ api, onBack }) => {
                             </Badge>
                           ) : (
                             '-'
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {u.mfa_enabled ? (
+                            <Badge variant="outline">enabled</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">disabled</span>
                           )}
                         </TableCell>
                         <TableCell className="space-x-1">

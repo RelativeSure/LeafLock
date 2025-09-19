@@ -21,6 +21,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
+import type { AdminUser } from '@/lib/schemas'
 
 const roles = ['admin', 'moderator', 'auditor']
 
@@ -45,12 +46,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
   const [quickResults, setQuickResults] = useState<AdminPanelQuickUser[]>([])
   const quickDebounceRef = React.useRef<number | null>(null)
 
-  type AdminPanelQuickUser = {
-    user_id: string
-    email: string
-    is_admin?: boolean
-    admin_via_allowlist?: boolean
-  }
+  type AdminPanelQuickUser = Pick<AdminUser, 'user_id' | 'email' | 'is_admin' | 'admin_via_allowlist'>
 
   useEffect(() => {
     try {
