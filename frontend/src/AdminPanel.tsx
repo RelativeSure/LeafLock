@@ -48,6 +48,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
 
   type AdminPanelQuickUser = Pick<AdminUser, 'user_id' | 'email' | 'is_admin' | 'admin_via_allowlist'>
 
+  const maskEmail = (email: string): string => {
+    const [localPart, domain] = email.split('@')
+    if (localPart.length <= 2) return `${localPart[0]}***@${domain}`
+    return `${localPart.slice(0, 2)}***@${domain}`
+  }
+
   useEffect(() => {
     try {
       const me = localStorage.getItem('current_user_id') || ''
@@ -204,7 +210,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
     setStatus(null)
     try {
       await api.adminSetAdmin(user.user_id, true)
-      setSuccess(`Granted admin to ${user.email}.`)
+      setSuccess(`Granted admin to ${maskEmail(user.email)}.`)
       await loadUsers()
       setQuickOpen(false)
       resetQuickState()
@@ -223,6 +229,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
         </CardTitle>
         <CardDescription>
           Manage administrator privileges and roles for individual users.
+          <br />
+          <span className="text-amber-600 dark:text-amber-400 text-sm font-medium">
+            ⚠️ Handle user data with care - emails are masked for privacy.
+          </span>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -325,6 +335,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
           </Button>
           <p className="text-sm text-muted-foreground">
             Opens a command palette to search users and instantly promote them.
+            <br />
+            <span className="text-amber-600 dark:text-amber-400 text-xs">
+              Note: Emails are masked for privacy protection.
+            </span>
           </p>
         </div>
       </CardContent>
@@ -373,7 +387,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
                 >
                   <div className="flex items-center gap-2">
                     <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span>{user.email}</span>
+                    <span>{maskEmail(user.email)}</span>
                   </div>
                   {user.is_admin ? (
                     <Badge variant="outline">admin</Badge>

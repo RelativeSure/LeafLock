@@ -3,9 +3,52 @@ import { ExternalLink, Book, Github, Shield, FileText } from 'lucide-react'
 
 interface FooterProps {
   className?: string
+  variant?: 'default' | 'minimal'
 }
 
-const Footer: React.FC<FooterProps> = ({ className = '' }) => {
+const Footer: React.FC<FooterProps> = ({ className = '', variant = 'default' }) => {
+  if (variant === 'minimal') {
+    return (
+      <footer className={`mt-12 ${className}`}>
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex flex-col items-center space-y-3">
+            {/* Essential links only */}
+            <div className="flex items-center space-x-6 text-xs">
+              <a
+                href="/docs/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Privacy
+              </a>
+              <a
+                href="/docs/terms-of-use"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Terms
+              </a>
+              <a
+                href="/docs"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Docs
+              </a>
+            </div>
+            {/* Copyright */}
+            <p className="text-xs text-muted-foreground">
+              © {new Date().getFullYear()} LeafLock. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
+    )
+  }
+
   return (
     <footer className={`border-t bg-background mt-auto ${className}`}>
       <div className="container mx-auto px-4 py-6">
