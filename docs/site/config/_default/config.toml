@@ -1,0 +1,41 @@
+baseURL = "https://docs.leaflock.app/"
+languageCode = "en"
+title = "LeafLock Documentation"
+pluralizeListTitles = false
+
+enableGitInfo = true
+
+timeZone = "UTC"
+
+[pagination]
+  pagerSize = 20
+
+[params]
+  contactEmail = "contact@leaflock.app"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+
+[module]
+  [[module.mounts]]
+    source = "../"
+    target = "content/pages"
+    includeFiles = ["**.md"]
+    excludeFiles = ["site/**"]
+
+[menu]
+  [[menu.main]]
+    name = "Documentation"
+    url = "/pages/"
+    weight = 10
+  [[menu.main]]
+    name = "Repository"
+    url = "https://github.com/RelativeSure/LeafLock"
+    weight = 20
+
+[outputs]
+  home = ["HTML", "RSS"]
+  section = ["HTML"]
+  page = ["HTML"]

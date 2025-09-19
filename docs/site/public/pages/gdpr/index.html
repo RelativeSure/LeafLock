@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GDPR Compliance · LeafLock Documentation</title>
+    <link rel="stylesheet" href="/css/main.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <a class="brand" href="/">LeafLock</a>
+        <nav>
+          <ul>
+            
+              <li><a href="/pages/">Documentation</a></li>
+            
+              <li><a href="https://github.com/RelativeSure/LeafLock">Repository</a></li>
+            
+          </ul>
+        </nav>
+      </div>
+    </header>
+    <main class="container">
+      
+  <article class="content">
+    <h1>GDPR Compliance</h1>
+    <p class="lead">Guidance for operating LeafLock in alignment with the EU GDPR.</p>
+    <div class="meta">
+      
+    </div>
+    <div class="markdown">
+      <p><em>Last updated: 2025-09-19</em></p>
+<p>LeafLock is committed to safeguarding the personal data of all users and administrators.
+This document outlines how the project aligns with the requirements of the EU General
+Data Protection Regulation (GDPR).</p>
+<h2 id="data-processing-roles">Data Processing Roles</h2>
+<ul>
+<li><strong>Data Controller:</strong> Deployers of the LeafLock stack determine the purpose and means of
+data processing and act as Data Controllers under GDPR.</li>
+<li><strong>Data Processor:</strong> When LeafLock Cloud or hosted environments operate on behalf of a
+Controller, the LeafLock operations team acts as a Data Processor.</li>
+</ul>
+<h2 id="lawful-basis-for-processing">Lawful Basis for Processing</h2>
+<p>LeafLock supports Controllers in establishing one or more lawful bases, including:</p>
+<ul>
+<li>Explicit consent captured through the user interface.</li>
+<li>Contractual necessity for registered accounts and service provisioning.</li>
+<li>Legitimate interest for security auditing, fraud prevention, and aggregated analytics.</li>
+</ul>
+<h2 id="data-subject-rights">Data Subject Rights</h2>
+<p>LeafLock provides interfaces and APIs to assist Controllers in fulfilling requests for:</p>
+<ul>
+<li>Access, rectification, and erasure of personal data.</li>
+<li>Restriction of processing and objection handling.</li>
+<li>Data portability in machine-readable formats.</li>
+</ul>
+<p>Controllers must implement organisational processes to acknowledge and resolve requests
+within one month, as required by GDPR Articles 12–23.</p>
+<h2 id="data-minimisation-and-retention">Data Minimisation and Retention</h2>
+<ul>
+<li>Collect only data that is necessary for the stated purpose.</li>
+<li>Configure retention policies to purge inactive accounts and associated metadata.</li>
+<li>Anonymise or pseudonymise analytics where feasible.</li>
+</ul>
+<h2 id="security-measures">Security Measures</h2>
+<p>LeafLock recommends the following safeguards:</p>
+<ul>
+<li>Enforce TLS for all external connections.</li>
+<li>Enable role-based access controls in accordance with <code>docs/rbac.md</code>.</li>
+<li>Maintain audit logs for administrative actions.</li>
+<li>Use environment-specific secrets management and rotate credentials regularly.</li>
+</ul>
+<h2 id="international-data-transfers">International Data Transfers</h2>
+<p>Controllers exporting data outside the European Economic Area (EEA) must ensure adequate
+safeguards (e.g., Standard Contractual Clauses). LeafLock tools integrate with common
+cloud vendors to support these obligations but do not replace legal due diligence.</p>
+<h2 id="breach-notification">Breach Notification</h2>
+<p>Upon discovering a personal data breach, Controllers must notify the relevant Data
+Protection Authority (DPA) without undue delay and, when feasible, within 72 hours.
+LeafLock Cloud will notify Controllers immediately if a breach is detected in managed
+infrastructure.</p>
+<h2 id="contact">Contact</h2>
+<p>For GDPR-related questions or Data Processing Agreements, contact <code>contact@leaflock.app</code>.</p>
+
+    </div>
+  </article>
+
+    </main>
+    <footer class="site-footer">
+  <div class="container">
+    <div class="footer-links">
+      <div>
+        <h2>LeafLock Docs</h2>
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/pages/">Documentation Index</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Legal</h2>
+        <ul>
+          
+            <li>
+              <a href="/pages/privacy/">Privacy</a>
+            </li>
+          
+            <li>
+              <a href="/pages/gdpr/">GDPR</a>
+            </li>
+          
+            <li>
+              <a href="/pages/license/">License</a>
+            </li>
+          
+            <li>
+              <a href="/pages/terms/">Terms</a>
+            </li>
+          
+            <li>
+              <a href="/pages/compliance/">Compliance</a>
+            </li>
+          
+        </ul>
+      </div>
+      <div>
+        <h2>Contact</h2>
+        <ul>
+          <li><a href="mailto:contact@leaflock.app">contact@leaflock.app</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="footer-note">&copy; 2025 LeafLock. All rights reserved.</p>
+  </div>
+</footer>
+
+  </body>
+</html>

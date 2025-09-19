@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LeafLock Documentation</title>
+    <link rel="stylesheet" href="/css/main.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <a class="brand" href="/">LeafLock</a>
+        <nav>
+          <ul>
+            
+              <li><a href="/pages/">Documentation</a></li>
+            
+              <li><a href="https://github.com/RelativeSure/LeafLock">Repository</a></li>
+            
+          </ul>
+        </nav>
+      </div>
+    </header>
+    <main class="container">
+      
+  <article class="content">
+    <h1></h1>
+    
+    <div class="meta">
+      <span>Last updated: 2025-09-14</span>
+    </div>
+    <div class="markdown">
+      <h2 id="admin-panel-usage">Admin Panel Usage</h2>
+<p>The admin panel allows privileged users to toggle admin, assign/remove roles, and inspect roles.</p>
+<h3 id="enable-in-builds">Enable in builds</h3>
+<ul>
+<li>Set build arg <code>VITE_ENABLE_ADMIN_PANEL=true</code> for the frontend (compose sets this in CI).</li>
+<li>Local compose: <code>export VITE_ENABLE_ADMIN_PANEL=true &amp;&amp; docker compose up -d --build</code>.</li>
+</ul>
+<h3 id="using-the-panel">Using the panel</h3>
+<ol>
+<li>Log in as an admin.</li>
+<li>Expand the “Admin” section below the app.</li>
+<li>Enter a user UUID.</li>
+<li>Use buttons to:
+<ul>
+<li>Load Roles</li>
+<li>Make Admin / Revoke Admin</li>
+<li>Assign Role / Remove Role (<code>moderator</code>, <code>auditor</code>, or <code>admin</code>)</li>
+</ul>
+</li>
+</ol>
+<p>The panel talks to admin endpoints documented in Swagger (<code>/api/v1/docs</code>).</p>
+<h3 id="admin-settings">Admin Settings</h3>
+<ul>
+<li>Registration toggle: enable/disable public sign‑ups.
+<ul>
+<li>Location: Admin Panel → User Management → “User Registration” switch.</li>
+<li>Persists in database (<code>app_settings.registration_enabled</code>).</li>
+<li>On boot, the backend seeds this from <code>ENABLE_REGISTRATION</code> if the DB value doesn’t exist yet.</li>
+<li>Changing the toggle updates the DB immediately (survives restarts).</li>
+</ul>
+</li>
+</ul>
+
+    </div>
+  </article>
+
+    </main>
+    <footer class="site-footer">
+  <div class="container">
+    <div class="footer-links">
+      <div>
+        <h2>LeafLock Docs</h2>
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/pages/">Documentation Index</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Legal</h2>
+        <ul>
+          
+            <li>
+              <a href="/pages/privacy/">Privacy</a>
+            </li>
+          
+            <li>
+              <a href="/pages/gdpr/">GDPR</a>
+            </li>
+          
+            <li>
+              <a href="/pages/license/">License</a>
+            </li>
+          
+            <li>
+              <a href="/pages/terms/">Terms</a>
+            </li>
+          
+            <li>
+              <a href="/pages/compliance/">Compliance</a>
+            </li>
+          
+        </ul>
+      </div>
+      <div>
+        <h2>Contact</h2>
+        <ul>
+          <li><a href="mailto:contact@leaflock.app">contact@leaflock.app</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="footer-note">&copy; 2025 LeafLock. All rights reserved.</p>
+  </div>
+</footer>
+
+  </body>
+</html>

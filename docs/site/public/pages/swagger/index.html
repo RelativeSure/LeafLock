@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LeafLock Documentation</title>
+    <link rel="stylesheet" href="/css/main.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <a class="brand" href="/">LeafLock</a>
+        <nav>
+          <ul>
+            
+              <li><a href="/pages/">Documentation</a></li>
+            
+              <li><a href="https://github.com/RelativeSure/LeafLock">Repository</a></li>
+            
+          </ul>
+        </nav>
+      </div>
+    </header>
+    <main class="container">
+      
+  <article class="content">
+    <h1></h1>
+    
+    <div class="meta">
+      <span>Last updated: 2025-09-14</span>
+    </div>
+    <div class="markdown">
+      <h2 id="swagger-api-docs">Swagger API Docs</h2>
+<p>Admin-only Swagger is served at:</p>
+<ul>
+<li>UI: <code>/api/v1/docs</code></li>
+<li>Spec: <code>/api/v1/docs/openapi.json</code></li>
+</ul>
+<p>All endpoints are documented in <code>backend/docs/openapi.json</code>.</p>
+<h3 id="authentication">Authentication</h3>
+<ul>
+<li>Add a JWT bearer token (from <code>/auth/register</code> or <code>/auth/login</code>).</li>
+<li>Access requires <code>admin</code> role.</li>
+</ul>
+<h3 id="testing-locally">Testing locally</h3>
+<ul>
+<li>Bootstrap by setting <code>ADMIN_USER_IDS=&lt;your-user-id&gt;</code> and restart backend.</li>
+<li>Open the UI and try the admin endpoints.</li>
+</ul>
+<h3 id="contributing-to-the-spec">Contributing to the spec</h3>
+<ul>
+<li>Update <code>backend/docs/openapi.json</code> and include:
+<ul>
+<li>request/response schemas in <code>components.schemas</code></li>
+<li>examples in <code>responses[*].content[*].examples</code></li>
+<li>security requirements as needed</li>
+</ul>
+</li>
+</ul>
+
+    </div>
+  </article>
+
+    </main>
+    <footer class="site-footer">
+  <div class="container">
+    <div class="footer-links">
+      <div>
+        <h2>LeafLock Docs</h2>
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/pages/">Documentation Index</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Legal</h2>
+        <ul>
+          
+            <li>
+              <a href="/pages/privacy/">Privacy</a>
+            </li>
+          
+            <li>
+              <a href="/pages/gdpr/">GDPR</a>
+            </li>
+          
+            <li>
+              <a href="/pages/license/">License</a>
+            </li>
+          
+            <li>
+              <a href="/pages/terms/">Terms</a>
+            </li>
+          
+            <li>
+              <a href="/pages/compliance/">Compliance</a>
+            </li>
+          
+        </ul>
+      </div>
+      <div>
+        <h2>Contact</h2>
+        <ul>
+          <li><a href="mailto:contact@leaflock.app">contact@leaflock.app</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="footer-note">&copy; 2025 LeafLock. All rights reserved.</p>
+  </div>
+</footer>
+
+  </body>
+</html>

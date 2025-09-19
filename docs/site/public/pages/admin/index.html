@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LeafLock Documentation</title>
+    <link rel="stylesheet" href="/css/main.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <a class="brand" href="/">LeafLock</a>
+        <nav>
+          <ul>
+            
+              <li><a href="/pages/">Documentation</a></li>
+            
+              <li><a href="https://github.com/RelativeSure/LeafLock">Repository</a></li>
+            
+          </ul>
+        </nav>
+      </div>
+    </header>
+    <main class="container">
+      
+  <article class="content">
+    <h1></h1>
+    
+    <div class="meta">
+      <span>Last updated: 2025-09-14</span>
+    </div>
+    <div class="markdown">
+      <p>Admin Access and Panel</p>
+<p>Overview</p>
+<ul>
+<li>Admin routes are protected by role-based access control on the backend.</li>
+<li>The frontend shows an admin panel icon only for admin users; non‑admins never see it.</li>
+</ul>
+<p>Grant Yourself Admin (local/dev)</p>
+<ul>
+<li>Get your user ID (UUID):
+<ul>
+<li>Log in, then open the browser DevTools → Application → Local Storage → find <code>current_user_id</code>.</li>
+<li>Alternatively, inspect the login/register response if debugging the network; it includes <code>user_id</code>.</li>
+<li>Or decode the JWT stored in <code>secure_token</code>:
+<ul>
+<li>In the browser console:
+<code>JSON.parse(atob(localStorage.getItem('secure_token').split('.')[1])).user_id</code></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Add your UUID to the <code>.env</code> file as a comma‑separated list:
+<ul>
+<li><code>ADMIN_USER_IDS=&lt;your-uuid-here&gt;</code></li>
+<li>Multiple: <code>ADMIN_USER_IDS=&lt;uuid-1&gt;,&lt;uuid-2&gt;</code></li>
+</ul>
+</li>
+<li>Restart the stack so the backend picks up env changes:
+<ul>
+<li><code>make down &amp;&amp; make up</code> (or <code>COMPOSE_DRIVER=docker make up</code>)</li>
+</ul>
+</li>
+</ul>
+<p>Using the Admin Panel</p>
+<ul>
+<li>Once you are an admin, a shield icon appears in the app header.</li>
+<li>Click the shield icon to toggle the Admin Panel.</li>
+<li>The Admin Panel lets you:
+<ul>
+<li>Toggle a user’s built‑in <code>is_admin</code> flag.</li>
+<li>Assign or remove RBAC roles (e.g., <code>moderator</code>, <code>auditor</code>).</li>
+<li>Load current roles for a given user.</li>
+</ul>
+</li>
+<li>Tip: The panel pre‑fills the “User ID” field with your own <code>current_user_id</code>. Use the “Use my ID” button if you need to re‑apply it.</li>
+</ul>
+<p>Security Notes</p>
+<ul>
+<li>Admin endpoints require a valid JWT and admin role; the UI gating is a convenience, but the backend enforces access.</li>
+<li>Do not expose <code>ADMIN_USER_IDS</code> in production images; manage admin status through the database and role assignment flows instead.</li>
+</ul>
+
+    </div>
+  </article>
+
+    </main>
+    <footer class="site-footer">
+  <div class="container">
+    <div class="footer-links">
+      <div>
+        <h2>LeafLock Docs</h2>
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/pages/">Documentation Index</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Legal</h2>
+        <ul>
+          
+            <li>
+              <a href="/pages/privacy/">Privacy</a>
+            </li>
+          
+            <li>
+              <a href="/pages/gdpr/">GDPR</a>
+            </li>
+          
+            <li>
+              <a href="/pages/license/">License</a>
+            </li>
+          
+            <li>
+              <a href="/pages/terms/">Terms</a>
+            </li>
+          
+            <li>
+              <a href="/pages/compliance/">Compliance</a>
+            </li>
+          
+        </ul>
+      </div>
+      <div>
+        <h2>Contact</h2>
+        <ul>
+          <li><a href="mailto:contact@leaflock.app">contact@leaflock.app</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="footer-note">&copy; 2025 LeafLock. All rights reserved.</p>
+  </div>
+</footer>
+
+  </body>
+</html>
