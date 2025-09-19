@@ -32,9 +32,19 @@ describe('AdminPanel', () => {
 
     // Toggle admin
     fireEvent.click(screen.getByText('Make Admin'))
-    await waitFor(() => expect(mockApi.adminSetAdmin).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001', true))
+    await waitFor(() =>
+      expect(mockApi.adminSetAdmin).toHaveBeenCalledWith(
+        '00000000-0000-0000-0000-000000000001',
+        true
+      )
+    )
     fireEvent.click(screen.getByText('Revoke Admin'))
-    await waitFor(() => expect(mockApi.adminSetAdmin).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001', false))
+    await waitFor(() =>
+      expect(mockApi.adminSetAdmin).toHaveBeenCalledWith(
+        '00000000-0000-0000-0000-000000000001',
+        false
+      )
+    )
   })
 
   it('grants admin via quick email helper', async () => {
@@ -69,11 +79,22 @@ describe('AdminPanel', () => {
     const commandInput = await screen.findByPlaceholderText('Search users by email...')
     fireEvent.input(commandInput, { target: { value: 'mail@rasmusj.dk' } })
 
-    await waitFor(() => expect(mockApi.adminListUsers).toHaveBeenLastCalledWith({ q: 'mail@rasmusj.dk', limit: 8, offset: 0 }))
+    await waitFor(() =>
+      expect(mockApi.adminListUsers).toHaveBeenLastCalledWith({
+        q: 'mail@rasmusj.dk',
+        limit: 8,
+        offset: 0,
+      })
+    )
 
     const option = await screen.findByText('mail@rasmusj.dk')
     fireEvent.click(option)
 
-    await waitFor(() => expect(mockApi.adminSetAdmin).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001', true))
+    await waitFor(() =>
+      expect(mockApi.adminSetAdmin).toHaveBeenCalledWith(
+        '00000000-0000-0000-0000-000000000001',
+        true
+      )
+    )
   })
 })
