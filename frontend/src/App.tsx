@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import sodium from 'libsodium-wrappers'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Lock, Shield, MessageSquare, Settings } from 'lucide-react'
+import { Lock, Shield, MessageSquare, Settings, Book, Info } from 'lucide-react'
 import {
   adminListUsersResponseSchema,
   adminActionResponseSchema,
@@ -27,6 +27,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import AdminPage from './AdminPage'
+import Footer from '@/components/Footer'
 
 // Types
 interface Note {
@@ -1512,6 +1513,7 @@ const SecuritySettingsView: React.FC<SecuritySettingsViewProps> = ({ api, onBack
           </CardContent>
         </Card>
       </div>
+      <Footer />
     </div>
   )
 }
@@ -1688,6 +1690,24 @@ const LoginView: React.FC<LoginViewProps> = ({ onAuthenticated }) => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      {/* Documentation Info Alert */}
+      <Alert className="w-full max-w-md mb-4 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+        <AlertDescription className="text-blue-800 dark:text-blue-200">
+          <span className="font-medium">Need help getting started?</span>{' '}
+          <a
+            href="/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 underline hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
+          >
+            <Book className="h-3 w-3" />
+            View Documentation
+          </a>{' '}
+          for setup guides, security features, and usage instructions.
+        </AlertDescription>
+      </Alert>
+
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
@@ -1817,6 +1837,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onAuthenticated }) => {
           <MessageSquare className="w-4 h-4" /> Join GitHub Discussions
         </a>
       </div>
+
+      <Footer />
     </div>
   )
 }
@@ -2746,123 +2768,18 @@ function SecureNotesApp() {
   // Main App Layout
   const AppLayout: React.FC = () => {
     return (
-      <div className="h-screen flex flex-col md:flex-row bg-background">
-        <div className="md:hidden flex items-center justify-between bg-card border-b border-border px-4 py-3">
-          <h1 className="text-lg font-semibold text-foreground">LeafLock</h1>
-          <Button
-            onClick={() => setCurrentView(currentView === 'notes' ? 'editor' : 'notes')}
-            variant="ghost"
-            size="sm"
-            className="p-1"
-            aria-label={currentView === 'notes' ? 'Show editor' : 'Show notes list'}
-          >
-            {currentView === 'notes' ? (
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-            ) : (
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            )}
-          </Button>
-        </div>
-
-        <div
-          className={`${currentView === 'notes' || selectedNote || currentView === 'editor' ? 'hidden md:block' : 'block'} w-full md:w-80`}
-        >
-          <NotesList />
-        </div>
-
-        <div
-          className={`${currentView === 'notes' && !selectedNote ? 'hidden md:flex' : 'flex'} flex-1 flex-col`}
-        >
-          <header className="hidden md:flex bg-card border-b border-border px-6 py-3 items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-lg font-semibold text-foreground">LeafLock</h1>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <ThemeToggle />
-
-              <button
-                onClick={() => setCurrentView('settings')}
-                className="text-gray-400 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded p-1"
-                aria-label="Security settings"
-                title="Security settings"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-
-              <button
-                onClick={() => {
-                  setViewingTrash(!viewingTrash)
-                  if (!viewingTrash) {
-                    loadTrash()
-                  }
-                }}
-                className={`flex items-center px-3 py-1 text-sm rounded transition focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${
-                  viewingTrash ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'
-                }`}
-                aria-label={viewingTrash ? 'Exit trash view' : 'View trash'}
-                title={viewingTrash ? 'Exit trash view' : 'View trash'}
-              >
-                <svg
-                  className="w-4 h-4 mr-1"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H7a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-                {viewingTrash ? 'Exit Trash' : 'Trash'}
-              </button>
-
-              {isAdmin && (
-                <button
-                  onClick={() => setCurrentView('admin')}
-                  className="text-gray-400 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded p-1"
-                  aria-label="Admin panel"
-                  title="Admin panel"
-                >
-                  <Shield className="w-5 h-5" />
-                </button>
-              )}
-
-              <button
-                onClick={handleLogout}
-                className="text-gray-400 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded p-1"
-                aria-label="Sign out"
-                title="Sign out"
-              >
+      <div className="h-screen flex flex-col bg-background">
+        <div className="flex-1 flex flex-col md:flex-row">
+          <div className="md:hidden flex items-center justify-between bg-card border-b border-border px-4 py-3">
+            <h1 className="text-lg font-semibold text-foreground">LeafLock</h1>
+            <Button
+              onClick={() => setCurrentView(currentView === 'notes' ? 'editor' : 'notes')}
+              variant="ghost"
+              size="sm"
+              className="p-1"
+              aria-label={currentView === 'notes' ? 'Show editor' : 'Show notes list'}
+            >
+              {currentView === 'notes' ? (
                 <svg
                   className="w-5 h-5"
                   fill="none"
@@ -2874,20 +2791,12 @@ function SecureNotesApp() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    d="M12 4v16m8-8H4"
                   />
                 </svg>
-              </button>
-            </div>
-          </header>
-
-          {selectedNote || currentView === 'editor' ? (
-            <NotesEditor />
-          ) : (
-            <main className="flex-1 flex items-center justify-center" role="main">
-              <div className="text-center">
+              ) : (
                 <svg
-                  className="w-16 h-16 mx-auto text-gray-600 mb-4"
+                  className="w-5 h-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -2896,18 +2805,134 @@ function SecureNotesApp() {
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
                   />
                 </svg>
-                <p className="text-gray-500">Select a note or create a new one</p>
-                <p className="text-gray-600 text-sm mt-2">
-                  Your notes are end-to-end encrypted for maximum privacy
-                </p>
+              )}
+            </Button>
+          </div>
+
+          <div
+            className={`${currentView === 'notes' || selectedNote || currentView === 'editor' ? 'hidden md:block' : 'block'} w-full md:w-80`}
+          >
+            <NotesList />
+          </div>
+
+          <div
+            className={`${currentView === 'notes' && !selectedNote ? 'hidden md:flex' : 'flex'} flex-1 flex-col`}
+          >
+            <header className="hidden md:flex bg-card border-b border-border px-6 py-3 items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <h1 className="text-lg font-semibold text-foreground">LeafLock</h1>
               </div>
-            </main>
-          )}
+
+              <div className="flex items-center space-x-4">
+                <ThemeToggle />
+
+                <button
+                  onClick={() => setCurrentView('settings')}
+                  className="text-gray-400 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded p-1"
+                  aria-label="Security settings"
+                  title="Security settings"
+                >
+                  <Settings className="w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={() => {
+                    setViewingTrash(!viewingTrash)
+                    if (!viewingTrash) {
+                      loadTrash()
+                    }
+                  }}
+                  className={`flex items-center px-3 py-1 text-sm rounded transition focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${
+                    viewingTrash ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'
+                  }`}
+                  aria-label={viewingTrash ? 'Exit trash view' : 'View trash'}
+                  title={viewingTrash ? 'Exit trash view' : 'View trash'}
+                >
+                  <svg
+                    className="w-4 h-4 mr-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H7a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                  {viewingTrash ? 'Exit Trash' : 'Trash'}
+                </button>
+
+                {isAdmin && (
+                  <button
+                    onClick={() => setCurrentView('admin')}
+                    className="text-gray-400 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded p-1"
+                    aria-label="Admin panel"
+                    title="Admin panel"
+                  >
+                    <Shield className="w-5 h-5" />
+                  </button>
+                )}
+
+                <button
+                  onClick={handleLogout}
+                  className="text-gray-400 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded p-1"
+                  aria-label="Sign out"
+                  title="Sign out"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </header>
+
+            {selectedNote || currentView === 'editor' ? (
+              <NotesEditor />
+            ) : (
+              <main className="flex-1 flex items-center justify-center" role="main">
+                <div className="text-center">
+                  <svg
+                    className="w-16 h-16 mx-auto text-gray-600 mb-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  <p className="text-gray-500">Select a note or create a new one</p>
+                  <p className="text-gray-600 text-sm mt-2">
+                    Your notes are end-to-end encrypted for maximum privacy
+                  </p>
+                </div>
+              </main>
+            )}
+          </div>
         </div>
+        <Footer />
       </div>
     )
   }
@@ -2971,7 +2996,8 @@ function SecureNotesApp() {
     }
 
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gray-900 flex flex-col">
+        <div className="flex-1 flex items-center justify-center px-4">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <svg
@@ -3039,6 +3065,8 @@ function SecureNotesApp() {
             </div>
           </form>
         </div>
+        </div>
+        <Footer />
       </div>
     )
   }
