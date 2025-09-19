@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Technical documentation for developers working with LeafLock." />
+    <meta name="author" content="LeafLock Team" />
+    <meta name="keywords" content="api, swagger, rbac, testing, scripts" />
+
+    
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://docs.leaflock.app/pages/developer/" />
+    <meta property="og:title" content="Developer Guide" />
+    <meta property="og:description" content="Technical documentation for developers working with LeafLock." />
+
+    
+    <meta property="twitter:card" content="summary" />
+    <meta property="twitter:url" content="https://docs.leaflock.app/pages/developer/" />
+    <meta property="twitter:title" content="Developer Guide" />
+    <meta property="twitter:description" content="Technical documentation for developers working with LeafLock." />
+
+    <title>Developer Guide · LeafLock Documentation</title>
+
+    
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" href="/favicon.ico" />
+
+    
+    <link rel="stylesheet" href="/css/main.css" />
+
+    
+    
+    <link rel="canonical" href="https://docs.leaflock.app/pages/developer/" />
+
+    
+    <meta name="git.commit" content="8ab4f0cd341d1dbf83214289c8dbde3e65a2c631" />
+    <meta name="git.date" content="2025-09-19T21:42:59&#43;02:00" />
+    
+  </head>
+  <body>
+    
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <header class="site-header">
+      <div class="container">
+        <a class="brand" href="/">LeafLock</a>
+        <nav>
+          <ul>
+            
+              <li><a href="/">Home</a></li>
+            
+              <li><a href="/pages/">Documentation</a></li>
+            
+              <li><a href="/categories/legal/">Legal</a></li>
+            
+              <li><a href="https://github.com/RelativeSure/LeafLock">Repository</a></li>
+            
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main-content" class="container">
+      
+  <div class="content-wrapper">
+    <article class="content">
+      <header>
+        <h1>Developer Guide</h1>
+        <p class="lead">Technical documentation for developers working with LeafLock.</p>
+
+        <div class="meta">
+          <span>📅 Last updated: September 19, 2025</span>
+          
+            <div class="taxonomy-list">
+              
+                <a href="/categories/development/" class="category">Development</a>
+              
+            </div>
+          
+          
+            <div class="taxonomy-list">
+              
+                <a href="/tags/api/" class="tag">api</a>
+              
+                <a href="/tags/swagger/" class="tag">swagger</a>
+              
+                <a href="/tags/rbac/" class="tag">rbac</a>
+              
+                <a href="/tags/testing/" class="tag">testing</a>
+              
+                <a href="/tags/scripts/" class="tag">scripts</a>
+              
+            </div>
+          
+        </div>
+      </header>
+
+      
+        
+          <aside class="toc">
+            <h3>Table of Contents</h3>
+            <nav id="TableOfContents">
+  <ul>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#api-documentation-swagger">API Documentation (Swagger)</a>
+      <ul>
+        <li><a href="#authentication">Authentication</a></li>
+        <li><a href="#testing-locally">Testing Locally</a></li>
+        <li><a href="#contributing-to-the-spec">Contributing to the Spec</a></li>
+      </ul>
+    </li>
+    <li><a href="#role-based-access-control-rbac">Role-Based Access Control (RBAC)</a>
+      <ul>
+        <li><a href="#roles">Roles</a></li>
+        <li><a href="#admin-apis">Admin APIs</a></li>
+        <li><a href="#local-bootstrap">Local Bootstrap</a></li>
+      </ul>
+    </li>
+    <li><a href="#rate-limiting">Rate Limiting</a>
+      <ul>
+        <li><a href="#registration-rate-limiting">Registration Rate Limiting</a></li>
+        <li><a href="#configuration">Configuration</a></li>
+      </ul>
+    </li>
+    <li><a href="#scripts-and-automation">Scripts and Automation</a>
+      <ul>
+        <li><a href="#specialized-scripts">Specialized Scripts</a></li>
+      </ul>
+    </li>
+    <li><a href="#icons-and-assets">Icons and Assets</a>
+      <ul>
+        <li><a href="#assets-included">Assets Included</a></li>
+        <li><a href="#regenerating-icons">Regenerating Icons</a></li>
+        <li><a href="#html-reference">HTML Reference</a></li>
+      </ul>
+    </li>
+    <li><a href="#testing-and-cicd">Testing and CI/CD</a>
+      <ul>
+        <li><a href="#e2e-verification-workflow">E2E Verification Workflow</a></li>
+      </ul>
+    </li>
+    <li><a href="#development-setup">Development Setup</a></li>
+    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+          </aside>
+        
+      
+
+      <div class="markdown">
+        <p><em>Last updated: 2025-09-19</em></p>
+<h2 id="overview">Overview</h2>
+<p>This guide provides technical information for developers working with LeafLock, including API documentation, testing, scripts, and development workflows.</p>
+<h2 id="api-documentation-swagger">API Documentation (Swagger)</h2>
+<p>Admin-only Swagger API documentation is available at:</p>
+<ul>
+<li><strong>UI</strong>: <code>/api/v1/docs</code></li>
+<li><strong>Spec</strong>: <code>/api/v1/docs/openapi.json</code></li>
+</ul>
+<p>All endpoints are documented in <code>backend/docs/openapi.json</code>.</p>
+<h3 id="authentication">Authentication</h3>
+<ul>
+<li>Add a JWT bearer token (from <code>/auth/register</code> or <code>/auth/login</code>)</li>
+<li>Access requires <code>admin</code> role</li>
+</ul>
+<h3 id="testing-locally">Testing Locally</h3>
+<ul>
+<li>Bootstrap by setting <code>ADMIN_USER_IDS=&lt;your-user-id&gt;</code> and restart backend</li>
+<li>Open the UI and try the admin endpoints</li>
+</ul>
+<h3 id="contributing-to-the-spec">Contributing to the Spec</h3>
+<ul>
+<li>Update <code>backend/docs/openapi.json</code> and include:
+<ul>
+<li>Request/response schemas in <code>components.schemas</code></li>
+<li>Examples in <code>responses[*].content[*].examples</code></li>
+<li>Security requirements as needed</li>
+</ul>
+</li>
+</ul>
+<h2 id="role-based-access-control-rbac">Role-Based Access Control (RBAC)</h2>
+<h3 id="roles">Roles</h3>
+<ul>
+<li><strong>admin</strong>: Full access to admin APIs and Swagger docs</li>
+<li><strong>moderator</strong>: Reserved for future moderation actions</li>
+<li><strong>auditor</strong>: Read-only reports in future</li>
+<li><strong>user</strong>: Default role for every user</li>
+</ul>
+<p>Roles are stored in tables <code>roles</code> and <code>user_roles</code>. Users also have a boolean <code>is_admin</code> for quick admin flag checking.</p>
+<h3 id="admin-apis">Admin APIs</h3>
+<ul>
+<li><code>GET /api/v1/admin/health</code></li>
+<li><code>PUT /api/v1/admin/users/:id/admin</code> <code>{ &quot;admin&quot;: true|false }</code></li>
+<li><code>GET /api/v1/admin/roles</code></li>
+<li><code>GET /api/v1/admin/users/:id/roles</code></li>
+<li><code>POST /api/v1/admin/users/:id/roles</code> <code>{ &quot;role&quot;: &quot;moderator&quot; }</code></li>
+<li><code>DELETE /api/v1/admin/users/:id/roles/:role</code></li>
+</ul>
+<p>All admin endpoints require JWT and <code>admin</code> role.</p>
+<h3 id="local-bootstrap">Local Bootstrap</h3>
+<ul>
+<li>Temporary allowlist via env var: <code>ADMIN_USER_IDS=uuid1,uuid2</code></li>
+<li>Use it to grant first admin, then set <code>is_admin</code> via API</li>
+</ul>
+<h2 id="rate-limiting">Rate Limiting</h2>
+<h3 id="registration-rate-limiting">Registration Rate Limiting</h3>
+<p>To reduce abuse in non-local environments, the registration endpoint is rate-limited.</p>
+<ul>
+<li><strong>Endpoint</strong>: <code>POST /api/v1/auth/register</code></li>
+<li><strong>Limit</strong>: 5 requests per minute per IP</li>
+<li><strong>Enabled when</strong>: <code>APP_ENV</code> is not <code>development</code> or <code>local</code></li>
+</ul>
+<h3 id="configuration">Configuration</h3>
+<ul>
+<li><code>APP_ENV=production</code> enables limiting</li>
+<li><code>APP_ENV=development</code> disables limiting for local dev</li>
+<li>General app rate limiting (100/min/IP) still applies globally</li>
+</ul>
+<h2 id="scripts-and-automation">Scripts and Automation</h2>
+<p>Use <code>./leaflock.sh</code> for common tasks:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1</span><span>./leaflock.sh <span style="color:#0086b3">help</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2</span><span>./leaflock.sh icons          <span style="color:#998;font-style:italic"># regenerate icons</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3</span><span>./leaflock.sh railway        <span style="color:#998;font-style:italic"># bootstrap Railway backend+frontend</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4</span><span>./leaflock.sh docker:up      <span style="color:#998;font-style:italic"># compose up -d --build</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5</span><span>./leaflock.sh docker:down
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6</span><span>./leaflock.sh docker:build
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7</span><span>./leaflock.sh k8s:deploy     <span style="color:#998;font-style:italic"># wrapper for deploy-k8s.sh</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8</span><span>./leaflock.sh health         <span style="color:#998;font-style:italic"># wrapper for health-check.sh</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9</span><span>./leaflock.sh troubleshoot   <span style="color:#998;font-style:italic"># wrapper for troubleshoot.sh</span>
+</span></span><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10</span><span>./leaflock.sh <span style="color:#0086b3">test</span>           <span style="color:#998;font-style:italic"># wrapper for test-automation.sh</span>
+</span></span></code></pre></div><h3 id="specialized-scripts">Specialized Scripts</h3>
+<p>Advanced scripts for CI or specific workflows:</p>
+<ul>
+<li><code>deploy-k8s.sh</code>, <code>deploy.sh</code>, <code>deploy-docker.sh</code>, <code>deploy-from-ghcr.sh</code></li>
+<li><code>setup-docker.sh</code>, <code>setup-podman.sh</code>, <code>podman-kube-play.sh</code></li>
+<li><code>health-check.sh</code>, <code>troubleshoot.sh</code>, <code>test-automation.sh</code></li>
+<li><code>env-setup.sh</code>, <code>dev-setup.sh</code>, <code>dev-watch.sh</code>, <code>init-ssl*.sh</code></li>
+</ul>
+<p><strong>Recommendation</strong>: Start with <code>leaflock.sh</code>. Use specialized scripts for fine-grained control or CI integration.</p>
+<h2 id="icons-and-assets">Icons and Assets</h2>
+<p>LeafLock ships with a full set of favicons and PWA icons generated from the LeafLock motif.</p>
+<h3 id="assets-included">Assets Included</h3>
+<ul>
+<li><code>favicon.svg</code> (scalable primary icon)</li>
+<li><code>favicon.ico</code> (multi-image 16/32/48)</li>
+<li><code>favicon-16.png</code>, <code>favicon-32.png</code>, <code>favicon-48.png</code>, <code>favicon-64.png</code></li>
+<li><code>apple-touch-icon.png</code> (180×180)</li>
+<li><code>icon-192.png</code>, <code>icon-512.png</code></li>
+<li><code>icon-192-maskable.png</code>, <code>icon-512-maskable.png</code> (safe padding for maskable PWAs)</li>
+</ul>
+<h3 id="regenerating-icons">Regenerating Icons</h3>
+<p>If you customize branding:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>node scripts/generate-icons.mjs
+</span></span></code></pre></div><h3 id="html-reference">HTML Reference</h3>
+<p>For single reference in HTML:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-html" data-lang="html"><span style="display:flex;"><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1</span><span>&lt;<span style="color:#000080">link</span> <span style="color:#008080">rel</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;icon&#34;</span> <span style="color:#008080">type</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;image/svg+xml&#34;</span> <span style="color:#008080">href</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;/favicon.svg&#34;</span> /&gt;
+</span></span></code></pre></div><h2 id="testing-and-cicd">Testing and CI/CD</h2>
+<h3 id="e2e-verification-workflow">E2E Verification Workflow</h3>
+<p>Located at <code>.github/workflows/e2e-verify.yml</code></p>
+<p><strong>What it does:</strong></p>
+<ul>
+<li>Runs frontend lint, typecheck, tests</li>
+<li>Builds and starts Postgres, Redis, backend, frontend via <code>docker compose</code></li>
+<li>Waits for readiness and tests API flow (register + list notes)</li>
+<li>Smoke tests frontend (index + asset)</li>
+<li>Runs backend tests with coverage gate</li>
+<li>Verifies Swagger access with <code>ADMIN_USER_IDS</code> fallback, then via RBAC grant</li>
+</ul>
+<p><strong>Admin panel in E2E:</strong></p>
+<ul>
+<li>Sets <code>VITE_ENABLE_ADMIN_PANEL=true</code> so the UI contains the Admin section</li>
+</ul>
+<h2 id="development-setup">Development Setup</h2>
+<p>Refer to the main <code>CLAUDE.md</code> file in the repository root for:</p>
+<ul>
+<li>Environment setup</li>
+<li>Development commands</li>
+<li>Container operations</li>
+<li>Technology stack details</li>
+<li>Required environment variables</li>
+</ul>
+<h2 id="contributing">Contributing</h2>
+<p>When contributing to LeafLock:</p>
+<ol>
+<li>Follow the existing code style and patterns</li>
+<li>Update relevant documentation</li>
+<li>Add tests for new features</li>
+<li>Update API documentation if adding new endpoints</li>
+<li>Test admin functionality if making admin-related changes</li>
+</ol>
+<h2 id="contact">Contact</h2>
+<p>For technical questions, contact <code>contact@leaflock.app</code>.</p>
+
+      </div>
+
+      <footer class="content-footer">
+        
+          <p class="git-info">
+            📝 Last edited September 19, 2025
+            <a href="https://github.com/RelativeSure/LeafLock/commit/8ab4f0cd341d1dbf83214289c8dbde3e65a2c631" target="_blank" rel="noopener">
+              (8ab4f0c)
+            </a>
+          </p>
+        
+
+        
+          <nav class="page-nav">
+            
+              <a href="/pages/license/" class="prev-page">
+                ← LeafLock Community License v1.0
+              </a>
+            
+            
+              <a href="/pages/compliance/" class="next-page">
+                Global Compliance →
+              </a>
+            
+          </nav>
+        
+      </footer>
+    </article>
+  </div>
+
+    </main>
+
+    <footer class="site-footer">
+  <div class="container">
+    <div class="footer-links">
+      <div>
+        <h2>LeafLock Docs</h2>
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/pages/">Documentation Index</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Legal</h2>
+        <ul>
+          
+            <li>
+              <a href="/pages/privacy/">Privacy</a>
+            </li>
+          
+            <li>
+              <a href="/pages/gdpr/">GDPR</a>
+            </li>
+          
+            <li>
+              <a href="/pages/terms/">Terms</a>
+            </li>
+          
+            <li>
+              <a href="/pages/admin/">Admin Guide</a>
+            </li>
+          
+            <li>
+              <a href="/pages/compliance/">Compliance</a>
+            </li>
+          
+            <li>
+              <a href="/pages/developer/">Developer Guide</a>
+            </li>
+          
+            <li>
+              <a href="/pages/license/">License</a>
+            </li>
+          
+        </ul>
+      </div>
+      <div>
+        <h2>Contact</h2>
+        <ul>
+          <li><a href="mailto:contact@leaflock.app">contact@leaflock.app</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="footer-note">&copy; 2025 LeafLock. All rights reserved.</p>
+  </div>
+</footer>
+
+
+    
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "name": "Developer Guide",
+      "description": "Technical documentation for developers working with LeafLock.",
+      "url": "https:\/\/docs.leaflock.app\/pages\/developer\/",
+      "datePublished": "0001-01-01T00:00:00Z",
+      "dateModified": "2025-09-19T21:42:59\u002b02:00",
+      "author": {
+        "@type": "Organization",
+        "name": "LeafLock Team"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "LeafLock Team",
+        "url": "https:\/\/docs.leaflock.app\/"
+      }
+    }
+    </script>
+  </body>
+</html>
