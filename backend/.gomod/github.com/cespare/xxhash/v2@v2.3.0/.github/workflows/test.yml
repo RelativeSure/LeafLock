@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Install go
-        uses: WillAbides/setup-go-faster@v1.5.0
+        uses: WillAbides/setup-go-faster@a0ff5217a7d2567ed6ff1aa2b7d8f9d58173b2c9 # v1.14.0
         with:
           go-version: ${{ matrix.go-version }}
 
@@ -38,7 +38,7 @@ jobs:
 
     steps:
       - name: Install go
-        uses: WillAbides/setup-go-faster@v1.5.0
+        uses: WillAbides/setup-go-faster@a0ff5217a7d2567ed6ff1aa2b7d8f9d58173b2c9 # v1.14.0
         with:
           go-version: ${{ matrix.go-version }}
 
