@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LeafLock Documentation</title>
+    <link rel="stylesheet" href="/css/main.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <a class="brand" href="/">LeafLock</a>
+        <nav>
+          <ul>
+            
+              <li><a href="/pages/">Documentation</a></li>
+            
+              <li><a href="https://github.com/RelativeSure/LeafLock">Repository</a></li>
+            
+          </ul>
+        </nav>
+      </div>
+    </header>
+    <main class="container">
+      
+  <article class="content">
+    <h1></h1>
+    
+    <div class="meta">
+      <span>Last updated: 2025-09-13</span>
+    </div>
+    <div class="markdown">
+      <h1 id="admin-management-guide">Admin Management Guide</h1>
+<h2 id="overview">Overview</h2>
+<p>This secure notes application is designed with end-to-end encryption where each user manages their own encrypted workspace. Currently, the system does not have built-in super admin functionality due to the zero-knowledge architecture. However, this guide explains how to add admin capabilities and manage users at the database level.</p>
+<h2 id="current-system-architecture">Current System Architecture</h2>
+<p>The application uses:</p>
+<ul>
+<li><strong>Zero-knowledge encryption</strong>: Server never sees plaintext data</li>
+<li><strong>User workspaces</strong>: Each user has their own encrypted workspace</li>
+<li><strong>Note-level permissions</strong>: Users can share notes with <code>read</code>, <code>write</code>, or <code>admin</code> permissions</li>
+<li><strong>PostgreSQL database</strong>: User data stored in encrypted format</li>
+</ul>
+<h2 id="database-schema">Database Schema</h2>
+<h3 id="users-table-structure">Users Table Structure</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> users (
+</span></span><span style="display:flex;"><span>    id UUID <span style="color:#66d9ef">PRIMARY</span> <span style="color:#66d9ef">KEY</span> <span style="color:#66d9ef">DEFAULT</span> uuid_generate_v4(),
+</span></span><span style="display:flex;"><span>    email TEXT <span style="color:#66d9ef">UNIQUE</span> <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span>,
+</span></span><span style="display:flex;"><span>    email_encrypted BYTEA <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span>,
+</span></span><span style="display:flex;"><span>    password_hash TEXT <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span>,
+</span></span><span style="display:flex;"><span>    salt BYTEA <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span>,
+</span></span><span style="display:flex;"><span>    master_key_encrypted BYTEA <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span>,
+</span></span><span style="display:flex;"><span>    created_at TIMESTAMPTZ <span style="color:#66d9ef">DEFAULT</span> NOW(),
+</span></span><span style="display:flex;"><span>    updated_at TIMESTAMPTZ <span style="color:#66d9ef">DEFAULT</span> NOW(),
+</span></span><span style="display:flex;"><span>    last_login TIMESTAMPTZ,
+</span></span><span style="display:flex;"><span>    failed_attempts INT <span style="color:#66d9ef">DEFAULT</span> <span style="color:#ae81ff">0</span>,
+</span></span><span style="display:flex;"><span>    locked_until TIMESTAMPTZ
+</span></span><span style="display:flex;"><span>);
+</span></span></code></pre></div><h2 id="adding-admin-role-support">Adding Admin Role Support</h2>
+<p>Since there&rsquo;s no admin role currently, you&rsquo;ll need to modify the database schema:</p>
+<h3 id="1-add-admin-column-to-users-table">1. Add Admin Column to Users Table</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">-- Connect to your PostgreSQL database
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>psql <span style="color:#f92672">-</span>U postgres <span style="color:#f92672">-</span>d notes
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- Add admin role column
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">ALTER</span> <span style="color:#66d9ef">TABLE</span> users <span style="color:#66d9ef">ADD</span> <span style="color:#66d9ef">COLUMN</span> is_admin BOOLEAN <span style="color:#66d9ef">DEFAULT</span> <span style="color:#66d9ef">false</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- Create an index for faster admin queries
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">INDEX</span> idx_users_is_admin <span style="color:#66d9ef">ON</span> users(is_admin);
+</span></span></code></pre></div><h3 id="2-make-a-user-admin">2. Make a User Admin</h3>
+<p>To grant admin access to a user, update their record in the database:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">-- Make a specific user admin by email
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">UPDATE</span> users 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SET</span> is_admin <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> email <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;admin@example.com&#39;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- Or by user ID
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">UPDATE</span> users 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SET</span> is_admin <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> id <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;your-user-uuid-here&#39;</span>;
+</span></span></code></pre></div><h3 id="3-remove-admin-access">3. Remove Admin Access</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">-- Remove admin access from a user
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">UPDATE</span> users 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SET</span> is_admin <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> email <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;user@example.com&#39;</span>;
+</span></span></code></pre></div><h2 id="database-user-management-tasks">Database User Management Tasks</h2>
+<h3 id="view-all-users">View All Users</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">-- List all users with basic info
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">SELECT</span> 
+</span></span><span style="display:flex;"><span>    id,
+</span></span><span style="display:flex;"><span>    email,
+</span></span><span style="display:flex;"><span>    COALESCE(is_admin, <span style="color:#66d9ef">false</span>) <span style="color:#66d9ef">as</span> is_admin,
+</span></span><span style="display:flex;"><span>    created_at,
+</span></span><span style="display:flex;"><span>    last_login,
+</span></span><span style="display:flex;"><span>    failed_attempts
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> users 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> created_at <span style="color:#66d9ef">DESC</span>;
+</span></span></code></pre></div><h3 id="find-admin-users">Find Admin Users</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">-- List all admin users
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">SELECT</span> 
+</span></span><span style="display:flex;"><span>    id,
+</span></span><span style="display:flex;"><span>    email,
+</span></span><span style="display:flex;"><span>    created_at,
+</span></span><span style="display:flex;"><span>    last_login
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> users 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> is_admin <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>;
+</span></span></code></pre></div><h3 id="user-activity-monitoring">User Activity Monitoring</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">-- Find inactive users (haven&#39;t logged in recently)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">SELECT</span> 
+</span></span><span style="display:flex;"><span>    id,
+</span></span><span style="display:flex;"><span>    email,
+</span></span><span style="display:flex;"><span>    created_at,
+</span></span><span style="display:flex;"><span>    last_login,
+</span></span><span style="display:flex;"><span>    (NOW() <span style="color:#f92672">-</span> last_login) <span style="color:#66d9ef">as</span> inactive_period
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> users 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> last_login <span style="color:#f92672">&lt;</span> NOW() <span style="color:#f92672">-</span> INTERVAL <span style="color:#e6db74">&#39;30 days&#39;</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#66d9ef">OR</span> last_login <span style="color:#66d9ef">IS</span> <span style="color:#66d9ef">NULL</span>;
+</span></span></code></pre></div><h3 id="account-security-management">Account Security Management</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">-- Check users with too many failed attempts
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">SELECT</span> 
+</span></span><span style="display:flex;"><span>    id,
+</span></span><span style="display:flex;"><span>    email,
+</span></span><span style="display:flex;"><span>    failed_attempts,
+</span></span><span style="display:flex;"><span>    locked_until
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> users 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> failed_attempts <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">5</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- Unlock a locked user account
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">UPDATE</span> users 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SET</span> failed_attempts <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>, 
+</span></span><span style="display:flex;"><span>    locked_until <span style="color:#f92672">=</span> <span style="color:#66d9ef">NULL</span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> email <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;user@example.com&#39;</span>;
+</span></span></code></pre></div><h3 id="user-statistics">User Statistics</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">-- Count total users
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">SELECT</span> <span style="color:#66d9ef">COUNT</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">as</span> total_users <span style="color:#66d9ef">FROM</span> users;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- Count active users (logged in last 30 days)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">SELECT</span> <span style="color:#66d9ef">COUNT</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">as</span> active_users 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> users 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> last_login <span style="color:#f92672">&gt;</span> NOW() <span style="color:#f92672">-</span> INTERVAL <span style="color:#e6db74">&#39;30 days&#39;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- Count notes per user
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">SELECT</span> 
+</span></span><span style="display:flex;"><span>    u.email,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">COUNT</span>(n.id) <span style="color:#66d9ef">as</span> note_count
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> users u
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">LEFT</span> <span style="color:#66d9ef">JOIN</span> workspaces w <span style="color:#66d9ef">ON</span> u.id <span style="color:#f92672">=</span> w.owner_id
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">LEFT</span> <span style="color:#66d9ef">JOIN</span> notes n <span style="color:#66d9ef">ON</span> w.id <span style="color:#f92672">=</span> n.workspace_id 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> n.deleted_at <span style="color:#66d9ef">IS</span> <span style="color:#66d9ef">NULL</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">GROUP</span> <span style="color:#66d9ef">BY</span> u.id, u.email
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> note_count <span style="color:#66d9ef">DESC</span>;
+</span></span></code></pre></div><h2 id="backend-code-modifications-needed">Backend Code Modifications Needed</h2>
+<p>To implement admin functionality, you would need to modify the Go backend:</p>
+<h3 id="1-add-admin-middleware">1. Add Admin Middleware</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">AdminRequired</span>(<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">fiber</span>.<span style="color:#a6e22e">Ctx</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">userID</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Locals</span>(<span style="color:#e6db74">&#34;userID&#34;</span>).(<span style="color:#66d9ef">string</span>)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Query database to check if user is admin
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">var</span> <span style="color:#a6e22e">isAdmin</span> <span style="color:#66d9ef">bool</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">QueryRow</span>(<span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>(), 
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;SELECT COALESCE(is_admin, false) FROM users WHERE id = $1&#34;</span>, 
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">userID</span>).<span style="color:#a6e22e">Scan</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">isAdmin</span>)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> <span style="color:#f92672">||</span> !<span style="color:#a6e22e">isAdmin</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Status</span>(<span style="color:#ae81ff">403</span>).<span style="color:#a6e22e">JSON</span>(<span style="color:#a6e22e">fiber</span>.<span style="color:#a6e22e">Map</span>{
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;error&#34;</span>: <span style="color:#e6db74">&#34;Admin access required&#34;</span>,
+</span></span><span style="display:flex;"><span>        })
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Next</span>()
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="2-add-admin-routes">2. Add Admin Routes</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Admin routes
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">adminGroup</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">app</span>.<span style="color:#a6e22e">Group</span>(<span style="color:#e6db74">&#34;/api/v1/admin&#34;</span>, <span style="color:#a6e22e">AuthRequired</span>, <span style="color:#a6e22e">AdminRequired</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">adminGroup</span>.<span style="color:#a6e22e">Get</span>(<span style="color:#e6db74">&#34;/users&#34;</span>, <span style="color:#a6e22e">listUsers</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">adminGroup</span>.<span style="color:#a6e22e">Put</span>(<span style="color:#e6db74">&#34;/users/:id/admin&#34;</span>, <span style="color:#a6e22e">toggleAdminStatus</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">adminGroup</span>.<span style="color:#a6e22e">Delete</span>(<span style="color:#e6db74">&#34;/users/:id&#34;</span>, <span style="color:#a6e22e">deleteUser</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">adminGroup</span>.<span style="color:#a6e22e">Get</span>(<span style="color:#e6db74">&#34;/stats&#34;</span>, <span style="color:#a6e22e">getSystemStats</span>)
+</span></span></code></pre></div><h2 id="security-considerations">Security Considerations</h2>
+<h3 id="zero-knowledge-limitations">Zero-Knowledge Limitations</h3>
+<p>Due to the zero-knowledge architecture:</p>
+<ul>
+<li><strong>Admins cannot read user notes</strong>: All content is encrypted with user keys</li>
+<li><strong>Password resets</strong>: Must be handled carefully to maintain encryption</li>
+<li><strong>User data</strong>: Only metadata (email, timestamps) is visible to admins</li>
+</ul>
+<h3 id="recommended-admin-capabilities">Recommended Admin Capabilities</h3>
+<p>Safe admin operations that preserve encryption:</p>
+<ul>
+<li>✅ View user list and metadata</li>
+<li>✅ Monitor login attempts and security events</li>
+<li>✅ Disable/enable user accounts</li>
+<li>✅ View system statistics and usage</li>
+<li>✅ Manage system-wide settings</li>
+<li>❌ Read user notes or content</li>
+<li>❌ Reset passwords without user involvement</li>
+</ul>
+<h2 id="environment-setup-for-admin-access">Environment Setup for Admin Access</h2>
+<h3 id="database-connection">Database Connection</h3>
+<p>Admins need direct database access for user management:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Using PostgreSQL command line</span>
+</span></span><span style="display:flex;"><span>export PGPASSWORD<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;your-postgres-password&#34;</span>
+</span></span><span style="display:flex;"><span>psql -h localhost -U postgres -d notes
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Or using a database admin tool</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Connect to: postgresql://postgres:password@localhost:5432/notes</span>
+</span></span></code></pre></div><h3 id="backup-user-data">Backup User Data</h3>
+<p>Before making changes, always backup:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Backup users table</span>
+</span></span><span style="display:flex;"><span>pg_dump -h localhost -U postgres -d notes -t users &gt; users_backup.sql
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Full database backup</span>
+</span></span><span style="display:flex;"><span>pg_dump -h localhost -U postgres -d notes &gt; full_backup.sql
+</span></span></code></pre></div><h2 id="common-admin-tasks">Common Admin Tasks</h2>
+<h3 id="1-creating-the-first-admin">1. Creating the First Admin</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">-- After first user registers, make them admin
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">UPDATE</span> users 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SET</span> is_admin <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> email <span style="color:#f92672">=</span> (
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">SELECT</span> email <span style="color:#66d9ef">FROM</span> users 
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> created_at <span style="color:#66d9ef">ASC</span> 
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">LIMIT</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>);
+</span></span></code></pre></div><h3 id="2-emergency-account-recovery">2. Emergency Account Recovery</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">-- If admin is locked out, unlock manually
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">UPDATE</span> users 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SET</span> failed_attempts <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>, 
+</span></span><span style="display:flex;"><span>    locked_until <span style="color:#f92672">=</span> <span style="color:#66d9ef">NULL</span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> is_admin <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>;
+</span></span></code></pre></div><h3 id="3-system-maintenance">3. System Maintenance</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">-- Clean up old deleted notes (after 30 days)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">DELETE</span> <span style="color:#66d9ef">FROM</span> notes 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> deleted_at <span style="color:#66d9ef">IS</span> <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span> 
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">AND</span> deleted_at <span style="color:#f92672">&lt;</span> NOW() <span style="color:#f92672">-</span> INTERVAL <span style="color:#e6db74">&#39;30 days&#39;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- Clean up inactive sessions (implement session cleanup)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">-- This would depend on your session storage implementation
+</span></span></span></code></pre></div><h2 id="monitoring-and-logging">Monitoring and Logging</h2>
+<p>For production admin management:</p>
+<ol>
+<li><strong>Enable PostgreSQL logging</strong> for audit trails</li>
+<li><strong>Monitor authentication failures</strong> for security</li>
+<li><strong>Set up alerts</strong> for suspicious activity</li>
+<li><strong>Regular backups</strong> of user data</li>
+</ol>
+<h2 id="frontend-admin-panel-future-enhancement">Frontend Admin Panel (Future Enhancement)</h2>
+<p>To add admin UI to the application, you would need:</p>
+<ol>
+<li><strong>Admin route protection</strong> in React</li>
+<li><strong>Admin dashboard component</strong> showing user statistics</li>
+<li><strong>User management interface</strong> for admin actions</li>
+<li><strong>System health monitoring</strong> displays</li>
+</ol>
+<p>This would require updating the frontend with admin-specific components and routes that only render for users with <code>is_admin = true</code>.</p>
+<hr>
+<p><strong>Note</strong>: This guide assumes you want to add admin functionality to an existing zero-knowledge encrypted system. All admin operations should respect the encryption model and user privacy principles of the application.</p>
+
+    </div>
+  </article>
+
+    </main>
+    <footer class="site-footer">
+  <div class="container">
+    <div class="footer-links">
+      <div>
+        <h2>LeafLock Docs</h2>
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/pages/">Documentation Index</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Legal</h2>
+        <ul>
+          
+            <li>
+              <a href="/pages/privacy/">Privacy</a>
+            </li>
+          
+            <li>
+              <a href="/pages/gdpr/">GDPR</a>
+            </li>
+          
+            <li>
+              <a href="/pages/license/">License</a>
+            </li>
+          
+            <li>
+              <a href="/pages/terms/">Terms</a>
+            </li>
+          
+            <li>
+              <a href="/pages/compliance/">Compliance</a>
+            </li>
+          
+        </ul>
+      </div>
+      <div>
+        <h2>Contact</h2>
+        <ul>
+          <li><a href="mailto:contact@leaflock.app">contact@leaflock.app</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="footer-note">&copy; 2025 LeafLock. All rights reserved.</p>
+  </div>
+</footer>
+
+  </body>
+</html>

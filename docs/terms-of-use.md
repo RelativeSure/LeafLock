@@ -1,0 +1,72 @@
+---
+title: "Terms of Use"
+slug: terms
+summary: "Conditions governing access to the LeafLock platform and services."
+menu:
+  footer:
+    name: Terms
+    weight: 40
+---
+
+_Last updated: 2025-09-19_
+
+These Terms of Use ("Terms") govern access to and use of the LeafLock platform,
+documentation, and associated services (collectively, the "Services"). By accessing the
+Services, you agree to these Terms.
+
+## 1. Eligibility
+You must be at least 16 years old and legally capable of entering binding contracts in
+your jurisdiction to use the Services. Organisational users confirm that their
+representatives have authority to bind the organisation.
+
+## 2. Accounts and Security
+You are responsible for safeguarding login credentials and ensuring that account
+information remains accurate. Notify LeafLock immediately at `security@leaflock.app` if
+you suspect unauthorised access or disclosure.
+
+## 3. Acceptable Use
+You agree not to:
+- Breach any applicable law or regulation.
+- Attempt to gain unauthorised access to systems or data.
+- Interfere with or disrupt service availability.
+- Upload malicious code or content that infringes intellectual property rights.
+- Misrepresent your affiliation with LeafLock or other parties.
+
+## 4. Content Ownership
+LeafLock retains all intellectual property rights in the Services. You retain ownership of
+content you upload while granting LeafLock a licence to host, reproduce, and process that
+content solely to provide the Services.
+
+## 5. Feedback
+Feedback and suggestions you provide may be used by LeafLock without obligation to you,
+consistent with the `docs/license.md`.
+
+## 6. Suspension and Termination
+LeafLock may suspend or terminate access to the Services for breach of these Terms or to
+protect the security and integrity of the platform.
+
+## 7. Third-Party Services
+The Services may integrate third-party APIs or plugins. Those services are governed by
+third-party terms, and LeafLock is not responsible for their content or security.
+
+## 8. Disclaimers
+The Services are provided "as is" without warranties. LeafLock disclaims implied
+warranties of merchantability, fitness for a particular purpose, and non-infringement to
+the fullest extent allowed by law.
+
+## 9. Limitation of Liability
+LeafLock is not liable for indirect, incidental, consequential, or punitive damages, or
+for loss of profits, revenue, or data, even if advised of the possibility of such damages.
+Total liability for direct damages will not exceed the greater of EUR 100 or the amount
+you paid for the Services in the prior 12 months.
+
+## 10. Governing Law
+These Terms are governed by the laws of Denmark, without regard to conflict of law
+principles. Disputes will be settled in the courts of Copenhagen, Denmark.
+
+## 11. Changes to Terms
+We may modify these Terms and will post updates here. Continued use after changes become
+effective constitutes acceptance of the revised Terms.
+
+## 12. Contact
+For questions about these Terms, email `contact@leaflock.app`.

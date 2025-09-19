@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Tags on LeafLock Documentation</title>
+    <link>https://docs.leaflock.app/tags/</link>
+    <description>Recent content in Tags on LeafLock Documentation</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <atom:link href="https://docs.leaflock.app/tags/index.xml" rel="self" type="application/rss+xml" />
+  </channel>
+</rss>

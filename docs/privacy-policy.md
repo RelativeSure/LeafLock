@@ -1,0 +1,68 @@
+---
+title: "Privacy Policy"
+slug: privacy
+summary: "How LeafLock collects, uses, and safeguards personal data across deployments."
+menu:
+  footer:
+    name: Privacy
+    weight: 10
+---
+
+_Last updated: 2025-09-19_
+
+This Privacy Policy describes how LeafLock collects, uses, and safeguards information
+when you access the LeafLock platform or documentation. Operators of self-hosted
+instances should adapt this policy to reflect their deployment specifics.
+
+## Information We Collect
+- **Account Information:** Name, email address, and authentication data provided when
+  creating or managing an account.
+- **Usage Data:** Logs, metrics, and device information required for service reliability
+  and security.
+- **Support Communications:** Messages you send to `support@leaflock.app`, including
+  attachments and metadata needed to resolve issues.
+
+LeafLock does not intentionally collect special categories of personal data. Operators
+must configure custom fields to avoid storing sensitive information unless obligated by
+law and protected by appropriate safeguards.
+
+## How We Use Information
+We process data to:
+- Provide and maintain platform functionality.
+- Detect, prevent, and respond to security incidents.
+- Communicate updates, maintenance notifications, and policy changes.
+- Generate aggregated, anonymised analytics to improve performance.
+
+## Sharing and Disclosure
+We do not sell personal data. We may share data with:
+- Service providers offering infrastructure, analytics, or email delivery under binding
+  agreements and confidentiality obligations.
+- Law enforcement or government authorities when required by applicable law.
+- Successors in the event of a merger, acquisition, or asset sale, subject to this Policy.
+
+## Data Retention
+Data is retained only as long as necessary for the purposes described above or to comply
+with legal obligations. Users may request deletion of their personal data by contacting
+`contact@leaflock.app`.
+
+## International Transfers
+Where data is transferred outside the region of collection, LeafLock implements
+appropriate safeguards such as Standard Contractual Clauses or adequacy decisions.
+
+## Your Rights
+Depending on your jurisdiction, you may have rights to access, correct, delete, or
+restrict processing of your personal data, and to object to certain processing activities.
+Submit requests to `contact@leaflock.app`.
+
+## Children
+LeafLock is not directed to children under the age of 16. If we learn that personal data
+from a child has been collected without verifiable parental consent, we will delete it.
+
+## Changes to this Policy
+We will post updates to this document and, where appropriate, notify you via email or in
+app. Material changes take effect no sooner than 14 days after notice unless required by
+law.
+
+## Contact
+For privacy inquiries, contact `contact@leaflock.app` or mail the LeafLock Privacy Team,
+LeafLock HQ, Copenhagen, Denmark.
