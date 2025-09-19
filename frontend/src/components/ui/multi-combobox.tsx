@@ -1,7 +1,14 @@
 import * as React from 'react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { Check, ChevronsUpDown } from 'lucide-react'
@@ -44,7 +51,10 @@ export const MultiCombobox: React.FC<MultiComboboxProps> = ({
     if (triggerText) return triggerText
     if (!values.length) return 'Any role'
     if (values.length <= 2) {
-      return items.filter(i => selectedMap.has(i.value)).map(i => i.label).join(', ')
+      return items
+        .filter((i) => selectedMap.has(i.value))
+        .map((i) => i.label)
+        .join(', ')
     }
     return `${values.length} selected`
   }, [triggerText, values, items, selectedMap])
@@ -52,7 +62,14 @@ export const MultiCombobox: React.FC<MultiComboboxProps> = ({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" role="combobox" aria-expanded={open} className={cn('justify-between w-[280px]', className)} disabled={disabled}>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn('justify-between w-[280px]', className)}
+          disabled={disabled}
+        >
           {label}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -80,4 +97,3 @@ export const MultiCombobox: React.FC<MultiComboboxProps> = ({
     </Popover>
   )
 }
-

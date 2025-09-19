@@ -96,10 +96,12 @@ describe('AdminPage', () => {
     const makeAdminButton = await screen.findByRole('button', { name: /make admin/i })
     fireEvent.click(makeAdminButton)
 
-    await waitFor(() => expect(mockApi.adminSetAdmin).toHaveBeenCalledWith(initialUser.user_id, true))
+    await waitFor(() =>
+      expect(mockApi.adminSetAdmin).toHaveBeenCalledWith(initialUser.user_id, true)
+    )
     await waitFor(() => expect(adminListUsers).toHaveBeenCalledTimes(2))
 
-    await screen.findByText(/Admin: Yes/i)
+    await screen.findByText(/Admin: Yes\\b/i)
     const table = await screen.findByRole('table')
     const rows = within(table).getAllByRole('row')
     expect(rows[1]).toHaveTextContent(/admin/i)

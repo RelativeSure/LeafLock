@@ -17,7 +17,7 @@ vi.mock('libsodium-wrappers', () => ({
   crypto_pwhash_ALG_ARGON2ID: 2,
   crypto_pwhash_SALTBYTES: 32,
   crypto_pwhash_OPSLIMIT_INTERACTIVE: 2,
-  crypto_pwhash_MEMLIMIT_INTERACTIVE: 67108864
+  crypto_pwhash_MEMLIMIT_INTERACTIVE: 67108864,
 }))
 
 // Import after mocking
@@ -130,7 +130,7 @@ describe('CryptoService', () => {
       sodium.randombytes_buf.mockReturnValue(mockSalt)
 
       const salt = await cryptoService.generateSalt()
-      
+
       expect(sodium.randombytes_buf).toHaveBeenCalledWith(32)
       expect(salt).toEqual(mockSalt)
     })
@@ -185,13 +185,21 @@ describe('CryptoService', () => {
       const mockDecrypted = new Uint8Array([72, 101, 108, 108, 111]) // "Hello"
       const expectedPlaintext = 'Hello'
 
-      sodium.from_base64.mockReturnValue(new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 1, 2, 3, 4]))
+      sodium.from_base64.mockReturnValue(
+        new Uint8Array([
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 1,
+          2, 3, 4,
+        ])
+      )
       sodium.crypto_secretbox_open_easy.mockReturnValue(mockDecrypted)
       sodium.to_string.mockReturnValue(expectedPlaintext)
 
       const decrypted = await cryptoService.decryptData(encryptedData)
 
-      expect(sodium.from_base64).toHaveBeenCalledWith(encryptedData, sodium.base64_variants.ORIGINAL)
+      expect(sodium.from_base64).toHaveBeenCalledWith(
+        encryptedData,
+        sodium.base64_variants.ORIGINAL
+      )
       expect(sodium.crypto_secretbox_open_easy).toHaveBeenCalled()
       expect(sodium.to_string).toHaveBeenCalledWith(mockDecrypted)
       expect(decrypted).toBe(expectedPlaintext)
@@ -234,7 +242,9 @@ describe('CryptoService', () => {
 
       // Mock decryption
       sodium.from_base64.mockReturnValue(mockCombined)
-      sodium.crypto_secretbox_open_easy.mockReturnValue(new Uint8Array(Buffer.from(plaintext, 'utf8')))
+      sodium.crypto_secretbox_open_easy.mockReturnValue(
+        new Uint8Array(Buffer.from(plaintext, 'utf8'))
+      )
       sodium.to_string.mockReturnValue(plaintext)
 
       const decrypted = await cryptoService.decryptData(encrypted)
@@ -245,11 +255,11 @@ describe('CryptoService', () => {
   describe('Error Handling', () => {
     it('should handle sodium library initialization failure', async () => {
       sodium.ready = Promise.reject(new Error('Sodium init failed'))
-      
+
       const newService = new CryptoService()
-      
+
       // Should handle the error gracefully
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
       expect(newService.sodiumReady).toBe(false)
     })
   })

@@ -23,9 +23,7 @@ const AdminUserPicker: React.FC<AdminUserPickerProps> = ({ users, value, onChang
         label: u.email,
         value: u.user_id,
         rightSlot: u.is_admin ? (
-          <Badge variant="secondary">
-            admin{u.admin_via_allowlist ? ' • allowlist' : ''}
-          </Badge>
+          <Badge variant="secondary">admin{u.admin_via_allowlist ? ' • allowlist' : ''}</Badge>
         ) : undefined,
       }))}
       value={value}

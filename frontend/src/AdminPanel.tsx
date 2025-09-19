@@ -3,7 +3,13 @@ import { Shield, Loader2, Mail, Crown } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -59,7 +65,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
 
   const ensureUserId = () => {
     if (!userId.trim()) {
-      setStatus({ variant: 'destructive', message: 'Enter a user ID before performing admin actions.' })
+      setStatus({
+        variant: 'destructive',
+        message: 'Enter a user ID before performing admin actions.',
+      })
       return false
     }
     return true
@@ -146,6 +155,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
     }
   }
 
+  const loadUsers = async (query = quickQuery.trim()) => {
+    const trimmed = query.trim()
+    if (!trimmed) {
+      setQuickResults([])
+      return
+    }
+    try {
+      const res = await api.adminListUsers({ q: trimmed, limit: 8, offset: 0 })
+      setQuickResults(res.users || [])
+    } catch (e: any) {
+      setFailure(e?.message || 'Lookup failed')
+      setQuickResults([])
+      throw e
+    }
+  }
+
   const resetQuickState = () => {
     setQuickQuery('')
     setQuickResults([])
@@ -169,11 +194,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
     quickDebounceRef.current = window.setTimeout(async () => {
       setQuickLoading(true)
       try {
-        const res = await api.adminListUsers({ q: query.trim(), limit: 8, offset: 0 })
-        setQuickResults(res.users || [])
-      } catch (e: any) {
-        setFailure(e?.message || 'Lookup failed')
-        setQuickResults([])
+        await loadUsers(query)
+      } catch {
+        // loadUsers already sets failure state
       } finally {
         setQuickLoading(false)
       }
@@ -202,7 +225,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
         <CardTitle className="flex items-center gap-2 text-lg">
           <Shield className="h-4 w-4" /> Admin Panel
         </CardTitle>
-        <CardDescription>Manage administrator privileges and roles for individual users.</CardDescription>
+        <CardDescription>
+          Manage administrator privileges and roles for individual users.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {status && status.message && (
@@ -252,10 +277,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Load Roles
           </Button>
-          <Button variant="secondary" onClick={() => toggleAdmin(true)} disabled={loading || !userId.trim()}>
+          <Button
+            variant="secondary"
+            onClick={() => toggleAdmin(true)}
+            disabled={loading || !userId.trim()}
+          >
             Make Admin
           </Button>
-          <Button variant="outline" onClick={() => toggleAdmin(false)} disabled={loading || !userId.trim()}>
+          <Button
+            variant="outline"
+            onClick={() => toggleAdmin(false)}
+            disabled={loading || !userId.trim()}
+          >
             Revoke Admin
           </Button>
           <Button variant="secondary" onClick={assignRole} disabled={loading || !userId.trim()}>
@@ -300,12 +333,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
         </div>
       </CardContent>
 
-      <CommandDialog open={quickOpen} onOpenChange={(open) => {
-        setQuickOpen(open)
-        if (!open) {
-          resetQuickState()
-        }
-      }}>
+      <CommandDialog
+        open={quickOpen}
+        onOpenChange={(open) => {
+          setQuickOpen(open)
+          if (!open) {
+            resetQuickState()
+          }
+        }}
+      >
         <div className="p-3">
           <CommandInput
             placeholder="Search users by email..."
@@ -318,7 +354,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
         </div>
         <CommandList>
           <CommandEmpty>
-            {quickQuery.trim() ? 'No matching users. Double-check the email.' : 'Start typing an email address.'}
+            {quickQuery.trim()
+              ? 'No matching users. Double-check the email.'
+              : 'Start typing an email address.'}
           </CommandEmpty>
           {quickLoading && (
             <CommandGroup heading="Searching">

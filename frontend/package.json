@@ -3,14 +3,15 @@
   "version": "0.0.1-rc.20250910210438",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.17.0",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
-    "format": "prettier --write src/**/*.{js,jsx,ts,tsx,json,css,md}",
-    "format:check": "prettier --check src/**/*.{js,jsx,ts,tsx,json,css,md}",
+    "format": "prettier --write src/**/*.{js,jsx,ts,tsx,css}",
+    "format:check": "prettier --check src/**/*.{js,jsx,ts,tsx,css}",
     "typecheck": "tsc --noEmit",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
@@ -23,7 +24,7 @@
     "clean": "rm -rf dist node_modules/.vite coverage",
     "analyze": "vite build --mode analyze",
     "serve": "vite preview --host 0.0.0.0",
-    "check-all": "npm run type-check && npm run lint && npm run format:check && npm run test"
+    "check-all": "pnpm run type-check && pnpm run lint && pnpm run format:check && pnpm run test"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
