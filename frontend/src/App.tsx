@@ -2,7 +2,21 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import sodium from 'libsodium-wrappers'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Lock, Shield, MessageSquare } from 'lucide-react'
+import { Lock, Shield, MessageSquare, Settings } from 'lucide-react'
+import {
+  adminListUsersResponseSchema,
+  adminActionResponseSchema,
+  adminUserRolesResponseSchema,
+  mfaSetupSchema,
+  mfaStatusSchema,
+  registrationStatusSchema,
+  type AdminListUsersResponse,
+  type AdminActionResponse,
+  type AdminUserRolesResponse,
+  type MfaSetup,
+  type MfaStatus,
+  type RegistrationStatus,
+} from '@/lib/schemas'
 
 // shadcn/ui components
 import { Button } from '@/components/ui/button'
@@ -55,7 +69,7 @@ interface MarkdownRendererProps {
   content: string
 }
 
-type ViewType = 'login' | 'notes' | 'editor' | 'unlock' | 'admin'
+type ViewType = 'login' | 'notes' | 'editor' | 'unlock' | 'admin' | 'settings'
 type EncryptionStatus = 'locked' | 'unlocked'
 type ThemeType = 'light' | 'dark' | 'system'
 
@@ -460,6 +474,52 @@ class SecureAPI {
     return response
   }
 
+  async getMfaStatus(): Promise<MfaStatus> {
+    const raw = await this.request('/auth/mfa/status')
+    const parsed = mfaStatusSchema.safeParse(raw)
+    if (!parsed.success) {
+      console.error('❌ MFA status validation failed', parsed.error)
+      throw new Error('Invalid response when loading MFA status')
+    }
+    return parsed.data
+  }
+
+  async startMfaSetup(): Promise<MfaSetup> {
+    const raw = await this.request('/auth/mfa/setup', { method: 'POST' })
+    const parsed = mfaSetupSchema.safeParse(raw)
+    if (!parsed.success) {
+      console.error('❌ MFA setup response validation failed', parsed.error)
+      throw new Error('Invalid response when generating MFA secret')
+    }
+    return parsed.data
+  }
+
+  async enableMfa(code: string): Promise<MfaStatus> {
+    const raw = await this.request('/auth/mfa/enable', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    })
+    const parsed = mfaStatusSchema.safeParse(raw)
+    if (!parsed.success) {
+      console.error('❌ MFA enable response validation failed', parsed.error)
+      throw new Error('Invalid response when enabling MFA')
+    }
+    return parsed.data
+  }
+
+  async disableMfa(code: string): Promise<MfaStatus> {
+    const raw = await this.request('/auth/mfa/disable', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    })
+    const parsed = mfaStatusSchema.safeParse(raw)
+    if (!parsed.success) {
+      console.error('❌ MFA disable response validation failed', parsed.error)
+      throw new Error('Invalid response when disabling MFA')
+    }
+    return parsed.data
+  }
+
   async getRegistrationStatus(): Promise<{ enabled: boolean }> {
     return this.request('/auth/registration')
   }
@@ -482,16 +542,30 @@ class SecureAPI {
     const r = await this.request('/admin/health')
     return r && r.status === 'ok'
   }
-  async adminSetAdmin(userId: string, admin: boolean): Promise<any> {
-    return this.request(`/admin/users/${userId}/admin`, {
+  async adminSetAdmin(userId: string, admin: boolean): Promise<AdminActionResponse> {
+    const raw = await this.request(`/admin/users/${userId}/admin`, {
       method: 'PUT',
       body: JSON.stringify({ admin }),
     })
+    const parsed = adminActionResponseSchema.safeParse(raw)
+    if (!parsed.success) {
+      console.error('❌ Admin setAdmin response validation failed', parsed.error)
+      throw new Error('Invalid response when updating admin status')
+    }
+    return parsed.data
   }
-  async adminGetUserRoles(userId: string): Promise<any> {
-    return this.request(`/admin/users/${userId}/roles`)
+  async adminGetUserRoles(userId: string): Promise<AdminUserRolesResponse> {
+    const raw = await this.request(`/admin/users/${userId}/roles`)
+    const parsed = adminUserRolesResponseSchema.safeParse(raw)
+    if (!parsed.success) {
+      console.error('❌ Admin roles response validation failed', parsed.error)
+      throw new Error('Invalid response when loading user roles')
+    }
+    return parsed.data
   }
-  async adminListUsers(params?: Record<string, string | number | boolean>): Promise<any> {
+  async adminListUsers(
+    params?: Record<string, string | number | boolean>
+  ): Promise<AdminListUsersResponse> {
     const query = new URLSearchParams()
     if (params) {
       for (const [k, v] of Object.entries(params)) {
@@ -500,7 +574,13 @@ class SecureAPI {
       }
     }
     const qs = query.toString()
-    return this.request(`/admin/users${qs ? `?${qs}` : ''}`)
+    const raw = await this.request(`/admin/users${qs ? `?${qs}` : ''}`)
+    const parsed = adminListUsersResponseSchema.safeParse(raw)
+    if (!parsed.success) {
+      console.error('❌ Admin users response validation failed', parsed.error)
+      throw new Error('Invalid response when loading users')
+    }
+    return parsed.data
   }
   async adminExportUsersCsv(params?: Record<string, string | number | boolean>): Promise<Blob> {
     const query = new URLSearchParams()
@@ -520,39 +600,75 @@ class SecureAPI {
     if (!response.ok) throw new Error(`Export failed: ${response.status}`)
     return await response.blob()
   }
-  async adminAssignRole(userId: string, role: string): Promise<any> {
-    return this.request(`/admin/users/${userId}/roles`, {
+  async adminAssignRole(userId: string, role: string): Promise<AdminActionResponse> {
+    const raw = await this.request(`/admin/users/${userId}/roles`, {
       method: 'POST',
       body: JSON.stringify({ role }),
     })
+    const parsed = adminActionResponseSchema.safeParse(raw)
+    if (!parsed.success) {
+      console.error('❌ Admin assignRole response validation failed', parsed.error)
+      throw new Error('Invalid response when assigning role')
+    }
+    return parsed.data
   }
-  async adminRemoveRole(userId: string, role: string): Promise<any> {
-    return this.request(`/admin/users/${userId}/roles/${role}`, { method: 'DELETE' })
+  async adminRemoveRole(userId: string, role: string): Promise<AdminActionResponse> {
+    const raw = await this.request(`/admin/users/${userId}/roles/${role}`, { method: 'DELETE' })
+    const parsed = adminActionResponseSchema.safeParse(raw)
+    if (!parsed.success) {
+      console.error('❌ Admin removeRole response validation failed', parsed.error)
+      throw new Error('Invalid response when removing role')
+    }
+    return parsed.data
   }
   async adminBulkRole(
     action: 'assign' | 'remove',
     role: string,
     filters: Record<string, any>
-  ): Promise<any> {
-    return this.request('/admin/users/roles/bulk', {
+  ): Promise<AdminActionResponse> {
+    const raw = await this.request('/admin/users/roles/bulk', {
       method: 'POST',
       body: JSON.stringify({ action, role, ...filters }),
     })
+    const parsed = adminActionResponseSchema.safeParse(raw)
+    if (!parsed.success) {
+      console.error('❌ Admin bulk role response validation failed', parsed.error)
+      throw new Error('Invalid response for bulk role operation')
+    }
+    return parsed.data
   }
-  async adminBulkAdmin(action: 'grant' | 'revoke', filters: Record<string, any>): Promise<any> {
-    return this.request('/admin/users/admin/bulk', {
+  async adminBulkAdmin(action: 'grant' | 'revoke', filters: Record<string, any>): Promise<AdminActionResponse> {
+    const raw = await this.request('/admin/users/admin/bulk', {
       method: 'POST',
       body: JSON.stringify({ action, ...filters }),
     })
+    const parsed = adminActionResponseSchema.safeParse(raw)
+    if (!parsed.success) {
+      console.error('❌ Admin bulk admin response validation failed', parsed.error)
+      throw new Error('Invalid response for bulk admin operation')
+    }
+    return parsed.data
   }
-  async adminGetRegistration(): Promise<{ enabled: boolean }> {
-    return this.request('/admin/settings/registration')
+  async adminGetRegistration(): Promise<RegistrationStatus> {
+    const raw = await this.request('/admin/settings/registration')
+    const parsed = registrationStatusSchema.safeParse(raw)
+    if (!parsed.success) {
+      console.error('❌ Registration status validation failed', parsed.error)
+      throw new Error('Invalid response when loading registration status')
+    }
+    return parsed.data
   }
-  async adminSetRegistration(enabled: boolean): Promise<{ enabled: boolean }> {
-    return this.request('/admin/settings/registration', {
+  async adminSetRegistration(enabled: boolean): Promise<RegistrationStatus> {
+    const raw = await this.request('/admin/settings/registration', {
       method: 'PUT',
       body: JSON.stringify({ enabled }),
     })
+    const parsed = registrationStatusSchema.safeParse(raw)
+    if (!parsed.success) {
+      console.error('❌ Registration update validation failed', parsed.error)
+      throw new Error('Invalid response when updating registration status')
+    }
+    return parsed.data
   }
 
   async getNotes(): Promise<Note[]> {
@@ -1147,6 +1263,255 @@ const ThemeToggle: React.FC = () => {
           </div>
         </>
       )}
+    </div>
+  )
+}
+
+type SecuritySettingsViewProps = {
+  api: SecureAPI
+  onBack: () => void
+}
+
+const SecuritySettingsView: React.FC<SecuritySettingsViewProps> = ({ api, onBack }) => {
+  const [status, setStatus] = useState<MfaStatus | null>(null)
+  const [setup, setSetup] = useState<MfaSetup | null>(null)
+  const [code, setCode] = useState('')
+  const [disableCode, setDisableCode] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const refreshStatus = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await api.getMfaStatus()
+      setStatus(data)
+      if (!data.enabled) {
+        // Clear disable code when MFA is off
+        setDisableCode('')
+      }
+    } catch (err) {
+      setError((err as Error).message || 'Failed to load MFA status')
+    } finally {
+      setLoading(false)
+    }
+  }, [api])
+
+  useEffect(() => {
+    void refreshStatus()
+  }, [refreshStatus])
+
+  const handleStartSetup = async () => {
+    setBusy(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const data = await api.startMfaSetup()
+      setSetup(data)
+      setCode('')
+      setStatus({ enabled: false, has_secret: true })
+      setMessage('Scan the code with your authenticator app, then enter the generated code to enable MFA.')
+    } catch (err) {
+      setError((err as Error).message || 'Failed to generate MFA secret')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleEnable = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!code.trim()) {
+      setError('Enter the 6-digit code from your authenticator')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    setMessage(null)
+    try {
+      await api.enableMfa(code.trim())
+      setCode('')
+      setSetup(null)
+      await refreshStatus()
+      setMessage('Two-factor authentication enabled.')
+    } catch (err) {
+      setError((err as Error).message || 'Failed to enable MFA')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleDisable = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!disableCode.trim()) {
+      setError('Enter a valid MFA code to disable')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    setMessage(null)
+    try {
+      await api.disableMfa(disableCode.trim())
+      setDisableCode('')
+      setSetup(null)
+      await refreshStatus()
+      setMessage('Two-factor authentication disabled.')
+    } catch (err) {
+      setError((err as Error).message || 'Failed to disable MFA')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleCopySecret = async () => {
+    if (!setup) return
+    try {
+      await navigator.clipboard.writeText(setup.secret)
+      setMessage('Secret copied to clipboard.')
+    } catch (err) {
+      console.error('Copy failed', err)
+      setError('Unable to copy secret to clipboard')
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-6">
+      <div className="w-full max-w-2xl space-y-6">
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" onClick={onBack}>
+            ← Back to notes
+          </Button>
+          <ThemeToggle />
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Account Security</CardTitle>
+            <CardDescription>Protect your account with time-based one-time passwords.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {loading ? (
+              <p className="text-sm text-muted-foreground">Loading MFA status…</p>
+            ) : (
+              <>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    Two-factor authentication is currently{' '}
+                    <span className={status?.enabled ? 'text-green-500' : 'text-red-400'}>
+                      {status?.enabled ? 'enabled' : 'disabled'}
+                    </span>
+                    .
+                  </p>
+                  {!status?.enabled && status?.has_secret && !setup && (
+                    <p className="text-sm text-muted-foreground">
+                      A setup secret is pending. Generate a new code if you no longer have access to the previous
+                      one.
+                    </p>
+                  )}
+                </div>
+
+                {message && (
+                  <Alert className="border-green-500/40 bg-green-500/10">
+                    <AlertDescription>{message}</AlertDescription>
+                  </Alert>
+                )}
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                {!status?.enabled ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Use an authenticator app (like 1Password, Authy, or Google Authenticator) to scan a setup code,
+                        then confirm with the generated passcode.
+                      </p>
+                      <Button onClick={handleStartSetup} disabled={busy}>
+                        {setup ? 'Regenerate setup code' : 'Generate setup code'}
+                      </Button>
+                    </div>
+
+                    {setup && (
+                      <div className="space-y-3 border rounded-lg p-4 bg-muted/40">
+                        <div className="space-y-1">
+                          <Label htmlFor="mfa-secret">Authenticator secret</Label>
+                          <div className="flex gap-2">
+                            <Input id="mfa-secret" value={setup.secret} readOnly className="font-mono" />
+                            <Button type="button" variant="outline" onClick={handleCopySecret}>
+                              Copy
+                            </Button>
+                          </div>
+                          {setup.otpauth_url && (
+                            <a
+                              href={setup.otpauth_url}
+                              className="text-sm text-primary underline"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Open in authenticator app
+                            </a>
+                          )}
+                        </div>
+
+                        <form className="space-y-3" onSubmit={handleEnable}>
+                          <div className="space-y-1">
+                            <Label htmlFor="mfa-code">Enter code from your authenticator</Label>
+                            <Input
+                              id="mfa-code"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              maxLength={10}
+                              value={code}
+                              onChange={(event) => setCode(event.target.value)}
+                              placeholder="123456"
+                              autoComplete="one-time-code"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button type="submit" disabled={busy}>
+                              Enable MFA
+                            </Button>
+                            <Button type="button" variant="outline" onClick={() => setSetup(null)} disabled={busy}>
+                              Cancel
+                            </Button>
+                          </div>
+                        </form>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <form className="space-y-3" onSubmit={handleDisable}>
+                    <div className="space-y-1">
+                      <Label htmlFor="disable-code">Enter a current MFA code to disable</Label>
+                      <Input
+                        id="disable-code"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={10}
+                        value={disableCode}
+                        onChange={(event) => setDisableCode(event.target.value)}
+                        placeholder="123456"
+                        autoComplete="one-time-code"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="submit" variant="destructive" disabled={busy}>
+                        Disable MFA
+                      </Button>
+                      <Button type="button" variant="outline" disabled={busy} onClick={() => void refreshStatus()}>
+                        Refresh status
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
@@ -2443,6 +2808,15 @@ function SecureNotesApp() {
               <ThemeToggle />
 
               <button
+                onClick={() => setCurrentView('settings')}
+                className="text-gray-400 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded p-1"
+                aria-label="Security settings"
+                title="Security settings"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+
+              <button
                 onClick={() => {
                   setViewingTrash(!viewingTrash)
                   if (!viewingTrash) {
@@ -2671,7 +3045,9 @@ function SecureNotesApp() {
 
   return (
     <>
-      {isAuthenticated && isAdmin && currentView === 'admin' ? (
+      {isAuthenticated && encryptionStatus === 'unlocked' && currentView === 'settings' ? (
+        <SecuritySettingsView api={api} onBack={() => setCurrentView('notes')} />
+      ) : isAuthenticated && isAdmin && currentView === 'admin' ? (
         <AdminPage api={api} onBack={() => setCurrentView('notes')} />
       ) : isAuthenticated && encryptionStatus === 'unlocked' ? (
         <>
