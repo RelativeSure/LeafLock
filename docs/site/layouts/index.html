@@ -1,0 +1,19 @@
+{{ define "main" }}
+  <section>
+    <h1>{{ .Site.Title }}</h1>
+    <div class="markdown">
+      {{ .Content }}
+    </div>
+  </section>
+  <section class="list">
+    <h2>All Documentation</h2>
+    <ul>
+      {{ range sort (where .Site.RegularPages "Section" "pages") "Title" }}
+        <li>
+          <a href="{{ .RelPermalink }}">{{ .LinkTitle }}</a>
+          {{ with .Params.summary }}<p>{{ . }}</p>{{ end }}
+        </li>
+      {{ end }}
+    </ul>
+  </section>
+{{ end }}

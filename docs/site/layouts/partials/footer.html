@@ -1,0 +1,30 @@
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-links">
+      <div>
+        <h2>LeafLock Docs</h2>
+        <ul>
+          <li><a href="{{ "/" | relURL }}">Home</a></li>
+          <li><a href="{{ "/pages/" | relURL }}">Documentation Index</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Legal</h2>
+        <ul>
+          {{ range .Site.Menus.footer }}
+            <li>
+              <a href="{{ if .Page }}{{ .Page.RelPermalink }}{{ else }}{{ .URL | relURL }}{{ end }}">{{ .Name }}</a>
+            </li>
+          {{ end }}
+        </ul>
+      </div>
+      <div>
+        <h2>Contact</h2>
+        <ul>
+          <li><a href="mailto:{{ .Site.Params.contactEmail }}">contact@leaflock.app</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="footer-note">&copy; {{ now.Format "2006" }} LeafLock. All rights reserved.</p>
+  </div>
+</footer>

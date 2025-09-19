@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LeafLock Documentation</title>
+    <link rel="stylesheet" href="/css/main.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <a class="brand" href="/">LeafLock</a>
+        <nav>
+          <ul>
+            
+              <li><a href="/pages/">Documentation</a></li>
+            
+              <li><a href="https://github.com/RelativeSure/LeafLock">Repository</a></li>
+            
+          </ul>
+        </nav>
+      </div>
+    </header>
+    <main class="container">
+      
+  <article class="content">
+    <h1></h1>
+    
+    <div class="meta">
+      <span>Last updated: 2025-09-14</span>
+    </div>
+    <div class="markdown">
+      <h2 id="e2e-verify-workflow">E2E Verify Workflow</h2>
+<p>Workflow: <code>.github/workflows/e2e-verify.yml</code></p>
+<h3 id="what-it-does">What it does</h3>
+<ul>
+<li>Runs frontend lint, typecheck, tests.</li>
+<li>Builds and starts Postgres, Redis, backend, frontend via <code>docker compose</code>.</li>
+<li>Waits for readiness and tests API flow (register + list notes).</li>
+<li>Smoke tests frontend (index + asset).</li>
+<li>Runs backend tests with coverage gate.</li>
+<li>Verifies Swagger access with <code>ADMIN_USER_IDS</code> fallback, then via RBAC grant.</li>
+</ul>
+<h3 id="admin-panel-in-e2e">Admin panel in E2E</h3>
+<ul>
+<li>Sets <code>VITE_ENABLE_ADMIN_PANEL=true</code> so the UI contains the Admin section.</li>
+</ul>
+
+    </div>
+  </article>
+
+    </main>
+    <footer class="site-footer">
+  <div class="container">
+    <div class="footer-links">
+      <div>
+        <h2>LeafLock Docs</h2>
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/pages/">Documentation Index</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Legal</h2>
+        <ul>
+          
+            <li>
+              <a href="/pages/privacy/">Privacy</a>
+            </li>
+          
+            <li>
+              <a href="/pages/gdpr/">GDPR</a>
+            </li>
+          
+            <li>
+              <a href="/pages/license/">License</a>
+            </li>
+          
+            <li>
+              <a href="/pages/terms/">Terms</a>
+            </li>
+          
+            <li>
+              <a href="/pages/compliance/">Compliance</a>
+            </li>
+          
+        </ul>
+      </div>
+      <div>
+        <h2>Contact</h2>
+        <ul>
+          <li><a href="mailto:contact@leaflock.app">contact@leaflock.app</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="footer-note">&copy; 2025 LeafLock. All rights reserved.</p>
+  </div>
+</footer>
+
+  </body>
+</html>
