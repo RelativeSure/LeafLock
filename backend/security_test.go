@@ -13,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -23,6 +24,9 @@ type SecurityTestSuite struct {
 	suite.Suite
 	app    *fiber.App
 	config *Config
+	rdb    *redis.Client
+	crypto *CryptoService
+	cleanupRedis func()
 }
 
 func (suite *SecurityTestSuite) SetupTest() {
@@ -40,6 +44,10 @@ func (suite *SecurityTestSuite) SetupTest() {
 		SessionDuration:  24 * time.Hour,
 		AllowedOrigins:   []string{"https://localhost:3000"},
 	}
+
+	// Set up Redis and crypto for tests
+	suite.rdb, suite.cleanupRedis = setupTestRedis(suite.T())
+	suite.crypto = NewCryptoService(encKey)
 
 	// Create test app with security middleware
 	suite.app = fiber.New(fiber.Config{
@@ -71,10 +79,16 @@ func (suite *SecurityTestSuite) SetupTest() {
 		return c.JSON(fiber.Map{"email": req.Email})
 	})
 
-	suite.app.Get("/test-protected", JWTMiddleware(suite.config.JWTSecret), func(c *fiber.Ctx) error {
+	suite.app.Get("/test-protected", JWTMiddleware(suite.config.JWTSecret, suite.rdb, suite.crypto), func(c *fiber.Ctx) error {
 		userID := c.Locals("user_id").(uuid.UUID)
 		return c.JSON(fiber.Map{"user_id": userID.String()})
 	})
+}
+
+func (suite *SecurityTestSuite) TearDownTest() {
+	if suite.cleanupRedis != nil {
+		suite.cleanupRedis()
+	}
 }
 
 // SQL Injection Tests
@@ -729,7 +743,16 @@ func TestPenetrationTesting(t *testing.T) {
 
 		app := fiber.New()
 		jwtSecret := []byte("test-secret-key-for-penetration-testing-suite")
-		app.Get("/protected", JWTMiddleware(jwtSecret), func(c *fiber.Ctx) error {
+
+		// Set up test dependencies for this specific test
+		rdb, cleanupRedis := setupTestRedis(t)
+		defer cleanupRedis()
+
+		key := make([]byte, 32)
+		rand.Read(key)
+		crypto := NewCryptoService(key)
+
+		app.Get("/protected", JWTMiddleware(jwtSecret, rdb, crypto), func(c *fiber.Ctx) error {
 			return c.JSON(fiber.Map{"status": "authorized"})
 		})
 
