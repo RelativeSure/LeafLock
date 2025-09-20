@@ -1790,11 +1790,15 @@ const LoginView: React.FC<LoginViewProps & { announcements?: Announcement[] }> =
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                autoComplete="email"
+                autoComplete="username email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                inputMode="email"
                 placeholder="Enter your email"
               />
             </div>
@@ -1803,6 +1807,7 @@ const LoginView: React.FC<LoginViewProps & { announcements?: Announcement[] }> =
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
+                name="password"
                 type="password"
                 value={password}
                 onChange={handlePasswordChange}
@@ -1846,6 +1851,7 @@ const LoginView: React.FC<LoginViewProps & { announcements?: Announcement[] }> =
                 <Label htmlFor="mfa">2FA Code</Label>
                 <Input
                   id="mfa"
+                  name="code"
                   type="text"
                   value={mfaCode}
                   onChange={(e) => setMfaCode(e.target.value)}
@@ -1853,6 +1859,8 @@ const LoginView: React.FC<LoginViewProps & { announcements?: Announcement[] }> =
                   maxLength={6}
                   required={mfaRequired}
                   autoComplete="one-time-code"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                 />
                 <p className="text-xs text-muted-foreground">
                   Enter the 6-digit code from your authenticator app
@@ -3136,12 +3144,14 @@ function SecureNotesApp() {
               </label>
               <input
                 id="unlock-password"
+                name="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors"
                 placeholder="Enter your password"
                 required
+                autoComplete="current-password"
                 autoFocus
               />
             </div>
