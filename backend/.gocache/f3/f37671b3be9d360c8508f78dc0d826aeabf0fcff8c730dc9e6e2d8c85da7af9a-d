@@ -1,7 +1,0 @@
-covervars.go
-main.cover.go
-./main_test.go
-./notes_test.go
-./security_test.go
-./tags_test.go
-./trash_test.go

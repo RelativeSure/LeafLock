@@ -28,6 +28,7 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import AdminPage from './AdminPage'
 import Footer from '@/components/Footer'
+import AnnouncementBanner, { Announcement } from '@/components/AnnouncementBanner'
 
 // Types
 interface Note {
@@ -670,6 +671,55 @@ class SecureAPI {
       throw new Error('Invalid response when updating registration status')
     }
     return parsed.data
+  }
+
+  // Announcement API methods
+  async adminGetAnnouncements(): Promise<{ announcements: any[] }> {
+    const raw = await this.request('/admin/announcements')
+    if (!raw || typeof raw !== 'object') {
+      throw new Error('Invalid response when fetching announcements')
+    }
+    return raw as { announcements: any[] }
+  }
+
+  async adminCreateAnnouncement(data: any): Promise<{ id: string; message: string }> {
+    const raw = await this.request('/admin/announcements', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    if (!raw || typeof raw !== 'object') {
+      throw new Error('Invalid response when creating announcement')
+    }
+    return raw as { id: string; message: string }
+  }
+
+  async adminUpdateAnnouncement(id: string, data: any): Promise<{ message: string }> {
+    const raw = await this.request(`/admin/announcements/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+    if (!raw || typeof raw !== 'object') {
+      throw new Error('Invalid response when updating announcement')
+    }
+    return raw as { message: string }
+  }
+
+  async adminDeleteAnnouncement(id: string): Promise<{ message: string }> {
+    const raw = await this.request(`/admin/announcements/${id}`, {
+      method: 'DELETE',
+    })
+    if (!raw || typeof raw !== 'object') {
+      throw new Error('Invalid response when deleting announcement')
+    }
+    return raw as { message: string }
+  }
+
+  async getAnnouncements(): Promise<{ announcements: any[] }> {
+    const raw = await this.request('/announcements')
+    if (!raw || typeof raw !== 'object') {
+      throw new Error('Invalid response when fetching announcements')
+    }
+    return raw as { announcements: any[] }
   }
 
   async getNotes(): Promise<Note[]> {
@@ -1523,7 +1573,10 @@ interface LoginViewProps {
   onAuthenticated?: () => void
 }
 
-const LoginView: React.FC<LoginViewProps> = ({ onAuthenticated }) => {
+const LoginView: React.FC<LoginViewProps & { announcements?: Announcement[] }> = ({
+  onAuthenticated,
+  announcements = []
+}) => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [mfaCode, setMfaCode] = useState('')
@@ -1688,8 +1741,18 @@ const LoginView: React.FC<LoginViewProps> = ({ onAuthenticated }) => {
     }
   }
 
+  // Filter announcements for public visibility (login/register page)
+  const publicAnnouncements = announcements.filter(a => a.visibility === 'all')
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      {/* Announcements */}
+      {publicAnnouncements.length > 0 && (
+        <div className="w-full max-w-md mb-4">
+          <AnnouncementBanner announcements={publicAnnouncements} />
+        </div>
+      )}
+
       {/* Documentation Info Alert */}
       <Alert className="w-full max-w-md mb-4 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
         <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -1859,6 +1922,8 @@ function SecureNotesApp() {
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [onboardingStep, setOnboardingStep] = useState(0)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [announcementsLoading, setAnnouncementsLoading] = useState(false)
 
   console.log(
     '🔄 SecureNotesApp render - initializing:',
@@ -2767,8 +2832,20 @@ function SecureNotesApp() {
 
   // Main App Layout
   const AppLayout: React.FC = () => {
+    // Filter announcements for logged-in users
+    const loggedInAnnouncements = announcements.filter(a =>
+      a.visibility === 'all' || a.visibility === 'logged_in'
+    )
+
     return (
       <div className="h-screen flex flex-col bg-background">
+        {/* Announcements for logged-in users */}
+        {loggedInAnnouncements.length > 0 && (
+          <div className="border-b border-border bg-card/50 px-4 py-2">
+            <AnnouncementBanner announcements={loggedInAnnouncements} />
+          </div>
+        )}
+
         <div className="flex-1 flex flex-col md:flex-row">
           <div className="md:hidden flex items-center justify-between bg-card border-b border-border px-4 py-3">
             <h1 className="text-lg font-semibold text-foreground">LeafLock</h1>
@@ -2953,6 +3030,27 @@ function SecureNotesApp() {
     }
   }, [encryptionStatus, isAuthenticated, initializing, currentView])
 
+  // Load announcements
+  const loadAnnouncements = useCallback(async () => {
+    try {
+      setAnnouncementsLoading(true)
+      const response = await api.getAnnouncements()
+      setAnnouncements(response.announcements || [])
+    } catch (error) {
+      console.warn('Failed to load announcements:', error)
+      // Don't show error to user for announcements - it's not critical
+    } finally {
+      setAnnouncementsLoading(false)
+    }
+  }, [])
+
+  // Load announcements on app start and when authentication changes
+  useEffect(() => {
+    if (!initializing) {
+      loadAnnouncements()
+    }
+  }, [initializing, isAuthenticated, loadAnnouncements])
+
   if (initializing) {
     return <LoadingOverlay message="Starting LeafLock" />
   }
@@ -3085,6 +3183,7 @@ function SecureNotesApp() {
         <UnlockView />
       ) : (
         <LoginView
+          announcements={announcements}
           onAuthenticated={async () => {
             // User has a valid token and master key; transition to notes
             setIsAuthenticated(true)
