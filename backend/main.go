@@ -4996,9 +4996,6 @@ func seedDefaultTemplates(db Database, crypto *CryptoService) error {
 
 	log.Println("Seeding default templates...")
 
-	// Create a system user ID for templates
-	systemUserID := uuid.New()
-
 	for _, template := range defaultTemplates {
 		// Encrypt template data
 		nameEncrypted, err := crypto.Encrypt([]byte(template.Name))
@@ -5023,7 +5020,7 @@ func seedDefaultTemplates(db Database, crypto *CryptoService) error {
 		_, err = db.Exec(ctx, `
 			INSERT INTO templates (user_id, name_encrypted, description_encrypted, content_encrypted, tags, icon, is_public, usage_count)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		`, systemUserID, nameEncrypted, descriptionEncrypted, contentEncrypted, tags, template.Icon, true, 0)
+		`, nil, nameEncrypted, descriptionEncrypted, contentEncrypted, tags, template.Icon, true, 0)
 		if err != nil {
 			return fmt.Errorf("failed to insert template '%s': %w", template.Name, err)
 		}
