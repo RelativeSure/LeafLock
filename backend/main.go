@@ -1,3 +1,19 @@
+// LeafLock API
+//
+// LeafLock is a secure notes application with end-to-end encryption and real-time collaboration features.
+//
+// @title LeafLock API
+// @description A secure notes application with end-to-end encryption and collaboration features
+// @version 1.0
+// @host localhost:8080
+// @BasePath /api/v1
+// @schemes http https
+//
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
+//
 // main.go - Complete secure backend with automatic PostgreSQL setup
 package main
 
@@ -11,6 +27,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -19,10 +36,13 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/swagger"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
@@ -39,6 +59,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/chacha20poly1305"
+	_ "leaflock/docs/swagger" // Import generated docs
 )
 
 // AUTOMATIC DATABASE SETUP - Runs migrations on startup
@@ -950,6 +971,18 @@ type LoginRequest struct {
 	MFACode  string `json:"mfa_code,omitempty"`
 }
 
+// Register godoc
+// @Summary Register a new user
+// @Description Register a new user with email and password
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body RegisterRequest true "Registration data"
+// @Success 201 {object} map[string]interface{} "User registered successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 409 {object} map[string]interface{} "Email already exists"
+// @Failure 503 {object} map[string]interface{} "Registration disabled"
+// @Router /auth/register [post]
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	// Check if registration is enabled (runtime toggle)
 	if regEnabled.Load() != 1 {
@@ -1098,6 +1131,18 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	})
 }
 
+// Login godoc
+// @Summary User login
+// @Description Authenticate user with email and password
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "Login credentials"
+// @Success 200 {object} map[string]interface{} "Login successful"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 401 {object} map[string]interface{} "Invalid credentials"
+// @Failure 423 {object} map[string]interface{} "MFA required"
+// @Router /auth/login [post]
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	var req LoginRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -1427,6 +1472,27 @@ func (h *AuthHandler) logAudit(ctx context.Context, userID uuid.UUID, action, re
 	}
 }
 
+// Helper function for audit logging from collaboration handlers
+func auditLog(db Database, userID uuid.UUID, action string, metadata fiber.Map) {
+	ctx := context.Background()
+
+	// Convert metadata to JSON for storage
+	metadataJSON, err := json.Marshal(metadata)
+	if err != nil {
+		log.Printf("failed to marshal audit log metadata: %v", err)
+		metadataJSON = []byte("{}")
+	}
+
+	// Create a simple audit log entry without IP/UA since we don't have the request context
+	if _, err := db.Exec(ctx, `
+        INSERT INTO audit_log (user_id, action, resource_type, metadata_encrypted)
+        VALUES ($1, $2, $3, $4)`,
+		userID, action, "collaboration", metadataJSON,
+	); err != nil {
+		log.Printf("failed to write audit log entry: %v", err)
+	}
+}
+
 // Notes Handler
 type NotesHandler struct {
 	db     Database
@@ -1443,6 +1509,16 @@ type UpdateNoteRequest struct {
 	ContentEncrypted string `json:"content_encrypted" validate:"required"`
 }
 
+// GetNotes godoc
+// @Summary List all notes
+// @Description Get all notes for the authenticated user
+// @Tags Notes
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "List of notes"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes [get]
 func (h *NotesHandler) GetNotes(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 	ctx := context.Background()
@@ -2031,6 +2107,1070 @@ func isValidHexColor(color string) bool {
 	return true
 }
 
+// Collaboration Handler
+type CollaborationHandler struct {
+	db     Database
+	crypto *CryptoService
+}
+
+type ShareNoteRequest struct {
+	UserEmail  string `json:"user_email" validate:"required,email"`
+	Permission string `json:"permission" validate:"required,oneof=read write admin"`
+}
+
+type CollaborationResponse struct {
+	ID         string `json:"id"`
+	NoteID     string `json:"note_id"`
+	UserID     string `json:"user_id"`
+	UserEmail  string `json:"user_email"`
+	Permission string `json:"permission"`
+	CreatedAt  string `json:"created_at"`
+}
+
+// ShareNote godoc
+// @Summary Share a note with another user
+// @Description Share a note with another user by email and set permission level
+// @Tags Collaboration
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Note ID"
+// @Param request body ShareNoteRequest true "Share request data"
+// @Success 201 {object} map[string]interface{} "Note shared successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 404 {object} map[string]interface{} "Note or user not found"
+// @Failure 409 {object} map[string]interface{} "Note already shared with user"
+// @Router /notes/{id}/share [post]
+func (h *CollaborationHandler) ShareNote(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	ctx := context.Background()
+
+	var req ShareNoteRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	// Validate email format
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	if !emailRegex.MatchString(req.UserEmail) {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid email format"})
+	}
+
+	// Validate permission
+	validPermissions := map[string]bool{"read": true, "write": true, "admin": true}
+	if !validPermissions[req.Permission] {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid permission"})
+	}
+
+	// Prevent self-sharing
+	var userEmail string
+	err = h.db.QueryRow(ctx, `SELECT email FROM users WHERE id = $1`, userID).Scan(&userEmail)
+	if err == nil && userEmail == req.UserEmail {
+		return c.Status(400).JSON(fiber.Map{"error": "Cannot share note with yourself"})
+	}
+
+	// Verify user owns the note
+	var ownerCheck bool
+	err = h.db.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM notes n
+			JOIN workspaces w ON n.workspace_id = w.id
+			WHERE n.id = $1 AND w.owner_id = $2 AND n.deleted_at IS NULL
+		)`, noteID, userID).Scan(&ownerCheck)
+
+	if err != nil || !ownerCheck {
+		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+	}
+
+	// Find the user to share with
+	var targetUserID uuid.UUID
+	err = h.db.QueryRow(ctx, `SELECT id FROM users WHERE email = $1`, req.UserEmail).Scan(&targetUserID)
+	if err != nil {
+		logRequestError(c, "ShareNote: user not found", err, "target_email", req.UserEmail)
+		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+	}
+
+	// Check if already shared
+	var existingID uuid.UUID
+	err = h.db.QueryRow(ctx, `
+		SELECT id FROM collaborations
+		WHERE note_id = $1 AND user_id = $2`, noteID, targetUserID).Scan(&existingID)
+
+	if err == nil {
+		return c.Status(409).JSON(fiber.Map{"error": "Note already shared with this user"})
+	}
+
+	// Generate a note encryption key for the collaboration
+	noteKey := make([]byte, 32)
+	if _, err := rand.Read(noteKey); err != nil {
+		logRequestError(c, "ShareNote: failed to generate encryption key", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate encryption key"})
+	}
+
+	// In a real implementation, we would encrypt the note key with the target user's public key
+	// For now, we'll store it encrypted with server's key as a placeholder
+	encryptedKey, err := h.crypto.Encrypt(noteKey)
+	if err != nil {
+		logRequestError(c, "ShareNote: failed to encrypt key", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt key"})
+	}
+
+	// Create collaboration record
+	var collaborationID uuid.UUID
+	err = h.db.QueryRow(ctx, `
+		INSERT INTO collaborations (note_id, user_id, permission, key_encrypted)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id`, noteID, targetUserID, req.Permission, encryptedKey).Scan(&collaborationID)
+
+	if err != nil {
+		logRequestError(c, "ShareNote: failed to create collaboration record", err, "target_user_id", targetUserID)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to share note"})
+	}
+
+	// Log the action
+	auditLog(h.db, userID, "share_note", fiber.Map{
+		"note_id":      noteID,
+		"target_user":  targetUserID,
+		"permission":   req.Permission,
+	})
+
+	return c.Status(201).JSON(fiber.Map{
+		"message":         "Note shared successfully",
+		"collaboration_id": collaborationID,
+	})
+}
+
+// GetCollaborators godoc
+// @Summary Get note collaborators
+// @Description Get list of users who have access to a note
+// @Tags Collaboration
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Note ID"
+// @Success 200 {object} map[string]interface{} "List of collaborators"
+// @Failure 400 {object} map[string]interface{} "Invalid note ID"
+// @Failure 404 {object} map[string]interface{} "Note not found"
+// @Router /notes/{id}/collaborators [get]
+func (h *CollaborationHandler) GetCollaborators(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	ctx := context.Background()
+
+	// Verify user has access to the note (owner or collaborator)
+	var hasAccess bool
+	err = h.db.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM notes n
+			JOIN workspaces w ON n.workspace_id = w.id
+			WHERE n.id = $1 AND w.owner_id = $2 AND n.deleted_at IS NULL
+		) OR EXISTS(
+			SELECT 1 FROM collaborations c
+			WHERE c.note_id = $1 AND c.user_id = $2
+		)`, noteID, userID).Scan(&hasAccess)
+
+	if err != nil || !hasAccess {
+		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+	}
+
+	// Get collaborators
+	rows, err := h.db.Query(ctx, `
+		SELECT c.id, c.user_id, u.email, c.permission, c.created_at
+		FROM collaborations c
+		JOIN users u ON c.user_id = u.id
+		WHERE c.note_id = $1
+		ORDER BY c.created_at ASC`, noteID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch collaborators"})
+	}
+	defer rows.Close()
+
+	collaborators := []CollaborationResponse{}
+	for rows.Next() {
+		var collab CollaborationResponse
+		var collaborationID, collaboratorUserID uuid.UUID
+		var createdAt time.Time
+
+		if err := rows.Scan(&collaborationID, &collaboratorUserID, &collab.UserEmail, &collab.Permission, &createdAt); err != nil {
+			continue
+		}
+
+		collab.ID = collaborationID.String()
+		collab.NoteID = noteID.String()
+		collab.UserID = collaboratorUserID.String()
+		collab.CreatedAt = createdAt.Format(time.RFC3339)
+
+		collaborators = append(collaborators, collab)
+	}
+
+	return c.JSON(fiber.Map{"collaborators": collaborators})
+}
+
+func (h *CollaborationHandler) RemoveCollaborator(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	collaboratorUserID, err := uuid.Parse(c.Params("userId"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid user ID"})
+	}
+
+	ctx := context.Background()
+
+	// Verify user owns the note
+	var ownerCheck bool
+	err = h.db.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM notes n
+			JOIN workspaces w ON n.workspace_id = w.id
+			WHERE n.id = $1 AND w.owner_id = $2 AND n.deleted_at IS NULL
+		)`, noteID, userID).Scan(&ownerCheck)
+
+	if err != nil || !ownerCheck {
+		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+	}
+
+	// Remove collaboration
+	result, err := h.db.Exec(ctx, `
+		DELETE FROM collaborations
+		WHERE note_id = $1 AND user_id = $2`, noteID, collaboratorUserID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to remove collaborator"})
+	}
+
+	if result.RowsAffected() == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "Collaboration not found"})
+	}
+
+	// Log the action
+	auditLog(h.db, userID, "remove_collaborator", fiber.Map{
+		"note_id":     noteID,
+		"target_user": collaboratorUserID,
+	})
+
+	return c.JSON(fiber.Map{"message": "Collaborator removed successfully"})
+}
+
+func (h *CollaborationHandler) GetSharedNotes(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	ctx := context.Background()
+
+	// Get notes shared with the user
+	rows, err := h.db.Query(ctx, `
+		SELECT n.id, n.title_encrypted, n.content_encrypted, n.created_at, n.updated_at,
+			   c.permission, u.email as owner_email
+		FROM notes n
+		JOIN collaborations c ON n.id = c.note_id
+		JOIN workspaces w ON n.workspace_id = w.id
+		JOIN users u ON w.owner_id = u.id
+		WHERE c.user_id = $1 AND n.deleted_at IS NULL
+		ORDER BY n.updated_at DESC`, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch shared notes"})
+	}
+	defer rows.Close()
+
+	notes := []fiber.Map{}
+	for rows.Next() {
+		var id uuid.UUID
+		var titleEnc, contentEnc []byte
+		var createdAt, updatedAt time.Time
+		var permission, ownerEmail string
+
+		if err := rows.Scan(&id, &titleEnc, &contentEnc, &createdAt, &updatedAt, &permission, &ownerEmail); err != nil {
+			continue
+		}
+
+		notes = append(notes, fiber.Map{
+			"id":                id,
+			"title_encrypted":   base64.StdEncoding.EncodeToString(titleEnc),
+			"content_encrypted": base64.StdEncoding.EncodeToString(contentEnc),
+			"created_at":        createdAt,
+			"updated_at":        updatedAt,
+			"permission":        permission,
+			"owner_email":       ownerEmail,
+			"is_shared":         true,
+		})
+	}
+
+	return c.JSON(fiber.Map{"notes": notes})
+}
+
+// Import/Export Handler
+type ImportExportHandler struct {
+	db     Database
+	crypto *CryptoService
+}
+
+type ImportRequest struct {
+	Format   string `json:"format" validate:"required,oneof=markdown text html json"`
+	Content  string `json:"content" validate:"required"`
+	Title    string `json:"title,omitempty"`
+	Filename string `json:"filename,omitempty"`
+}
+
+type ExportRequest struct {
+	Format string `json:"format" validate:"required,oneof=markdown text html json"`
+}
+
+type BulkImportRequest struct {
+	Files []ImportRequest `json:"files" validate:"required,min=1,max=50"`
+}
+
+// ImportNote godoc
+// @Summary Import a note from various formats
+// @Description Import a note from markdown, text, HTML, or JSON format
+// @Tags Import/Export
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body ImportRequest true "Import data"
+// @Success 201 {object} map[string]interface{} "Note imported successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 500 {object} map[string]interface{} "Import failed"
+// @Router /notes/import [post]
+func (h *ImportExportHandler) ImportNote(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	ctx := context.Background()
+
+	var req ImportRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	// Validate content size (max 10MB)
+	if len(req.Content) > 10*1024*1024 {
+		return c.Status(400).JSON(fiber.Map{"error": "Content too large (max 10MB)"})
+	}
+
+	// Extract title from content if not provided
+	title := req.Title
+	if title == "" {
+		title = extractTitleFromContent(req.Content, req.Format)
+	}
+	if title == "" {
+		title = req.Filename
+	}
+	if title == "" {
+		title = "Imported Note"
+	}
+
+	// Convert content based on format
+	content, err := convertToMarkdown(req.Content, req.Format)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("Failed to convert %s: %s", req.Format, err.Error())})
+	}
+
+	// Get user's default workspace
+	var workspaceID uuid.UUID
+	err = h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&workspaceID)
+	if err != nil {
+		logRequestError(c, "ImportNote: failed to get user workspace", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to get workspace"})
+	}
+
+	// Encrypt title and content
+	titleEncrypted, err := h.crypto.Encrypt([]byte(title))
+	if err != nil {
+		logRequestError(c, "ImportNote: failed to encrypt title", err, "title_length", len(title))
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt title"})
+	}
+
+	contentEncrypted, err := h.crypto.Encrypt([]byte(content))
+	if err != nil {
+		logRequestError(c, "ImportNote: failed to encrypt content", err, "content_length", len(content))
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt content"})
+	}
+
+	// Insert note
+	noteID := uuid.New()
+	_, err = h.db.Exec(ctx, `
+		INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted)
+		VALUES ($1, $2, $3, $4)`,
+		noteID, workspaceID, titleEncrypted, contentEncrypted)
+
+	if err != nil {
+		logRequestError(c, "ImportNote: failed to create note in database", err, "note_id", noteID)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create note"})
+	}
+
+	return c.Status(201).JSON(fiber.Map{
+		"message": "Note imported successfully",
+		"note_id": noteID,
+		"title":   title,
+		"format":  req.Format,
+	})
+}
+
+// ExportNote godoc
+// @Summary Export a note in various formats
+// @Description Export a note as markdown, text, HTML, or JSON
+// @Tags Import/Export
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Note ID"
+// @Param request body ExportRequest true "Export format"
+// @Success 200 {object} map[string]interface{} "Note exported successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 404 {object} map[string]interface{} "Note not found"
+// @Router /notes/{id}/export [post]
+func (h *ImportExportHandler) ExportNote(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	ctx := context.Background()
+
+	var req ExportRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	// Get note with permission check
+	var titleEnc, contentEnc []byte
+	var createdAt, updatedAt time.Time
+	err = h.db.QueryRow(ctx, `
+		SELECT n.title_encrypted, n.content_encrypted, n.created_at, n.updated_at
+		FROM notes n
+		JOIN workspaces w ON n.workspace_id = w.id
+		WHERE n.id = $1 AND (w.owner_id = $2 OR EXISTS(
+			SELECT 1 FROM collaborations c
+			WHERE c.note_id = n.id AND c.user_id = $2
+		)) AND n.deleted_at IS NULL`,
+		noteID, userID).Scan(&titleEnc, &contentEnc, &createdAt, &updatedAt)
+
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+	}
+
+	// Decrypt content
+	titleBytes, err := h.crypto.Decrypt(titleEnc)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to decrypt title"})
+	}
+
+	contentBytes, err := h.crypto.Decrypt(contentEnc)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to decrypt content"})
+	}
+
+	title := string(titleBytes)
+	content := string(contentBytes)
+
+	// Convert content to requested format
+	exportedContent, contentType, err := convertFromMarkdown(content, req.Format, title, createdAt, updatedAt)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": fmt.Sprintf("Failed to convert to %s: %s", req.Format, err.Error())})
+	}
+
+	return c.JSON(fiber.Map{
+		"content":      exportedContent,
+		"content_type": contentType,
+		"title":        title,
+		"format":       req.Format,
+		"filename":     generateFilename(title, req.Format),
+	})
+}
+
+// BulkImport godoc
+// @Summary Import multiple notes at once
+// @Description Import multiple notes from various formats
+// @Tags Import/Export
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body BulkImportRequest true "Bulk import data"
+// @Success 201 {object} map[string]interface{} "Notes imported successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Router /notes/bulk-import [post]
+func (h *ImportExportHandler) BulkImport(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	ctx := context.Background()
+
+	var req BulkImportRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	if len(req.Files) > 50 {
+		return c.Status(400).JSON(fiber.Map{"error": "Too many files (max 50)"})
+	}
+
+	// Get user's default workspace
+	var workspaceID uuid.UUID
+	err := h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&workspaceID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to get workspace"})
+	}
+
+	var imported []map[string]interface{}
+	var failed []map[string]interface{}
+
+	for i, file := range req.Files {
+		// Validate file size
+		if len(file.Content) > 10*1024*1024 {
+			failed = append(failed, map[string]interface{}{
+				"index":  i,
+				"title":  file.Title,
+				"error":  "Content too large (max 10MB)",
+			})
+			continue
+		}
+
+		// Extract title
+		title := file.Title
+		if title == "" {
+			title = extractTitleFromContent(file.Content, file.Format)
+		}
+		if title == "" {
+			title = file.Filename
+		}
+		if title == "" {
+			title = fmt.Sprintf("Imported Note %d", i+1)
+		}
+
+		// Convert content
+		content, err := convertToMarkdown(file.Content, file.Format)
+		if err != nil {
+			failed = append(failed, map[string]interface{}{
+				"index":  i,
+				"title":  title,
+				"error":  fmt.Sprintf("Failed to convert %s: %s", file.Format, err.Error()),
+			})
+			continue
+		}
+
+		// Encrypt and save
+		titleEncrypted, err := h.crypto.Encrypt([]byte(title))
+		if err != nil {
+			failed = append(failed, map[string]interface{}{
+				"index":  i,
+				"title":  title,
+				"error":  "Failed to encrypt title",
+			})
+			continue
+		}
+
+		contentEncrypted, err := h.crypto.Encrypt([]byte(content))
+		if err != nil {
+			failed = append(failed, map[string]interface{}{
+				"index":  i,
+				"title":  title,
+				"error":  "Failed to encrypt content",
+			})
+			continue
+		}
+
+		noteID := uuid.New()
+		_, err = h.db.Exec(ctx, `
+			INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted)
+			VALUES ($1, $2, $3, $4)`,
+			noteID, workspaceID, titleEncrypted, contentEncrypted)
+
+		if err != nil {
+			failed = append(failed, map[string]interface{}{
+				"index":  i,
+				"title":  title,
+				"error":  "Failed to save note",
+			})
+			continue
+		}
+
+		imported = append(imported, map[string]interface{}{
+			"note_id": noteID,
+			"title":   title,
+			"format":  file.Format,
+		})
+	}
+
+	return c.Status(201).JSON(fiber.Map{
+		"imported_count": len(imported),
+		"failed_count":   len(failed),
+		"imported":       imported,
+		"failed":         failed,
+	})
+}
+
+// Helper functions for content conversion
+func extractTitleFromContent(content, format string) string {
+	switch format {
+	case "markdown":
+		lines := strings.Split(content, "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "# ") {
+				return strings.TrimSpace(line[2:])
+			}
+		}
+	case "html":
+		// Simple regex to extract title from HTML
+		re := regexp.MustCompile(`<title[^>]*>([^<]+)</title>`)
+		matches := re.FindStringSubmatch(content)
+		if len(matches) > 1 {
+			return strings.TrimSpace(matches[1])
+		}
+		// Try h1 tag
+		re = regexp.MustCompile(`<h1[^>]*>([^<]+)</h1>`)
+		matches = re.FindStringSubmatch(content)
+		if len(matches) > 1 {
+			return strings.TrimSpace(matches[1])
+		}
+	case "text":
+		lines := strings.Split(content, "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line != "" {
+				if len(line) > 50 {
+					return line[:50] + "..."
+				}
+				return line
+			}
+		}
+	case "json":
+		var data map[string]interface{}
+		if err := json.Unmarshal([]byte(content), &data); err == nil {
+			if title, ok := data["title"].(string); ok {
+				return title
+			}
+		}
+	}
+	return ""
+}
+
+func convertToMarkdown(content, format string) (string, error) {
+	switch format {
+	case "markdown":
+		return content, nil
+	case "text":
+		// Convert plain text to markdown by preserving line breaks
+		return strings.ReplaceAll(content, "\n", "\n\n"), nil
+	case "html":
+		// Basic HTML to Markdown conversion
+		// In production, you'd use a proper HTML to Markdown converter
+		content = regexp.MustCompile(`<h([1-6])[^>]*>([^<]+)</h[1-6]>`).ReplaceAllString(content, "${1} $2\n")
+		content = regexp.MustCompile(`<p[^>]*>([^<]*)</p>`).ReplaceAllString(content, "$1\n\n")
+		content = regexp.MustCompile(`<strong[^>]*>([^<]*)</strong>`).ReplaceAllString(content, "**$1**")
+		content = regexp.MustCompile(`<em[^>]*>([^<]*)</em>`).ReplaceAllString(content, "*$1*")
+		content = regexp.MustCompile(`<br[^>]*>`).ReplaceAllString(content, "\n")
+		content = regexp.MustCompile(`<[^>]+>`).ReplaceAllString(content, "")
+		return strings.TrimSpace(content), nil
+	case "json":
+		var data map[string]interface{}
+		if err := json.Unmarshal([]byte(content), &data); err != nil {
+			return "", err
+		}
+
+		if markdownContent, ok := data["content"].(string); ok {
+			return markdownContent, nil
+		}
+		if textContent, ok := data["text"].(string); ok {
+			return textContent, nil
+		}
+
+		// Convert JSON to markdown representation
+		formatted, _ := json.MarshalIndent(data, "", "  ")
+		return "```json\n" + string(formatted) + "\n```", nil
+	default:
+		return "", fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+func convertFromMarkdown(content, format, title string, createdAt, updatedAt time.Time) (string, string, error) {
+	switch format {
+	case "markdown":
+		return content, "text/markdown", nil
+	case "text":
+		// Strip markdown formatting for plain text
+		text := content
+		text = regexp.MustCompile(`\*\*([^*]+)\*\*`).ReplaceAllString(text, "$1")
+		text = regexp.MustCompile(`\*([^*]+)\*`).ReplaceAllString(text, "$1")
+		text = regexp.MustCompile(`#{1,6}\s*`).ReplaceAllString(text, "")
+		text = regexp.MustCompile(`\[([^\]]+)\]\([^)]+\)`).ReplaceAllString(text, "$1")
+		return text, "text/plain", nil
+	case "html":
+		// Basic markdown to HTML conversion
+		html := content
+		html = regexp.MustCompile(`^#{6}\s*(.+)$`).ReplaceAllString(html, "<h6>$1</h6>")
+		html = regexp.MustCompile(`^#{5}\s*(.+)$`).ReplaceAllString(html, "<h5>$1</h5>")
+		html = regexp.MustCompile(`^#{4}\s*(.+)$`).ReplaceAllString(html, "<h4>$1</h4>")
+		html = regexp.MustCompile(`^#{3}\s*(.+)$`).ReplaceAllString(html, "<h3>$1</h3>")
+		html = regexp.MustCompile(`^#{2}\s*(.+)$`).ReplaceAllString(html, "<h2>$1</h2>")
+		html = regexp.MustCompile(`^#{1}\s*(.+)$`).ReplaceAllString(html, "<h1>$1</h1>")
+		html = regexp.MustCompile(`\*\*([^*]+)\*\*`).ReplaceAllString(html, "<strong>$1</strong>")
+		html = regexp.MustCompile(`\*([^*]+)\*`).ReplaceAllString(html, "<em>$1</em>")
+		html = strings.ReplaceAll(html, "\n\n", "</p><p>")
+		html = "<p>" + html + "</p>"
+
+		fullHTML := fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head>
+    <title>%s</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    %s
+</body>
+</html>`, title, html)
+
+		return fullHTML, "text/html", nil
+	case "json":
+		data := map[string]interface{}{
+			"title":      title,
+			"content":    content,
+			"created_at": createdAt,
+			"updated_at": updatedAt,
+			"format":     "markdown",
+		}
+		jsonBytes, err := json.MarshalIndent(data, "", "  ")
+		if err != nil {
+			return "", "", err
+		}
+		return string(jsonBytes), "application/json", nil
+	default:
+		return "", "", fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+func generateFilename(title, format string) string {
+	// Sanitize title for filename
+	filename := regexp.MustCompile(`[^a-zA-Z0-9\-_\s]`).ReplaceAllString(title, "")
+	filename = regexp.MustCompile(`\s+`).ReplaceAllString(filename, "_")
+	filename = strings.Trim(filename, "_")
+
+	if len(filename) > 50 {
+		filename = filename[:50]
+	}
+
+	if filename == "" {
+		filename = "exported_note"
+	}
+
+	switch format {
+	case "markdown":
+		return filename + ".md"
+	case "text":
+		return filename + ".txt"
+	case "html":
+		return filename + ".html"
+	case "json":
+		return filename + ".json"
+	default:
+		return filename + ".txt"
+	}
+}
+
+// WebSocket connection management for real-time collaboration
+type Connection struct {
+	ID     string
+	UserID uuid.UUID
+	NoteID uuid.UUID
+	Conn   *websocket.Conn
+	Send   chan []byte
+}
+
+type Hub struct {
+	connections map[string]*Connection
+	noteUsers   map[uuid.UUID]map[uuid.UUID]*Connection // noteID -> userID -> connection
+	register    chan *Connection
+	unregister  chan *Connection
+	broadcast   chan []byte
+	mu          sync.RWMutex
+}
+
+type WSMessage struct {
+	Type    string      `json:"type"`
+	NoteID  string      `json:"note_id,omitempty"`
+	UserID  string      `json:"user_id,omitempty"`
+	Content interface{} `json:"content,omitempty"`
+}
+
+type PresenceMessage struct {
+	UserID    string `json:"user_id"`
+	UserEmail string `json:"user_email"`
+	Status    string `json:"status"` // "online", "offline"
+}
+
+type EditMessage struct {
+	Operation string `json:"operation"` // "insert", "delete", "replace"
+	Position  int    `json:"position"`
+	Content   string `json:"content"`
+	Timestamp int64  `json:"timestamp"`
+}
+
+type CursorMessage struct {
+	UserID   string `json:"user_id"`
+	Position int    `json:"position"`
+	Length   int    `json:"length"`
+}
+
+func NewHub() *Hub {
+	return &Hub{
+		connections: make(map[string]*Connection),
+		noteUsers:   make(map[uuid.UUID]map[uuid.UUID]*Connection),
+		register:    make(chan *Connection),
+		unregister:  make(chan *Connection),
+		broadcast:   make(chan []byte),
+	}
+}
+
+func (h *Hub) Run() {
+	for {
+		select {
+		case conn := <-h.register:
+			h.mu.Lock()
+			h.connections[conn.ID] = conn
+
+			if h.noteUsers[conn.NoteID] == nil {
+				h.noteUsers[conn.NoteID] = make(map[uuid.UUID]*Connection)
+			}
+			h.noteUsers[conn.NoteID][conn.UserID] = conn
+			h.mu.Unlock()
+
+			// Notify others about new user joining
+			h.broadcastToNote(conn.NoteID, WSMessage{
+				Type:   "presence",
+				NoteID: conn.NoteID.String(),
+				Content: PresenceMessage{
+					UserID: conn.UserID.String(),
+					Status: "online",
+				},
+			}, conn.UserID)
+
+		case conn := <-h.unregister:
+			h.mu.Lock()
+			if _, ok := h.connections[conn.ID]; ok {
+				delete(h.connections, conn.ID)
+				if noteConns, exists := h.noteUsers[conn.NoteID]; exists {
+					delete(noteConns, conn.UserID)
+					if len(noteConns) == 0 {
+						delete(h.noteUsers, conn.NoteID)
+					}
+				}
+				close(conn.Send)
+			}
+			h.mu.Unlock()
+
+			// Notify others about user leaving
+			h.broadcastToNote(conn.NoteID, WSMessage{
+				Type:   "presence",
+				NoteID: conn.NoteID.String(),
+				Content: PresenceMessage{
+					UserID: conn.UserID.String(),
+					Status: "offline",
+				},
+			}, conn.UserID)
+		}
+	}
+}
+
+func (h *Hub) broadcastToNote(noteID uuid.UUID, message WSMessage, excludeUserID uuid.UUID) {
+	h.mu.RLock()
+	noteConns := h.noteUsers[noteID]
+	h.mu.RUnlock()
+
+	if noteConns == nil {
+		return
+	}
+
+	data, err := json.Marshal(message)
+	if err != nil {
+		return
+	}
+
+	for userID, conn := range noteConns {
+		if userID != excludeUserID {
+			select {
+			case conn.Send <- data:
+			default:
+				close(conn.Send)
+				delete(noteConns, userID)
+			}
+		}
+	}
+}
+
+func (h *Hub) GetConnectedUsers(noteID uuid.UUID) []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	noteConns := h.noteUsers[noteID]
+	if noteConns == nil {
+		return []string{}
+	}
+
+	users := make([]string, 0, len(noteConns))
+	for userID := range noteConns {
+		users = append(users, userID.String())
+	}
+	return users
+}
+
+// WebSocket handler for note collaboration with dependencies
+func handleWebSocketWithDeps(c *websocket.Conn, hub *Hub, db Database) {
+	defer c.Close()
+
+	// Extract note ID, user ID, and token from query params
+	noteIDStr := c.Query("note_id")
+	userIDStr := c.Query("user_id")
+	tokenStr := c.Query("token")
+
+	// Validate JWT token
+	if tokenStr == "" {
+		log.Printf("WebSocket connection rejected: missing token")
+		return
+	}
+
+	// Parse and validate JWT token
+	config := LoadConfig()
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return config.JWTSecret, nil
+	})
+
+	if err != nil || !token.Valid {
+		log.Printf("WebSocket connection rejected: invalid token")
+		return
+	}
+
+	// Extract claims
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		log.Printf("WebSocket connection rejected: invalid token claims")
+		return
+	}
+
+	// Verify the user ID matches the token
+	tokenUserID, ok := claims["user_id"].(string)
+	if !ok || tokenUserID != userIDStr {
+		log.Printf("WebSocket connection rejected: user ID mismatch")
+		return
+	}
+
+	noteID, err := uuid.Parse(noteIDStr)
+	if err != nil {
+		log.Printf("Invalid note ID: %v", err)
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		log.Printf("Invalid user ID: %v", err)
+		return
+	}
+
+	// Verify user has access to the note
+	ctx := context.Background()
+	var hasAccess bool
+	err = db.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM notes n
+			JOIN workspaces w ON n.workspace_id = w.id
+			WHERE n.id = $1 AND w.owner_id = $2 AND n.deleted_at IS NULL
+		) OR EXISTS(
+			SELECT 1 FROM collaborations c
+			WHERE c.note_id = $1 AND c.user_id = $2
+		)`, noteID, userID).Scan(&hasAccess)
+
+	if err != nil || !hasAccess {
+		log.Printf("User %s does not have access to note %s", userID, noteID)
+		return
+	}
+
+	// Create connection
+	conn := &Connection{
+		ID:     uuid.New().String(),
+		UserID: userID,
+		NoteID: noteID,
+		Conn:   c,
+		Send:   make(chan []byte, 256),
+	}
+
+	hub.register <- conn
+
+	// Handle outgoing messages
+	go func() {
+		defer func() {
+			hub.unregister <- conn
+		}()
+
+		for {
+			select {
+			case message, ok := <-conn.Send:
+				if !ok {
+					c.WriteMessage(websocket.CloseMessage, []byte{})
+					return
+				}
+
+				if err := c.WriteMessage(websocket.TextMessage, message); err != nil {
+					log.Printf("WebSocket write error: %v", err)
+					return
+				}
+			}
+		}
+	}()
+
+	// Handle incoming messages
+	for {
+		var msg WSMessage
+		err := c.ReadJSON(&msg)
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Printf("WebSocket error: %v", err)
+			}
+			break
+		}
+
+		// Broadcast the message to other users in the same note
+		switch msg.Type {
+		case "edit":
+			// Handle real-time editing
+			hub.broadcastToNote(noteID, WSMessage{
+				Type:    "edit",
+				NoteID:  noteID.String(),
+				UserID:  userID.String(),
+				Content: msg.Content,
+			}, userID)
+
+		case "cursor":
+			// Handle cursor position updates
+			hub.broadcastToNote(noteID, WSMessage{
+				Type:    "cursor",
+				NoteID:  noteID.String(),
+				UserID:  userID.String(),
+				Content: msg.Content,
+			}, userID)
+
+		case "presence":
+			// Handle presence updates (typing indicators, etc.)
+			hub.broadcastToNote(noteID, WSMessage{
+				Type:    "presence",
+				NoteID:  noteID.String(),
+				UserID:  userID.String(),
+				Content: msg.Content,
+			}, userID)
+		}
+	}
+}
+
 // JWT Middleware
 func JWTMiddleware(secret []byte) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -2126,7 +3266,65 @@ func runCleanupTasks(ctx context.Context, db Database) {
 	_ = result2
 }
 
+// Structured logging setup
+var (
+	InfoLogger  *log.Logger
+	ErrorLogger *log.Logger
+)
+
+func initLogging() {
+	// Info logs go to stdout
+	InfoLogger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
+
+	// Error logs go to stderr
+	ErrorLogger = log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
+
+	// Configure default log package to use stderr for errors
+	log.SetOutput(os.Stderr)
+	log.SetPrefix("SYSTEM: ")
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+}
+
+// logError logs errors with context to stderr
+func logError(context string, err error, metadata ...interface{}) {
+	if err != nil {
+		args := []interface{}{context, err}
+		args = append(args, metadata...)
+		ErrorLogger.Println(args...)
+	}
+}
+
+// logInfo logs informational messages to stdout
+func logInfo(message string, metadata ...interface{}) {
+	args := []interface{}{message}
+	args = append(args, metadata...)
+	InfoLogger.Println(args...)
+}
+
+// logRequestError logs errors with request context to stderr
+func logRequestError(c *fiber.Ctx, context string, err error, metadata ...interface{}) {
+	if err != nil {
+		requestID, _ := c.Locals("request_id").(string)
+		userID, _ := c.Locals("user_id").(uuid.UUID)
+
+		args := []interface{}{
+			"request_id", requestID,
+			"user_id", userID.String(),
+			"method", c.Method(),
+			"path", c.Path(),
+			"ip", c.IP(),
+			"context", context,
+			"error", err,
+		}
+		args = append(args, metadata...)
+		ErrorLogger.Println(args...)
+	}
+}
+
 func main() {
+	// Initialize logging
+	initLogging()
+
 	// Load configuration
 	config := LoadConfig()
 	trustProxyHeaders.Store(config.TrustProxyHeaders)
@@ -2177,9 +3375,32 @@ func main() {
 		},
 	})
 
-	// Security middleware
-	app.Use(recover.New())
-	app.Use(logger.New())
+	// Enhanced panic recovery middleware with error logging
+	app.Use(recover.New(recover.Config{
+		EnableStackTrace: true,
+		StackTraceHandler: func(c *fiber.Ctx, e interface{}) {
+			logError("PANIC RECOVERED", fmt.Errorf("%v", e),
+				"method", c.Method(),
+				"path", c.Path(),
+				"ip", c.IP(),
+				"user_agent", c.Get("User-Agent"),
+			)
+		},
+	}))
+
+	// Request ID middleware for error correlation
+	app.Use(func(c *fiber.Ctx) error {
+		requestID := uuid.New().String()
+		c.Locals("request_id", requestID)
+		c.Set("X-Request-ID", requestID)
+		return c.Next()
+	})
+
+	// Enhanced request logging
+	app.Use(logger.New(logger.Config{
+		Output: InfoLogger.Writer(),
+		Format: "[${time}] ${locals:request_id} ${status} - ${method} ${path} - ${ip} - ${latency}\n",
+	}))
 	app.Use(helmet.New(helmet.Config{
 		XSSProtection:         "1; mode=block",
 		ContentTypeNosniff:    "nosniff",
@@ -2282,6 +3503,16 @@ func main() {
 		crypto: crypto,
 	}
 
+	// Collaboration handlers
+	collaborationHandler := &CollaborationHandler{
+		db:     db,
+		crypto: crypto,
+	}
+
+	// Initialize WebSocket hub for real-time collaboration
+	hub := NewHub()
+	go hub.Run()
+
 	// Public announcement endpoint
 	api.Get("/announcements", func(c *fiber.Ctx) error {
 		ctx := c.Context()
@@ -2380,11 +3611,49 @@ func main() {
 	protected.Post("/notes/:id/tags", tagsHandler.AssignTagToNote)
 	protected.Delete("/notes/:id/tags/:tag_id", tagsHandler.RemoveTagFromNote)
 
+	// Collaboration endpoints with rate limiting
+	collaborationLimiter := limiter.New(limiter.Config{
+		Max:        10, // 10 requests per minute for collaboration actions
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return fmt.Sprintf("collab:%s", clientIP(c))
+		},
+	})
+
+	protected.Post("/notes/:id/share", collaborationLimiter, collaborationHandler.ShareNote)
+	protected.Get("/notes/:id/collaborators", collaborationHandler.GetCollaborators)
+	protected.Delete("/notes/:id/collaborators/:userId", collaborationLimiter, collaborationHandler.RemoveCollaborator)
+	protected.Get("/notes/shared", collaborationHandler.GetSharedNotes)
+
+	// Import/Export endpoints
+	importExportHandler := &ImportExportHandler{
+		db:     db,
+		crypto: crypto,
+	}
+	protected.Post("/notes/import", importExportHandler.ImportNote)
+	protected.Post("/notes/:id/export", importExportHandler.ExportNote)
+	protected.Post("/notes/bulk-import", importExportHandler.BulkImport)
+
+	// WebSocket endpoint for real-time collaboration
+	app.Use("/ws", func(c *fiber.Ctx) error {
+		// IsWebSocketUpgrade returns true if the client
+		// requested upgrade to the WebSocket protocol.
+		if websocket.IsWebSocketUpgrade(c) {
+			c.Locals("allowed", true)
+			return c.Next()
+		}
+		return fiber.ErrUpgradeRequired
+	})
+
+	app.Get("/ws/notes", websocket.New(func(c *websocket.Conn) {
+		// Create a closure that captures hub and db
+		handleWebSocketWithDeps(c, hub, db)
+	}))
+
 	// Admin-only Swagger docs (JWT + RBAC admin)
-	// TODO: Implement swagger handlers
-	// docs := api.Group("/docs", JWTMiddleware(config.JWTSecret), RequireRole(db, "admin"))
-	// docs.Get("/", swaggerUIHandler)
-	// docs.Get("/openapi.json", swaggerJSONHandler)
+	docs := api.Group("/docs", JWTMiddleware(config.JWTSecret), AdminOnlyFromEnv())
+	docs.Get("/", swagger.HandlerDefault)
+	docs.Get("/openapi.json", swaggerJSONHandler)
 
 	// Seed app_settings.registration_enabled from env; env overrides DB
 	func() {
