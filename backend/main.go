@@ -96,6 +96,10 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_hash BYTEA UNIQUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_search_hash BYTEA UNIQUE;
 
+-- Add storage tracking columns for file import limits
+ALTER TABLE users ADD COLUMN IF NOT EXISTS storage_used BIGINT DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS storage_limit BIGINT DEFAULT 5242880; -- 5MB default limit
+
 
 -- GDPR compliance: Add table to store GDPR deletion keys for email recovery
 CREATE TABLE IF NOT EXISTS gdpr_keys (
@@ -2431,6 +2435,114 @@ type BulkImportRequest struct {
 	Files []ImportRequest `json:"files" validate:"required,min=1,max=50"`
 }
 
+// Helper functions for storage management
+func (h *ImportExportHandler) checkStorageLimit(userID uuid.UUID, additionalBytes int64) error {
+	ctx := context.Background()
+
+	var storageUsed, storageLimit int64
+	err := h.db.QueryRow(ctx, `
+		SELECT storage_used, storage_limit
+		FROM users
+		WHERE id = $1
+	`, userID).Scan(&storageUsed, &storageLimit)
+
+	if err != nil {
+		return fmt.Errorf("failed to check storage: %w", err)
+	}
+
+	if storageUsed+additionalBytes > storageLimit {
+		return fmt.Errorf("storage limit exceeded: %d bytes used + %d bytes new > %d bytes limit",
+			storageUsed, additionalBytes, storageLimit)
+	}
+
+	return nil
+}
+
+func (h *ImportExportHandler) updateStorageUsage(userID uuid.UUID, additionalBytes int64) error {
+	ctx := context.Background()
+
+	_, err := h.db.Exec(ctx, `
+		UPDATE users
+		SET storage_used = storage_used + $1
+		WHERE id = $2
+	`, additionalBytes, userID)
+
+	return err
+}
+
+func validateFileContent(content, format string) error {
+	// Validate file size (max 100KB per file for text content)
+	if len(content) > 100*1024 {
+		return fmt.Errorf("file too large (max 100KB per file)")
+	}
+
+	// Basic content security validation
+	lowerContent := strings.ToLower(content)
+
+	// Check for potentially malicious content
+	dangerousPatterns := []string{
+		"<script", "javascript:", "data:text/html", "data:image/svg+xml",
+		"vbscript:", "onload=", "onerror=", "onclick=", "onmouseover=",
+		"<iframe", "<object", "<embed", "<applet",
+	}
+
+	for _, pattern := range dangerousPatterns {
+		if strings.Contains(lowerContent, pattern) {
+			return fmt.Errorf("potentially malicious content detected: %s", pattern)
+		}
+	}
+
+	// Format-specific validation
+	switch format {
+	case "html":
+		// Additional HTML validation
+		if strings.Contains(lowerContent, "<meta http-equiv") {
+			return fmt.Errorf("meta refresh tags not allowed")
+		}
+	case "json":
+		// Validate JSON structure
+		var js interface{}
+		if err := json.Unmarshal([]byte(content), &js); err != nil {
+			return fmt.Errorf("invalid JSON format: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// GetStorageInfo godoc
+// @Summary Get user storage information
+// @Description Get current storage usage and limit for the user
+// @Tags Import/Export
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "Storage information"
+// @Failure 500 {object} map[string]interface{} "Failed to get storage info"
+// @Router /user/storage [get]
+func (h *ImportExportHandler) GetStorageInfo(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	ctx := context.Background()
+
+	var storageUsed, storageLimit int64
+	err := h.db.QueryRow(ctx, `
+		SELECT storage_used, storage_limit
+		FROM users
+		WHERE id = $1
+	`, userID).Scan(&storageUsed, &storageLimit)
+
+	if err != nil {
+		logRequestError(c, "GetStorageInfo: failed to get storage info", err, "user_id", userID)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to get storage information"})
+	}
+
+	return c.JSON(fiber.Map{
+		"storage_used":       storageUsed,
+		"storage_limit":      storageLimit,
+		"storage_remaining":  storageLimit - storageUsed,
+		"usage_percentage":   float64(storageUsed) / float64(storageLimit) * 100,
+	})
+}
+
 // ImportNote godoc
 // @Summary Import a note from various formats
 // @Description Import a note from markdown, text, HTML, or JSON format
@@ -2452,9 +2564,15 @@ func (h *ImportExportHandler) ImportNote(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
-	// Validate content size (max 10MB)
-	if len(req.Content) > 10*1024*1024 {
-		return c.Status(400).JSON(fiber.Map{"error": "Content too large (max 10MB)"})
+	// Validate file content and security
+	if err := validateFileContent(req.Content, req.Format); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("Invalid file content: %s", err.Error())})
+	}
+
+	// Check storage limit before processing
+	contentSize := int64(len(req.Content))
+	if err := h.checkStorageLimit(userID, contentSize); err != nil {
+		return c.Status(413).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	// Extract title from content if not provided
@@ -2506,6 +2624,12 @@ func (h *ImportExportHandler) ImportNote(c *fiber.Ctx) error {
 	if err != nil {
 		logRequestError(c, "ImportNote: failed to create note in database", err, "note_id", noteID)
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create note"})
+	}
+
+	// Update storage usage
+	if err := h.updateStorageUsage(userID, contentSize); err != nil {
+		logRequestError(c, "ImportNote: failed to update storage usage", err, "user_id", userID, "content_size", contentSize)
+		// Note: We don't fail the import here as the note was already created
 	}
 
 	return c.Status(201).JSON(fiber.Map{
@@ -2613,6 +2737,16 @@ func (h *ImportExportHandler) BulkImport(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Too many files (max 50)"})
 	}
 
+	// Calculate total size and check overall storage limit
+	var totalSize int64
+	for _, file := range req.Files {
+		totalSize += int64(len(file.Content))
+	}
+
+	if err := h.checkStorageLimit(userID, totalSize); err != nil {
+		return c.Status(413).JSON(fiber.Map{"error": err.Error()})
+	}
+
 	// Get user's default workspace
 	var workspaceID uuid.UUID
 	err := h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&workspaceID)
@@ -2622,14 +2756,15 @@ func (h *ImportExportHandler) BulkImport(c *fiber.Ctx) error {
 
 	var imported []map[string]interface{}
 	var failed []map[string]interface{}
+	var totalImportedSize int64
 
 	for i, file := range req.Files {
-		// Validate file size
-		if len(file.Content) > 10*1024*1024 {
+		// Validate file content and security
+		if err := validateFileContent(file.Content, file.Format); err != nil {
 			failed = append(failed, map[string]interface{}{
 				"index":  i,
 				"title":  file.Title,
-				"error":  "Content too large (max 10MB)",
+				"error":  fmt.Sprintf("Invalid file content: %s", err.Error()),
 			})
 			continue
 		}
@@ -2693,11 +2828,22 @@ func (h *ImportExportHandler) BulkImport(c *fiber.Ctx) error {
 			continue
 		}
 
+		// Track successful import size
+		totalImportedSize += int64(len(file.Content))
+
 		imported = append(imported, map[string]interface{}{
 			"note_id": noteID,
 			"title":   title,
 			"format":  file.Format,
 		})
+	}
+
+	// Update storage usage for all successfully imported files
+	if totalImportedSize > 0 {
+		if err := h.updateStorageUsage(userID, totalImportedSize); err != nil {
+			logRequestError(c, "BulkImport: failed to update storage usage", err, "user_id", userID, "imported_size", totalImportedSize)
+			// Note: We don't fail the import here as the notes were already created
+		}
 	}
 
 	return c.Status(201).JSON(fiber.Map{
@@ -3633,6 +3779,7 @@ func main() {
 	protected.Post("/notes/import", importExportHandler.ImportNote)
 	protected.Post("/notes/:id/export", importExportHandler.ExportNote)
 	protected.Post("/notes/bulk-import", importExportHandler.BulkImport)
+	protected.Get("/user/storage", importExportHandler.GetStorageInfo)
 
 	// WebSocket endpoint for real-time collaboration
 	app.Use("/ws", func(c *fiber.Ctx) error {
