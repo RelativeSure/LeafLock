@@ -154,6 +154,7 @@ else
 endif
 
 rebuild-up: ## Rebuild all without cache and start the stack
+ifeq ($(COMPOSE_CMD),podman_kube_play)
 	@if [ ! -f leaflock-kube.yaml ]; then $(MAKE) kube; fi
 	$(MAKE) rebuild-all
 	podman play kube --replace leaflock-kube.yaml
