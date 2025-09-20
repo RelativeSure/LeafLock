@@ -22,6 +22,7 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import type { AdminUser } from '@/lib/schemas'
+import AnnouncementManager from '@/components/AnnouncementManager'
 
 const roles = ['admin', 'moderator', 'auditor']
 
@@ -401,6 +402,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
         </CommandList>
       </CommandDialog>
     </Card>
+  )
+}
+
+export const AdminPanelWithAnnouncements: React.FC<AdminPanelProps> = ({ api }) => {
+  return (
+    <div className="space-y-6">
+      <AdminPanel api={api} />
+      <AnnouncementManager api={api} />
+    </div>
   )
 }
 

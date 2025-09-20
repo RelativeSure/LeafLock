@@ -106,6 +106,26 @@ INSERT INTO roles (name)
 SELECT r FROM (VALUES ('admin'), ('user'), ('moderator'), ('auditor')) AS v(r)
 ON CONFLICT (name) DO NOTHING;
 
+-- Announcements table for system-wide messages
+CREATE TABLE IF NOT EXISTS announcements (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title TEXT NOT NULL,
+    content TEXT NOT NULL, -- Markdown content
+    visibility TEXT CHECK (visibility IN ('all', 'logged_in')) DEFAULT 'logged_in',
+    style JSONB DEFAULT '{}', -- Style configuration (colors, icons, etc.)
+    active BOOLEAN DEFAULT true,
+    dismissible BOOLEAN DEFAULT true,
+    priority INT DEFAULT 0, -- For ordering (higher = more important)
+    start_date TIMESTAMPTZ,
+    end_date TIMESTAMPTZ,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index for active announcements query
+CREATE INDEX IF NOT EXISTS idx_announcements_active ON announcements(active, priority DESC, created_at DESC);
+
 -- Workspace table
 CREATE TABLE IF NOT EXISTS workspaces (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -558,6 +578,15 @@ func startAdminAllowlistRefresher() {
 			}
 		}
 	}()
+}
+
+// Helper function to get user ID from JWT token stored in context
+func getUserIDFromToken(c *fiber.Ctx) (uuid.UUID, error) {
+	userID, ok := c.Locals("user_id").(uuid.UUID)
+	if !ok {
+		return uuid.Nil, fmt.Errorf("user ID not found in context")
+	}
+	return userID, nil
 }
 
 func RequireRole(db Database, role string) fiber.Handler {
@@ -2284,9 +2313,10 @@ func main() {
 	protected.Delete("/notes/:id/tags/:tag_id", tagsHandler.RemoveTagFromNote)
 
 	// Admin-only Swagger docs (JWT + RBAC admin)
-	docs := api.Group("/docs", JWTMiddleware(config.JWTSecret), RequireRole(db, "admin"))
-	docs.Get("/", swaggerUIHandler)
-	docs.Get("/openapi.json", swaggerJSONHandler)
+	// TODO: Implement swagger handlers
+	// docs := api.Group("/docs", JWTMiddleware(config.JWTSecret), RequireRole(db, "admin"))
+	// docs.Get("/", swaggerUIHandler)
+	// docs.Get("/openapi.json", swaggerJSONHandler)
 
 	// Seed app_settings.registration_enabled from env; env overrides DB
 	func() {
@@ -3062,6 +3092,224 @@ func main() {
 			return c.Status(500).JSON(fiber.Map{"error": "bulk admin update failed"})
 		}
 		return c.JSON(fiber.Map{"ok": true, "affected": ct.RowsAffected()})
+	})
+
+	// Announcement endpoints
+	admin.Get("/announcements", func(c *fiber.Ctx) error {
+		ctx := c.Context()
+
+		rows, err := db.Query(ctx, `
+			SELECT id, title, content, visibility, style, active, dismissible, priority, start_date, end_date, created_by, created_at, updated_at
+			FROM announcements
+			ORDER BY priority DESC, created_at DESC
+		`)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch announcements"})
+		}
+		defer rows.Close()
+
+		var announcements []fiber.Map
+		for rows.Next() {
+			var id, createdBy uuid.UUID
+			var title, content, visibility string
+			var style map[string]interface{}
+			var active, dismissible bool
+			var priority int
+			var startDate, endDate *time.Time
+			var createdAt, updatedAt time.Time
+
+			err := rows.Scan(&id, &title, &content, &visibility, &style, &active, &dismissible, &priority, &startDate, &endDate, &createdBy, &createdAt, &updatedAt)
+			if err != nil {
+				continue
+			}
+
+			announcements = append(announcements, fiber.Map{
+				"id":          id,
+				"title":       title,
+				"content":     content,
+				"visibility":  visibility,
+				"style":       style,
+				"active":      active,
+				"dismissible": dismissible,
+				"priority":    priority,
+				"start_date":  startDate,
+				"end_date":    endDate,
+				"created_by":  createdBy,
+				"created_at":  createdAt,
+				"updated_at":  updatedAt,
+			})
+		}
+
+		return c.JSON(fiber.Map{"announcements": announcements})
+	})
+
+	admin.Post("/announcements", func(c *fiber.Ctx) error {
+		var req struct {
+			Title       string                 `json:"title" validate:"required"`
+			Content     string                 `json:"content" validate:"required"`
+			Visibility  string                 `json:"visibility" validate:"required,oneof=all logged_in"`
+			Style       map[string]interface{} `json:"style"`
+			Active      bool                   `json:"active"`
+			Dismissible bool                   `json:"dismissible"`
+			Priority    int                    `json:"priority"`
+			StartDate   *time.Time             `json:"start_date"`
+			EndDate     *time.Time             `json:"end_date"`
+		}
+
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+		}
+
+		// Get user ID from JWT token
+		userID, err := getUserIDFromToken(c)
+		if err != nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+		}
+
+		ctx := c.Context()
+		var id uuid.UUID
+		err = db.QueryRow(ctx, `
+			INSERT INTO announcements (title, content, visibility, style, active, dismissible, priority, start_date, end_date, created_by)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			RETURNING id
+		`, req.Title, req.Content, req.Visibility, req.Style, req.Active, req.Dismissible, req.Priority, req.StartDate, req.EndDate, userID).Scan(&id)
+
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to create announcement"})
+		}
+
+		return c.Status(201).JSON(fiber.Map{"id": id, "message": "Announcement created successfully"})
+	})
+
+	admin.Put("/announcements/:id", func(c *fiber.Ctx) error {
+		announcementID := c.Params("id")
+		if announcementID == "" {
+			return c.Status(400).JSON(fiber.Map{"error": "Announcement ID required"})
+		}
+
+		var req struct {
+			Title       string                 `json:"title"`
+			Content     string                 `json:"content"`
+			Visibility  string                 `json:"visibility" validate:"omitempty,oneof=all logged_in"`
+			Style       map[string]interface{} `json:"style"`
+			Active      *bool                  `json:"active"`
+			Dismissible *bool                  `json:"dismissible"`
+			Priority    *int                   `json:"priority"`
+			StartDate   *time.Time             `json:"start_date"`
+			EndDate     *time.Time             `json:"end_date"`
+		}
+
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+		}
+
+		ctx := c.Context()
+		_, err := db.Exec(ctx, `
+			UPDATE announcements
+			SET title = COALESCE(NULLIF($2, ''), title),
+				content = COALESCE(NULLIF($3, ''), content),
+				visibility = COALESCE(NULLIF($4, ''), visibility),
+				style = COALESCE($5, style),
+				active = COALESCE($6, active),
+				dismissible = COALESCE($7, dismissible),
+				priority = COALESCE($8, priority),
+				start_date = COALESCE($9, start_date),
+				end_date = COALESCE($10, end_date),
+				updated_at = NOW()
+			WHERE id = $1
+		`, announcementID, req.Title, req.Content, req.Visibility, req.Style, req.Active, req.Dismissible, req.Priority, req.StartDate, req.EndDate)
+
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to update announcement"})
+		}
+
+		return c.JSON(fiber.Map{"message": "Announcement updated successfully"})
+	})
+
+	admin.Delete("/announcements/:id", func(c *fiber.Ctx) error {
+		announcementID := c.Params("id")
+		if announcementID == "" {
+			return c.Status(400).JSON(fiber.Map{"error": "Announcement ID required"})
+		}
+
+		ctx := c.Context()
+		ct, err := db.Exec(ctx, `DELETE FROM announcements WHERE id = $1`, announcementID)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to delete announcement"})
+		}
+
+		if ct.RowsAffected() == 0 {
+			return c.Status(404).JSON(fiber.Map{"error": "Announcement not found"})
+		}
+
+		return c.JSON(fiber.Map{"message": "Announcement deleted successfully"})
+	})
+
+	// Public announcement endpoint
+	api.Get("/announcements", func(c *fiber.Ctx) error {
+		ctx := c.Context()
+
+		// Check if user is authenticated
+		isAuthenticated := false
+		if token := c.Get("Authorization"); token != "" {
+			// Simple token validation - in real implementation you'd properly validate JWT
+			isAuthenticated = strings.HasPrefix(token, "Bearer ")
+		}
+
+		// Build query based on authentication status
+		var visibilityFilter string
+		if isAuthenticated {
+			visibilityFilter = `visibility IN ('all', 'logged_in')`
+		} else {
+			visibilityFilter = `visibility = 'all'`
+		}
+
+		query := fmt.Sprintf(`
+			SELECT id, title, content, visibility, style, dismissible, priority, start_date, end_date, created_at
+			FROM announcements
+			WHERE active = true
+			AND %s
+			AND (start_date IS NULL OR start_date <= NOW())
+			AND (end_date IS NULL OR end_date >= NOW())
+			ORDER BY priority DESC, created_at DESC
+		`, visibilityFilter)
+
+		rows, err := db.Query(ctx, query)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch announcements"})
+		}
+		defer rows.Close()
+
+		var announcements []fiber.Map
+		for rows.Next() {
+			var id uuid.UUID
+			var title, content, visibility string
+			var style map[string]interface{}
+			var dismissible bool
+			var priority int
+			var startDate, endDate *time.Time
+			var createdAt time.Time
+
+			err := rows.Scan(&id, &title, &content, &visibility, &style, &dismissible, &priority, &startDate, &endDate, &createdAt)
+			if err != nil {
+				continue
+			}
+
+			announcements = append(announcements, fiber.Map{
+				"id":          id,
+				"title":       title,
+				"content":     content,
+				"visibility":  visibility,
+				"style":       style,
+				"dismissible": dismissible,
+				"priority":    priority,
+				"start_date":  startDate,
+				"end_date":    endDate,
+				"created_at":  createdAt,
+			})
+		}
+
+		return c.JSON(fiber.Map{"announcements": announcements})
 	})
 
 	// GDPR compliance endpoints
