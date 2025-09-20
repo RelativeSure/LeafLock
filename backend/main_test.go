@@ -382,7 +382,17 @@ func TestConfig(t *testing.T) {
 // JWT Middleware Tests
 func TestJWTMiddleware(t *testing.T) {
 	secret := []byte("test-secret-key-for-jwt-tokens-with-sufficient-length")
-	middleware := JWTMiddleware(secret)
+
+	// Set up test dependencies
+	rdb, cleanupRedis := setupTestRedis(t)
+	defer cleanupRedis()
+
+	// Generate test encryption key
+	key := make([]byte, 32)
+	rand.Read(key)
+	crypto := NewCryptoService(key)
+
+	middleware := JWTMiddleware(secret, rdb, crypto)
 
 	t.Run("ValidToken", func(t *testing.T) {
 		app := fiber.New()

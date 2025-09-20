@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense, lazy } from 'react'
 import sodium from 'libsodium-wrappers'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import { Lock, Shield, MessageSquare, Settings, Book, Info } from 'lucide-react'
+import { Lock, Shield, MessageSquare, Settings, Book, Info, Hash, Folder, FileText, Plus } from 'lucide-react'
 import {
   adminListUsersResponseSchema,
   adminActionResponseSchema,
@@ -24,12 +22,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import AdminPage from './AdminPage'
 import Footer from '@/components/Footer'
 import AnnouncementBanner, { Announcement } from '@/components/AnnouncementBanner'
-import { ImportExportDialog } from '@/components/ImportExportDialog'
+
+// Lazy loaded components for code splitting
+const AdminPage = lazy(() => import('./AdminPage'))
+const ImportExportDialog = lazy(() => import('@/components/ImportExportDialog').then(module => ({ default: module.ImportExportDialog })))
+const RichTextEditor = lazy(() => import('@/components/RichTextEditor').then(module => ({ default: module.RichTextEditor })))
+const SearchBar = lazy(() => import('@/components/SearchBar'))
+const SearchResults = lazy(() => import('@/components/SearchResults'))
+const TagsManager = lazy(() => import('@/components/TagsManager'))
+const TagSelector = lazy(() => import('@/components/TagSelector'))
+const FoldersManager = lazy(() => import('@/components/FoldersManager'))
+const TemplatesManager = lazy(() => import('@/components/TemplatesManager'))
+import { SearchResult } from '@/services/searchService'
+import { Template } from '@/services/templatesService'
+
+// Loading component for lazy loaded components
+const ComponentLoader: React.FC = () => (
+  <div className="flex items-center justify-center p-4">
+    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+  </div>
+)
 
 // Types
 interface Note {
@@ -68,11 +83,8 @@ interface LoadingOverlayProps {
   message?: string
 }
 
-interface MarkdownRendererProps {
-  content: string
-}
 
-type ViewType = 'login' | 'notes' | 'editor' | 'unlock' | 'admin' | 'settings'
+type ViewType = 'login' | 'notes' | 'editor' | 'unlock' | 'admin' | 'settings' | 'tags' | 'folders' | 'templates'
 type EncryptionStatus = 'locked' | 'unlocked'
 type ThemeType = 'light' | 'dark' | 'system'
 
@@ -1069,115 +1081,6 @@ const OnboardingOverlay: React.FC<OnboardingOverlayProps> = ({
   )
 }
 
-// Markdown Renderer with Error Boundary
-const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
-  const [renderError, setRenderError] = useState<string | null>(null)
-
-  useEffect(() => {
-    // Reset error when content changes
-    setRenderError(null)
-  }, [content])
-
-  try {
-    if (renderError) {
-      return (
-        <div className="bg-red-900/50 border border-red-600 rounded-lg p-4">
-          <h3 className="text-red-200 font-medium mb-2">Preview Error</h3>
-          <p className="text-red-300 text-sm mb-2">Unable to render markdown preview</p>
-          <p className="text-red-400 text-xs">{renderError}</p>
-          <button
-            onClick={() => setRenderError(null)}
-            className="mt-3 text-xs text-red-300 hover:text-red-200 underline"
-          >
-            Try Again
-          </button>
-        </div>
-      )
-    }
-
-    return (
-      <div className="text-gray-200">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={{
-            // Style headings
-            h1: ({ children }) => (
-              <h1 className="text-2xl font-bold text-white mb-4 border-b border-gray-600 pb-2">
-                {children}
-              </h1>
-            ),
-            h2: ({ children }) => (
-              <h2 className="text-xl font-semibold text-white mb-3 mt-6">{children}</h2>
-            ),
-            h3: ({ children }) => (
-              <h3 className="text-lg font-medium text-white mb-2 mt-4">{children}</h3>
-            ),
-            // Style paragraphs
-            p: ({ children }) => <p className="text-gray-200 mb-4 leading-relaxed">{children}</p>,
-            // Style lists
-            ul: ({ children }) => <ul className="text-gray-200 mb-4 ml-6 list-disc">{children}</ul>,
-            ol: ({ children }) => (
-              <ol className="text-gray-200 mb-4 ml-6 list-decimal">{children}</ol>
-            ),
-            li: ({ children }) => <li className="mb-1">{children}</li>,
-            // Style code
-            code: ({ children }) => (
-              <code className="bg-gray-800 text-blue-300 px-1 py-0.5 rounded text-sm">
-                {children}
-              </code>
-            ),
-            pre: ({ children }) => (
-              <pre className="bg-gray-800 text-gray-200 p-4 rounded-lg overflow-x-auto mb-4">
-                {children}
-              </pre>
-            ),
-            // Style links
-            a: ({ children, href }) => (
-              <a
-                href={href}
-                className="text-blue-400 hover:text-blue-300 underline"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {children}
-              </a>
-            ),
-            // Style blockquotes
-            blockquote: ({ children }) => (
-              <blockquote className="border-l-4 border-blue-500 pl-4 my-4 text-gray-300 italic">
-                {children}
-              </blockquote>
-            ),
-            // Style tables
-            table: ({ children }) => (
-              <table className="w-full mb-4 border-collapse">{children}</table>
-            ),
-            thead: ({ children }) => <thead className="bg-gray-800">{children}</thead>,
-            th: ({ children }) => (
-              <th className="border border-gray-600 px-3 py-2 text-left text-white font-semibold">
-                {children}
-              </th>
-            ),
-            td: ({ children }) => (
-              <td className="border border-gray-600 px-3 py-2 text-gray-200">{children}</td>
-            ),
-          }}
-        >
-          {content}
-        </ReactMarkdown>
-      </div>
-    )
-  } catch (err) {
-    console.error('Markdown component error:', err)
-    return (
-      <div className="bg-red-900/50 border border-red-600 rounded-lg p-4">
-        <h3 className="text-red-200 font-medium mb-2">Preview Error</h3>
-        <p className="text-red-300 text-sm mb-2">Unable to render markdown preview</p>
-        <p className="text-red-400 text-xs">{(err as Error).message || 'Unknown error'}</p>
-      </div>
-    )
-  }
-}
 
 // Utility function for debouncing with cancel support
 function debounce(func: (...args: any[]) => void, wait: number): DebounceFunction {
@@ -1932,7 +1835,9 @@ function SecureNotesApp() {
   const [onboardingStep, setOnboardingStep] = useState(0)
   const [isAdmin, setIsAdmin] = useState(false)
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
-  const [announcementsLoading, setAnnouncementsLoading] = useState(false)
+  const [_announcementsLoading, setAnnouncementsLoading] = useState(false)
+  const [showTemplatesManager, setShowTemplatesManager] = useState(false)
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false)
 
   console.log(
     '🔄 SecureNotesApp render - initializing:',
@@ -1964,6 +1869,37 @@ function SecureNotesApp() {
 
     console.log('✅ Complete logout finished')
   }, [])
+
+  // Template handlers
+  const handleTemplateSelect = useCallback(async (template: Template) => {
+    try {
+      // Use the templatesService to create a note from the template
+      const response = await api.request('/templates/' + template.id + '/use', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: `${template.name} - ${new Date().toLocaleDateString()}`,
+        }),
+      })
+
+      console.log('✅ Note created from template:', response)
+
+      // Close the template selector
+      setShowTemplateSelector(false)
+
+      // Reload notes to show the new note
+      await loadNotes()
+
+      // Find and select the new note
+      const newNote = notes.find(n => n.id === response.id)
+      if (newNote) {
+        setSelectedNote(newNote)
+        setCurrentView('editor')
+      }
+    } catch (err) {
+      console.error('Failed to create note from template:', err)
+      setError(err instanceof Error ? err.message : 'Failed to create note from template')
+    }
+  }, [api, notes])
 
   // Set up API unauthorized callback
   useEffect(() => {
@@ -2286,7 +2222,6 @@ function SecureNotesApp() {
     const [saving, setSaving] = useState(false)
     const [lastSaved, setLastSaved] = useState<Date | null>(null)
     const [saveError, setSaveError] = useState<string | null>(null)
-    const [isPreviewMode, setIsPreviewMode] = useState(false) // true = preview, false = edit
 
     // Use refs to access current values inside debounced function
     const titleRef = useRef(title)
@@ -2486,22 +2421,6 @@ function SecureNotesApp() {
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Preview Toggle Switch */}
-              <div className="flex items-center gap-2">
-                <Label htmlFor="preview-toggle" className="text-sm text-gray-300">
-                  Edit
-                </Label>
-                <Switch
-                  id="preview-toggle"
-                  checked={isPreviewMode}
-                  onCheckedChange={setIsPreviewMode}
-                  className="data-[state=checked]:bg-blue-600"
-                />
-                <Label htmlFor="preview-toggle" className="text-sm text-gray-300">
-                  Preview
-                </Label>
-              </div>
-
               {/* Manual Save Button */}
               <button
                 data-save-action
@@ -2552,42 +2471,34 @@ function SecureNotesApp() {
           </div>
         )}
 
-        <div className="flex-1 flex">
-          {/* Edit Mode */}
-          {!isPreviewMode && (
-            <div className="w-full p-6">
-              <label htmlFor="note-content" className="sr-only">
-                Note content
-              </label>
-              <textarea
-                id="note-content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Start writing your secure note... You can use Markdown formatting!"
-                className="w-full h-full bg-transparent text-gray-200 placeholder-gray-500 focus:outline-none resize-none focus:ring-2 focus:ring-blue-500/50 rounded p-2 -m-2"
-                aria-describedby="editor-help"
-              />
-              <p id="editor-help" className="sr-only">
-                This note is automatically encrypted and saved as you type. Supports Markdown
-                formatting.
-              </p>
+        <div className="flex-1 p-6">
+          {/* Tags Selector */}
+          {selectedNote && (
+            <div className="mb-4">
+              <Suspense fallback={<div className="h-8 bg-gray-100 rounded animate-pulse"></div>}>
+                <TagSelector
+                  noteId={selectedNote.id}
+                  size="sm"
+                  className="mb-2"
+                />
+              </Suspense>
             </div>
           )}
 
-          {/* Preview Mode */}
-          {isPreviewMode && (
-            <div className="w-full p-6 overflow-y-auto">
-              <div className="prose prose-invert max-w-none">
-                {content ? (
-                  <MarkdownRenderer content={content} />
-                ) : (
-                  <p className="text-gray-500 italic">
-                    Preview will appear here when you start writing...
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
+          <Suspense fallback={<ComponentLoader />}>
+            <RichTextEditor
+              content={content}
+              onChange={setContent}
+              noteId={selectedNote?.id}
+            placeholder="Start writing your secure note... You can use rich text formatting or Markdown!"
+            className="h-full"
+            defaultMode="wysiwyg"
+            showModeToggle={true}
+            />
+          </Suspense>
+          <p id="editor-help" className="sr-only">
+            This note is automatically encrypted and saved as you type. Supports rich text and Markdown formatting.
+          </p>
         </div>
       </div>
     )
@@ -2596,6 +2507,8 @@ function SecureNotesApp() {
   // Notes List Component
   const NotesList: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('')
+    const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+    const [isSearchMode, setIsSearchMode] = useState(false)
 
     const currentNotes = viewingTrash ? trashedNotes : notes
     const filteredNotes = currentNotes.filter(
@@ -2603,6 +2516,27 @@ function SecureNotesApp() {
         note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         note.content.toLowerCase().includes(searchQuery.toLowerCase())
     )
+
+    const handleSearchResults = (results: SearchResult[], query: string) => {
+      setSearchResults(results)
+      setIsSearchMode(!!query.trim())
+    }
+
+    const handleSearchClear = () => {
+      setSearchResults([])
+      setIsSearchMode(false)
+      setSearchQuery('')
+    }
+
+    const handleSelectSearchResult = (noteId: string) => {
+      const note = notes.find(n => n.id === noteId)
+      if (note) {
+        setSelectedNote(note)
+        if (window.innerWidth < 768) {
+          setCurrentView('editor')
+        }
+      }
+    }
 
     return (
       <nav
@@ -2622,39 +2556,48 @@ function SecureNotesApp() {
             )}
           </div>
 
-          <div className="relative">
-            <label htmlFor="search-notes" className="sr-only">
-              {viewingTrash ? 'Search trash' : 'Search notes'}
-            </label>
-            <svg
-              className="absolute left-3 top-2.5 w-5 h-5 text-muted-foreground"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          {!viewingTrash ? (
+            <Suspense fallback={<ComponentLoader />}>
+              <SearchBar
+                onSearchResults={handleSearchResults}
+                onClear={handleSearchClear}
+                placeholder="Search notes..."
+                className="w-full"
               />
-            </svg>
-            <Input
-              id="search-notes"
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={viewingTrash ? 'Search trash...' : 'Search notes...'}
-              className="w-full pl-10"
-              aria-describedby="search-help"
-            />
-            <p id="search-help" className="sr-only">
-              {viewingTrash
-                ? 'Search through your trashed notes'
-                : 'Search through your notes by title or content'}
-            </p>
-          </div>
+            </Suspense>
+          ) : (
+            <div className="relative">
+              <label htmlFor="search-notes" className="sr-only">
+                Search trash
+              </label>
+              <svg
+                className="absolute left-3 top-2.5 w-5 h-5 text-muted-foreground"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <Input
+                id="search-notes"
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search trash..."
+                className="w-full pl-10"
+                aria-describedby="search-help"
+              />
+              <p id="search-help" className="sr-only">
+                Search through your trashed notes
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto" role="list" aria-label="Notes">
@@ -2668,6 +2611,17 @@ function SecureNotesApp() {
             </div>
           ) : loading ? (
             <NoteListSkeleton />
+          ) : !viewingTrash && isSearchMode ? (
+            <div className="p-4">
+              <Suspense fallback={<ComponentLoader />}>
+                <SearchResults
+                  results={searchResults}
+                  query={searchResults.length > 0 ? 'search' : ''}
+                  onSelectNote={handleSelectSearchResult}
+                  className=""
+                />
+              </Suspense>
+            </div>
           ) : filteredNotes.length > 0 ? (
             filteredNotes.map((note) => (
               <div
@@ -2819,7 +2773,7 @@ function SecureNotesApp() {
         </div>
 
         {!viewingTrash && (
-          <div className="p-4 border-t border-border">
+          <div className="p-4 border-t border-border space-y-2">
             <Button
               onClick={() => {
                 setSelectedNote(null)
@@ -2828,10 +2782,23 @@ function SecureNotesApp() {
               className="w-full"
               aria-describedby="new-note-help"
             >
+              <Plus className="h-4 w-4 mr-2" />
               New Note
+            </Button>
+            <Button
+              onClick={() => setShowTemplateSelector(true)}
+              variant="outline"
+              className="w-full"
+              aria-describedby="template-note-help"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              New from Template
             </Button>
             <p id="new-note-help" className="sr-only">
               Create a new note
+            </p>
+            <p id="template-note-help" className="sr-only">
+              Create a new note from a template
             </p>
           </div>
         )}
@@ -2914,12 +2881,14 @@ function SecureNotesApp() {
               </div>
 
               <div className="flex items-center space-x-4">
-                <ImportExportDialog
-                  noteId={selectedNote?.id}
-                  notes={notes}
-                  setNotes={setNotes}
-                  onImportSuccess={() => loadNotes()}
-                />
+                <Suspense fallback={<ComponentLoader />}>
+                  <ImportExportDialog
+                    noteId={selectedNote?.id}
+                    notes={notes}
+                    setNotes={setNotes}
+                    onImportSuccess={() => loadNotes()}
+                  />
+                </Suspense>
 
                 <ThemeToggle />
 
@@ -2930,6 +2899,33 @@ function SecureNotesApp() {
                   title="Security settings"
                 >
                   <Settings className="w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={() => setCurrentView('tags')}
+                  className="text-gray-400 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded p-1"
+                  aria-label="Manage tags"
+                  title="Manage tags"
+                >
+                  <Hash className="w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={() => setCurrentView('folders')}
+                  className="text-gray-400 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded p-1"
+                  aria-label="Manage folders"
+                  title="Manage folders"
+                >
+                  <Folder className="w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={() => setCurrentView('templates')}
+                  className="text-gray-400 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded p-1"
+                  aria-label="Manage templates"
+                  title="Manage templates"
+                >
+                  <FileText className="w-5 h-5" />
                 </button>
 
                 <button
@@ -3191,8 +3187,28 @@ function SecureNotesApp() {
     <>
       {isAuthenticated && encryptionStatus === 'unlocked' && currentView === 'settings' ? (
         <SecuritySettingsView api={api} onBack={() => setCurrentView('notes')} />
+      ) : isAuthenticated && encryptionStatus === 'unlocked' && currentView === 'tags' ? (
+        <div className="h-screen flex items-center justify-center bg-background">
+          <Suspense fallback={<ComponentLoader />}>
+            <TagsManager onClose={() => setCurrentView('notes')} />
+          </Suspense>
+        </div>
+      ) : isAuthenticated && encryptionStatus === 'unlocked' && currentView === 'folders' ? (
+        <div className="h-screen flex items-center justify-center bg-background">
+          <Suspense fallback={<ComponentLoader />}>
+            <FoldersManager onClose={() => setCurrentView('notes')} />
+          </Suspense>
+        </div>
+      ) : isAuthenticated && encryptionStatus === 'unlocked' && currentView === 'templates' ? (
+        <div className="h-screen flex items-center justify-center bg-background">
+          <Suspense fallback={<ComponentLoader />}>
+            <TemplatesManager onClose={() => setCurrentView('notes')} mode="manage" />
+          </Suspense>
+        </div>
       ) : isAuthenticated && isAdmin && currentView === 'admin' ? (
-        <AdminPage api={api} onBack={() => setCurrentView('notes')} />
+        <Suspense fallback={<ComponentLoader />}>
+          <AdminPage api={api} onBack={() => setCurrentView('notes')} />
+        </Suspense>
       ) : isAuthenticated && encryptionStatus === 'unlocked' ? (
         <>
           <AppLayout />
@@ -3233,6 +3249,21 @@ function SecureNotesApp() {
           onSkip={handleOnboardingSkip}
           onComplete={handleOnboardingComplete}
         />
+      )}
+
+      {/* Template Selector Modal */}
+      {showTemplateSelector && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-background rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden">
+            <Suspense fallback={<ComponentLoader />}>
+              <TemplatesManager
+                onClose={() => setShowTemplateSelector(false)}
+                onTemplateSelect={handleTemplateSelect}
+                mode="select"
+              />
+            </Suspense>
+          </div>
+        </div>
       )}
     </>
   )

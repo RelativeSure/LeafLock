@@ -29,6 +29,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	neturl "net/url"
@@ -43,7 +44,9 @@ import (
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/swagger"
+	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/csrf"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -247,6 +250,21 @@ CREATE TABLE IF NOT EXISTS key_rotations (
     completed_at TIMESTAMPTZ
 );
 
+-- Folders table for organizing notes
+CREATE TABLE IF NOT EXISTS folders (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    parent_id UUID REFERENCES folders(id) ON DELETE CASCADE, -- NULL for root folders
+    name_encrypted BYTEA NOT NULL, -- Encrypted folder name
+    color VARCHAR(7) DEFAULT '#3b82f6', -- Hex color code
+    position INT DEFAULT 0, -- For custom ordering
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Add folder_id to notes table for folder organization
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS folder_id UUID REFERENCES folders(id) ON DELETE SET NULL;
+
 -- Tags table for organizing notes
 CREATE TABLE IF NOT EXISTS tags (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -266,6 +284,24 @@ CREATE TABLE IF NOT EXISTS note_tags (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(note_id, tag_id) -- Prevent duplicate assignments
 );
+
+-- Templates table for reusable note templates
+CREATE TABLE IF NOT EXISTS templates (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    name_encrypted BYTEA NOT NULL, -- Encrypted template name
+    description_encrypted BYTEA, -- Encrypted template description
+    content_encrypted BYTEA NOT NULL, -- Encrypted template content
+    tags TEXT[], -- Array of tag names for categorization
+    icon VARCHAR(50) DEFAULT '📝', -- Emoji icon for template
+    is_public BOOLEAN DEFAULT false, -- Whether template is shared publicly
+    usage_count INT DEFAULT 0, -- Track how often template is used
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Add template_id to notes table for tracking template origin
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS template_id UUID REFERENCES templates(id) ON DELETE SET NULL;
 
 -- Functions for automatic updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -295,7 +331,17 @@ BEGIN
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_tags_updated_at') THEN
-        CREATE TRIGGER update_tags_updated_at BEFORE UPDATE ON tags 
+        CREATE TRIGGER update_tags_updated_at BEFORE UPDATE ON tags
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_folders_updated_at') THEN
+        CREATE TRIGGER update_folders_updated_at BEFORE UPDATE ON folders
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_templates_updated_at') THEN
+        CREATE TRIGGER update_templates_updated_at BEFORE UPDATE ON templates
             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
     END IF;
 END $$;
@@ -353,6 +399,12 @@ CREATE INDEX IF NOT EXISTS idx_tags_user ON tags(user_id);
 CREATE INDEX IF NOT EXISTS idx_note_tags_note ON note_tags(note_id);
 CREATE INDEX IF NOT EXISTS idx_note_tags_tag ON note_tags(tag_id);
 
+-- Folders indexes
+CREATE INDEX IF NOT EXISTS idx_folders_user ON folders(user_id);
+CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(parent_id);
+CREATE INDEX IF NOT EXISTS idx_folders_position ON folders(user_id, position);
+CREATE INDEX IF NOT EXISTS idx_notes_folder ON notes(folder_id);
+
 -- Note: Cleanup jobs run automatically via background service every 24 hours
 `
 
@@ -405,7 +457,7 @@ func LoadConfig() *Config {
 			dbURL = built
 		} else {
 			// Safe local default for dev
-			dbURL = "postgres://postgres:postgres@localhost:5432/notes?sslmode=disable"
+			dbURL = "postgres://postgres:postgres@localhost:5432/notes?sslmode=prefer"
 		}
 	}
 
@@ -456,7 +508,7 @@ func buildDatabaseURLFromEnv() string {
 		return ""
 	}
 	port := getEnvOrDefault("POSTGRESQL_PORT", "5432")
-	sslmode := getEnvOrDefault("POSTGRESQL_SSLMODE", "disable")
+	sslmode := getEnvOrDefault("POSTGRESQL_SSLMODE", "require")
 	u := &neturl.URL{
 		Scheme: "postgres",
 		User:   neturl.UserPassword(user, pass),
@@ -909,9 +961,24 @@ func SetupDatabase(dbURL string) (*pgxpool.Pool, error) {
 		_ = adminDB.Close()
 	}
 
-	// Connect to the actual database
+	// Connect to the actual database with optimized connection pool settings
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, dbURL)
+
+	// Parse the database URL into a config
+	config, err := pgxpool.ParseConfig(dbURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse database URL: %w", err)
+	}
+
+	// Configure connection pool for production workloads
+	config.MaxConns = 25                        // Maximum number of connections in the pool
+	config.MinConns = 5                         // Minimum number of connections to maintain
+	config.MaxConnLifetime = time.Hour          // Close connections after 1 hour
+	config.MaxConnIdleTime = 30 * time.Minute   // Close idle connections after 30 minutes
+	config.HealthCheckPeriod = 1 * time.Minute  // Health check every minute
+
+	// Create the connection pool with the configured settings
+	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
@@ -960,8 +1027,88 @@ type Database interface {
 // Auth handlers
 type AuthHandler struct {
 	db     Database
+	redis  *redis.Client
 	crypto *CryptoService
 	config *Config
+}
+
+// Session data structure for Redis storage
+type SessionData struct {
+	UserID            string    `json:"user_id"`
+	IPAddress         string    `json:"ip_address"`
+	UserAgent         string    `json:"user_agent"`
+	CreatedAt         time.Time `json:"created_at"`
+	ExpiresAt         time.Time `json:"expires_at"`
+}
+
+// Store session in Redis with encrypted metadata
+func (h *AuthHandler) storeSessionInRedis(ctx context.Context, tokenHash []byte, userID uuid.UUID, ipAddr, userAgent string, expiresAt time.Time) error {
+	sessionData := SessionData{
+		UserID:    userID.String(),
+		IPAddress: ipAddr,
+		UserAgent: userAgent,
+		CreatedAt: time.Now(),
+		ExpiresAt: expiresAt,
+	}
+
+	// Serialize session data
+	data, err := json.Marshal(sessionData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal session data: %w", err)
+	}
+
+	// Encrypt session data
+	encryptedData, err := h.crypto.Encrypt(data)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt session data: %w", err)
+	}
+
+	// Store in Redis with expiration
+	sessionKey := fmt.Sprintf("session:%x", tokenHash)
+	duration := time.Until(expiresAt)
+
+	return h.redis.Set(ctx, sessionKey, encryptedData, duration).Err()
+}
+
+// Validate session from Redis
+func (h *AuthHandler) validateSessionInRedis(ctx context.Context, tokenHash []byte) (*SessionData, error) {
+	sessionKey := fmt.Sprintf("session:%x", tokenHash)
+
+	// Get encrypted session data from Redis
+	encryptedData, err := h.redis.Get(ctx, sessionKey).Bytes()
+	if err != nil {
+		if err.Error() == "redis: nil" {
+			return nil, fmt.Errorf("session not found")
+		}
+		return nil, fmt.Errorf("failed to get session from Redis: %w", err)
+	}
+
+	// Decrypt session data
+	data, err := h.crypto.Decrypt(encryptedData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt session data: %w", err)
+	}
+
+	// Deserialize session data
+	var sessionData SessionData
+	if err := json.Unmarshal(data, &sessionData); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal session data: %w", err)
+	}
+
+	// Check if session is expired
+	if time.Now().After(sessionData.ExpiresAt) {
+		// Delete expired session
+		h.redis.Del(ctx, sessionKey)
+		return nil, fmt.Errorf("session expired")
+	}
+
+	return &sessionData, nil
+}
+
+// Delete session from Redis
+func (h *AuthHandler) deleteSessionFromRedis(ctx context.Context, tokenHash []byte) error {
+	sessionKey := fmt.Sprintf("session:%x", tokenHash)
+	return h.redis.Del(ctx, sessionKey).Err()
 }
 
 type RegisterRequest struct {
@@ -1247,24 +1394,11 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	// Hash token for storage
 	tokenHash := argon2.IDKey(sessionToken, []byte("session"), 1, 64*1024, 4, 32)
 
-	// Encrypt IP and user agent
-	encryptedIP, err := h.crypto.Encrypt([]byte(clientIP(c)))
+	// Store session in Redis
+	expiresAt := time.Now().Add(h.config.SessionDuration)
+	err = h.storeSessionInRedis(ctx, tokenHash, userID, clientIP(c), c.Get("User-Agent"), expiresAt)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Session creation failed"})
-	}
-	encryptedUA, err := h.crypto.Encrypt([]byte(c.Get("User-Agent")))
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Session creation failed"})
-	}
-
-	// Store session
-	_, err = h.db.Exec(ctx, `
-        INSERT INTO sessions (user_id, token_hash, ip_address_encrypted, user_agent_encrypted, expires_at)
-        VALUES ($1, $2, $3, $4, $5)`,
-		userID, tokenHash, encryptedIP, encryptedUA, time.Now().Add(h.config.SessionDuration),
-	)
-
-	if err != nil {
+		log.Printf("Failed to store session in Redis: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Session creation failed"})
 	}
 
@@ -2111,6 +2245,593 @@ func isValidHexColor(color string) bool {
 	return true
 }
 
+// Folders Handler
+type FoldersHandler struct {
+	db     Database
+	crypto *CryptoService
+}
+
+type CreateFolderRequest struct {
+	Name     string  `json:"name" validate:"required"`
+	ParentID *string `json:"parent_id,omitempty"`
+	Color    string  `json:"color,omitempty"`
+	Position int     `json:"position,omitempty"`
+}
+
+type UpdateFolderRequest struct {
+	Name     string  `json:"name" validate:"required"`
+	ParentID *string `json:"parent_id,omitempty"`
+	Color    string  `json:"color,omitempty"`
+	Position int     `json:"position,omitempty"`
+}
+
+type MoveNoteToFolderRequest struct {
+	FolderID *string `json:"folder_id"`
+}
+
+func (h *FoldersHandler) GetFolders(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	ctx := context.Background()
+
+	rows, err := h.db.Query(ctx, `
+		SELECT id, parent_id, name_encrypted, color, position, created_at, updated_at
+		FROM folders
+		WHERE user_id = $1
+		ORDER BY position ASC, created_at ASC`,
+		userID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch folders"})
+	}
+	defer rows.Close()
+
+	folders := []fiber.Map{}
+	for rows.Next() {
+		var id uuid.UUID
+		var parentID *uuid.UUID
+		var nameEncrypted []byte
+		var color string
+		var position int
+		var createdAt, updatedAt time.Time
+
+		err := rows.Scan(&id, &parentID, &nameEncrypted, &color, &position, &createdAt, &updatedAt)
+		if err != nil {
+			continue
+		}
+
+		nameBytes, err := h.crypto.Decrypt(nameEncrypted)
+		if err != nil {
+			continue
+		}
+
+		var parentIDStr *string
+		if parentID != nil {
+			str := parentID.String()
+			parentIDStr = &str
+		}
+
+		folders = append(folders, fiber.Map{
+			"id":         id,
+			"parent_id":  parentIDStr,
+			"name":       string(nameBytes),
+			"color":      color,
+			"position":   position,
+			"created_at": createdAt,
+			"updated_at": updatedAt,
+		})
+	}
+
+	return c.JSON(fiber.Map{"folders": folders})
+}
+
+func (h *FoldersHandler) CreateFolder(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	var req CreateFolderRequest
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request format"})
+	}
+
+	if req.Color != "" && !isValidHexColor(req.Color) {
+		req.Color = "#3b82f6"
+	} else if req.Color == "" {
+		req.Color = "#3b82f6"
+	}
+
+	encryptedName, err := h.crypto.Encrypt([]byte(req.Name))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt folder name"})
+	}
+
+	ctx := context.Background()
+	var parentID *uuid.UUID
+	if req.ParentID != nil && *req.ParentID != "" {
+		parsed, err := uuid.Parse(*req.ParentID)
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid parent ID"})
+		}
+		parentID = &parsed
+
+		var exists bool
+		err = h.db.QueryRow(ctx, `SELECT true FROM folders WHERE id = $1 AND user_id = $2`, *parentID, userID).Scan(&exists)
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Parent folder not found"})
+		}
+	}
+
+	var folderID uuid.UUID
+	err = h.db.QueryRow(ctx, `
+		INSERT INTO folders (user_id, parent_id, name_encrypted, color, position)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id`,
+		userID, parentID, encryptedName, req.Color, req.Position).Scan(&folderID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create folder"})
+	}
+
+	return c.JSON(fiber.Map{
+		"id":      folderID,
+		"name":    req.Name,
+		"color":   req.Color,
+		"message": "Folder created successfully",
+	})
+}
+
+func (h *FoldersHandler) DeleteFolder(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	folderID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid folder ID"})
+	}
+
+	ctx := context.Background()
+
+	_, err = h.db.Exec(ctx, `
+		UPDATE notes
+		SET folder_id = (
+			SELECT parent_id FROM folders WHERE id = $1 AND user_id = $2
+		)
+		WHERE folder_id = $1`,
+		folderID, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to move notes from folder"})
+	}
+
+	_, err = h.db.Exec(ctx, `
+		DELETE FROM folders
+		WHERE id = $1 AND user_id = $2`,
+		folderID, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete folder"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Folder deleted successfully"})
+}
+
+func (h *FoldersHandler) MoveNoteToFolder(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	var req MoveNoteToFolderRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request format"})
+	}
+
+	ctx := context.Background()
+	var folderID *uuid.UUID
+
+	if req.FolderID != nil && *req.FolderID != "" {
+		parsed, err := uuid.Parse(*req.FolderID)
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid folder ID"})
+		}
+		folderID = &parsed
+
+		var exists bool
+		err = h.db.QueryRow(ctx, `SELECT true FROM folders WHERE id = $1 AND user_id = $2`, *folderID, userID).Scan(&exists)
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Folder not found"})
+		}
+	}
+
+	_, err = h.db.Exec(ctx, `
+		UPDATE notes
+		SET folder_id = $1, updated_at = NOW()
+		FROM workspaces w
+		WHERE notes.id = $2
+		AND notes.workspace_id = w.id
+		AND w.owner_id = $3`,
+		folderID, noteID, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to move note"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Note moved successfully"})
+}
+
+// Templates Handler
+type TemplatesHandler struct {
+	db     Database
+	crypto *CryptoService
+}
+
+type CreateTemplateRequest struct {
+	Name        string   `json:"name" validate:"required"`
+	Description string   `json:"description,omitempty"`
+	Content     string   `json:"content" validate:"required"`
+	Tags        []string `json:"tags,omitempty"`
+	Icon        string   `json:"icon,omitempty"`
+	IsPublic    bool     `json:"is_public,omitempty"`
+}
+
+type UpdateTemplateRequest struct {
+	Name        string   `json:"name" validate:"required"`
+	Description string   `json:"description,omitempty"`
+	Content     string   `json:"content" validate:"required"`
+	Tags        []string `json:"tags,omitempty"`
+	Icon        string   `json:"icon,omitempty"`
+	IsPublic    bool     `json:"is_public,omitempty"`
+}
+
+type UseTemplateRequest struct {
+	Title     string  `json:"title,omitempty"`
+	FolderID  *string `json:"folder_id,omitempty"`
+}
+
+func (h *TemplatesHandler) GetTemplates(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	ctx := context.Background()
+
+	rows, err := h.db.Query(ctx, `
+		SELECT id, name_encrypted, description_encrypted, content_encrypted, tags, icon, is_public, usage_count, created_at, updated_at
+		FROM templates
+		WHERE user_id = $1 OR is_public = true
+		ORDER BY created_at DESC
+	`, userID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch templates"})
+	}
+	defer rows.Close()
+
+	var templates []map[string]interface{}
+	for rows.Next() {
+		var id uuid.UUID
+		var nameEncrypted, descriptionEncrypted, contentEncrypted []byte
+		var tags []string
+		var icon string
+		var isPublic bool
+		var usageCount int
+		var createdAt, updatedAt time.Time
+
+		err := rows.Scan(&id, &nameEncrypted, &descriptionEncrypted, &contentEncrypted, &tags, &icon, &isPublic, &usageCount, &createdAt, &updatedAt)
+		if err != nil {
+			continue
+		}
+
+		// Decrypt template data
+		nameBytes, err := h.crypto.Decrypt(nameEncrypted)
+		if err != nil {
+			continue
+		}
+		name := string(nameBytes)
+
+		var description string
+		if len(descriptionEncrypted) > 0 {
+			descBytes, err := h.crypto.Decrypt(descriptionEncrypted)
+			if err == nil {
+				description = string(descBytes)
+			}
+		}
+
+		// Don't decrypt content for listing (performance)
+		template := map[string]interface{}{
+			"id":           id,
+			"name":         name,
+			"description":  description,
+			"tags":         tags,
+			"icon":         icon,
+			"is_public":    isPublic,
+			"usage_count":  usageCount,
+			"created_at":   createdAt,
+			"updated_at":   updatedAt,
+		}
+
+		templates = append(templates, template)
+	}
+
+	return c.JSON(fiber.Map{"templates": templates})
+}
+
+func (h *TemplatesHandler) GetTemplate(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	templateID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid template ID"})
+	}
+
+	ctx := context.Background()
+	var nameEncrypted, descriptionEncrypted, contentEncrypted []byte
+	var tags []string
+	var icon string
+	var isPublic bool
+	var usageCount int
+	var createdAt, updatedAt time.Time
+
+	err = h.db.QueryRow(ctx, `
+		SELECT name_encrypted, description_encrypted, content_encrypted, tags, icon, is_public, usage_count, created_at, updated_at
+		FROM templates
+		WHERE id = $1 AND (user_id = $2 OR is_public = true)
+	`, templateID, userID).Scan(&nameEncrypted, &descriptionEncrypted, &contentEncrypted, &tags, &icon, &isPublic, &usageCount, &createdAt, &updatedAt)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Template not found"})
+	}
+
+	// Decrypt template data
+	nameBytes, err := h.crypto.Decrypt(nameEncrypted)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to decrypt template name"})
+	}
+	name := string(nameBytes)
+
+	var description string
+	if len(descriptionEncrypted) > 0 {
+		descBytes, err := h.crypto.Decrypt(descriptionEncrypted)
+		if err == nil {
+			description = string(descBytes)
+		}
+	}
+
+	contentBytes, err := h.crypto.Decrypt(contentEncrypted)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to decrypt template content"})
+	}
+	content := string(contentBytes)
+
+	template := map[string]interface{}{
+		"id":           templateID,
+		"name":         name,
+		"description":  description,
+		"content":      content,
+		"tags":         tags,
+		"icon":         icon,
+		"is_public":    isPublic,
+		"usage_count":  usageCount,
+		"created_at":   createdAt,
+		"updated_at":   updatedAt,
+	}
+
+	return c.JSON(template)
+}
+
+func (h *TemplatesHandler) CreateTemplate(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	var req CreateTemplateRequest
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request format"})
+	}
+
+	// Encrypt template data
+	nameEncrypted, err := h.crypto.Encrypt([]byte(req.Name))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt template name"})
+	}
+
+	var descriptionEncrypted []byte
+	if req.Description != "" {
+		descriptionEncrypted, err = h.crypto.Encrypt([]byte(req.Description))
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt template description"})
+		}
+	}
+
+	contentEncrypted, err := h.crypto.Encrypt([]byte(req.Content))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt template content"})
+	}
+
+	// Default icon if not provided
+	icon := req.Icon
+	if icon == "" {
+		icon = "📝"
+	}
+
+	ctx := context.Background()
+	var templateID uuid.UUID
+	err = h.db.QueryRow(ctx, `
+		INSERT INTO templates (user_id, name_encrypted, description_encrypted, content_encrypted, tags, icon, is_public)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id
+	`, userID, nameEncrypted, descriptionEncrypted, contentEncrypted, req.Tags, icon, req.IsPublic).Scan(&templateID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create template"})
+	}
+
+	return c.Status(201).JSON(fiber.Map{
+		"id":      templateID,
+		"message": "Template created successfully",
+	})
+}
+
+func (h *TemplatesHandler) UpdateTemplate(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	templateID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid template ID"})
+	}
+
+	var req UpdateTemplateRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request format"})
+	}
+
+	// Encrypt template data
+	nameEncrypted, err := h.crypto.Encrypt([]byte(req.Name))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt template name"})
+	}
+
+	var descriptionEncrypted []byte
+	if req.Description != "" {
+		descriptionEncrypted, err = h.crypto.Encrypt([]byte(req.Description))
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt template description"})
+		}
+	}
+
+	contentEncrypted, err := h.crypto.Encrypt([]byte(req.Content))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt template content"})
+	}
+
+	// Default icon if not provided
+	icon := req.Icon
+	if icon == "" {
+		icon = "📝"
+	}
+
+	ctx := context.Background()
+	result, err := h.db.Exec(ctx, `
+		UPDATE templates
+		SET name_encrypted = $3, description_encrypted = $4, content_encrypted = $5, tags = $6, icon = $7, is_public = $8, updated_at = NOW()
+		WHERE id = $1 AND user_id = $2
+	`, templateID, userID, nameEncrypted, descriptionEncrypted, contentEncrypted, req.Tags, icon, req.IsPublic)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to update template"})
+	}
+
+	if result.RowsAffected() == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "Template not found or access denied"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Template updated successfully"})
+}
+
+func (h *TemplatesHandler) DeleteTemplate(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	templateID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid template ID"})
+	}
+
+	ctx := context.Background()
+	result, err := h.db.Exec(ctx, `DELETE FROM templates WHERE id = $1 AND user_id = $2`, templateID, userID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete template"})
+	}
+
+	if result.RowsAffected() == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "Template not found or access denied"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Template deleted successfully"})
+}
+
+func (h *TemplatesHandler) UseTemplate(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	templateID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid template ID"})
+	}
+
+	var req UseTemplateRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request format"})
+	}
+
+	ctx := context.Background()
+
+	// Get template content
+	var contentEncrypted []byte
+	var nameEncrypted []byte
+	err = h.db.QueryRow(ctx, `
+		SELECT name_encrypted, content_encrypted
+		FROM templates
+		WHERE id = $1 AND (user_id = $2 OR is_public = true)
+	`, templateID, userID).Scan(&nameEncrypted, &contentEncrypted)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Template not found"})
+	}
+
+	// Decrypt template data
+	templateNameBytes, err := h.crypto.Decrypt(nameEncrypted)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to decrypt template name"})
+	}
+	templateName := string(templateNameBytes)
+
+	contentBytes, err := h.crypto.Decrypt(contentEncrypted)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to decrypt template content"})
+	}
+	content := string(contentBytes)
+
+	// Use provided title or template name
+	title := req.Title
+	if title == "" {
+		title = templateName
+	}
+
+	// Encrypt note data
+	titleEncrypted, err := h.crypto.Encrypt([]byte(title))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt note title"})
+	}
+
+	contentEncryptedForNote, err := h.crypto.Encrypt([]byte(content))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt note content"})
+	}
+
+	// Parse folder ID if provided
+	var folderID *uuid.UUID
+	if req.FolderID != nil && *req.FolderID != "" {
+		parsed, err := uuid.Parse(*req.FolderID)
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid folder ID"})
+		}
+		folderID = &parsed
+
+		// Verify folder exists and belongs to user
+		var exists bool
+		err = h.db.QueryRow(ctx, `SELECT true FROM folders WHERE id = $1 AND user_id = $2`, *folderID, userID).Scan(&exists)
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Folder not found"})
+		}
+	}
+
+	// Create new note from template
+	var noteID uuid.UUID
+	err = h.db.QueryRow(ctx, `
+		INSERT INTO notes (user_id, title_encrypted, content_encrypted, template_id, folder_id)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id
+	`, userID, titleEncrypted, contentEncryptedForNote, templateID, folderID).Scan(&noteID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create note from template"})
+	}
+
+	// Increment template usage count
+	_, err = h.db.Exec(ctx, `
+		UPDATE templates SET usage_count = usage_count + 1 WHERE id = $1
+	`, templateID)
+	if err != nil {
+		// Log error but don't fail the request
+		log.Printf("Failed to increment template usage count: %v", err)
+	}
+
+	return c.Status(201).JSON(fiber.Map{
+		"id":      noteID,
+		"message": "Note created from template successfully",
+	})
+}
+
 // Collaboration Handler
 type CollaborationHandler struct {
 	db     Database
@@ -2412,6 +3133,435 @@ func (h *CollaborationHandler) GetSharedNotes(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"notes": notes})
+}
+
+// Attachments Handler
+type AttachmentsHandler struct {
+	db     Database
+	crypto *CryptoService
+}
+
+type AttachmentUploadRequest struct {
+	NoteID   string `json:"note_id" validate:"required,uuid"`
+	Filename string `json:"filename" validate:"required"`
+	MimeType string `json:"mime_type"`
+}
+
+type AttachmentResponse struct {
+	ID           string `json:"id"`
+	NoteID       string `json:"note_id"`
+	Filename     string `json:"filename"`
+	MimeType     string `json:"mime_type"`
+	SizeBytes    int64  `json:"size_bytes"`
+	CreatedAt    string `json:"created_at"`
+	DownloadURL  string `json:"download_url"`
+}
+
+// Upload attachment to a note
+func (h *AttachmentsHandler) UploadAttachment(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID := c.Params("noteId")
+
+	// Validate note ID
+	noteUUID, err := uuid.Parse(noteID)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	// Verify user owns the note
+	var noteExists bool
+	err = h.db.QueryRow(c.Context(),
+		"SELECT EXISTS(SELECT 1 FROM notes WHERE id = $1 AND user_id = $2)",
+		noteUUID, userID).Scan(&noteExists)
+	if err != nil || !noteExists {
+		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+	}
+
+	// Get uploaded file
+	file, err := c.FormFile("file")
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "No file uploaded"})
+	}
+
+	// Security: Validate file size (10MB limit)
+	const maxFileSize = 10 * 1024 * 1024 // 10MB
+	if file.Size > maxFileSize {
+		return c.Status(400).JSON(fiber.Map{"error": "File too large. Maximum size is 10MB"})
+	}
+
+	// Security: Validate file type
+	allowedTypes := map[string]bool{
+		"image/jpeg":      true,
+		"image/png":       true,
+		"image/gif":       true,
+		"image/webp":      true,
+		"text/plain":      true,
+		"application/pdf": true,
+		"text/markdown":   true,
+	}
+
+	if file.Header.Get("Content-Type") != "" && !allowedTypes[file.Header.Get("Content-Type")] {
+		return c.Status(400).JSON(fiber.Map{"error": "File type not allowed"})
+	}
+
+	// Read file content
+	fileContent, err := file.Open()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to read file"})
+	}
+	defer fileContent.Close()
+
+	content, err := io.ReadAll(fileContent)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to read file content"})
+	}
+
+	// Calculate checksum
+	hash := sha256.Sum256(content)
+
+	// Encrypt filename and content
+	encryptedFilename, err := h.crypto.Encrypt([]byte(file.Filename))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt filename"})
+	}
+
+	encryptedContent, err := h.crypto.Encrypt(content)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt file content"})
+	}
+
+	// Save to database
+	attachmentID := uuid.New()
+	mimeType := file.Header.Get("Content-Type")
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+
+	_, err = h.db.Exec(c.Context(), `
+		INSERT INTO attachments (id, note_id, filename_encrypted, content_encrypted, mime_type, size_bytes, checksum, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		attachmentID, noteUUID, encryptedFilename, encryptedContent, mimeType, file.Size, hash[:], userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to save attachment"})
+	}
+
+	return c.JSON(AttachmentResponse{
+		ID:          attachmentID.String(),
+		NoteID:      noteID,
+		Filename:    file.Filename,
+		MimeType:    mimeType,
+		SizeBytes:   file.Size,
+		CreatedAt:   time.Now().Format(time.RFC3339),
+		DownloadURL: "/api/v1/notes/" + noteID + "/attachments/" + attachmentID.String(),
+	})
+}
+
+// Get attachments for a note
+func (h *AttachmentsHandler) GetAttachments(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID := c.Params("noteId")
+
+	noteUUID, err := uuid.Parse(noteID)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	// Verify user owns the note
+	var noteExists bool
+	err = h.db.QueryRow(c.Context(),
+		"SELECT EXISTS(SELECT 1 FROM notes WHERE id = $1 AND user_id = $2)",
+		noteUUID, userID).Scan(&noteExists)
+	if err != nil || !noteExists {
+		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+	}
+
+	rows, err := h.db.Query(c.Context(), `
+		SELECT id, filename_encrypted, mime_type, size_bytes, created_at
+		FROM attachments
+		WHERE note_id = $1
+		ORDER BY created_at DESC`, noteUUID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch attachments"})
+	}
+	defer rows.Close()
+
+	var attachments []AttachmentResponse
+	for rows.Next() {
+		var id uuid.UUID
+		var encryptedFilename []byte
+		var mimeType string
+		var sizeBytes int64
+		var createdAt time.Time
+
+		err := rows.Scan(&id, &encryptedFilename, &mimeType, &sizeBytes, &createdAt)
+		if err != nil {
+			continue
+		}
+
+		// Decrypt filename
+		filenameBytes, err := h.crypto.Decrypt(encryptedFilename)
+		if err != nil {
+			continue
+		}
+
+		attachments = append(attachments, AttachmentResponse{
+			ID:          id.String(),
+			NoteID:      noteID,
+			Filename:    string(filenameBytes),
+			MimeType:    mimeType,
+			SizeBytes:   sizeBytes,
+			CreatedAt:   createdAt.Format(time.RFC3339),
+			DownloadURL: "/api/v1/notes/" + noteID + "/attachments/" + id.String(),
+		})
+	}
+
+	return c.JSON(attachments)
+}
+
+// Download attachment
+func (h *AttachmentsHandler) DownloadAttachment(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID := c.Params("noteId")
+	attachmentID := c.Params("attachmentId")
+
+	noteUUID, err := uuid.Parse(noteID)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	attachmentUUID, err := uuid.Parse(attachmentID)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid attachment ID"})
+	}
+
+	// Verify user owns the note and attachment exists
+	var encryptedFilename, encryptedContent []byte
+	var mimeType string
+	err = h.db.QueryRow(c.Context(), `
+		SELECT a.filename_encrypted, a.content_encrypted, a.mime_type
+		FROM attachments a
+		JOIN notes n ON a.note_id = n.id
+		WHERE a.id = $1 AND a.note_id = $2 AND n.user_id = $3`,
+		attachmentUUID, noteUUID, userID).Scan(&encryptedFilename, &encryptedContent, &mimeType)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return c.Status(404).JSON(fiber.Map{"error": "Attachment not found"})
+		}
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch attachment"})
+	}
+
+	// Decrypt filename and content
+	filenameBytes, err := h.crypto.Decrypt(encryptedFilename)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to decrypt filename"})
+	}
+
+	content, err := h.crypto.Decrypt(encryptedContent)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to decrypt file content"})
+	}
+
+	filename := string(filenameBytes)
+
+	// Set appropriate headers
+	c.Set("Content-Type", mimeType)
+	c.Set("Content-Disposition", "attachment; filename=\""+filename+"\"")
+	c.Set("Content-Length", strconv.Itoa(len(content)))
+
+	return c.Send(content)
+}
+
+// Delete attachment
+func (h *AttachmentsHandler) DeleteAttachment(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID := c.Params("noteId")
+	attachmentID := c.Params("attachmentId")
+
+	noteUUID, err := uuid.Parse(noteID)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	attachmentUUID, err := uuid.Parse(attachmentID)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid attachment ID"})
+	}
+
+	// Delete attachment (verify ownership through note)
+	result, err := h.db.Exec(c.Context(), `
+		DELETE FROM attachments a
+		USING notes n
+		WHERE a.id = $1 AND a.note_id = $2 AND a.note_id = n.id AND n.user_id = $3`,
+		attachmentUUID, noteUUID, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete attachment"})
+	}
+
+	if result.RowsAffected() == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "Attachment not found"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Attachment deleted successfully"})
+}
+
+// Search Handler
+type SearchHandler struct {
+	db     Database
+	crypto *CryptoService
+}
+
+type SearchRequest struct {
+	Query string `json:"query" validate:"required,min=1"`
+	Limit int    `json:"limit,omitempty"`
+}
+
+type SearchResult struct {
+	ID        string `json:"id"`
+	Title     string `json:"title"`
+	Content   string `json:"content"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+	Snippet   string `json:"snippet"`
+}
+
+type SearchResponse struct {
+	Results []SearchResult `json:"results"`
+	Total   int            `json:"total"`
+	Query   string         `json:"query"`
+}
+
+// Search notes for the authenticated user
+func (h *SearchHandler) SearchNotes(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+
+	var req SearchRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	// Validate request
+	if req.Query == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Search query is required"})
+	}
+
+	if req.Limit <= 0 {
+		req.Limit = 20 // Default limit
+	}
+	if req.Limit > 100 {
+		req.Limit = 100 // Max limit
+	}
+
+	// Search in notes (decrypt and search - in production you'd want indexed search)
+	query := `
+		SELECT id, title_encrypted, content_encrypted, created_at, updated_at
+		FROM notes
+		WHERE user_id = $1 AND deleted_at IS NULL
+		ORDER BY updated_at DESC
+		LIMIT $2`
+
+	rows, err := h.db.Query(c.Context(), query, userID, req.Limit*2) // Get more to account for filtering
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to search notes"})
+	}
+	defer rows.Close()
+
+	var results []SearchResult
+	searchQuery := strings.ToLower(strings.TrimSpace(req.Query))
+
+	for rows.Next() {
+		var id uuid.UUID
+		var titleEncrypted, contentEncrypted []byte
+		var createdAt, updatedAt time.Time
+
+		err := rows.Scan(&id, &titleEncrypted, &contentEncrypted, &createdAt, &updatedAt)
+		if err != nil {
+			continue
+		}
+
+		// Decrypt title and content
+		titleBytes, err := h.crypto.Decrypt(titleEncrypted)
+		if err != nil {
+			continue
+		}
+
+		contentBytes, err := h.crypto.Decrypt(contentEncrypted)
+		if err != nil {
+			continue
+		}
+
+		title := string(titleBytes)
+		content := string(contentBytes)
+
+		// Perform case-insensitive search
+		titleLower := strings.ToLower(title)
+		contentLower := strings.ToLower(content)
+
+		if strings.Contains(titleLower, searchQuery) || strings.Contains(contentLower, searchQuery) {
+			// Create snippet showing context around the match
+			snippet := createSearchSnippet(content, searchQuery, 150)
+
+			results = append(results, SearchResult{
+				ID:        id.String(),
+				Title:     title,
+				Content:   content,
+				CreatedAt: createdAt.Format(time.RFC3339),
+				UpdatedAt: updatedAt.Format(time.RFC3339),
+				Snippet:   snippet,
+			})
+
+			// Stop when we have enough results
+			if len(results) >= req.Limit {
+				break
+			}
+		}
+	}
+
+	return c.JSON(SearchResponse{
+		Results: results,
+		Total:   len(results),
+		Query:   req.Query,
+	})
+}
+
+// Create a snippet showing context around the search term
+func createSearchSnippet(content, query string, maxLength int) string {
+	contentLower := strings.ToLower(content)
+	queryLower := strings.ToLower(query)
+
+	index := strings.Index(contentLower, queryLower)
+	if index == -1 {
+		// If query not found in content, return beginning
+		if len(content) <= maxLength {
+			return content
+		}
+		return content[:maxLength] + "..."
+	}
+
+	// Calculate snippet bounds
+	start := index - 50
+	if start < 0 {
+		start = 0
+	}
+
+	end := index + len(query) + 50
+	if end > len(content) {
+		end = len(content)
+	}
+
+	snippet := content[start:end]
+
+	// Add ellipsis if needed
+	if start > 0 {
+		snippet = "..." + snippet
+	}
+	if end < len(content) {
+		snippet = snippet + "..."
+	}
+
+	return snippet
 }
 
 // Import/Export Handler
@@ -3318,7 +4468,7 @@ func handleWebSocketWithDeps(c *websocket.Conn, hub *Hub, db Database) {
 }
 
 // JWT Middleware
-func JWTMiddleware(secret []byte) fiber.Handler {
+func JWTMiddleware(secret []byte, redis *redis.Client, crypto *CryptoService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		token := c.Get("Authorization")
 		if token == "" {
@@ -3351,6 +4501,42 @@ func JWTMiddleware(secret []byte) fiber.Handler {
 		userID, err := uuid.Parse(userIDStr)
 		if err != nil {
 			return c.Status(401).JSON(fiber.Map{"error": "Invalid user_id format"})
+		}
+
+		// Validate session in Redis
+		ctx := c.Context()
+		tokenHash := sha256.Sum256([]byte(token))
+		sessionKey := fmt.Sprintf("session:%x", tokenHash[:])
+
+		// Check if session exists in Redis
+		encryptedData, err := redis.Get(ctx, sessionKey).Bytes()
+		if err != nil {
+			if err.Error() == "redis: nil" {
+				return c.Status(401).JSON(fiber.Map{"error": "Session expired or invalid"})
+			}
+			return c.Status(500).JSON(fiber.Map{"error": "Session validation failed"})
+		}
+
+		// Decrypt and validate session data
+		sessionDataBytes, err := crypto.Decrypt(encryptedData)
+		if err != nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Invalid session data"})
+		}
+
+		var sessionData SessionData
+		if err := json.Unmarshal(sessionDataBytes, &sessionData); err != nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Corrupted session data"})
+		}
+
+		// Verify session belongs to the user from JWT
+		if sessionData.UserID != userID.String() {
+			return c.Status(401).JSON(fiber.Map{"error": "Session user mismatch"})
+		}
+
+		// Check if session is expired (additional check)
+		if time.Now().After(sessionData.ExpiresAt) {
+			redis.Del(ctx, sessionKey) // Clean up expired session
+			return c.Status(401).JSON(fiber.Map{"error": "Session expired"})
 		}
 
 		c.Locals("user_id", userID)
@@ -3467,6 +4653,388 @@ func logRequestError(c *fiber.Ctx, context string, err error, metadata ...interf
 	}
 }
 
+// Default template data
+type DefaultTemplate struct {
+	Name        string
+	Description string
+	Content     string
+	Tags        []string
+	Icon        string
+}
+
+var defaultTemplates = []DefaultTemplate{
+	{
+		Name:        "Meeting Notes",
+		Description: "Template for recording meeting discussions and action items",
+		Content: `# Meeting Notes
+
+**Date:** ${date}
+**Attendees:**
+**Duration:**
+
+## Agenda
+1.
+2.
+3.
+
+## Discussion Points
+### Topic 1
+-
+-
+
+### Topic 2
+-
+-
+
+## Action Items
+- [ ] Task 1 - Assigned to: ${person} - Due: ${date}
+- [ ] Task 2 - Assigned to: ${person} - Due: ${date}
+
+## Next Meeting
+**Date:**
+**Topics to discuss:**
+-
+- `,
+		Tags: []string{"meeting", "work", "action-items"},
+		Icon: "📝",
+	},
+	{
+		Name:        "Project Planning",
+		Description: "Template for planning projects with goals, milestones, and resources",
+		Content: `# Project: ${project_name}
+
+## Overview
+**Start Date:** ${date}
+**End Date:** ${date}
+**Project Manager:** ${person}
+**Budget:** $
+
+## Goals & Objectives
+### Primary Goal
+-
+
+### Secondary Goals
+-
+-
+
+## Project Scope
+### Included
+-
+-
+
+### Excluded
+-
+-
+
+## Timeline & Milestones
+- [ ] **Phase 1:** ${milestone} - Due: ${date}
+- [ ] **Phase 2:** ${milestone} - Due: ${date}
+- [ ] **Phase 3:** ${milestone} - Due: ${date}
+
+## Resources Required
+### Team Members
+- ${person} - Role:
+- ${person} - Role:
+
+### Tools & Technology
+-
+-
+
+### Budget Breakdown
+- Category 1: $
+- Category 2: $
+- Total: $
+
+## Risk Assessment
+### High Priority Risks
+- **Risk:** ${risk} - **Mitigation:** ${strategy}
+
+### Medium Priority Risks
+- **Risk:** ${risk} - **Mitigation:** ${strategy}
+
+## Success Criteria
+-
+-
+- `,
+		Tags: []string{"project", "planning", "work", "goals"},
+		Icon: "📊",
+	},
+	{
+		Name:        "Daily Journal",
+		Description: "Template for daily reflection and gratitude practice",
+		Content: `# Daily Journal - ${date}
+
+## Today's Mood
+Scale 1-10: ___
+Overall feeling:
+
+## Gratitude
+3 things I'm grateful for today:
+1.
+2.
+3.
+
+## Today's Priorities
+### Must Do
+- [ ]
+- [ ]
+- [ ]
+
+### Should Do
+- [ ]
+- [ ]
+
+### Could Do
+- [ ]
+- [ ]
+
+## Reflections
+### What went well today?
+-
+-
+
+### What could have been better?
+-
+-
+
+### What did I learn?
+-
+-
+
+## Tomorrow's Focus
+Main priority:
+3 key tasks:
+1.
+2.
+3.
+
+## Random Thoughts
+${thoughts}
+
+---
+*"Every day is a new beginning."*`,
+		Tags: []string{"journal", "personal", "gratitude", "reflection"},
+		Icon: "🗒️",
+	},
+	{
+		Name:        "Code Review Checklist",
+		Description: "Template for thorough code review documentation",
+		Content: `# Code Review: ${feature_name}
+
+**Pull Request:** #${pr_number}
+**Author:** ${developer}
+**Reviewer:** ${reviewer}
+**Date:** ${date}
+
+## Summary
+Brief description of changes:
+
+
+## Review Checklist
+
+### Code Quality
+- [ ] Code follows project style guidelines
+- [ ] Functions are well-named and focused
+- [ ] Code is DRY (Don't Repeat Yourself)
+- [ ] Comments explain the "why", not the "what"
+- [ ] No commented-out code left behind
+
+### Functionality
+- [ ] Code does what it's supposed to do
+- [ ] Edge cases are handled
+- [ ] Error handling is appropriate
+- [ ] Input validation is present where needed
+
+### Performance
+- [ ] No obvious performance issues
+- [ ] Database queries are optimized
+- [ ] Caching used where appropriate
+- [ ] No memory leaks
+
+### Security
+- [ ] No hardcoded secrets
+- [ ] Input sanitization implemented
+- [ ] Authorization checks in place
+- [ ] HTTPS used for sensitive data
+
+### Testing
+- [ ] Unit tests cover new functionality
+- [ ] Integration tests updated if needed
+- [ ] Test coverage is adequate
+- [ ] Tests are meaningful and not just for coverage
+
+## Detailed Comments
+
+### Positive Feedback
+-
+-
+
+### Issues Found
+1. **File:** ${file} **Line:** ${line}
+   **Issue:**
+   **Suggestion:**
+
+2. **File:** ${file} **Line:** ${line}
+   **Issue:**
+   **Suggestion:**
+
+## Overall Assessment
+- [ ] Approve
+- [ ] Approve with minor changes
+- [ ] Request changes
+- [ ] Major revision needed
+
+**Final Comments:**
+
+
+**Next Steps:**
+- `,
+		Tags: []string{"code-review", "development", "quality", "checklist"},
+		Icon: "🔍",
+	},
+	{
+		Name:        "Bug Report",
+		Description: "Template for documenting software bugs with all necessary details",
+		Content: `# Bug Report: ${bug_title}
+
+**Reporter:** ${person}
+**Date:** ${date}
+**Priority:** [ ] Low [ ] Medium [ ] High [ ] Critical
+**Status:** Open
+
+## Environment
+- **OS:**
+- **Browser/App Version:**
+- **Device:**
+- **Screen Resolution:**
+
+## Description
+Brief summary of the issue:
+
+
+## Steps to Reproduce
+1.
+2.
+3.
+4.
+
+## Expected Behavior
+What should happen:
+
+
+## Actual Behavior
+What actually happens:
+
+
+## Screenshots/Videos
+[Attach screenshots or screen recordings if applicable]
+
+## Error Messages
+` + "```" + `
+[Paste any error messages here]
+` + "```" + `
+
+## Console Logs
+` + "```" + `
+[Paste relevant console logs here]
+` + "```" + `
+
+## Additional Context
+Any other information that might be helpful:
+
+
+## Workaround
+Temporary solution (if any):
+
+
+## Related Issues
+- Issue #
+- Related to:
+
+---
+
+## For Developers
+
+### Investigation Notes
+-
+
+### Root Cause
+-
+
+### Proposed Solution
+-
+
+### Testing Requirements
+- [ ] Unit tests
+- [ ] Integration tests
+- [ ] Manual testing scenarios:
+  -
+  -
+
+### Deployment Notes
+- `,
+		Tags: []string{"bug-report", "development", "testing", "issue"},
+		Icon: "🐛",
+	},
+}
+
+// seedDefaultTemplates creates default public templates if they don't exist
+func seedDefaultTemplates(db Database, crypto *CryptoService) error {
+	ctx := context.Background()
+
+	// Check if we already have default templates
+	var count int
+	err := db.QueryRow(ctx, `SELECT COUNT(*) FROM templates WHERE tags @> ARRAY['system']`).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("failed to check existing templates: %w", err)
+	}
+
+	if count > 0 {
+		log.Println("Default templates already exist, skipping seed")
+		return nil
+	}
+
+	log.Println("Seeding default templates...")
+
+	// Create a system user ID for templates
+	systemUserID := uuid.New()
+
+	for _, template := range defaultTemplates {
+		// Encrypt template data
+		nameEncrypted, err := crypto.Encrypt([]byte(template.Name))
+		if err != nil {
+			return fmt.Errorf("failed to encrypt template name '%s': %w", template.Name, err)
+		}
+
+		descriptionEncrypted, err := crypto.Encrypt([]byte(template.Description))
+		if err != nil {
+			return fmt.Errorf("failed to encrypt template description '%s': %w", template.Name, err)
+		}
+
+		contentEncrypted, err := crypto.Encrypt([]byte(template.Content))
+		if err != nil {
+			return fmt.Errorf("failed to encrypt template content '%s': %w", template.Name, err)
+		}
+
+		// Add 'system' tag to identify default templates
+		tags := append(template.Tags, "system")
+
+		// Insert template
+		_, err = db.Exec(ctx, `
+			INSERT INTO templates (user_id, name_encrypted, description_encrypted, content_encrypted, tags, icon, is_public, usage_count)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		`, systemUserID, nameEncrypted, descriptionEncrypted, contentEncrypted, tags, template.Icon, true, 0)
+		if err != nil {
+			return fmt.Errorf("failed to insert template '%s': %w", template.Name, err)
+		}
+
+		log.Printf("✅ Created default template: %s", template.Name)
+	}
+
+	log.Printf("Successfully seeded %d default templates", len(defaultTemplates))
+	return nil
+}
+
 func main() {
 	// Initialize logging
 	initLogging()
@@ -3504,6 +5072,11 @@ func main() {
 
 	// Initialize crypto service
 	crypto := NewCryptoService(config.EncryptionKey)
+
+	// Seed default templates
+	if err := seedDefaultTemplates(db, crypto); err != nil {
+		log.Printf("Warning: Failed to seed default templates: %v", err)
+	}
 
 	// Start dynamic admin allowlist refresher (hot-reloads from file if mounted)
 	startAdminAllowlistRefresher()
@@ -3547,22 +5120,67 @@ func main() {
 		Output: InfoLogger.Writer(),
 		Format: "[${time}] ${locals:request_id} ${status} - ${method} ${path} - ${ip} - ${latency}\n",
 	}))
+
+	// Compression middleware for API responses
+	app.Use(compress.New(compress.Config{
+		Level: compress.LevelBestSpeed, // Balance between speed and compression ratio
+		Next: func(c *fiber.Ctx) bool {
+			// Skip compression for WebSocket upgrades
+			return c.Get("Upgrade") == "websocket"
+		},
+	}))
+
 	app.Use(helmet.New(helmet.Config{
-		XSSProtection:         "1; mode=block",
-		ContentTypeNosniff:    "nosniff",
-		XFrameOptions:         "DENY",
-		HSTSMaxAge:            31536000,
-		HSTSPreloadEnabled:    true,
-		ContentSecurityPolicy: "default-src 'self'",
-		ReferrerPolicy:        "strict-origin-when-cross-origin",
+		XSSProtection:      "1; mode=block",
+		ContentTypeNosniff: "nosniff",
+		XFrameOptions:      "DENY",
+		HSTSMaxAge:         31536000,
+		HSTSPreloadEnabled: true,
+		ContentSecurityPolicy: "default-src 'self'; " +
+			"script-src 'self' 'strict-dynamic' 'nonce-{random}'; " +
+			"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+			"font-src 'self' https://fonts.gstatic.com data:; " +
+			"img-src 'self' data: https: blob:; " +
+			"connect-src 'self' ws: wss:; " +
+			"media-src 'self' blob:; " +
+			"worker-src 'self' blob:; " +
+			"child-src 'self' blob:; " +
+			"object-src 'none'; " +
+			"frame-ancestors 'none'; " +
+			"base-uri 'self'; " +
+			"form-action 'self'; " +
+			"upgrade-insecure-requests; " +
+			"block-all-mixed-content",
+		ReferrerPolicy: "strict-origin-when-cross-origin",
+	}))
+
+	// CSRF Protection
+	app.Use(csrf.New(csrf.Config{
+		KeyLookup:         "header:X-CSRF-Token",
+		CookieName:        "csrf_token",
+		CookieSameSite:    "Strict",
+		CookieSecure:      true,
+		CookieHTTPOnly:    true,
+		Expiration:        1 * time.Hour,
+		KeyGenerator:      uuid.NewString,
+		ContextKey:        "csrf",
+		Next: func(c *fiber.Ctx) bool {
+			// Skip CSRF for safe methods and health endpoints
+			method := c.Method()
+			path := c.Path()
+			return method == "GET" || method == "HEAD" || method == "OPTIONS" ||
+				strings.HasPrefix(path, "/api/v1/health") ||
+				strings.HasPrefix(path, "/api/v1/ready")
+		},
 	}))
 
 	// CORS
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     strings.Join(config.AllowedOrigins, ","),
 		AllowCredentials: true,
-		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-CSRF-Token",
 		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
+		ExposeHeaders:    "X-CSRF-Token",
 	}))
 
 	// Rate limiting
@@ -3577,6 +5195,7 @@ func main() {
 	// Initialize handlers
 	authHandler := &AuthHandler{
 		db:     db,
+		redis:  rdb,
 		crypto: crypto,
 		config: config,
 	}
@@ -3637,6 +5256,12 @@ func main() {
 		})
 	})
 
+	// CSRF token endpoint
+	api.Get("/csrf-token", func(c *fiber.Ctx) error {
+		token := c.Locals("csrf").(string)
+		return c.JSON(fiber.Map{"csrf_token": token})
+	})
+
 	// Notes handlers
 	notesHandler := &NotesHandler{
 		db:     db,
@@ -3649,8 +5274,32 @@ func main() {
 		crypto: crypto,
 	}
 
+	// Folders handlers
+	foldersHandler := &FoldersHandler{
+		db:     db,
+		crypto: crypto,
+	}
+
+	// Templates handlers
+	templatesHandler := &TemplatesHandler{
+		db:     db,
+		crypto: crypto,
+	}
+
 	// Collaboration handlers
 	collaborationHandler := &CollaborationHandler{
+		db:     db,
+		crypto: crypto,
+	}
+
+	// Attachments handlers
+	attachmentsHandler := &AttachmentsHandler{
+		db:     db,
+		crypto: crypto,
+	}
+
+	// Search handlers
+	searchHandler := &SearchHandler{
 		db:     db,
 		crypto: crypto,
 	}
@@ -3727,7 +5376,7 @@ func main() {
 	})
 
 	// Protected routes
-	protected := api.Group("/", JWTMiddleware(config.JWTSecret))
+	protected := api.Group("/", JWTMiddleware(config.JWTSecret, rdb, crypto))
 
 	// MFA endpoints
 	protected.Get("/auth/mfa/status", authHandler.GetMFAStatus)
@@ -3757,6 +5406,22 @@ func main() {
 	protected.Post("/notes/:id/tags", tagsHandler.AssignTagToNote)
 	protected.Delete("/notes/:id/tags/:tag_id", tagsHandler.RemoveTagFromNote)
 
+	// Folders endpoints
+	protected.Get("/folders", foldersHandler.GetFolders)
+	protected.Post("/folders", foldersHandler.CreateFolder)
+	protected.Delete("/folders/:id", foldersHandler.DeleteFolder)
+
+	// Note-folder assignment endpoints
+	protected.Put("/notes/:id/folder", foldersHandler.MoveNoteToFolder)
+
+	// Templates endpoints
+	protected.Get("/templates", templatesHandler.GetTemplates)
+	protected.Get("/templates/:id", templatesHandler.GetTemplate)
+	protected.Post("/templates", templatesHandler.CreateTemplate)
+	protected.Put("/templates/:id", templatesHandler.UpdateTemplate)
+	protected.Delete("/templates/:id", templatesHandler.DeleteTemplate)
+	protected.Post("/templates/:id/use", templatesHandler.UseTemplate)
+
 	// Collaboration endpoints with rate limiting
 	collaborationLimiter := limiter.New(limiter.Config{
 		Max:        10, // 10 requests per minute for collaboration actions
@@ -3781,6 +5446,15 @@ func main() {
 	protected.Post("/notes/bulk-import", importExportHandler.BulkImport)
 	protected.Get("/user/storage", importExportHandler.GetStorageInfo)
 
+	// Attachments endpoints
+	protected.Post("/notes/:noteId/attachments", attachmentsHandler.UploadAttachment)
+	protected.Get("/notes/:noteId/attachments", attachmentsHandler.GetAttachments)
+	protected.Get("/notes/:noteId/attachments/:attachmentId", attachmentsHandler.DownloadAttachment)
+	protected.Delete("/notes/:noteId/attachments/:attachmentId", attachmentsHandler.DeleteAttachment)
+
+	// Search endpoints
+	protected.Post("/search/notes", searchHandler.SearchNotes)
+
 	// WebSocket endpoint for real-time collaboration
 	app.Use("/ws", func(c *fiber.Ctx) error {
 		// IsWebSocketUpgrade returns true if the client
@@ -3798,7 +5472,7 @@ func main() {
 	}))
 
 	// Admin-only Swagger docs (JWT + RBAC admin)
-	docs := api.Group("/docs", JWTMiddleware(config.JWTSecret), AdminOnlyFromEnv())
+	docs := api.Group("/docs", JWTMiddleware(config.JWTSecret, rdb, crypto), AdminOnlyFromEnv())
 	docs.Get("/", swagger.HandlerDefault)
 	docs.Get("/openapi.json", swaggerJSONHandler)
 
@@ -3828,7 +5502,7 @@ func main() {
 	}()
 
 	// Admin API (RBAC)
-	admin := api.Group("/admin", JWTMiddleware(config.JWTSecret), RequireRole(db, "admin"))
+	admin := api.Group("/admin", JWTMiddleware(config.JWTSecret, rdb, crypto), RequireRole(db, "admin"))
 	admin.Get("/health", func(c *fiber.Ctx) error { return c.JSON(fiber.Map{"status": "ok"}) })
 
 	// Registration setting endpoints
