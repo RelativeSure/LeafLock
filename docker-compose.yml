@@ -46,7 +46,7 @@ services:
       dockerfile: Dockerfile
     container_name: leaflock-backend
     environment:
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}@postgres:5432/notes?sslmode=disable
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}@postgres:5432/notes?sslmode=require
       REDIS_URL: redis:6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-ChangeThisRedisPassword123!}
       JWT_SECRET: ${JWT_SECRET:-ChangeThisToRandom64CharStringForProductionUsePlease!}

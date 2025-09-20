@@ -8,7 +8,6 @@ import {
   EyeOff,
   Loader2,
   Save,
-  X,
   Palette,
   Calendar,
   Users,
