@@ -75,8 +75,6 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_hash BYTEA UNIQUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_search_hash BYTEA UNIQUE;
 
--- Encrypt audit log metadata field
-ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS metadata_encrypted BYTEA;
 
 -- GDPR compliance: Add table to store GDPR deletion keys for email recovery
 CREATE TABLE IF NOT EXISTS gdpr_keys (
@@ -195,6 +193,9 @@ CREATE TABLE IF NOT EXISTS audit_log (
     metadata JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Encrypt audit log metadata field
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS metadata_encrypted BYTEA;
 
 -- File attachments with encryption
 CREATE TABLE IF NOT EXISTS attachments (
@@ -2281,6 +2282,73 @@ func main() {
 		crypto: crypto,
 	}
 
+	// Public announcement endpoint
+	api.Get("/announcements", func(c *fiber.Ctx) error {
+		ctx := c.Context()
+
+		// Check if user is authenticated
+		isAuthenticated := false
+		if token := c.Get("Authorization"); token != "" {
+			// Simple token validation - in real implementation you'd properly validate JWT
+			isAuthenticated = strings.HasPrefix(token, "Bearer ")
+		}
+
+		// Build query based on authentication status
+		var visibilityFilter string
+		if isAuthenticated {
+			visibilityFilter = `visibility IN ('all', 'logged_in')`
+		} else {
+			visibilityFilter = `visibility = 'all'`
+		}
+
+		query := fmt.Sprintf(`
+			SELECT id, title, content, visibility, style, dismissible, priority, start_date, end_date, created_at
+			FROM announcements
+			WHERE active = true
+			AND %s
+			AND (start_date IS NULL OR start_date <= NOW())
+			AND (end_date IS NULL OR end_date >= NOW())
+			ORDER BY priority DESC, created_at DESC
+		`, visibilityFilter)
+
+		rows, err := db.Query(ctx, query)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch announcements"})
+		}
+		defer rows.Close()
+
+		var announcements []fiber.Map
+		for rows.Next() {
+			var id uuid.UUID
+			var title, content, visibility string
+			var style map[string]interface{}
+			var dismissible bool
+			var priority int
+			var startDate, endDate *time.Time
+			var createdAt time.Time
+
+			err := rows.Scan(&id, &title, &content, &visibility, &style, &dismissible, &priority, &startDate, &endDate, &createdAt)
+			if err != nil {
+				continue
+			}
+
+			announcements = append(announcements, fiber.Map{
+				"id":          id,
+				"title":       title,
+				"content":     content,
+				"visibility":  visibility,
+				"style":       style,
+				"dismissible": dismissible,
+				"priority":    priority,
+				"start_date":  startDate,
+				"end_date":    endDate,
+				"created_at":  createdAt,
+			})
+		}
+
+		return c.JSON(fiber.Map{"announcements": announcements})
+	})
+
 	// Protected routes
 	protected := api.Group("/", JWTMiddleware(config.JWTSecret))
 
@@ -3245,72 +3313,6 @@ func main() {
 		return c.JSON(fiber.Map{"message": "Announcement deleted successfully"})
 	})
 
-	// Public announcement endpoint
-	api.Get("/announcements", func(c *fiber.Ctx) error {
-		ctx := c.Context()
-
-		// Check if user is authenticated
-		isAuthenticated := false
-		if token := c.Get("Authorization"); token != "" {
-			// Simple token validation - in real implementation you'd properly validate JWT
-			isAuthenticated = strings.HasPrefix(token, "Bearer ")
-		}
-
-		// Build query based on authentication status
-		var visibilityFilter string
-		if isAuthenticated {
-			visibilityFilter = `visibility IN ('all', 'logged_in')`
-		} else {
-			visibilityFilter = `visibility = 'all'`
-		}
-
-		query := fmt.Sprintf(`
-			SELECT id, title, content, visibility, style, dismissible, priority, start_date, end_date, created_at
-			FROM announcements
-			WHERE active = true
-			AND %s
-			AND (start_date IS NULL OR start_date <= NOW())
-			AND (end_date IS NULL OR end_date >= NOW())
-			ORDER BY priority DESC, created_at DESC
-		`, visibilityFilter)
-
-		rows, err := db.Query(ctx, query)
-		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch announcements"})
-		}
-		defer rows.Close()
-
-		var announcements []fiber.Map
-		for rows.Next() {
-			var id uuid.UUID
-			var title, content, visibility string
-			var style map[string]interface{}
-			var dismissible bool
-			var priority int
-			var startDate, endDate *time.Time
-			var createdAt time.Time
-
-			err := rows.Scan(&id, &title, &content, &visibility, &style, &dismissible, &priority, &startDate, &endDate, &createdAt)
-			if err != nil {
-				continue
-			}
-
-			announcements = append(announcements, fiber.Map{
-				"id":          id,
-				"title":       title,
-				"content":     content,
-				"visibility":  visibility,
-				"style":       style,
-				"dismissible": dismissible,
-				"priority":    priority,
-				"start_date":  startDate,
-				"end_date":    endDate,
-				"created_at":  createdAt,
-			})
-		}
-
-		return c.JSON(fiber.Map{"announcements": announcements})
-	})
 
 	// GDPR compliance endpoints
 	api.Post("/gdpr/request", func(c *fiber.Ctx) error {
