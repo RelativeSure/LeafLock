@@ -29,6 +29,7 @@ import { Badge } from '@/components/ui/badge'
 import AdminPage from './AdminPage'
 import Footer from '@/components/Footer'
 import AnnouncementBanner, { Announcement } from '@/components/AnnouncementBanner'
+import { ImportExportDialog } from '@/components/ImportExportDialog'
 
 // Types
 interface Note {
@@ -2905,6 +2906,13 @@ function SecureNotesApp() {
               </div>
 
               <div className="flex items-center space-x-4">
+                <ImportExportDialog
+                  noteId={selectedNote?.id}
+                  notes={notes}
+                  setNotes={setNotes}
+                  onImportSuccess={() => loadNotes()}
+                />
+
                 <ThemeToggle />
 
                 <button
