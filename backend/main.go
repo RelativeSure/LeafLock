@@ -5276,29 +5276,60 @@ func seedDefaultAdminUser(db Database, crypto *CryptoService, config *Config) er
 
 	masterKeyEncrypted := aead.Seal(nonce, nonce, masterKey, nil)
 
-	// Create encrypted email fields
-	emailHash := sha256.Sum256([]byte(strings.ToLower(email)))
-	emailEncrypted, err := crypto.Encrypt([]byte(email))
+	// Generate GDPR deletion key for email encryption (same as registration)
+	deletionKey := make([]byte, 32)
+	if _, err := rand.Read(deletionKey); err != nil {
+		return fmt.Errorf("failed to generate GDPR deletion key: %w", err)
+	}
+
+	// Create email hash for uniqueness and GDPR lookups (same as registration)
+	emailHash := crypto.HashEmail(email)
+
+	// Encrypt email with GDPR key (same as registration)
+	emailEncrypted, err := crypto.EncryptWithGDPRKey([]byte(email), deletionKey)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt email: %w", err)
 	}
 
+	// Create deterministic email hash for secure login lookups (same as registration)
 	emailSearchHash, err := crypto.EncryptDeterministic([]byte(strings.ToLower(email)), "email_search")
 	if err != nil {
 		return fmt.Errorf("failed to create email search hash: %w", err)
 	}
 
-	// Insert default admin user
-	_, err = db.Exec(ctx, `
+	// Start transaction (same as registration)
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Store GDPR deletion key (same as registration)
+	_, err = tx.Exec(ctx, `
+		INSERT INTO gdpr_keys (email_hash, deletion_key)
+		VALUES ($1, $2)`,
+		emailHash, deletionKey,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to store GDPR deletion key: %w", err)
+	}
+
+	// Insert default admin user (same as registration)
+	_, err = tx.Exec(ctx, `
 		INSERT INTO users (
 			email_hash, email_encrypted, email_search_hash,
 			password_hash, salt, master_key_encrypted,
 			is_admin, mfa_enabled, failed_attempts
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`, emailHash[:], emailEncrypted, emailSearchHash, passwordHash, salt, masterKeyEncrypted, true, false, 0)
+	`, emailHash, emailEncrypted, emailSearchHash, passwordHash, salt, masterKeyEncrypted, true, false, 0)
 
 	if err != nil {
 		return fmt.Errorf("failed to create default admin user: %w", err)
+	}
+
+	// Commit transaction
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit admin user creation: %w", err)
 	}
 
 	log.Printf("✅ Created default admin user: %s", email)
