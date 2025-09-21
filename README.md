@@ -52,6 +52,7 @@ LeafLock is a privacy-first notes application with end-to-end encryption, real-t
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8080
    - API health check: http://localhost:8080/api/v1/health
+   - API documentation: http://localhost:8080/api/v1/docs (admin users only)
 
 4. Stop the stack when you are done:
 

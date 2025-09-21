@@ -1649,7 +1649,7 @@ const LoginView: React.FC<LoginViewProps & { announcements?: Announcement[] }> =
   const publicAnnouncements = announcements.filter(a => a.visibility === 'all')
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+    <div className="h-screen overflow-y-auto bg-background flex flex-col items-center justify-center p-4">
       {/* Announcements */}
       {publicAnnouncements.length > 0 && (
         <div className="w-full max-w-md mb-4">
@@ -1658,20 +1658,19 @@ const LoginView: React.FC<LoginViewProps & { announcements?: Announcement[] }> =
       )}
 
       {/* Documentation Info Alert */}
-      <Alert className="w-full max-w-md mb-4 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+      <Alert className="w-full max-w-md mb-3 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
         <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-        <AlertDescription className="text-blue-800 dark:text-blue-200">
-          <span className="font-medium">Need help getting started?</span>{' '}
+        <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
           <a
-            href="/docs"
+            href="https://docs.leaflock.app"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 underline hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
           >
             <Book className="h-3 w-3" />
-            View Documentation
+            Documentation
           </a>{' '}
-          for setup guides, security features, and usage instructions.
+          • Setup guides & security features
         </AlertDescription>
       </Alert>
 
