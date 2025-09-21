@@ -450,9 +450,26 @@ class SecureAPI {
   }
 
   async login(email: string, password: string, mfaCode?: string): Promise<AuthResponse> {
+    // Enhanced debug logging for special character password issues
+    console.log('🔍 Frontend Login Debug Info:')
+    console.log('   - Email:', email)
+    console.log('   - Password length:', password.length)
+    if (password.length > 0) {
+      console.log('   - Password first char:', password[0])
+      console.log('   - Password last char:', password[password.length - 1])
+      console.log('   - Password contains [:', password.includes('['))
+      console.log('   - Password contains ]:', password.includes(']'))
+    }
+
+    // Test JSON serialization
+    const requestBody = { email, password, mfa_code: mfaCode }
+    const serializedBody = JSON.stringify(requestBody)
+    console.log('   - JSON body length:', serializedBody.length)
+    console.log('   - JSON body preview:', serializedBody.substring(0, 100) + '...')
+
     const response = await this.request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password, mfa_code: mfaCode }),
+      body: serializedBody,
     })
 
     if (response.token) {
