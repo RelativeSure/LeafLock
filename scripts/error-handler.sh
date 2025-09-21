@@ -495,7 +495,7 @@ main() {
     cat << "EOF"
 ╔════════════════════════════════════════════════════════════════╗
 ║                                                                ║
-║           🚨 SECURE NOTES ERROR HANDLER & RECOVERY 🚨          ║
+║                 🚨 LEAFLOCK ERROR HANDLER & RECOVERY 🚨                ║
 ║                                                                ║
 ║         Automated error detection and system recovery         ║
 ║                                                                ║

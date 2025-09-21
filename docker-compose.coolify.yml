@@ -13,7 +13,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Please set POSTGRES_PASSWORD in Coolify environment variables}
-      POSTGRES_DB: notes
+      POSTGRES_DB: leaflock
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -39,6 +39,9 @@ services:
       - redis_data:/data
     networks:
       - leaflock-network
+    sysctls:
+      - net.core.somaxconn=1024
+      - vm.overcommit_memory=1
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -a \"${REDIS_PASSWORD}\" --no-auth-warning ping | grep -q PONG"]
       interval: 10s
@@ -57,7 +60,7 @@ services:
     container_name: leaflock-backend
     environment:
       # Database Configuration
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?}@postgres:5432/notes?sslmode=prefer
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?}@postgres:5432/leaflock?sslmode=prefer
       
       # Redis Configuration
       REDIS_URL: redis:6379

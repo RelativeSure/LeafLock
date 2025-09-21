@@ -28,7 +28,7 @@ _Last updated: 2025-09-19_
 
 ## Privacy First: Zero-Knowledge Protection
 
-**LeafLock is fundamentally different from most online services.** We've built our secure notes application with zero-knowledge architecture, which means **we cannot read your notes even if we wanted to**. Your data is encrypted on your device before it ever reaches our servers, and only you have the keys.
+**LeafLock is fundamentally different from most online services.** We've built our application with zero-knowledge architecture, which means **we cannot read your notes even if we wanted to**. Your data is encrypted on your device before it ever reaches our servers, and only you have the keys.
 
 This unique approach means that many traditional data protection concerns simply don't apply to LeafLock - because we never see your sensitive information in the first place.
 
@@ -100,7 +100,7 @@ Unlike most online services, LeafLock collects very little data because of our z
 ## Legal Basis for Processing
 
 We process your limited data based on:
-- **Contract performance**: To provide the secure notes service you signed up for
+- **Contract performance**: To provide the LeafLock service you signed up for
 - **Legitimate interest**: Basic security monitoring and service improvement
 - **Consent**: For optional analytics (which you can opt out of)
 

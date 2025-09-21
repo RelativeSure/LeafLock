@@ -15,7 +15,7 @@ timeZone = "UTC"
   contactEmail = "contact@leaflock.app"
   description = "Secure, end-to-end encrypted notes with zero-knowledge architecture"
   author = "LeafLock Team"
-  keywords = ["secure notes", "encryption", "privacy", "end-to-end", "zero-knowledge"]
+  keywords = ["leaflock", "encryption", "privacy", "end-to-end", "zero-knowledge", "secure notes"]
   version = "1.0.0"
 
   [params.social]

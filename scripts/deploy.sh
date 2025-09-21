@@ -373,7 +373,7 @@ show_banner() {
 
 EOF
     echo -e "${NC}"
-    echo -e "${BLUE}          Secure End-to-End Encrypted Notes Application${NC}"
+    echo -e "${BLUE}             Secure End-to-End Encrypted Application${NC}"
     echo -e "${BLUE}                    Production-Ready Deployment${NC}"
     echo
 }

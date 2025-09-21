@@ -477,7 +477,7 @@ main() {
     cat << "EOF"
 ╔════════════════════════════════════════════════════════════════╗
 ║                                                                ║
-║           🪝 SECURE NOTES GIT HOOKS SETUP 🪝                   ║
+║                 🪝 LEAFLOCK GIT HOOKS SETUP 🪝                     ║
 ║                                                                ║
 ║     Comprehensive code quality and security automation        ║
 ║                                                                ║
