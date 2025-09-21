@@ -85,6 +85,17 @@ services:
 
       # Admin Configuration (Optional)
       ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
+
+      # Progressive Rate Limiting Configuration
+      RATE_LIMIT_MODE: ${RATE_LIMIT_MODE:-progressive}
+      IP_RATE_LIMIT_ENABLED: ${IP_RATE_LIMIT_ENABLED:-true}
+      RATE_LIMIT_DECAY_MINUTES: ${RATE_LIMIT_DECAY_MINUTES:-5}
+      RATE_LIMIT_USE_SUBNET: ${RATE_LIMIT_USE_SUBNET:-false}
+      MAX_DELAY_SECONDS: ${MAX_DELAY_SECONDS:-60}
+      TRUSTED_IP_RANGES: ${TRUSTED_IP_RANGES:-}
+
+      # Monitoring
+      ENABLE_METRICS: ${ENABLE_METRICS:-true}
     # Backend is internal-only - no external port exposure
     # ports:
     #   - "8080:8080"
@@ -160,3 +171,9 @@ networks:
 # 5. Health endpoints:
 #    - Backend: http://your-backend:8080/api/v1/health
 #    - Frontend: http://your-frontend/
+#
+# Rate Limiting Configuration:
+# - To DISABLE rate limiting entirely: Set RATE_LIMIT_MODE=disabled
+# - For progressive delays (default): Set RATE_LIMIT_MODE=progressive
+# - For shared IP environments: Set RATE_LIMIT_USE_SUBNET=true
+# - To disable IP rate limiting: Set IP_RATE_LIMIT_ENABLED=false
