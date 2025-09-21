@@ -1,6 +1,7 @@
 # docker-compose.coolify.yml - LeafLock deployment for Coolify
 # This file is optimized for Coolify deployment with proper health checks,
 # environment variable validation, and service dependencies.
+# Updated for Coolify v4+ compatibility
 
 version: '3.8'
 
@@ -12,7 +13,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Please set POSTGRES_PASSWORD in Coolify environment variables}
-      POSTGRES_DB: leaflock
+      POSTGRES_DB: notes
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -56,7 +57,7 @@ services:
     container_name: leaflock-backend
     environment:
       # Database Configuration
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?}@postgres:5432/leaflock?sslmode=disable
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?}@postgres:5432/notes?sslmode=prefer
       
       # Redis Configuration
       REDIS_URL: redis:6379
@@ -98,6 +99,9 @@ services:
       start_period: 60s
       retries: 3
     restart: unless-stopped
+    labels:
+      - "coolify.type=internal"
+      - "coolify.name=leaflock-backend"
 
   # React Frontend
   frontend:
@@ -115,8 +119,8 @@ services:
       BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8080}
       # Set port to 80 to match Coolify port mapping expectations
       PORT: 80
-    ports:
-      - "3000:80"
+    expose:
+      - "80"
     depends_on:
       - backend
     networks:
@@ -128,6 +132,9 @@ services:
       start_period: 30s
       retries: 3
     restart: unless-stopped
+    labels:
+      - "coolify.type=application"
+      - "coolify.name=leaflock-frontend"
 
 volumes:
   postgres_data:

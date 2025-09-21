@@ -789,7 +789,7 @@ func setupTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 
 	cleanup := func() {
 		// Clean up test data
-		pool.Exec(ctx, "TRUNCATE users, workspaces, notes, sessions, audit_log CASCADE")
+		pool.Exec(ctx, "TRUNCATE users, workspaces, notes, audit_log CASCADE")
 		pool.Close()
 	}
 
