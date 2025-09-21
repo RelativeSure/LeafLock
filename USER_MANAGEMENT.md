@@ -20,7 +20,7 @@ Configure the default admin account via environment variables:
 ENABLE_DEFAULT_ADMIN=true
 
 # Default admin credentials
-DEFAULT_ADMIN_EMAIL=admin@leaflock.local
+DEFAULT_ADMIN_EMAIL=admin@leaflock.app
 DEFAULT_ADMIN_PASSWORD=AdminPass123!
 ```
 

@@ -73,7 +73,12 @@ services:
       # Application Settings
       APP_ENV: ${APP_ENV:-production}
       ENABLE_REGISTRATION: ${ENABLE_REGISTRATION:-true}
-      
+
+      # Default Admin User Configuration
+      ENABLE_DEFAULT_ADMIN: ${ENABLE_DEFAULT_ADMIN:-true}
+      DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@leaflock.app}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-AdminPass123!}
+
       # Admin Configuration (Optional)
       ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
     # Backend is internal-only - no external port exposure
