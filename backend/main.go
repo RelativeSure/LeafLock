@@ -1346,10 +1346,30 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 // @Failure 423 {object} map[string]interface{} "MFA required"
 // @Router /auth/login [post]
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
+	// Enhanced debug logging for troubleshooting CORS/request issues
+	log.Printf("🔍 Login Request Debug Info:")
+	log.Printf("   - Method: %s", c.Method())
+	log.Printf("   - Origin: %s", c.Get("Origin"))
+	log.Printf("   - Content-Type: %s", c.Get("Content-Type"))
+	log.Printf("   - User-Agent: %s", c.Get("User-Agent"))
+	log.Printf("   - Content-Length: %s", c.Get("Content-Length"))
+
 	var req LoginRequest
 	if err := c.BodyParser(&req); err != nil {
+		log.Printf("❌ Body parsing failed: %v", err)
+		log.Printf("   - Raw body: %s", c.Body())
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
 	}
+
+	// Log parsed request details (without logging full password for security)
+	log.Printf("✅ Request parsed successfully:")
+	log.Printf("   - Email: %s", req.Email)
+	log.Printf("   - Password length: %d", len(req.Password))
+	if len(req.Password) > 0 {
+		log.Printf("   - Password first char: %c", req.Password[0])
+		log.Printf("   - Password last char: %c", req.Password[len(req.Password)-1])
+	}
+	log.Printf("   - MFA Code present: %t", req.MFACode != "")
 
 	ctx := context.Background()
 
@@ -1377,9 +1397,24 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
-	// Check if account is locked
+	// Check if account is locked with detailed time remaining
 	if lockedUntil != nil && lockedUntil.After(time.Now()) {
-		return c.Status(403).JSON(fiber.Map{"error": "Account locked. Try again later."})
+		timeRemaining := time.Until(*lockedUntil)
+		minutes := int(timeRemaining.Minutes())
+		seconds := int(timeRemaining.Seconds()) % 60
+
+		var timeMessage string
+		if minutes > 0 {
+			timeMessage = fmt.Sprintf("%d minutes and %d seconds", minutes, seconds)
+		} else {
+			timeMessage = fmt.Sprintf("%d seconds", seconds)
+		}
+
+		return c.Status(423).JSON(fiber.Map{
+			"error": fmt.Sprintf("Account locked due to too many failed login attempts. Please try again in %s.", timeMessage),
+			"locked_until": lockedUntil.Format(time.RFC3339),
+			"retry_after_seconds": int(timeRemaining.Seconds()),
+		})
 	}
 
 	// Debug logging for password verification
@@ -1401,7 +1436,24 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 				failedAttempts, lockUntil, userID,
 			)
 			h.logAudit(ctx, userID, "login.locked", "user", userID, c)
-			return c.Status(403).JSON(fiber.Map{"error": "Account locked due to too many failed attempts"})
+
+			// Calculate time remaining for the lockout message
+			timeRemaining := time.Until(lockUntil)
+			minutes := int(timeRemaining.Minutes())
+			seconds := int(timeRemaining.Seconds()) % 60
+
+			var timeMessage string
+			if minutes > 0 {
+				timeMessage = fmt.Sprintf("%d minutes and %d seconds", minutes, seconds)
+			} else {
+				timeMessage = fmt.Sprintf("%d seconds", seconds)
+			}
+
+			return c.Status(423).JSON(fiber.Map{
+				"error": fmt.Sprintf("Account locked due to too many failed login attempts. Please try again in %s.", timeMessage),
+				"locked_until": lockUntil.Format(time.RFC3339),
+				"retry_after_seconds": int(timeRemaining.Seconds()),
+			})
 		}
 
 		h.db.Exec(ctx, `UPDATE users SET failed_attempts = $1 WHERE id = $2`, failedAttempts, userID)
