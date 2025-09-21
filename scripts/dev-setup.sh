@@ -46,7 +46,7 @@ show_banner() {
     cat << "EOF"
 ╔══════════════════════════════════════════════════╗
 ║                                                  ║
-║        🔒 SECURE NOTES DEVELOPMENT SETUP        ║
+║             🔒 LEAFLOCK DEVELOPMENT SETUP            ║
 ║                                                  ║
 ║     Automated environment configuration for      ║
 ║          rapid development onboarding            ║

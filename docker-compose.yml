@@ -1,4 +1,4 @@
-# docker-compose.yml - Complete secure notes app with automatic setup
+# docker-compose.yml - Complete LeafLock app with automatic setup
 
 services:
   # PostgreSQL with automatic SSL setup
@@ -10,7 +10,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}
-      POSTGRES_DB: notes
+      POSTGRES_DB: leaflock
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     command: ["postgres"]
     volumes:
@@ -36,6 +36,9 @@ services:
       - redis_data:/data
     networks:
       - leaflock-network
+    sysctls:
+      - net.core.somaxconn=1024
+      - vm.overcommit_memory=1
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -a \"$REDIS_PASSWORD\" --no-auth-warning PING | grep -q PONG"]
       interval: 10s
@@ -52,14 +55,14 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}@postgres:5432/notes?sslmode=prefer
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}@postgres:5432/leaflock?sslmode=prefer
       REDIS_URL: redis:6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-ChangeThisRedisPassword123!}
       JWT_SECRET: ${JWT_SECRET:-ChangeThisToRandom64CharStringForProductionUsePlease!}
       SERVER_ENCRYPTION_KEY: ${SERVER_ENCRYPTION_KEY:-ChangeThisToRandom32CharString!}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost,https://localhost}
       ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
-      ADMIN_USER_IDS_FILE: /run/config/notes.env
+      ADMIN_USER_IDS_FILE: /run/config/leaflock.env
       APP_ENV: ${APP_ENV:-development}
       PORT: 8080
       # Default admin user configuration
@@ -69,7 +72,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./.env:/run/config/notes.env:ro
+      - ./.env:/run/config/leaflock.env:ro
     depends_on:
       postgres:
         condition: service_healthy

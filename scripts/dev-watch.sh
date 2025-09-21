@@ -58,7 +58,7 @@ show_banner() {
     cat << "EOF"
 ╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
-║        🔥 SECURE NOTES HOT RELOAD DEVELOPMENT SERVER 🔥       ║
+║              🔥 LEAFLOCK HOT RELOAD DEVELOPMENT SERVER 🔥             ║
 ║                                                               ║
 ║     Intelligent file watching with automatic reload          ║
 ║        • Go backend with instant rebuild                     ║

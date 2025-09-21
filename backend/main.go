@@ -270,6 +270,15 @@ CREATE TABLE IF NOT EXISTS folders (
 -- Add folder_id to notes table for folder organization
 ALTER TABLE notes ADD COLUMN IF NOT EXISTS folder_id UUID REFERENCES folders(id) ON DELETE SET NULL;
 
+-- Login attempts table for IP-based rate limiting
+CREATE TABLE IF NOT EXISTS login_attempts (
+    ip_address_encrypted BYTEA PRIMARY KEY, -- Encrypted IP address for privacy
+    attempts INT DEFAULT 0,
+    last_attempt TIMESTAMPTZ DEFAULT NOW(),
+    locked_until TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Tags table for organizing notes
 CREATE TABLE IF NOT EXISTS tags (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -807,6 +816,110 @@ func isPublicIP(ip net.IP) bool {
 		}
 	}
 	return true
+}
+
+// checkIPRateLimit checks if an IP address is rate limited for login attempts
+func (h *AuthHandler) checkIPRateLimit(ctx context.Context, ipAddress string) (bool, time.Duration, error) {
+	encryptedIP, err := h.crypto.Encrypt([]byte(ipAddress))
+	if err != nil {
+		return false, 0, fmt.Errorf("failed to encrypt IP: %w", err)
+	}
+
+	var attempts int
+	var lockedUntil *time.Time
+	var lastAttempt time.Time
+
+	err = h.db.QueryRow(ctx, `
+        SELECT attempts, locked_until, last_attempt
+        FROM login_attempts
+        WHERE ip_address_encrypted = $1`,
+		encryptedIP,
+	).Scan(&attempts, &lockedUntil, &lastAttempt)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// No record exists, IP is not rate limited
+			return false, 0, nil
+		}
+		return false, 0, fmt.Errorf("database query failed: %w", err)
+	}
+
+	// Check if IP is currently locked
+	if lockedUntil != nil && lockedUntil.After(time.Now()) {
+		return true, time.Until(*lockedUntil), nil
+	}
+
+	return false, 0, nil
+}
+
+// incrementIPAttempts increments failed login attempts for an IP address
+func (h *AuthHandler) incrementIPAttempts(ctx context.Context, ipAddress string) error {
+	encryptedIP, err := h.crypto.Encrypt([]byte(ipAddress))
+	if err != nil {
+		return fmt.Errorf("failed to encrypt IP: %w", err)
+	}
+
+	// First, try to get current attempts
+	var attempts int
+	err = h.db.QueryRow(ctx, `
+        SELECT attempts FROM login_attempts
+        WHERE ip_address_encrypted = $1`,
+		encryptedIP,
+	).Scan(&attempts)
+
+	if err == sql.ErrNoRows {
+		// No record exists, create new one
+		_, err = h.db.Exec(ctx, `
+            INSERT INTO login_attempts (ip_address_encrypted, attempts, last_attempt)
+            VALUES ($1, 1, NOW())`,
+			encryptedIP,
+		)
+		return err
+	} else if err != nil {
+		return fmt.Errorf("failed to query IP attempts: %w", err)
+	}
+
+	// Increment attempts
+	attempts++
+
+	// Lock IP if it exceeds max attempts (use higher threshold than user lockout)
+	var lockUntil *time.Time
+	maxIPAttempts := h.config.MaxLoginAttempts * 3 // IP gets 3x more attempts than individual users
+	if attempts >= maxIPAttempts {
+		lockTime := time.Now().Add(h.config.LockoutDuration)
+		lockUntil = &lockTime
+	}
+
+	_, err = h.db.Exec(ctx, `
+        UPDATE login_attempts
+        SET attempts = $1, last_attempt = NOW(), locked_until = $2
+        WHERE ip_address_encrypted = $3`,
+		attempts, lockUntil, encryptedIP,
+	)
+
+	return err
+}
+
+// resetIPAttempts resets failed login attempts for an IP address after successful login
+func (h *AuthHandler) resetIPAttempts(ctx context.Context, ipAddress string) error {
+	encryptedIP, err := h.crypto.Encrypt([]byte(ipAddress))
+	if err != nil {
+		return fmt.Errorf("failed to encrypt IP: %w", err)
+	}
+
+	_, err = h.db.Exec(ctx, `
+        UPDATE login_attempts
+        SET attempts = 0, locked_until = NULL
+        WHERE ip_address_encrypted = $1`,
+		encryptedIP,
+	)
+
+	// Ignore error if record doesn't exist
+	if err == sql.ErrNoRows {
+		return nil
+	}
+
+	return err
 }
 
 func csvEscape(s string) string {
@@ -1373,6 +1486,31 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	ctx := context.Background()
 
+	// Get client IP for rate limiting
+	clientIPAddr := clientIP(c)
+
+	// Check IP-based rate limiting first
+	isIPLocked, ipLockDuration, err := h.checkIPRateLimit(ctx, clientIPAddr)
+	if err != nil {
+		log.Printf("Error checking IP rate limit: %v", err)
+		// Continue with login attempt but log the error
+	} else if isIPLocked {
+		minutes := int(ipLockDuration.Minutes())
+		seconds := int(ipLockDuration.Seconds()) % 60
+
+		var timeMessage string
+		if minutes > 0 {
+			timeMessage = fmt.Sprintf("%d minutes and %d seconds", minutes, seconds)
+		} else {
+			timeMessage = fmt.Sprintf("%d seconds", seconds)
+		}
+
+		return c.Status(429).JSON(fiber.Map{
+			"error": fmt.Sprintf("Too many login attempts from this IP address. Please try again in %s.", timeMessage),
+			"retry_after_seconds": int(ipLockDuration.Seconds()),
+		})
+	}
+
 	// Create deterministic hash for secure email lookup
 	emailSearchHash, err := h.crypto.EncryptDeterministic([]byte(strings.ToLower(req.Email)), "email_search")
 	if err != nil {
@@ -1394,6 +1532,10 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	).Scan(&userID, &passwordHash, &failedAttempts, &lockedUntil, &mfaEnabled, &mfaSecret)
 
 	if err != nil {
+		// Increment IP attempts on invalid email
+		if ipErr := h.incrementIPAttempts(ctx, clientIPAddr); ipErr != nil {
+			log.Printf("Error incrementing IP attempts: %v", ipErr)
+		}
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
@@ -1458,6 +1600,12 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 		h.db.Exec(ctx, `UPDATE users SET failed_attempts = $1 WHERE id = $2`, failedAttempts, userID)
 		h.logAudit(ctx, userID, "login.failed", "user", userID, c)
+
+		// Also increment IP attempts on failed password
+		if ipErr := h.incrementIPAttempts(ctx, clientIPAddr); ipErr != nil {
+			log.Printf("Error incrementing IP attempts: %v", ipErr)
+		}
+
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
@@ -1483,16 +1631,27 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		}
 		if !totp.Validate(code, secret) {
 			h.logAudit(ctx, userID, "login.mfa_failed", "user", userID, c)
+
+			// Also increment IP attempts on failed MFA
+			if ipErr := h.incrementIPAttempts(ctx, clientIPAddr); ipErr != nil {
+				log.Printf("Error incrementing IP attempts: %v", ipErr)
+			}
+
 			return c.Status(401).JSON(fiber.Map{"error": "Invalid MFA code"})
 		}
 	}
 
 	// Reset failed attempts and update last login
 	h.db.Exec(ctx, `
-        UPDATE users SET failed_attempts = 0, locked_until = NULL, last_login = NOW() 
+        UPDATE users SET failed_attempts = 0, locked_until = NULL, last_login = NOW()
         WHERE id = $1`,
 		userID,
 	)
+
+	// Reset IP attempts on successful login
+	if ipErr := h.resetIPAttempts(ctx, clientIPAddr); ipErr != nil {
+		log.Printf("Error resetting IP attempts: %v", ipErr)
+	}
 
 	// Generate session
 	sessionToken := make([]byte, 32)

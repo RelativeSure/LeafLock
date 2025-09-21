@@ -680,7 +680,7 @@ main() {
     cat << "EOF"
 ╔════════════════════════════════════════════════════════════════╗
 ║                                                                ║
-║       🧪 SECURE NOTES AUTOMATED TESTING FRAMEWORK 🧪          ║
+║             🧪 LEAFLOCK AUTOMATED TESTING FRAMEWORK 🧪              ║
 ║                                                                ║
 ║     Comprehensive test automation and validation suite        ║
 ║                                                                ║

@@ -170,7 +170,7 @@ diagnose_docker() {
 
 # Function to diagnose Kubernetes issues
 diagnose_kubernetes() {
-    local namespace="${1:-secure-notes}"
+    local namespace="${1:-leaflock}"
     
     log_section "Kubernetes Diagnosis"
     
@@ -368,7 +368,7 @@ diagnose_network() {
     if command -v docker &> /dev/null && docker info &> /dev/null; then
         log_search "Checking Docker networks..."
         local networks
-        networks=$(docker network ls --filter name=secure-notes --format "{{.Name}}" 2>/dev/null || echo "")
+        networks=$(docker network ls --filter name=leaflock --format "{{.Name}}" 2>/dev/null || echo "")
         
         if [[ -n "$networks" ]]; then
             while read -r network; do
@@ -384,7 +384,7 @@ diagnose_network() {
                 fi
             done <<< "$networks"
         else
-            log_warn "No secure-notes Docker networks found"
+            log_warn "No leaflock Docker networks found"
         fi
     fi
 }
@@ -646,7 +646,7 @@ quick_fixes() {
     
     echo "6. Image issues (Kubernetes):"
     echo "   • Build images: ./scripts/build.sh build"
-    echo "   • Load to kind: kind load docker-image secure-notes/backend:latest"
+    echo "   • Load to kind: kind load docker-image leaflock/backend:latest"
     echo "   • Check image pull policy: kubectl describe pod <pod-name>"
     echo
 }
@@ -670,7 +670,7 @@ main() {
             
             # Auto-detect and diagnose Kubernetes if available
             if command -v kubectl &> /dev/null && kubectl cluster-info &> /dev/null; then
-                diagnose_kubernetes "${1:-secure-notes}"
+                diagnose_kubernetes "${1:-leaflock}"
                 echo
             fi
             ;;
@@ -680,7 +680,7 @@ main() {
             ;;
             
         k8s|kubernetes)
-            diagnose_kubernetes "${1:-secure-notes}"
+            diagnose_kubernetes "${1:-leaflock}"
             ;;
             
         network)
@@ -729,7 +729,7 @@ Deployment Types:
 Examples:
   $0                           # Full diagnostic scan
   $0 docker                    # Check Docker deployment
-  $0 k8s secure-notes          # Check Kubernetes in namespace
+  $0 k8s leaflock          # Check Kubernetes in namespace
   $0 service backend docker    # Check backend service in Docker
   $0 report my-report.txt      # Generate diagnostic report
   $0 fixes                     # Show common fixes
