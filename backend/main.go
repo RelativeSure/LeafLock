@@ -48,6 +48,9 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/csrf"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"net/http"
+	"net/url"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
@@ -176,6 +179,19 @@ CREATE TABLE IF NOT EXISTS notes (
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
     version INT DEFAULT 1
+);
+
+-- Note versions for history tracking
+CREATE TABLE IF NOT EXISTS note_versions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    version_number INT NOT NULL,
+    title_encrypted BYTEA NOT NULL, -- Encrypted title at this version
+    content_encrypted BYTEA NOT NULL, -- Encrypted content at this version
+    content_hash BYTEA NOT NULL, -- For integrity verification
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(note_id, version_number)
 );
 
 -- Encrypted search index (searchable encryption)
@@ -422,6 +438,37 @@ type Config struct {
 	SessionDuration   time.Duration
 	Environment       string
 	TrustProxyHeaders bool
+}
+
+// fiberResponseWriter adapts Fiber's context to http.ResponseWriter interface
+type fiberResponseWriter struct {
+	ctx    *fiber.Ctx
+	status int
+	header http.Header
+}
+
+func (w *fiberResponseWriter) Header() http.Header {
+	return w.header
+}
+
+func (w *fiberResponseWriter) Write(data []byte) (int, error) {
+	// Copy headers to Fiber context
+	for key, values := range w.header {
+		for _, value := range values {
+			w.ctx.Set(key, value)
+		}
+	}
+
+	// Set status code if it was set
+	if w.status != 200 {
+		w.ctx.Status(w.status)
+	}
+
+	return w.ctx.Write(data)
+}
+
+func (w *fiberResponseWriter) WriteHeader(statusCode int) {
+	w.status = statusCode
 }
 
 // Runtime feature toggles (in-memory; initialized from env at startup)
@@ -1777,6 +1824,10 @@ func (h *NotesHandler) CreateNote(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create note"})
 	}
 
+	// Record metrics
+	IncrementNoteOperation("create")
+	IncrementDatabaseQuery("insert")
+
 	return c.Status(201).JSON(fiber.Map{
 		"id":      noteID,
 		"message": "Note created successfully",
@@ -1811,10 +1862,41 @@ func (h *NotesHandler) UpdateNote(c *fiber.Ctx) error {
 	// Create content hash for integrity
 	contentHash := argon2.IDKey(contentEnc, []byte("integrity"), 1, 64*1024, 4, 32)
 
-	// Update note
-	result, err := h.db.Exec(ctx, `
-		UPDATE notes 
-		SET title_encrypted = $1, content_encrypted = $2, content_hash = $3, updated_at = NOW()
+	// Start transaction for version history
+	tx, err := h.db.Begin(ctx)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Database transaction failed"})
+	}
+	defer tx.Rollback(ctx)
+
+	// Get current version and content to save as history
+	var currentVersion int
+	var currentTitle, currentContent, currentHash []byte
+	err = tx.QueryRow(ctx, `
+		SELECT version, title_encrypted, content_encrypted, content_hash
+		FROM notes n
+		JOIN workspaces w ON n.workspace_id = w.id
+		WHERE n.id = $1 AND w.owner_id = $2 AND n.deleted_at IS NULL`,
+		noteID, userID).Scan(&currentVersion, &currentTitle, &currentContent, &currentHash)
+
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+	}
+
+	// Save current version to history before updating
+	_, err = tx.Exec(ctx, `
+		INSERT INTO note_versions (note_id, version_number, title_encrypted, content_encrypted, content_hash, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6)`,
+		noteID, currentVersion, currentTitle, currentContent, currentHash, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to save version history"})
+	}
+
+	// Update note with new content and increment version
+	result, err := tx.Exec(ctx, `
+		UPDATE notes
+		SET title_encrypted = $1, content_encrypted = $2, content_hash = $3, version = version + 1, updated_at = NOW()
 		FROM workspaces w
 		WHERE notes.id = $4 AND notes.workspace_id = w.id AND w.owner_id = $5 AND notes.deleted_at IS NULL`,
 		titleEnc, contentEnc, contentHash, noteID, userID)
@@ -1826,6 +1908,16 @@ func (h *NotesHandler) UpdateNote(c *fiber.Ctx) error {
 	if result.RowsAffected() == 0 {
 		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
 	}
+
+	// Commit transaction
+	err = tx.Commit(ctx)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to commit version history"})
+	}
+
+	// Record metrics
+	IncrementNoteOperation("update")
+	IncrementDatabaseQuery("update")
 
 	return c.JSON(fiber.Map{"message": "Note updated successfully"})
 }
@@ -1854,6 +1946,10 @@ func (h *NotesHandler) DeleteNote(c *fiber.Ctx) error {
 	if result.RowsAffected() == 0 {
 		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
 	}
+
+	// Record metrics
+	IncrementNoteOperation("delete")
+	IncrementDatabaseQuery("update")
 
 	return c.JSON(fiber.Map{"message": "Note moved to trash successfully"})
 }
@@ -1930,6 +2026,140 @@ func (h *NotesHandler) RestoreNote(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"message": "Note restored successfully"})
+}
+
+// GetNoteVersions returns version history for a note
+func (h *NotesHandler) GetNoteVersions(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	ctx := context.Background()
+
+	// Get all versions for the note
+	rows, err := h.db.Query(ctx, `
+		SELECT nv.id, nv.version_number, nv.created_at, u.email as created_by_email
+		FROM note_versions nv
+		JOIN notes n ON nv.note_id = n.id
+		JOIN workspaces w ON n.workspace_id = w.id
+		JOIN users u ON nv.created_by = u.id
+		WHERE n.id = $1 AND w.owner_id = $2 AND n.deleted_at IS NULL
+		ORDER BY nv.version_number DESC`,
+		noteID, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch version history"})
+	}
+	defer rows.Close()
+
+	var versions []map[string]interface{}
+	for rows.Next() {
+		var versionID uuid.UUID
+		var versionNumber int
+		var createdAt time.Time
+		var createdByEmail string
+
+		err := rows.Scan(&versionID, &versionNumber, &createdAt, &createdByEmail)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to read version data"})
+		}
+
+		versions = append(versions, map[string]interface{}{
+			"id":              versionID.String(),
+			"version_number":  versionNumber,
+			"created_at":      createdAt.Format(time.RFC3339),
+			"created_by":      createdByEmail,
+		})
+	}
+
+	return c.JSON(fiber.Map{"versions": versions})
+}
+
+// RestoreNoteVersion restores a note to a specific version
+func (h *NotesHandler) RestoreNoteVersion(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	versionNumber, err := strconv.Atoi(c.Params("version"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid version number"})
+	}
+
+	ctx := context.Background()
+
+	// Start transaction
+	tx, err := h.db.Begin(ctx)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Database transaction failed"})
+	}
+	defer tx.Rollback(ctx)
+
+	// Get the version to restore
+	var titleEnc, contentEnc, contentHash []byte
+	err = tx.QueryRow(ctx, `
+		SELECT nv.title_encrypted, nv.content_encrypted, nv.content_hash
+		FROM note_versions nv
+		JOIN notes n ON nv.note_id = n.id
+		JOIN workspaces w ON n.workspace_id = w.id
+		WHERE n.id = $1 AND nv.version_number = $2 AND w.owner_id = $3 AND n.deleted_at IS NULL`,
+		noteID, versionNumber, userID).Scan(&titleEnc, &contentEnc, &contentHash)
+
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Version not found"})
+	}
+
+	// Save current version before restoring
+	var currentVersion int
+	var currentTitle, currentContent, currentContentHash []byte
+	err = tx.QueryRow(ctx, `
+		SELECT version, title_encrypted, content_encrypted, content_hash
+		FROM notes n
+		JOIN workspaces w ON n.workspace_id = w.id
+		WHERE n.id = $1 AND w.owner_id = $2 AND n.deleted_at IS NULL`,
+		noteID, userID).Scan(&currentVersion, &currentTitle, &currentContent, &currentContentHash)
+
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+	}
+
+	// Save current version to history
+	_, err = tx.Exec(ctx, `
+		INSERT INTO note_versions (note_id, version_number, title_encrypted, content_encrypted, content_hash, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6)`,
+		noteID, currentVersion, currentTitle, currentContent, currentContentHash, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to save current version"})
+	}
+
+	// Restore to the selected version
+	result, err := tx.Exec(ctx, `
+		UPDATE notes
+		SET title_encrypted = $1, content_encrypted = $2, content_hash = $3, version = version + 1, updated_at = NOW()
+		FROM workspaces w
+		WHERE notes.id = $4 AND notes.workspace_id = w.id AND w.owner_id = $5 AND notes.deleted_at IS NULL`,
+		titleEnc, contentEnc, contentHash, noteID, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to restore version"})
+	}
+
+	if result.RowsAffected() == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+	}
+
+	// Commit transaction
+	err = tx.Commit(ctx)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to commit version restore"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Note restored to version " + strconv.Itoa(versionNumber)})
 }
 
 func (h *NotesHandler) PermanentlyDeleteNote(c *fiber.Ctx) error {
@@ -5195,6 +5425,11 @@ func main() {
 		ExposeHeaders:    "X-CSRF-Token",
 	}))
 
+	// Prometheus metrics (if enabled)
+	if os.Getenv("ENABLE_METRICS") != "false" {
+		app.Use(PrometheusMiddleware())
+	}
+
 	// Rate limiting
 	app.Use(limiter.New(limiter.Config{
 		Max:        100,
@@ -5267,6 +5502,37 @@ func main() {
 			"encryption": "active",
 		})
 	})
+
+	// Prometheus metrics endpoint (if enabled)
+	if os.Getenv("ENABLE_METRICS") != "false" {
+		app.Get("/metrics", func(c *fiber.Ctx) error {
+			handler := promhttp.Handler()
+			// Use Fiber's adaptor for HTTP handlers
+			req := &http.Request{
+				Method:     c.Method(),
+				URL:        &url.URL{Path: c.Path(), RawQuery: string(c.Request().URI().QueryString())},
+				Header:     make(http.Header),
+				Body:       io.NopCloser(bytes.NewReader(c.Body())),
+				Host:       string(c.Request().Host()),
+				RequestURI: c.OriginalURL(),
+			}
+
+			// Copy headers
+			c.Request().Header.VisitAll(func(key, value []byte) {
+				req.Header.Add(string(key), string(value))
+			})
+
+			// Create response writer
+			w := &fiberResponseWriter{
+				ctx:    c,
+				status: 200,
+				header: make(http.Header),
+			}
+
+			handler.ServeHTTP(w, req)
+			return nil
+		})
+	}
 
 	// CSRF token endpoint
 	api.Get("/csrf-token", func(c *fiber.Ctx) error {
@@ -5407,6 +5673,10 @@ func main() {
 	protected.Get("/trash", notesHandler.GetTrash)
 	protected.Put("/trash/:id/restore", notesHandler.RestoreNote)
 	protected.Delete("/trash/:id", notesHandler.PermanentlyDeleteNote)
+
+	// Version history endpoints
+	protected.Get("/notes/:id/versions", notesHandler.GetNoteVersions)
+	protected.Post("/notes/:id/restore/:version", notesHandler.RestoreNoteVersion)
 
 	// Tags endpoints
 	protected.Get("/tags", tagsHandler.GetTags)

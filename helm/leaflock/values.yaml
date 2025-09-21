@@ -116,6 +116,7 @@ backend:
   env:
     PORT: "8080"
     CORS_ORIGINS: "https://localhost:3000"
+    ENABLE_METRICS: "true"
     
   # Volume mounts for temporary files
   volumeMounts:
@@ -500,17 +501,75 @@ podSecurityStandards:
 
 # Monitoring and observability
 monitoring:
-  enabled: false
+  enabled: true
   serviceMonitor:
-    enabled: false
+    enabled: true
     namespace: monitoring
     interval: 30s
     path: /metrics
-  
+    labels: {}
+    annotations: {}
+
   prometheusRule:
-    enabled: false
+    enabled: true
     namespace: monitoring
-    rules: []
+    rules:
+      - alert: LeafLockBackendDown
+        expr: up{job="leaflock-backend"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "LeafLock backend is down"
+          description: "LeafLock backend has been down for more than 5 minutes"
+
+      - alert: LeafLockHighErrorRate
+        expr: rate(leaflock_errors_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate in LeafLock"
+          description: "Error rate is {{ $value }} errors per second"
+
+      - alert: LeafLockBackupFailed
+        expr: increase(leaflock_backups_total{status="failure"}[1h]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "LeafLock backup failed"
+          description: "Backup operation failed in the last hour"
+
+# Backup configuration
+backup:
+  enabled: true
+  image:
+    registry: ""
+    repository: leaflock/backup
+    tag: "latest"
+    pullPolicy: Never
+
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  retentionDays: 30
+  timezone: "UTC"
+
+  s3:
+    enabled: true
+    endpoint: "https://s3.amazonaws.com"
+    region: "us-east-1"
+    bucket: ""  # Set via secret
+
+  # Backup credentials stored in secrets
+  existingSecret: "leaflock-backup-secret"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
 
 # Tests
 tests:
