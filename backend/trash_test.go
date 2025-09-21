@@ -237,7 +237,7 @@ func TestCleanupOldDeletedNotes(t *testing.T) {
 	mockResult2.On("RowsAffected").Return(int64(0))
 
 	ctx := context.Background()
-	mockDB.On("Exec", ctx, "SELECT cleanup_expired_sessions()").Return(mockResult1, nil)
+	// Session cleanup removed - now handled by Redis TTL
 	mockDB.On("Exec", ctx, "SELECT cleanup_old_deleted_notes()").Return(mockResult2, nil)
 
 	// Mock the count query for deleted notes
@@ -251,8 +251,7 @@ func TestCleanupOldDeletedNotes(t *testing.T) {
 
 	runCleanupTasks(ctx, mockDB)
 
-	// Verify both cleanup functions were called
-	mockDB.AssertCalled(t, "Exec", ctx, "SELECT cleanup_expired_sessions()")
+	// Verify cleanup function was called
 	mockDB.AssertCalled(t, "Exec", ctx, "SELECT cleanup_old_deleted_notes()")
 }
 
@@ -266,7 +265,7 @@ func TestBackgroundCleanupService(t *testing.T) {
 	mockResult2 := &MockResult{}
 	mockResult2.On("RowsAffected").Return(int64(0))
 
-	mockDB.On("Exec", mock.Anything, "SELECT cleanup_expired_sessions()").Return(mockResult1, nil)
+	// Session cleanup removed - now handled by Redis TTL
 	mockDB.On("Exec", mock.Anything, "SELECT cleanup_old_deleted_notes()").Return(mockResult2, nil)
 
 	// Mock count query for deleted notes
@@ -283,7 +282,7 @@ func TestBackgroundCleanupService(t *testing.T) {
 	runCleanupTasks(ctx, mockDB)
 
 	// Verify all cleanup functions were called
-	mockDB.AssertCalled(t, "Exec", ctx, "SELECT cleanup_expired_sessions()")
+	// Session cleanup removed - now handled by Redis TTL
 	mockDB.AssertCalled(t, "Exec", ctx, "SELECT cleanup_old_deleted_notes()")
 }
 
