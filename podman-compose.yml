@@ -73,6 +73,10 @@ services:
       SERVER_ENCRYPTION_KEY: ${SERVER_ENCRYPTION_KEY:-ChangeThisToRandom32CharString!}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost,https://localhost}
       PORT: 8080
+      # Default admin user configuration
+      ENABLE_DEFAULT_ADMIN: ${ENABLE_DEFAULT_ADMIN:-true}
+      DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@leaflock.app}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-AdminPass123!}
     ports:
       - "8080:8080"
     depends_on:
@@ -231,6 +235,13 @@ spec:
       value: "ChangeThisToRandom32CharString!"
     - name: PORT
       value: "8080"
+    # Default admin user configuration
+    - name: ENABLE_DEFAULT_ADMIN
+      value: "true"
+    - name: DEFAULT_ADMIN_EMAIL
+      value: "admin@leaflock.app"
+    - name: DEFAULT_ADMIN_PASSWORD
+      value: "AdminPass123!"
     ports:
     - containerPort: 8080
       hostPort: 8080

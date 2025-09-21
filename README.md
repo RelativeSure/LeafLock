@@ -55,7 +55,7 @@ LeafLock is a privacy-first notes application with end-to-end encryption, real-t
    - API documentation: http://localhost:8080/api/v1/docs (admin users only)
 
 4. **First-time login**: Use the default admin credentials (⚠️ **Change immediately after first login!**):
-   - Email: `admin@leaflock.local` (configurable via `DEFAULT_ADMIN_EMAIL`)
+   - Email: `admin@leaflock.app` (configurable via `DEFAULT_ADMIN_EMAIL`)
    - Password: `AdminPass123!` (configurable via `DEFAULT_ADMIN_PASSWORD`)
 
 5. Stop the stack when you are done:
@@ -68,7 +68,7 @@ LeafLock is a privacy-first notes application with end-to-end encryption, real-t
 
 When starting LeafLock for the first time, a default admin user is automatically created if no users exist in the database:
 
-- **Email**: `admin@leaflock.local` (default)
+- **Email**: `admin@leaflock.app` (default)
 - **Password**: `AdminPass123!` (default)
 - **Admin privileges**: Yes
 

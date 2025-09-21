@@ -56,6 +56,10 @@ services:
       ADMIN_USER_IDS_FILE: /run/config/notes.env
       APP_ENV: ${APP_ENV:-development}
       PORT: 8080
+      # Default admin user configuration
+      ENABLE_DEFAULT_ADMIN: ${ENABLE_DEFAULT_ADMIN:-true}
+      DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@leaflock.app}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-AdminPass123!}
     ports:
       - "8080:8080"
     volumes:
