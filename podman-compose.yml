@@ -10,7 +10,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}
-      POSTGRES_DB: notes
+      POSTGRES_DB: leaflock
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     command:
       - postgres
@@ -50,6 +50,9 @@ services:
       - leaflock
     security_opt:
       - label=disable
+    sysctls:
+      - net.core.somaxconn=1024
+      - vm.overcommit_memory=1
     healthcheck:
       test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
       interval: 10s
@@ -66,7 +69,7 @@ services:
     container_name: leaflock-backend
     hostname: backend
     environment:
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}@postgres:5432/notes?sslmode=require
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}@postgres:5432/leaflock?sslmode=require
       REDIS_URL: redis:6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-ChangeThisRedisPassword123!}
       JWT_SECRET: ${JWT_SECRET:-ChangeThisToRandom64CharStringForProductionUsePlease!}

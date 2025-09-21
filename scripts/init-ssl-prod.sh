@@ -77,7 +77,7 @@ req_extensions = v3_req
 C=${SSL_COUNTRY:-US}
 ST=${SSL_STATE:-State}
 L=${SSL_CITY:-City}
-O=${SSL_ORG:-SecureNotes}
+O=${SSL_ORG:-LeafLock}
 OU=${SSL_OU:-Production Database}
 CN=$DOMAIN
 
