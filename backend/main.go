@@ -5084,10 +5084,24 @@ func main() {
 		BodyLimit:             512 * 1024, // 512KB body size limit
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
+			message := "Internal Server Error"
+
 			if e, ok := err.(*fiber.Error); ok {
 				code = e.Code
+				message = e.Message
+			} else if code < 500 {
+				// Only show actual error for client errors (4xx)
+				message = err.Error()
+			} else {
+				// Log server errors but don't expose details
+				logError("HTTP_ERROR", err,
+					"method", c.Method(),
+					"path", c.Path(),
+					"ip", c.IP(),
+				)
 			}
-			return c.Status(code).JSON(fiber.Map{"error": err.Error()})
+
+			return c.Status(code).JSON(fiber.Map{"error": message})
 		},
 	})
 
@@ -5162,12 +5176,13 @@ func main() {
 		KeyGenerator:      uuid.NewString,
 		ContextKey:        "csrf",
 		Next: func(c *fiber.Ctx) bool {
-			// Skip CSRF for safe methods and health endpoints
+			// Skip CSRF for safe methods, health endpoints, and auth endpoints
 			method := c.Method()
 			path := c.Path()
 			return method == "GET" || method == "HEAD" || method == "OPTIONS" ||
 				strings.HasPrefix(path, "/api/v1/health") ||
-				strings.HasPrefix(path, "/api/v1/ready")
+				strings.HasPrefix(path, "/api/v1/ready") ||
+				strings.HasPrefix(path, "/api/v1/auth/")
 		},
 	}))
 
