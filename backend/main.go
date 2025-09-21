@@ -1415,6 +1415,13 @@ type LoginRequest struct {
 	MFACode  string `json:"mfa_code,omitempty"`
 }
 
+type AdminRecoveryRequest struct {
+	Email           string `json:"email" validate:"required,email"`
+	Password        string `json:"password" validate:"required,min=12"`
+	RecoveryToken   string `json:"recovery_token" validate:"required"`
+	ConfirmDeletion bool   `json:"confirm_deletion"`
+}
+
 // Register godoc
 // @Summary Register a new user
 // @Description Register a new user with email and password
@@ -1816,6 +1823,283 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		"user_id":      userID,
 		"workspace_id": workspaceID,
 	})
+}
+
+func (h *AuthHandler) AdminRecovery(c *fiber.Ctx) error {
+	log.Println("🚨 Admin Recovery Request - Starting emergency admin recovery process")
+
+	var req AdminRecoveryRequest
+	if err := c.BodyParser(&req); err != nil {
+		log.Printf("❌ Admin recovery body parsing failed: %v", err)
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	// Validate request
+	if req.Email == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Email is required"})
+	}
+	if len(req.Password) < 12 {
+		return c.Status(400).JSON(fiber.Map{"error": "Password must be at least 12 characters long"})
+	}
+	if req.RecoveryToken == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Recovery token is required"})
+	}
+
+	log.Printf("📧 Admin recovery for email: %s", req.Email)
+
+	// Generate and validate recovery token
+	expectedToken := h.generateRecoveryToken(req.Email)
+	if req.RecoveryToken != expectedToken {
+		log.Printf("❌ Invalid recovery token provided")
+		return c.Status(401).JSON(fiber.Map{"error": "Invalid recovery token"})
+	}
+
+	// Only allow recovery for admin email
+	if req.Email != h.config.DefaultAdminEmail {
+		log.Printf("❌ Recovery attempted for non-admin email: %s", req.Email)
+		return c.Status(403).JSON(fiber.Map{"error": "Recovery only allowed for default admin account"})
+	}
+
+	ctx := context.Background()
+
+	// Check if this is a key mismatch situation
+	oldEmailSearchHash, err := h.findExistingUserWithDifferentKey(ctx, req.Email)
+	if err != nil && err != sql.ErrNoRows {
+		log.Printf("❌ Error checking for existing user: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Recovery check failed"})
+	}
+
+	var userFound bool
+	var existingUserID uuid.UUID
+
+	if oldEmailSearchHash != "" {
+		userFound = true
+		log.Printf("🔍 Found existing admin user with old encryption key")
+
+		// Get the user ID
+		err = h.db.QueryRow(ctx, `SELECT id FROM users WHERE email_search_hash = $1`, oldEmailSearchHash).Scan(&existingUserID)
+		if err != nil {
+			log.Printf("❌ Error getting user ID: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "Recovery failed"})
+		}
+	}
+
+	if userFound && !req.ConfirmDeletion {
+		return c.JSON(fiber.Map{
+			"status": "confirmation_required",
+			"message": "An admin user exists but is unreachable due to encryption key mismatch. Continuing will delete the old user and create a new one.",
+			"user_id": existingUserID,
+			"action_required": "Set confirm_deletion to true to proceed",
+		})
+	}
+
+	// Begin transaction
+	tx, err := h.db.Begin(ctx)
+	if err != nil {
+		log.Printf("❌ Failed to start recovery transaction: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Recovery failed"})
+	}
+	defer tx.Rollback(ctx)
+
+	// If user exists, delete them and all related data
+	if userFound {
+		log.Printf("🗑️ Deleting existing admin user and related data...")
+
+		// Delete related data first (to avoid foreign key constraints)
+		tables := []string{
+			"notes", "tags", "folders", "templates", "note_tags", "attachments",
+			"shared_notes", "user_sessions", "audit_logs", "password_reset_tokens",
+			"gdpr_keys",
+		}
+
+		for _, table := range tables {
+			_, err = tx.Exec(ctx, fmt.Sprintf("DELETE FROM %s WHERE user_id = $1", table), existingUserID)
+			if err != nil {
+				log.Printf("⚠️ Error deleting from %s: %v", table, err)
+				// Continue with other tables
+			}
+		}
+
+		// Delete the user
+		_, err = tx.Exec(ctx, "DELETE FROM users WHERE id = $1", existingUserID)
+		if err != nil {
+			log.Printf("❌ Error deleting user: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to delete existing user"})
+		}
+
+		log.Printf("✅ Deleted existing admin user and all related data")
+	}
+
+	// Create new admin user with current encryption key
+	log.Printf("👤 Creating new admin user with current encryption key...")
+
+	// Generate salt for password hashing
+	salt := make([]byte, 32)
+	if _, err := rand.Read(salt); err != nil {
+		log.Printf("❌ Failed to generate salt: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Recovery failed"})
+	}
+
+	// Hash password with Argon2id
+	passwordHash := HashPassword(req.Password, salt)
+
+	// Generate user's master encryption key
+	masterKey := make([]byte, 32)
+	if _, err := rand.Read(masterKey); err != nil {
+		log.Printf("❌ Failed to generate master key: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Recovery failed"})
+	}
+
+	// Derive key from password to encrypt master key
+	userKey := argon2.IDKey([]byte(req.Password), salt, 1, 64*1024, 4, 32)
+
+	// Encrypt master key with user's derived key
+	aead, err := chacha20poly1305.NewX(userKey)
+	if err != nil {
+		log.Printf("❌ Failed to initialize encryption: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Recovery failed"})
+	}
+
+	nonce := make([]byte, aead.NonceSize())
+	if _, err := rand.Read(nonce); err != nil {
+		log.Printf("❌ Failed to generate nonce: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Recovery failed"})
+	}
+
+	masterKeyEncrypted := aead.Seal(nonce, nonce, masterKey, nil)
+
+	// Generate GDPR deletion key for email encryption
+	deletionKey := make([]byte, 32)
+	if _, err := rand.Read(deletionKey); err != nil {
+		log.Printf("❌ Failed to generate GDPR deletion key: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Recovery failed"})
+	}
+
+	// Create email hash for uniqueness and GDPR lookups
+	emailHash := h.crypto.HashEmail(req.Email)
+
+	// Encrypt email with GDPR key
+	emailEncrypted, err := h.crypto.EncryptWithGDPRKey([]byte(req.Email), deletionKey)
+	if err != nil {
+		log.Printf("❌ Failed to encrypt email: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Recovery failed"})
+	}
+
+	// Create deterministic email hash for secure login lookups (with CURRENT key)
+	emailSearchHash, err := h.crypto.EncryptDeterministic([]byte(strings.ToLower(req.Email)), "email_search")
+	if err != nil {
+		log.Printf("❌ Failed to create email search hash: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Recovery failed"})
+	}
+
+	// Store GDPR deletion key
+	_, err = tx.Exec(ctx, `
+		INSERT INTO gdpr_keys (email_hash, deletion_key)
+		VALUES ($1, $2)`,
+		emailHash, deletionKey,
+	)
+	if err != nil {
+		log.Printf("❌ Failed to store GDPR key: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Recovery failed"})
+	}
+
+	// Create new user
+	newUserID := uuid.New()
+	workspaceID := uuid.New()
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO users (
+			id, email_encrypted, email_search_hash, password_hash,
+			master_key_encrypted, workspace_id, created_at, updated_at,
+			failed_attempts, locked_until, mfa_enabled
+		) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), 0, NULL, false)`,
+		newUserID, emailEncrypted, emailSearchHash, passwordHash,
+		masterKeyEncrypted, workspaceID,
+	)
+	if err != nil {
+		log.Printf("❌ Failed to create new admin user: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Recovery failed"})
+	}
+
+	// Commit transaction
+	if err = tx.Commit(ctx); err != nil {
+		log.Printf("❌ Failed to commit recovery transaction: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Recovery failed"})
+	}
+
+	log.Printf("✅ Admin recovery completed successfully")
+	log.Printf("   - New User ID: %s", newUserID)
+	log.Printf("   - Workspace ID: %s", workspaceID)
+	log.Printf("   - Email: %s", req.Email)
+
+	return c.JSON(fiber.Map{
+		"status": "success",
+		"message": "Admin user recovered successfully",
+		"user_id": newUserID,
+		"workspace_id": workspaceID,
+		"instructions": "You can now login with the provided credentials",
+	})
+}
+
+func (h *AuthHandler) generateRecoveryToken(email string) string {
+	// Generate recovery token based on current server encryption key and email
+	// This ensures only someone with access to the server config can generate valid tokens
+	data := fmt.Sprintf("%s:%s:%s", email, h.config.EncryptionKey, "admin_recovery")
+	hash := sha256.Sum256([]byte(data))
+	return fmt.Sprintf("recovery_%x", hash[:16]) // First 16 bytes as hex
+}
+
+func (h *AuthHandler) findExistingUserWithDifferentKey(ctx context.Context, email string) (string, error) {
+	// Try to find users with the same email but different email_search_hash
+	// This indicates they were created with a different encryption key
+
+	log.Printf("🔍 Searching for existing admin users that may have key mismatch...")
+
+	var foundHashes [][]byte
+	rows, err := h.db.Query(ctx, `
+		SELECT DISTINCT email_search_hash
+		FROM users
+		WHERE LENGTH(email_search_hash) > 0
+	`)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var hash []byte
+		if err := rows.Scan(&hash); err != nil {
+			continue
+		}
+		foundHashes = append(foundHashes, hash)
+	}
+
+	log.Printf("🔍 Found %d existing users in database", len(foundHashes))
+
+	// Since we can't decrypt the stored emails to check if they match,
+	// we'll assume any existing user might be the admin if there's exactly one user
+	// and the current email search hash doesn't match
+	currentEmailSearchHash, err := h.crypto.EncryptDeterministic([]byte(strings.ToLower(email)), "email_search")
+	if err != nil {
+		return "", err
+	}
+
+	// Check if current hash exists
+	for _, hash := range foundHashes {
+		if bytes.Equal(hash, currentEmailSearchHash) {
+			log.Printf("🔍 Current email search hash found - no key mismatch")
+			return "", sql.ErrNoRows // No mismatch
+		}
+	}
+
+	// If we have exactly one user and it's not matching current hash, likely key mismatch
+	if len(foundHashes) == 1 {
+		log.Printf("🔍 Found potential key mismatch - one user exists with different hash")
+		return string(foundHashes[0]), nil
+	}
+
+	log.Printf("🔍 No clear key mismatch detected")
+	return "", sql.ErrNoRows
 }
 
 type mfaCodeRequest struct {
@@ -5523,7 +5807,97 @@ Temporary solution (if any):
 	},
 }
 
-// seedDefaultAdminUser creates a default admin user if no users exist
+// validateEncryptionKeyAndAdminAccess checks for potential admin access issues due to encryption key changes
+func validateEncryptionKeyAndAdminAccess(db Database, crypto *CryptoService, config *Config) error {
+	ctx := context.Background()
+
+	log.Println("🔍 Validating encryption key and admin access...")
+
+	// Check if any users exist
+	var userCount int
+	err := db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&userCount)
+	if err != nil {
+		return fmt.Errorf("failed to check user count: %w", err)
+	}
+
+	if userCount == 0 {
+		log.Println("✅ No users found - fresh installation, no key validation needed")
+		return nil
+	}
+
+	log.Printf("🔍 Found %d users in database, checking admin accessibility...", userCount)
+
+	// Try to find the admin user with current encryption key
+	adminEmail := config.DefaultAdminEmail
+	currentEmailSearchHash, err := crypto.EncryptDeterministic([]byte(strings.ToLower(adminEmail)), "email_search")
+	if err != nil {
+		return fmt.Errorf("failed to generate current email search hash: %w", err)
+	}
+
+	var adminUserID uuid.UUID
+	err = db.QueryRow(ctx, `SELECT id FROM users WHERE email_search_hash = $1`, currentEmailSearchHash).Scan(&adminUserID)
+
+	if err == nil {
+		log.Printf("✅ Admin user accessible with current encryption key (ID: %s)", adminUserID)
+		return nil
+	}
+
+	if err != sql.ErrNoRows {
+		return fmt.Errorf("error checking admin user accessibility: %w", err)
+	}
+
+	// Admin user not found with current key - check if it might exist with old key
+	log.Printf("⚠️  ADMIN ACCESS ISSUE DETECTED!")
+	log.Printf("   - Admin email: %s", adminEmail)
+	log.Printf("   - Admin user not found with current encryption key")
+	log.Printf("   - This likely means the SERVER_ENCRYPTION_KEY has changed")
+
+	// Get all user email hashes to see if there are users with different keys
+	rows, err := db.Query(ctx, `SELECT email_search_hash FROM users WHERE LENGTH(email_search_hash) > 0`)
+	if err != nil {
+		return fmt.Errorf("failed to query existing users: %w", err)
+	}
+	defer rows.Close()
+
+	var existingHashes []string
+	for rows.Next() {
+		var hash string
+		if err := rows.Scan(&hash); err != nil {
+			continue
+		}
+		existingHashes = append(existingHashes, hash)
+	}
+
+	log.Printf("📊 Database contains %d users with different encryption key hashes", len(existingHashes))
+
+	if len(existingHashes) > 0 {
+		log.Printf("🚨 CRITICAL: Admin user is unreachable due to encryption key mismatch!")
+		log.Printf("   This happened because SERVER_ENCRYPTION_KEY changed between deployments.")
+		log.Printf("")
+		log.Printf("🔧 RECOVERY OPTIONS:")
+		log.Printf("   1. Restore the original SERVER_ENCRYPTION_KEY if you have it")
+		log.Printf("   2. Use the emergency admin recovery endpoint:")
+		log.Printf("      POST /api/v1/auth/admin-recovery")
+		log.Printf("      Body: {")
+		log.Printf("        \"email\": \"%s\",", adminEmail)
+		log.Printf("        \"password\": \"your_desired_password\",")
+		log.Printf("        \"recovery_token\": \"<generated_token>\",")
+		log.Printf("        \"confirm_deletion\": true")
+		log.Printf("      }")
+		log.Printf("")
+		log.Printf("   To generate recovery token, use this command:")
+		log.Printf("   echo -n '%s:%s:admin_recovery' | sha256sum | cut -c1-32 | sed 's/^/recovery_/'", adminEmail, config.EncryptionKey)
+		log.Printf("")
+		log.Printf("⚠️  WARNING: Recovery will delete the old admin user and create a new one!")
+
+		return fmt.Errorf("admin user unreachable due to encryption key mismatch - see logs for recovery instructions")
+	}
+
+	log.Printf("ℹ️  No existing users found with email search hashes - this may be a different issue")
+	return nil
+}
+
+// seedDefaultAdminUser creates a default admin user if no accessible admin exists with current encryption key
 func seedDefaultAdminUser(db Database, crypto *CryptoService, config *Config) error {
 	ctx := context.Background()
 
@@ -5533,19 +5907,40 @@ func seedDefaultAdminUser(db Database, crypto *CryptoService, config *Config) er
 		return nil
 	}
 
-	// Check if any users exist
-	var userCount int
-	err := db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&userCount)
+	// Check if admin user is accessible with current encryption key
+	adminEmail := config.DefaultAdminEmail
+	currentEmailSearchHash, err := crypto.EncryptDeterministic([]byte(strings.ToLower(adminEmail)), "email_search")
+	if err != nil {
+		return fmt.Errorf("failed to generate admin email search hash: %w", err)
+	}
+
+	var existingAdminID uuid.UUID
+	err = db.QueryRow(ctx, `SELECT id FROM users WHERE email_search_hash = $1`, currentEmailSearchHash).Scan(&existingAdminID)
+	if err == nil {
+		log.Printf("✅ Default admin user already exists and is accessible (ID: %s)", existingAdminID)
+		return nil
+	}
+
+	if err != sql.ErrNoRows {
+		return fmt.Errorf("failed to check for existing admin user: %w", err)
+	}
+
+	// Admin user doesn't exist with current key - check if we need to handle key mismatch
+	var totalUserCount int
+	err = db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&totalUserCount)
 	if err != nil {
 		return fmt.Errorf("failed to check existing users: %w", err)
 	}
 
-	if userCount > 0 {
-		log.Println("Users already exist, skipping default admin creation")
-		return nil
+	if totalUserCount > 0 {
+		log.Printf("⚠️  Admin user not accessible with current encryption key, but %d other users exist", totalUserCount)
+		log.Printf("   This indicates a SERVER_ENCRYPTION_KEY mismatch.")
+		log.Printf("   Creating new admin user with current key...")
+		log.Printf("   Use /api/v1/auth/admin-recovery to clean up old unreachable users if needed.")
+	} else {
+		log.Println("🔐 No users found - creating default admin user...")
 	}
 
-	log.Println("🔐 No users found - creating default admin user...")
 	log.Println("⚠️  WARNING: Default admin credentials are insecure. Please change them immediately after first login!")
 
 	// Get admin credentials from config (environment variables)
@@ -5605,11 +6000,8 @@ func seedDefaultAdminUser(db Database, crypto *CryptoService, config *Config) er
 		return fmt.Errorf("failed to encrypt email: %w", err)
 	}
 
-	// Create deterministic email hash for secure login lookups (same as registration)
-	emailSearchHash, err := crypto.EncryptDeterministic([]byte(strings.ToLower(email)), "email_search")
-	if err != nil {
-		return fmt.Errorf("failed to create email search hash: %w", err)
-	}
+	// Reuse the already computed email search hash with current encryption key
+	emailSearchHash := currentEmailSearchHash
 
 	// Start transaction (same as registration)
 	tx, err := db.Begin(ctx)
@@ -5748,6 +6140,11 @@ func main() {
 
 	// Initialize crypto service
 	crypto := NewCryptoService(config.EncryptionKey)
+
+	// Validate encryption key and detect potential admin access issues
+	if err := validateEncryptionKeyAndAdminAccess(db, crypto, config); err != nil {
+		log.Printf("⚠️  ENCRYPTION KEY WARNING: %v", err)
+	}
 
 	// Seed default admin user if no users exist
 	if err := seedDefaultAdminUser(db, crypto, config); err != nil {
@@ -5920,6 +6317,7 @@ func main() {
 		api.Post("/auth/register", authHandler.Register)
 	}
 	api.Post("/auth/login", authHandler.Login)
+	api.Post("/auth/admin-recovery", authHandler.AdminRecovery)
 
 	// Public registration status endpoint so the frontend can respect the toggle
 	api.Get("/auth/registration", func(c *fiber.Ctx) error {
