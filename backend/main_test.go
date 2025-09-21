@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
@@ -28,7 +29,7 @@ import (
 
 // Test configuration
 const (
-	TestDatabaseURL = "postgres://test:test@localhost:5433/test_notes?sslmode=disable"
+	TestDatabaseURL = "postgres://test:test@localhost:5433/test_leaflock?sslmode=disable"
 	TestRedisURL    = "localhost:6380"
 )
 
@@ -759,7 +760,7 @@ func (suite *AuthHandlerTestSuite) TestLoginAccountLocked() {
 	resp, err := app.Test(httpReq)
 
 	suite.NoError(err)
-	suite.Equal(403, resp.StatusCode)
+	suite.Equal(423, resp.StatusCode)
 }
 
 // Run the test suites
@@ -886,4 +887,164 @@ func TestRegister_Disabled(t *testing.T) {
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, 403, resp.StatusCode)
+}
+
+
+
+type LockoutTestSuite struct {
+	suite.Suite
+	app          *fiber.App
+	config       *Config
+	rdb          *redis.Client
+	crypto       *CryptoService
+	db           Database
+	cleanupRedis func()
+	cleanupDB    func()
+	authHandler  *AuthHandler
+}
+
+func (suite *LockoutTestSuite) SetupTest() {
+	// Test config
+	suite.config = &Config{
+		JWTSecret:            []byte("test-secret"),
+		EncryptionKey:        []byte("12345678901234567890123456789012"),
+		MaxLoginAttempts:     3,
+		MaxIPLoginAttempts:   5,
+		IPLockoutDuration:    3 * time.Second, // Short duration for testing
+		LockoutDuration:      3 * time.Second, // Short duration for testing
+		SessionDuration:      1 * time.Hour,
+		DefaultAdminEmail:    "admin@test.com",
+		DefaultAdminPassword: "password",
+		DefaultAdminEnabled:  true,
+	}
+
+	// Test DB and Redis
+	suite.db, suite.cleanupDB = setupTestDB(suite.T())
+	suite.rdb, suite.cleanupRedis = setupTestRedis(suite.T())
+	suite.crypto = NewCryptoService(suite.config.EncryptionKey)
+
+	// Create app
+	suite.app = fiber.New()
+	suite.authHandler = &AuthHandler{
+		db:     suite.db,
+		redis:  suite.rdb,
+		crypto: suite.crypto,
+		config: suite.config,
+	}
+	suite.app.Post("/auth/login", suite.authHandler.Login)
+
+	// Create test user
+	err := seedDefaultAdminUser(suite.db, suite.crypto, suite.config)
+	require.NoError(suite.T(), err)
+}
+
+func (suite *LockoutTestSuite) TearDownTest() {
+	suite.cleanupDB()
+	suite.cleanupRedis()
+}
+
+func (suite *LockoutTestSuite) TestProgressiveRateLimit() {
+	// Skip this test if progressive rate limiting is disabled
+	if suite.config.RateLimitMode == "disabled" {
+		suite.T().Skip("Rate limiting is disabled")
+	}
+
+	// 1. Successful login should work
+	loginReq := LoginRequest{Email: "admin@test.com", Password: "password"}
+	body, _ := json.Marshal(loginReq)
+	req := httptest.NewRequest("POST", "/auth/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := suite.app.Test(req)
+	require.NoError(suite.T(), err)
+	assert.Equal(suite.T(), http.StatusOK, resp.StatusCode, "First login should be successful")
+
+	// 2. Fail login attempts - first few should have no delay
+	for i := 0; i < 3; i++ {
+		loginReq.Password = "wrong-password"
+		body, _ = json.Marshal(loginReq)
+		req = httptest.NewRequest("POST", "/auth/login", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		start := time.Now()
+		resp, err = suite.app.Test(req)
+		elapsed := time.Since(start)
+
+		require.NoError(suite.T(), err)
+		assert.Contains(suite.T(), []int{http.StatusUnauthorized, http.StatusLocked}, resp.StatusCode)
+		assert.Less(suite.T(), elapsed.Milliseconds(), int64(500), "First few attempts should have no significant delay")
+	}
+
+	// 3. Additional attempts should start showing progressive delays
+	loginReq.Password = "wrong-password"
+	body, _ = json.Marshal(loginReq)
+	req = httptest.NewRequest("POST", "/auth/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	start := time.Now()
+	resp, err = suite.app.Test(req)
+	elapsed := time.Since(start)
+
+	require.NoError(suite.T(), err)
+	assert.Contains(suite.T(), []int{http.StatusUnauthorized, http.StatusLocked}, resp.StatusCode)
+
+	if suite.config.RateLimitMode == "progressive" {
+		// Should have at least some delay (around 1 second for 4th attempt)
+		assert.Greater(suite.T(), elapsed.Milliseconds(), int64(800), "4th attempt should have progressive delay")
+	}
+
+	// 4. Correct password should still work (progressive delays don't prevent correct logins)
+	loginReq.Password = "password"
+	body, _ = json.Marshal(loginReq)
+	req = httptest.NewRequest("POST", "/auth/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = suite.app.Test(req)
+	require.NoError(suite.T(), err)
+	assert.Equal(suite.T(), http.StatusOK, resp.StatusCode, "Correct password should work despite rate limiting")
+}
+
+func (suite *LockoutTestSuite) TestUserLockout() {
+	// Use a different IP to not interfere with other tests
+	const testIP = "1.2.3.4:1234"
+
+	// 1. Fail login attempts up to the user limit
+	for i := 0; i < suite.config.MaxLoginAttempts; i++ {
+		loginReq := LoginRequest{Email: "admin@test.com", Password: "wrong-password"}
+		body, _ := json.Marshal(loginReq)
+		req := httptest.NewRequest("POST", "/auth/login", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.RemoteAddr = testIP
+		resp, err := suite.app.Test(req)
+		require.NoError(suite.T(), err)
+		if i < suite.config.MaxLoginAttempts-1 {
+			assert.Equal(suite.T(), http.StatusUnauthorized, resp.StatusCode)
+		} else {
+			// The last attempt that triggers the lockout
+			assert.Equal(suite.T(), http.StatusLocked, resp.StatusCode)
+		}
+	}
+
+	// 2. User should be locked now
+	loginReq := LoginRequest{Email: "admin@test.com", Password: "password"}
+	body, _ := json.Marshal(loginReq)
+	req := httptest.NewRequest("POST", "/auth/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.RemoteAddr = testIP
+	resp, err := suite.app.Test(req)
+	require.NoError(suite.T(), err)
+	assert.Equal(suite.T(), http.StatusLocked, resp.StatusCode, "User account should be locked")
+
+	// 3. Wait for lockout to expire
+	time.Sleep(suite.config.LockoutDuration + 1*time.Second)
+
+	// 4. User should be able to log in again
+	req = httptest.NewRequest("POST", "/auth/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.RemoteAddr = testIP
+	resp, err = suite.app.Test(req)
+	require.NoError(suite.T(), err)
+	assert.Equal(suite.T(), http.StatusOK, resp.StatusCode, "Should be able to login after user lockout expires")
+}
+
+func TestLockoutTestSuite(t *testing.T) {
+	suite.Run(t, new(LockoutTestSuite))
 }
