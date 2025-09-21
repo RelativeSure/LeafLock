@@ -270,14 +270,7 @@ CREATE TABLE IF NOT EXISTS folders (
 -- Add folder_id to notes table for folder organization
 ALTER TABLE notes ADD COLUMN IF NOT EXISTS folder_id UUID REFERENCES folders(id) ON DELETE SET NULL;
 
--- Login attempts table for IP-based rate limiting
-CREATE TABLE IF NOT EXISTS login_attempts (
-    ip_address_encrypted BYTEA PRIMARY KEY, -- Encrypted IP address for privacy
-    attempts INT DEFAULT 0,
-    last_attempt TIMESTAMPTZ DEFAULT NOW(),
-    locked_until TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
+
 
 -- Tags table for organizing notes
 CREATE TABLE IF NOT EXISTS tags (
@@ -423,10 +416,19 @@ type Config struct {
 	Port              string
 	AllowedOrigins    []string
 	MaxLoginAttempts  int
-	LockoutDuration   time.Duration
+	LockoutDuration    time.Duration
+	IPLockoutDuration  time.Duration
+	MaxIPLoginAttempts int
 	SessionDuration   time.Duration
 	Environment       string
 	TrustProxyHeaders bool
+	// Progressive rate limiting options
+	RateLimitMode        string        // "progressive", "lockout", or "disabled"
+	IPRateLimitEnabled   bool          // Enable/disable IP-based rate limiting
+	RateLimitDecayMinutes int          // Minutes between attempt count reductions
+	RateLimitUseSubnet   bool          // Group by subnet instead of individual IP
+	MaxDelaySeconds      int           // Maximum delay to apply in seconds
+	TrustedIPRanges      []string      // IP ranges that bypass rate limiting
 	// Default admin settings
 	DefaultAdminEnabled  bool
 	DefaultAdminEmail    string
@@ -508,12 +510,21 @@ func LoadConfig() *Config {
 		JWTSecret:         []byte(jwtSecret),
 		EncryptionKey:     []byte(encKey),
 		Port:              getEnvOrDefault("PORT", "8080"),
-		AllowedOrigins:    strings.Split(getEnvOrDefault("CORS_ORIGINS", "https://localhost:3000"), ","),
-		MaxLoginAttempts:  5,
-		LockoutDuration:   15 * time.Minute,
+		        AllowedOrigins:    strings.Split(getEnvOrDefault("CORS_ORIGINS", "https://localhost:3000"), ","),
+		MaxLoginAttempts:  getEnvAsInt("MAX_LOGIN_ATTEMPTS", 5),
+		LockoutDuration: time.Duration(getEnvAsInt("LOCKOUT_MINUTES", 15)) * time.Minute,
+		MaxIPLoginAttempts: getEnvAsInt("MAX_IP_LOGIN_ATTEMPTS", 15),
+		IPLockoutDuration: time.Duration(getEnvAsInt("IP_LOCKOUT_MINUTES", 15)) * time.Minute,
 		SessionDuration:   24 * time.Hour,
 		Environment:       getEnvOrDefault("APP_ENV", "development"),
 		TrustProxyHeaders: getEnvAsBool("TRUST_PROXY_HEADERS", false),
+		// Progressive rate limiting configuration
+		RateLimitMode:        getEnvOrDefault("RATE_LIMIT_MODE", "progressive"),
+		IPRateLimitEnabled:   getEnvAsBool("IP_RATE_LIMIT_ENABLED", true),
+		RateLimitDecayMinutes: getEnvAsInt("RATE_LIMIT_DECAY_MINUTES", 5),
+		RateLimitUseSubnet:   getEnvAsBool("RATE_LIMIT_USE_SUBNET", false),
+		MaxDelaySeconds:      getEnvAsInt("MAX_DELAY_SECONDS", 60),
+		TrustedIPRanges:      getEnvAsStringSlice("TRUSTED_IP_RANGES", []string{}),
 		// Default admin configuration
 		DefaultAdminEnabled:  getEnvAsBool("ENABLE_DEFAULT_ADMIN", true),
 		DefaultAdminEmail:    getEnvOrDefault("DEFAULT_ADMIN_EMAIL", "admin@leaflock.app"),
@@ -536,6 +547,29 @@ func getEnvAsBool(key string, defaultValue bool) bool {
 		}
 		if value == "false" || value == "0" || value == "no" {
 			return false
+		}
+	}
+	return defaultValue
+}
+
+func getEnvAsStringSlice(key string, defaultValue []string) []string {
+	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+		parts := strings.Split(value, ",")
+		result := make([]string, 0, len(parts))
+		for _, part := range parts {
+			if trimmed := strings.TrimSpace(part); trimmed != "" {
+				result = append(result, trimmed)
+			}
+		}
+		return result
+	}
+	return defaultValue
+}
+
+func getEnvAsInt(key string, defaultValue int) int {
+	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+		if intValue, err := strconv.Atoi(value); err == nil {
+			return intValue
 		}
 	}
 	return defaultValue
@@ -818,108 +852,202 @@ func isPublicIP(ip net.IP) bool {
 	return true
 }
 
-// checkIPRateLimit checks if an IP address is rate limited for login attempts
-func (h *AuthHandler) checkIPRateLimit(ctx context.Context, ipAddress string) (bool, time.Duration, error) {
-	encryptedIP, err := h.crypto.Encrypt([]byte(ipAddress))
-	if err != nil {
-		return false, 0, fmt.Errorf("failed to encrypt IP: %w", err)
+// normalizeIPForRateLimit normalizes IP addresses for rate limiting
+// If using subnet mode, converts to network address. Also handles trusted IPs.
+func (h *AuthHandler) normalizeIPForRateLimit(ipAddr string) (string, bool) {
+	// Check if IP is in trusted ranges first
+	if h.isIPTrusted(ipAddr) {
+		return "", true // Return empty string to bypass rate limiting
 	}
 
-	var attempts int
-	var lockedUntil *time.Time
-	var lastAttempt time.Time
+	if !h.config.RateLimitUseSubnet {
+		return ipAddr, false
+	}
 
-	err = h.db.QueryRow(ctx, `
-        SELECT attempts, locked_until, last_attempt
-        FROM login_attempts
-        WHERE ip_address_encrypted = $1`,
-		encryptedIP,
-	).Scan(&attempts, &lockedUntil, &lastAttempt)
+	// Parse IP address
+	ip := net.ParseIP(ipAddr)
+	if ip == nil {
+		return ipAddr, false // Fallback to original IP if parsing fails
+	}
 
-	if err != nil {
-		if err == sql.ErrNoRows {
-			// No record exists, IP is not rate limited
-			return false, 0, nil
+	// For IPv4, use /24 subnet (class C network)
+	if ip4 := ip.To4(); ip4 != nil {
+		mask := net.CIDRMask(24, 32)
+		network := ip4.Mask(mask)
+		return network.String(), false
+	}
+
+	// For IPv6, use /48 subnet (typical provider allocation)
+	if ip.To16() != nil {
+		mask := net.CIDRMask(48, 128)
+		network := ip.Mask(mask)
+		return network.String(), false
+	}
+
+	return ipAddr, false
+}
+
+// isIPTrusted checks if an IP address is in the trusted ranges
+func (h *AuthHandler) isIPTrusted(ipAddr string) bool {
+	if len(h.config.TrustedIPRanges) == 0 {
+		return false
+	}
+
+	ip := net.ParseIP(ipAddr)
+	if ip == nil {
+		return false
+	}
+
+	for _, cidr := range h.config.TrustedIPRanges {
+		_, network, err := net.ParseCIDR(cidr)
+		if err != nil {
+			continue
 		}
-		return false, 0, fmt.Errorf("database query failed: %w", err)
+		if network.Contains(ip) {
+			return true
+		}
 	}
-
-	// Check if IP is currently locked
-	if lockedUntil != nil && lockedUntil.After(time.Now()) {
-		return true, time.Until(*lockedUntil), nil
-	}
-
-	return false, 0, nil
+	return false
 }
 
-// incrementIPAttempts increments failed login attempts for an IP address
-func (h *AuthHandler) incrementIPAttempts(ctx context.Context, ipAddress string) error {
-	encryptedIP, err := h.crypto.Encrypt([]byte(ipAddress))
-	if err != nil {
-		return fmt.Errorf("failed to encrypt IP: %w", err)
+// calculateProgressiveDelay calculates delay based on attempt count
+func (h *AuthHandler) calculateProgressiveDelay(attempts int) time.Duration {
+	if attempts <= 3 {
+		return 0 // No delay for first 3 attempts
 	}
 
-	// First, try to get current attempts
-	var attempts int
-	err = h.db.QueryRow(ctx, `
-        SELECT attempts FROM login_attempts
-        WHERE ip_address_encrypted = $1`,
-		encryptedIP,
-	).Scan(&attempts)
-
-	if err == sql.ErrNoRows {
-		// No record exists, create new one
-		_, err = h.db.Exec(ctx, `
-            INSERT INTO login_attempts (ip_address_encrypted, attempts, last_attempt)
-            VALUES ($1, 1, NOW())`,
-			encryptedIP,
-		)
-		return err
-	} else if err != nil {
-		return fmt.Errorf("failed to query IP attempts: %w", err)
+	var delaySeconds int
+	switch {
+	case attempts <= 5:
+		delaySeconds = 1
+	case attempts <= 7:
+		delaySeconds = 2
+	case attempts <= 9:
+		delaySeconds = 5
+	case attempts <= 12:
+		delaySeconds = 10
+	case attempts <= 15:
+		delaySeconds = 30
+	default:
+		delaySeconds = h.config.MaxDelaySeconds
 	}
 
-	// Increment attempts
-	attempts++
-
-	// Lock IP if it exceeds max attempts (use higher threshold than user lockout)
-	var lockUntil *time.Time
-	maxIPAttempts := h.config.MaxLoginAttempts * 3 // IP gets 3x more attempts than individual users
-	if attempts >= maxIPAttempts {
-		lockTime := time.Now().Add(h.config.LockoutDuration)
-		lockUntil = &lockTime
+	// Cap at max delay
+	if delaySeconds > h.config.MaxDelaySeconds {
+		delaySeconds = h.config.MaxDelaySeconds
 	}
 
-	_, err = h.db.Exec(ctx, `
-        UPDATE login_attempts
-        SET attempts = $1, last_attempt = NOW(), locked_until = $2
-        WHERE ip_address_encrypted = $3`,
-		attempts, lockUntil, encryptedIP,
-	)
-
-	return err
+	return time.Duration(delaySeconds) * time.Second
 }
 
-// resetIPAttempts resets failed login attempts for an IP address after successful login
-func (h *AuthHandler) resetIPAttempts(ctx context.Context, ipAddress string) error {
-	encryptedIP, err := h.crypto.Encrypt([]byte(ipAddress))
-	if err != nil {
-		return fmt.Errorf("failed to encrypt IP: %w", err)
+// getProgressiveDelay gets the current progressive delay for an IP
+func (h *AuthHandler) getProgressiveDelay(ctx context.Context, ipAddr string) (time.Duration, error) {
+	if h.config.RateLimitMode == "disabled" || !h.config.IPRateLimitEnabled {
+		return 0, nil
 	}
 
-	_, err = h.db.Exec(ctx, `
-        UPDATE login_attempts
-        SET attempts = 0, locked_until = NULL
-        WHERE ip_address_encrypted = $1`,
-		encryptedIP,
-	)
+	normalizedIP, isTrusted := h.normalizeIPForRateLimit(ipAddr)
+	if isTrusted {
+		return 0, nil // Trusted IPs bypass rate limiting
+	}
 
-	// Ignore error if record doesn't exist
-	if err == sql.ErrNoRows {
+	key := "rate_limit:attempts:" + normalizedIP
+	count, err := h.redis.Get(ctx, key).Int()
+	if err != nil && err.Error() != "redis: nil" {
+		return 0, err
+	}
+
+	return h.calculateProgressiveDelay(count), nil
+}
+
+// incrementProgressiveAttempts increments the attempt count for progressive rate limiting
+func (h *AuthHandler) incrementProgressiveAttempts(ctx context.Context, ipAddr string) error {
+	if h.config.RateLimitMode == "disabled" || !h.config.IPRateLimitEnabled {
 		return nil
 	}
 
-	return err
+	normalizedIP, isTrusted := h.normalizeIPForRateLimit(ipAddr)
+	if isTrusted {
+		return nil // Trusted IPs bypass rate limiting
+	}
+
+	key := "rate_limit:attempts:" + normalizedIP
+	count, err := h.redis.Incr(ctx, key).Result()
+	if err != nil {
+		return err
+	}
+
+	// Set expiration on first attempt (will be extended by decay process)
+	if count == 1 {
+		decayTime := time.Duration(h.config.RateLimitDecayMinutes) * time.Minute
+		expireTime := decayTime * 20 // Give enough time for multiple decay cycles
+		h.redis.Expire(ctx, key, expireTime)
+	}
+
+	return nil
+}
+
+// resetProgressiveAttempts resets the attempt count for an IP
+func (h *AuthHandler) resetProgressiveAttempts(ctx context.Context, ipAddr string) error {
+	if h.config.RateLimitMode == "disabled" || !h.config.IPRateLimitEnabled {
+		return nil
+	}
+
+	normalizedIP, isTrusted := h.normalizeIPForRateLimit(ipAddr)
+	if isTrusted {
+		return nil
+	}
+
+	key := "rate_limit:attempts:" + normalizedIP
+	return h.redis.Del(ctx, key).Err()
+}
+
+// startRateLimitDecayProcess starts a background process to decay rate limit attempts
+func (h *AuthHandler) startRateLimitDecayProcess() {
+	if h.config.RateLimitMode == "disabled" || !h.config.IPRateLimitEnabled {
+		return
+	}
+
+	go func() {
+		ticker := time.NewTicker(time.Duration(h.config.RateLimitDecayMinutes) * time.Minute)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			h.decayRateLimitAttempts()
+		}
+	}()
+}
+
+// decayRateLimitAttempts reduces attempt counts for all IPs by 1 (minimum 0)
+func (h *AuthHandler) decayRateLimitAttempts() {
+	ctx := context.Background()
+	pattern := "rate_limit:attempts:*"
+
+	// Use SCAN to iterate through all rate limit keys
+	iter := h.redis.Scan(ctx, 0, pattern, 100).Iterator()
+	for iter.Next(ctx) {
+		key := iter.Val()
+
+		// Get current count
+		count, err := h.redis.Get(ctx, key).Int()
+		if err != nil {
+			continue // Key might have expired or been deleted
+		}
+
+		// Decay the count by 1, minimum 0
+		newCount := count - 1
+		if newCount <= 0 {
+			// Remove key entirely if count reaches 0
+			h.redis.Del(ctx, key)
+		} else {
+			// Update with decayed count and refresh expiration
+			h.redis.Set(ctx, key, newCount, time.Duration(h.config.RateLimitDecayMinutes)*time.Minute*20)
+		}
+	}
+
+	if err := iter.Err(); err != nil {
+		log.Printf("Error during rate limit decay process: %v", err)
+	}
 }
 
 func csvEscape(s string) string {
@@ -1275,6 +1403,7 @@ func (h *AuthHandler) deleteSessionFromRedis(ctx context.Context, tokenHash []by
 	return h.redis.Del(ctx, sessionKey).Err()
 }
 
+
 type RegisterRequest struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=12"`
@@ -1484,32 +1613,19 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	}
 	log.Printf("   - MFA Code present: %t", req.MFACode != "")
 
-	ctx := context.Background()
-
-	// Get client IP for rate limiting
 	clientIPAddr := clientIP(c)
 
-	// Check IP-based rate limiting first
-	isIPLocked, ipLockDuration, err := h.checkIPRateLimit(ctx, clientIPAddr)
+	// Apply progressive delay based on failed attempts
+	delay, err := h.getProgressiveDelay(c.Context(), clientIPAddr)
 	if err != nil {
-		log.Printf("Error checking IP rate limit: %v", err)
-		// Continue with login attempt but log the error
-	} else if isIPLocked {
-		minutes := int(ipLockDuration.Minutes())
-		seconds := int(ipLockDuration.Seconds()) % 60
-
-		var timeMessage string
-		if minutes > 0 {
-			timeMessage = fmt.Sprintf("%d minutes and %d seconds", minutes, seconds)
-		} else {
-			timeMessage = fmt.Sprintf("%d seconds", seconds)
-		}
-
-		return c.Status(429).JSON(fiber.Map{
-			"error": fmt.Sprintf("Too many login attempts from this IP address. Please try again in %s.", timeMessage),
-			"retry_after_seconds": int(ipLockDuration.Seconds()),
-		})
+		log.Printf("Error getting progressive delay: %v", err)
+		// Continue with login attempt even if rate limiting check fails
+	} else if delay > 0 {
+		log.Printf("Applying progressive delay of %v for IP %s", delay, clientIPAddr)
+		time.Sleep(delay)
 	}
+
+	ctx := context.Background()
 
 	// Create deterministic hash for secure email lookup
 	emailSearchHash, err := h.crypto.EncryptDeterministic([]byte(strings.ToLower(req.Email)), "email_search")
@@ -1532,9 +1648,9 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	).Scan(&userID, &passwordHash, &failedAttempts, &lockedUntil, &mfaEnabled, &mfaSecret)
 
 	if err != nil {
-		// Increment IP attempts on invalid email
-		if ipErr := h.incrementIPAttempts(ctx, clientIPAddr); ipErr != nil {
-			log.Printf("Error incrementing IP attempts: %v", ipErr)
+		// Increment progressive IP attempts on invalid email
+		if ipErr := h.incrementProgressiveAttempts(ctx, clientIPAddr); ipErr != nil {
+			log.Printf("Error incrementing progressive attempts: %v", ipErr)
 		}
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
@@ -1568,10 +1684,25 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	// Verify password
 	if !VerifyPassword(req.Password, passwordHash) {
+		// Also increment progressive IP attempts
+		if err := h.incrementProgressiveAttempts(ctx, clientIPAddr); err != nil {
+			log.Printf("Error incrementing progressive attempts: %v", err)
+		}
+
 		// Increment failed attempts
 		failedAttempts++
-		if failedAttempts >= h.config.MaxLoginAttempts {
-			lockUntil := time.Now().Add(h.config.LockoutDuration)
+
+		var lockDuration time.Duration
+		if failedAttempts >= 7 {
+			lockDuration = 15 * time.Minute
+		} else if failedAttempts >= 6 {
+			lockDuration = 5 * time.Minute
+		} else if failedAttempts >= h.config.MaxLoginAttempts {
+			lockDuration = 1 * time.Minute
+		}
+
+		if lockDuration > 0 {
+			lockUntil := time.Now().Add(lockDuration)
 			h.db.Exec(ctx, `
                 UPDATE users SET failed_attempts = $1, locked_until = $2 
                 WHERE id = $3`,
@@ -1601,11 +1732,6 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		h.db.Exec(ctx, `UPDATE users SET failed_attempts = $1 WHERE id = $2`, failedAttempts, userID)
 		h.logAudit(ctx, userID, "login.failed", "user", userID, c)
 
-		// Also increment IP attempts on failed password
-		if ipErr := h.incrementIPAttempts(ctx, clientIPAddr); ipErr != nil {
-			log.Printf("Error incrementing IP attempts: %v", ipErr)
-		}
-
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
@@ -1632,9 +1758,9 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		if !totp.Validate(code, secret) {
 			h.logAudit(ctx, userID, "login.mfa_failed", "user", userID, c)
 
-			// Also increment IP attempts on failed MFA
-			if ipErr := h.incrementIPAttempts(ctx, clientIPAddr); ipErr != nil {
-				log.Printf("Error incrementing IP attempts: %v", ipErr)
+			// Also increment progressive IP attempts on failed MFA
+			if ipErr := h.incrementProgressiveAttempts(ctx, clientIPAddr); ipErr != nil {
+				log.Printf("Error incrementing progressive attempts: %v", ipErr)
 			}
 
 			return c.Status(401).JSON(fiber.Map{"error": "Invalid MFA code"})
@@ -1648,9 +1774,9 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		userID,
 	)
 
-	// Reset IP attempts on successful login
-	if ipErr := h.resetIPAttempts(ctx, clientIPAddr); ipErr != nil {
-		log.Printf("Error resetting IP attempts: %v", ipErr)
+	// Reset progressive IP attempts on successful login
+	if err := h.resetProgressiveAttempts(ctx, clientIPAddr); err != nil {
+		log.Printf("Error resetting progressive attempts: %v", err)
 	}
 
 	// Generate session
@@ -4986,8 +5112,20 @@ func runCleanupTasks(ctx context.Context, db Database) {
 
 	// Note: Session cleanup is now handled by Redis TTL
 
+	// Reset failed login attempts for users who are no longer locked
+	result, err := db.Exec(ctx, `
+		UPDATE users
+		SET failed_attempts = 0
+		WHERE locked_until IS NOT NULL AND locked_until < NOW()
+	`)
+	if err != nil {
+		log.Printf("⚠️ Failed to reset failed login attempts: %v", err)
+	} else if result.RowsAffected() > 0 {
+		log.Printf("✅ Reset failed login attempts for %d users", result.RowsAffected())
+	}
+
 	// Clean up old deleted notes (30+ days)
-	result2, err2 := db.Exec(ctx, "SELECT cleanup_old_deleted_notes()")
+	_, err2 := db.Exec(ctx, "SELECT cleanup_old_deleted_notes()")
 	if err2 != nil {
 		log.Printf("⚠️ Failed to cleanup old deleted notes: %v", err2)
 	} else {
@@ -5003,9 +5141,6 @@ func runCleanupTasks(ctx context.Context, db Database) {
 	}
 
 	log.Println("🎯 Cleanup tasks completed successfully")
-
-	// Prevent unused variable warnings
-	_ = result2
 }
 
 // Structured logging setup
@@ -5765,6 +5900,9 @@ func main() {
 		crypto: crypto,
 		config: config,
 	}
+
+	// Start background rate limit decay process
+	authHandler.startRateLimitDecayProcess()
 
 	// Public routes
 	api := app.Group("/api/v1")
@@ -7012,6 +7150,25 @@ func main() {
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "update failed"})
 		}
+		return c.JSON(fiber.Map{"ok": true})
+	})
+
+	admin.Post("/users/:id/unlock", func(c *fiber.Ctx) error {
+		id, err := uuid.Parse(c.Params("id"))
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "invalid id"})
+		}
+
+		_, err = db.Exec(c.Context(), `
+			UPDATE users
+			SET failed_attempts = 0, locked_until = NULL
+			WHERE id = $1`,
+			id,
+		)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "update failed"})
+		}
+
 		return c.JSON(fiber.Map{"ok": true})
 	})
 
