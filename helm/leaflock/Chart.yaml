@@ -1,21 +1,21 @@
 apiVersion: v2
 name: leaflock
 description: LeafLock – end-to-end encrypted notes with zero-knowledge architecture
-version: 1.0.0
-appVersion: 1.0.0
+version: 0.1.0
+appVersion: "0.0.1-rc.20250910210438"
 keywords:
   - notes
   - encryption
   - security
   - zero-knowledge
   - e2ee
-home: https://github.com/your-org/leaflock
+home: https://leaflock.app
 sources:
-  - https://github.com/your-org/leaflock
+  - https://github.com/RelativeSure/LeafLock
 maintainers:
   - name: LeafLock Team
-    email: team@leaflock.app
-icon: https://raw.githubusercontent.com/your-org/leaflock/main/assets/icon.png
+    email: contact@leaflock.app
+icon: https://raw.githubusercontent.com/RelativeSure/LeafLock/main/frontend/public/leaflock-icon-512.png
 kubeVersion: ">=1.24.0"
 
 dependencies:

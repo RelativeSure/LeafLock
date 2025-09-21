@@ -15,7 +15,7 @@ const Footer: React.FC<FooterProps> = ({ className = '', variant = 'default' }) 
             {/* Essential links only */}
             <div className="flex items-center space-x-6 text-xs">
               <a
-                href="/docs/privacy-policy"
+                href="https://docs.leaflock.app/privacy-policy"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground transition-colors"
@@ -23,7 +23,7 @@ const Footer: React.FC<FooterProps> = ({ className = '', variant = 'default' }) 
                 Privacy
               </a>
               <a
-                href="/docs/terms-of-use"
+                href="https://docs.leaflock.app/terms-of-use"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground transition-colors"
@@ -31,7 +31,7 @@ const Footer: React.FC<FooterProps> = ({ className = '', variant = 'default' }) 
                 Terms
               </a>
               <a
-                href="/docs"
+                href="https://docs.leaflock.app"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground transition-colors"
@@ -67,7 +67,7 @@ const Footer: React.FC<FooterProps> = ({ className = '', variant = 'default' }) 
           {/* Links */}
           <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-6">
             <a
-              href="/docs"
+              href="https://docs.leaflock.app"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center space-x-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -89,7 +89,7 @@ const Footer: React.FC<FooterProps> = ({ className = '', variant = 'default' }) 
             </a>
 
             <a
-              href="/docs/privacy-policy"
+              href="https://docs.leaflock.app/privacy-policy"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center space-x-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -100,7 +100,7 @@ const Footer: React.FC<FooterProps> = ({ className = '', variant = 'default' }) 
             </a>
 
             <a
-              href="/docs/terms-of-use"
+              href="https://docs.leaflock.app/terms-of-use"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center space-x-1 text-sm text-muted-foreground hover:text-foreground transition-colors"

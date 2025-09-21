@@ -1,0 +1,60 @@
+LeafLock Community License v1.0
+Source Available License - Not Open Source
+
+Last updated: 2025-09-19
+
+1. Grant of Conditional Use
+Subject to this License, LeafLock contributors grant you a worldwide, non-exclusive,
+non-transferable right to use, modify, and distribute the LeafLock codebase ("Software")
+only for lawful purposes and in accordance with the conditions below.
+
+2. Permitted Use
+You may:
+- Run the Software for personal, educational, research, or internal business purposes.
+- Modify the Software and maintain private or public forks for collaboration, learning,
+  and contribution back to the upstream project.
+- Redistribute unmodified copies of the Software, provided that this License is included
+  and recipients are informed of the applicable restrictions.
+
+3. Commercial and Revenue Restrictions
+- Forks or derivative works of the Software may **not** be used to generate direct or
+  indirect revenue, commercial benefit, or financial consideration without a separate
+  commercial agreement from the LeafLock maintainers.
+- Offering paid support, hosted services, or premium functionality built on top of a
+  fork of the Software is prohibited, including but not limited to SaaS, PaaS, IaaS,
+  consulting, training, or support services, unless expressly authorised in writing by
+  the LeafLock maintainers.
+- Any attempt to monetise a fork or derivative work renders this License void for the
+  offending party, and all granted rights immediately terminate.
+
+4. Contribution Policy
+By submitting contributions to the Software, you affirm that you are legally entitled to
+provide the contribution and that it is offered under this License. Contributions remain
+owned by their authors, and you grant the project maintainers the irrevocable right to
+publish, modify, and relicense the contribution within the scope of this project.
+
+5. Compliance with Law
+You must comply with all applicable laws, regulations, and export controls when using or
+redistributing the Software, including data protection and consumer protection laws in
+your jurisdiction.
+
+6. Disclaimer of Warranty
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE, AND NON-INFRINGEMENT. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE
+SOFTWARE IS WITH YOU.
+
+7. Limitation of Liability
+IN NO EVENT SHALL THE LEAFLOCK MAINTAINERS OR CONTRIBUTORS BE LIABLE FOR ANY CLAIM,
+DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE,
+ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+8. Termination
+Failure to comply with any term of this License automatically terminates your rights
+under it. Upon termination, you must cease all use and distribution of the Software and
+destroy or return all copies in your possession.
+
+9. Contact
+For commercial licensing inquiries or questions about this License, contact
+contact@leaflock.app.
