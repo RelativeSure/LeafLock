@@ -198,7 +198,23 @@ Check these endpoints to verify successful deployment:
 - Check Redis container health
 - Ensure `REDIS_URL` is set to `redis:6379`
 
-#### 4. SSL/HTTPS Issues
+#### 4. Container Runtime Issues
+
+**Symptom**: Error "sysctl is not in a separate kernel namespace" during Redis startup
+
+**Root Cause**: Coolify's container runtime doesn't allow setting kernel sysctls within containers
+
+**Solutions**:
+- The `docker-compose.coolify.yml` has been optimized to work without sysctls
+- Performance optimizations (`vm.overcommit_memory`, `net.core.somaxconn`) must be set on the host
+- Ask your Coolify administrator to configure these on the host system:
+  ```bash
+  sudo sysctl -w vm.overcommit_memory=1
+  sudo sysctl -w net.core.somaxconn=1024
+  ```
+- The application will work without these optimizations, just with slightly reduced Redis performance
+
+#### 5. SSL/HTTPS Issues
 
 **Symptom**: SSL certificate not generated or HTTPS redirects fail
 
@@ -208,7 +224,7 @@ Check these endpoints to verify successful deployment:
 - Wait 5-10 minutes for Let's Encrypt certificate generation
 - Check Coolify logs for SSL certificate errors
 
-#### 5. Admin Login Issues
+#### 6. Admin Login Issues
 
 **Symptom**: Cannot login with default admin credentials
 
