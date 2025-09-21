@@ -438,6 +438,10 @@ type Config struct {
 	SessionDuration   time.Duration
 	Environment       string
 	TrustProxyHeaders bool
+	// Default admin settings
+	DefaultAdminEnabled  bool
+	DefaultAdminEmail    string
+	DefaultAdminPassword string
 }
 
 // fiberResponseWriter adapts Fiber's context to http.ResponseWriter interface
@@ -521,6 +525,10 @@ func LoadConfig() *Config {
 		SessionDuration:   24 * time.Hour,
 		Environment:       getEnvOrDefault("APP_ENV", "development"),
 		TrustProxyHeaders: getEnvAsBool("TRUST_PROXY_HEADERS", false),
+		// Default admin configuration
+		DefaultAdminEnabled:  getEnvAsBool("ENABLE_DEFAULT_ADMIN", true),
+		DefaultAdminEmail:    getEnvOrDefault("DEFAULT_ADMIN_EMAIL", "admin@leaflock.local"),
+		DefaultAdminPassword: getEnvOrDefault("DEFAULT_ADMIN_PASSWORD", "AdminPass123!"),
 	}
 }
 
@@ -5208,6 +5216,99 @@ Temporary solution (if any):
 	},
 }
 
+// seedDefaultAdminUser creates a default admin user if no users exist
+func seedDefaultAdminUser(db Database, crypto *CryptoService, config *Config) error {
+	ctx := context.Background()
+
+	// Check if default admin creation is enabled
+	if !config.DefaultAdminEnabled {
+		log.Println("Default admin creation disabled via ENABLE_DEFAULT_ADMIN=false")
+		return nil
+	}
+
+	// Check if any users exist
+	var userCount int
+	err := db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&userCount)
+	if err != nil {
+		return fmt.Errorf("failed to check existing users: %w", err)
+	}
+
+	if userCount > 0 {
+		log.Println("Users already exist, skipping default admin creation")
+		return nil
+	}
+
+	log.Println("🔐 No users found - creating default admin user...")
+	log.Println("⚠️  WARNING: Default admin credentials are insecure. Please change them immediately after first login!")
+
+	// Get admin credentials from config (environment variables)
+	email := config.DefaultAdminEmail
+	password := config.DefaultAdminPassword
+
+	// Generate salt for password hashing
+	salt := make([]byte, 32)
+	if _, err := rand.Read(salt); err != nil {
+		return fmt.Errorf("failed to generate salt: %w", err)
+	}
+
+	// Hash password with Argon2id
+	passwordHash := HashPassword(password, salt)
+
+	// Generate user's master encryption key
+	masterKey := make([]byte, 32)
+	if _, err := rand.Read(masterKey); err != nil {
+		return fmt.Errorf("failed to generate master key: %w", err)
+	}
+
+	// Derive key from password to encrypt master key
+	userKey := argon2.IDKey([]byte(password), salt, 1, 64*1024, 4, 32)
+
+	// Encrypt master key with user's derived key
+	aead, err := chacha20poly1305.NewX(userKey)
+	if err != nil {
+		return fmt.Errorf("failed to initialize encryption: %w", err)
+	}
+
+	nonce := make([]byte, aead.NonceSize())
+	if _, err := rand.Read(nonce); err != nil {
+		return fmt.Errorf("failed to generate nonce: %w", err)
+	}
+
+	masterKeyEncrypted := aead.Seal(nonce, nonce, masterKey, nil)
+
+	// Create encrypted email fields
+	emailHash := sha256.Sum256([]byte(strings.ToLower(email)))
+	emailEncrypted, err := crypto.Encrypt([]byte(email))
+	if err != nil {
+		return fmt.Errorf("failed to encrypt email: %w", err)
+	}
+
+	emailSearchHash, err := crypto.EncryptDeterministic([]byte(strings.ToLower(email)), "email_search")
+	if err != nil {
+		return fmt.Errorf("failed to create email search hash: %w", err)
+	}
+
+	// Insert default admin user
+	_, err = db.Exec(ctx, `
+		INSERT INTO users (
+			email_hash, email_encrypted, email_search_hash,
+			password_hash, salt, master_key_encrypted,
+			is_admin, mfa_enabled, failed_attempts
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, emailHash[:], emailEncrypted, emailSearchHash, passwordHash, salt, masterKeyEncrypted, true, false, 0)
+
+	if err != nil {
+		return fmt.Errorf("failed to create default admin user: %w", err)
+	}
+
+	log.Printf("✅ Created default admin user: %s", email)
+	log.Printf("🔑 Default password: %s", password)
+	log.Println("⚠️  SECURITY WARNING: Change the default password immediately!")
+	log.Println("📖 See USER_MANAGEMENT.md for user management instructions")
+
+	return nil
+}
+
 // seedDefaultTemplates creates default public templates if they don't exist
 func seedDefaultTemplates(db Database, crypto *CryptoService) error {
 	ctx := context.Background()
@@ -5299,6 +5400,11 @@ func main() {
 
 	// Initialize crypto service
 	crypto := NewCryptoService(config.EncryptionKey)
+
+	// Seed default admin user if no users exist
+	if err := seedDefaultAdminUser(db, crypto, config); err != nil {
+		log.Printf("Warning: Failed to create default admin user: %v", err)
+	}
 
 	// Seed default templates
 	if err := seedDefaultTemplates(db, crypto); err != nil {

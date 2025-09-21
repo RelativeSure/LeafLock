@@ -54,11 +54,42 @@ LeafLock is a privacy-first notes application with end-to-end encryption, real-t
    - API health check: http://localhost:8080/api/v1/health
    - API documentation: http://localhost:8080/api/v1/docs (admin users only)
 
-4. Stop the stack when you are done:
+4. **First-time login**: Use the default admin credentials (⚠️ **Change immediately after first login!**):
+   - Email: `admin@leaflock.local` (configurable via `DEFAULT_ADMIN_EMAIL`)
+   - Password: `AdminPass123!` (configurable via `DEFAULT_ADMIN_PASSWORD`)
+
+5. Stop the stack when you are done:
 
    ```bash
    make down
    ```
+
+## Default Admin Account
+
+When starting LeafLock for the first time, a default admin user is automatically created if no users exist in the database:
+
+- **Email**: `admin@leaflock.local` (default)
+- **Password**: `AdminPass123!` (default)
+- **Admin privileges**: Yes
+
+### Configuration
+
+You can customize the default admin account using environment variables:
+
+```bash
+# Enable/disable default admin creation
+ENABLE_DEFAULT_ADMIN=true
+
+# Customize admin credentials
+DEFAULT_ADMIN_EMAIL=your-admin@domain.com
+DEFAULT_ADMIN_PASSWORD=YourSecurePassword123!
+```
+
+To disable automatic admin creation entirely, set `ENABLE_DEFAULT_ADMIN=false` in your `.env` file.
+
+⚠️ **SECURITY WARNING**: Change the default password immediately after your first login! These credentials are publicly documented and should never be used in production.
+
+For user management instructions, see [USER_MANAGEMENT.md](./USER_MANAGEMENT.md).
 
 ## Project Structure
 
