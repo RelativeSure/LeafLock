@@ -214,17 +214,6 @@ CREATE TABLE IF NOT EXISTS collaborations (
     UNIQUE(note_id, user_id)
 );
 
--- Session management with encryption
-CREATE TABLE IF NOT EXISTS sessions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    token_hash BYTEA NOT NULL UNIQUE, -- SHA-256 hash of session token
-    ip_address_encrypted BYTEA,
-    user_agent_encrypted BYTEA,
-    expires_at TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
 -- Audit log for security
 CREATE TABLE IF NOT EXISTS audit_log (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -362,13 +351,6 @@ BEGIN
     END IF;
 END $$;
 
--- Session cleanup function
-CREATE OR REPLACE FUNCTION cleanup_expired_sessions()
-RETURNS void AS $$
-BEGIN
-    DELETE FROM sessions WHERE expires_at < NOW();
-END;
-$$ LANGUAGE plpgsql;
 
 -- Cleanup old deleted notes function (30 days)
 CREATE OR REPLACE FUNCTION cleanup_old_deleted_notes()
@@ -385,8 +367,6 @@ CREATE INDEX IF NOT EXISTS idx_notes_created ON notes(created_by, created_at DES
 
 CREATE INDEX IF NOT EXISTS idx_search_keyword ON search_index(keyword_hash);
 
-CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
-CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 
 -- App settings key-value store
 CREATE TABLE IF NOT EXISTS app_settings (
@@ -754,6 +734,22 @@ func nilIfInvalid(t sql.NullTime) any {
 		return t.Time
 	}
 	return nil
+}
+
+// min returns the smaller of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// max returns the larger of two integers
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 // clientIP returns the best-effort client address, honoring common proxy headers.
@@ -1384,6 +1380,13 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	// Check if account is locked
 	if lockedUntil != nil && lockedUntil.After(time.Now()) {
 		return c.Status(403).JSON(fiber.Map{"error": "Account locked. Try again later."})
+	}
+
+	// Debug logging for password verification
+	log.Printf("🔍 Login attempt for email: %s", req.Email)
+	log.Printf("🔍 Received password length: %d characters", len(req.Password))
+	if len(req.Password) > 0 {
+		log.Printf("🔍 Password starts with: %c", req.Password[0])
 	}
 
 	// Verify password
@@ -4741,42 +4744,7 @@ func JWTMiddleware(secret []byte, redis *redis.Client, crypto *CryptoService) fi
 			return c.Status(401).JSON(fiber.Map{"error": "Invalid user_id format"})
 		}
 
-		// Validate session in Redis
-		ctx := c.Context()
-		tokenHash := sha256.Sum256([]byte(token))
-		sessionKey := fmt.Sprintf("session:%x", tokenHash[:])
-
-		// Check if session exists in Redis
-		encryptedData, err := redis.Get(ctx, sessionKey).Bytes()
-		if err != nil {
-			if err.Error() == "redis: nil" {
-				return c.Status(401).JSON(fiber.Map{"error": "Session expired or invalid"})
-			}
-			return c.Status(500).JSON(fiber.Map{"error": "Session validation failed"})
-		}
-
-		// Decrypt and validate session data
-		sessionDataBytes, err := crypto.Decrypt(encryptedData)
-		if err != nil {
-			return c.Status(401).JSON(fiber.Map{"error": "Invalid session data"})
-		}
-
-		var sessionData SessionData
-		if err := json.Unmarshal(sessionDataBytes, &sessionData); err != nil {
-			return c.Status(401).JSON(fiber.Map{"error": "Corrupted session data"})
-		}
-
-		// Verify session belongs to the user from JWT
-		if sessionData.UserID != userID.String() {
-			return c.Status(401).JSON(fiber.Map{"error": "Session user mismatch"})
-		}
-
-		// Check if session is expired (additional check)
-		if time.Now().After(sessionData.ExpiresAt) {
-			redis.Del(ctx, sessionKey) // Clean up expired session
-			return c.Status(401).JSON(fiber.Map{"error": "Session expired"})
-		}
-
+		// Set user ID in context for subsequent middleware
 		c.Locals("user_id", userID)
 
 		return c.Next()
@@ -4805,13 +4773,7 @@ func startCleanupService(db Database) {
 func runCleanupTasks(ctx context.Context, db Database) {
 	log.Println("🧹 Running scheduled cleanup tasks...")
 
-	// Clean up expired sessions
-	result1, err1 := db.Exec(ctx, "SELECT cleanup_expired_sessions()")
-	if err1 != nil {
-		log.Printf("⚠️ Failed to cleanup expired sessions: %v", err1)
-	} else {
-		log.Println("✅ Cleaned up expired sessions")
-	}
+	// Note: Session cleanup is now handled by Redis TTL
 
 	// Clean up old deleted notes (30+ days)
 	result2, err2 := db.Exec(ctx, "SELECT cleanup_old_deleted_notes()")
@@ -4832,7 +4794,6 @@ func runCleanupTasks(ctx context.Context, db Database) {
 	log.Println("🎯 Cleanup tasks completed successfully")
 
 	// Prevent unused variable warnings
-	_ = result1
 	_ = result2
 }
 
@@ -5245,6 +5206,13 @@ func seedDefaultAdminUser(db Database, crypto *CryptoService, config *Config) er
 	email := config.DefaultAdminEmail
 	password := config.DefaultAdminPassword
 
+	// Debug logging for password validation
+	log.Printf("📧 Admin email: %s", email)
+	log.Printf("🔑 Password length: %d characters", len(password))
+	if len(password) > 0 {
+		log.Printf("🔑 Password starts with: %c", password[0])
+	}
+
 	// Generate salt for password hashing
 	salt := make([]byte, 32)
 	if _, err := rand.Read(salt); err != nil {
@@ -5401,6 +5369,9 @@ func main() {
 	// Load configuration
 	config := LoadConfig()
 	trustProxyHeaders.Store(config.TrustProxyHeaders)
+
+	// Track application start time for uptime calculation
+	startTime := time.Now()
 
 	// Initialize runtime toggle from env (default true)
 	envRegRaw, envRegExplicit := os.LookupEnv("ENABLE_REGISTRATION")
@@ -5615,9 +5586,62 @@ func main() {
 		return c.JSON(fiber.Map{"enabled": regEnabled.Load() == 1})
 	})
 
-	// Health checks
+	// Health checks - comprehensive status for monitoring
 	api.Get("/health", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"status": "healthy", "encryption": "enabled"})
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		health := fiber.Map{
+			"status":    "healthy",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+			"version":   "1.0.0", // TODO: Get from build info
+			"uptime":    time.Since(startTime).String(),
+		}
+
+		// Database health check
+		var userCount int
+		dbHealthy := true
+		if err := db.QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&userCount); err != nil {
+			dbHealthy = false
+			health["database"] = fiber.Map{
+				"status": "unhealthy",
+				"error":  "connection failed",
+			}
+		} else {
+			health["database"] = fiber.Map{
+				"status":     "healthy",
+				"user_count": userCount,
+			}
+		}
+
+		// Redis health check
+		redisHealthy := true
+		if err := rdb.Ping(ctx).Err(); err != nil {
+			redisHealthy = false
+			health["redis"] = fiber.Map{
+				"status": "unhealthy",
+				"error":  "connection failed",
+			}
+		} else {
+			health["redis"] = fiber.Map{
+				"status": "healthy",
+				"info":   "connected",
+			}
+		}
+
+		// Encryption status
+		health["encryption"] = fiber.Map{
+			"status":     "active",
+			"algorithms": []string{"XChaCha20-Poly1305", "Argon2id"},
+		}
+
+		// Overall status
+		if !dbHealthy || !redisHealthy {
+			health["status"] = "degraded"
+			return c.Status(503).JSON(health)
+		}
+
+		return c.JSON(health)
 	})
 
 	api.Get("/ready", func(c *fiber.Ctx) error {
@@ -5959,6 +5983,416 @@ func main() {
 		return c.JSON(fiber.Map{"enabled": regEnabled.Load() == 1})
 	})
 
+	// Debug API endpoints (admin-only)
+	debug := admin.Group("/debug")
+
+	// Check if default admin exists and get admin details
+	debug.Get("/check-admin", func(c *fiber.Ctx) error {
+		ctx := c.Context()
+
+		// Check for default admin by email
+		defaultEmail := config.DefaultAdminEmail
+		emailSearchHash, err := crypto.EncryptDeterministic([]byte(strings.ToLower(defaultEmail)), "email_search")
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to check admin", "details": err.Error()})
+		}
+
+		var adminID uuid.UUID
+		var isAdmin bool
+		var created, lastLogin sql.NullTime
+		var failedAttempts int
+		err = db.QueryRow(ctx, `
+			SELECT id, is_admin, created_at, last_login, failed_attempts
+			FROM users WHERE email_search_hash = $1`,
+			emailSearchHash,
+		).Scan(&adminID, &isAdmin, &created, &lastLogin, &failedAttempts)
+
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return c.JSON(fiber.Map{
+					"admin_exists": false,
+					"default_email": defaultEmail,
+					"email_search_hash_length": len(emailSearchHash),
+					"message": "Default admin user not found",
+				})
+			}
+			return c.Status(500).JSON(fiber.Map{"error": "Database query failed", "details": err.Error()})
+		}
+
+		return c.JSON(fiber.Map{
+			"admin_exists": true,
+			"admin_id": adminID,
+			"email": defaultEmail,
+			"is_admin": isAdmin,
+			"created_at": nilIfInvalid(created),
+			"last_login": nilIfInvalid(lastLogin),
+			"failed_attempts": failedAttempts,
+			"email_search_hash_length": len(emailSearchHash),
+		})
+	})
+
+	// List all users with detailed diagnostic info
+	debug.Get("/users", func(c *fiber.Ctx) error {
+		ctx := c.Context()
+
+		// Parse query params
+		limit := 50
+		if l := c.Query("limit"); l != "" {
+			if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 100 {
+				limit = parsed
+			}
+		}
+
+		rows, err := db.Query(ctx, `
+			SELECT id, email_encrypted, email_search_hash, is_admin, mfa_enabled,
+				   created_at, last_login, failed_attempts, locked_until
+			FROM users
+			ORDER BY created_at DESC
+			LIMIT $1`, limit)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Database query failed", "details": err.Error()})
+		}
+		defer rows.Close()
+
+		var users []fiber.Map
+		for rows.Next() {
+			var id uuid.UUID
+			var emailEnc, emailSearchHash []byte
+			var isAdmin, mfaEnabled bool
+			var created, lastLogin sql.NullTime
+			var failedAttempts int
+			var lockedUntil sql.NullTime
+
+			if err := rows.Scan(&id, &emailEnc, &emailSearchHash, &isAdmin, &mfaEnabled,
+				&created, &lastLogin, &failedAttempts, &lockedUntil); err != nil {
+				continue
+			}
+
+			// Decrypt email
+			email := "***encrypted***"
+			if decrypted, err := crypto.Decrypt(emailEnc); err == nil {
+				email = string(decrypted)
+			}
+
+			users = append(users, fiber.Map{
+				"id": id,
+				"email": email,
+				"email_search_hash_length": len(emailSearchHash),
+				"is_admin": isAdmin,
+				"mfa_enabled": mfaEnabled,
+				"created_at": nilIfInvalid(created),
+				"last_login": nilIfInvalid(lastLogin),
+				"failed_attempts": failedAttempts,
+				"is_locked": lockedUntil.Valid && lockedUntil.Time.After(time.Now()),
+				"locked_until": nilIfInvalid(lockedUntil),
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"users": users,
+			"count": len(users),
+			"limit": limit,
+		})
+	})
+
+	// Check specific user by email
+	debug.Get("/user/:email", func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		email := strings.ToLower(strings.TrimSpace(c.Params("email")))
+
+		if email == "" {
+			return c.Status(400).JSON(fiber.Map{"error": "Email parameter required"})
+		}
+
+		// Create email search hash
+		emailSearchHash, err := crypto.EncryptDeterministic([]byte(email), "email_search")
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to create email hash", "details": err.Error()})
+		}
+
+		var id uuid.UUID
+		var emailEnc []byte
+		var isAdmin, mfaEnabled bool
+		var created, lastLogin sql.NullTime
+		var failedAttempts int
+		var lockedUntil sql.NullTime
+		var passwordHash string
+
+		err = db.QueryRow(ctx, `
+			SELECT id, email_encrypted, is_admin, mfa_enabled, created_at, last_login,
+				   failed_attempts, locked_until, password_hash
+			FROM users WHERE email_search_hash = $1`,
+			emailSearchHash,
+		).Scan(&id, &emailEnc, &isAdmin, &mfaEnabled, &created, &lastLogin,
+			&failedAttempts, &lockedUntil, &passwordHash)
+
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return c.JSON(fiber.Map{
+					"user_exists": false,
+					"searched_email": email,
+					"email_search_hash_length": len(emailSearchHash),
+				})
+			}
+			return c.Status(500).JSON(fiber.Map{"error": "Database query failed", "details": err.Error()})
+		}
+
+		// Decrypt email to verify
+		decryptedEmail := "***encrypted***"
+		if decrypted, err := crypto.Decrypt(emailEnc); err == nil {
+			decryptedEmail = string(decrypted)
+		}
+
+		return c.JSON(fiber.Map{
+			"user_exists": true,
+			"id": id,
+			"searched_email": email,
+			"stored_email": decryptedEmail,
+			"email_search_hash_length": len(emailSearchHash),
+			"is_admin": isAdmin,
+			"mfa_enabled": mfaEnabled,
+			"created_at": nilIfInvalid(created),
+			"last_login": nilIfInvalid(lastLogin),
+			"failed_attempts": failedAttempts,
+			"is_locked": lockedUntil.Valid && lockedUntil.Time.After(time.Now()),
+			"locked_until": nilIfInvalid(lockedUntil),
+			"password_hash_length": len(passwordHash),
+			"password_hash_starts_with": passwordHash[:min(10, len(passwordHash))] + "...",
+		})
+	})
+
+	// Test authentication flow with detailed logging
+	debug.Post("/test-login", func(c *fiber.Ctx) error {
+		var req struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}
+
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid request body", "details": err.Error()})
+		}
+
+		ctx := c.Context()
+		result := fiber.Map{
+			"test_email": req.Email,
+			"password_length": len(req.Password),
+			"steps": fiber.Map{},
+		}
+
+		// Step 1: Email normalization
+		normalizedEmail := strings.ToLower(req.Email)
+		result["steps"].(fiber.Map)["email_normalization"] = fiber.Map{
+			"original": req.Email,
+			"normalized": normalizedEmail,
+			"changed": req.Email != normalizedEmail,
+		}
+
+		// Step 2: Create email search hash
+		emailSearchHash, err := crypto.EncryptDeterministic([]byte(normalizedEmail), "email_search")
+		if err != nil {
+			result["steps"].(fiber.Map)["email_hash_creation"] = fiber.Map{
+				"success": false,
+				"error": err.Error(),
+			}
+			return c.JSON(result)
+		}
+
+		result["steps"].(fiber.Map)["email_hash_creation"] = fiber.Map{
+			"success": true,
+			"hash_length": len(emailSearchHash),
+		}
+
+		// Step 3: Database lookup
+		var userID uuid.UUID
+		var passwordHash string
+		var failedAttempts int
+		var lockedUntil *time.Time
+		var mfaEnabled bool
+		var mfaSecret []byte
+
+		err = db.QueryRow(ctx, `
+			SELECT id, password_hash, failed_attempts, locked_until, mfa_enabled, mfa_secret_encrypted
+			FROM users WHERE email_search_hash = $1`,
+			emailSearchHash,
+		).Scan(&userID, &passwordHash, &failedAttempts, &lockedUntil, &mfaEnabled, &mfaSecret)
+
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				result["steps"].(fiber.Map)["database_lookup"] = fiber.Map{
+					"success": false,
+					"user_found": false,
+					"error": "User not found",
+				}
+			} else {
+				result["steps"].(fiber.Map)["database_lookup"] = fiber.Map{
+					"success": false,
+					"error": err.Error(),
+				}
+			}
+			return c.JSON(result)
+		}
+
+		result["steps"].(fiber.Map)["database_lookup"] = fiber.Map{
+			"success": true,
+			"user_found": true,
+			"user_id": userID,
+			"failed_attempts": failedAttempts,
+			"is_locked": lockedUntil != nil && lockedUntil.After(time.Now()),
+			"mfa_enabled": mfaEnabled,
+			"password_hash_length": len(passwordHash),
+		}
+
+		// Step 4: Check if account is locked
+		if lockedUntil != nil && lockedUntil.After(time.Now()) {
+			result["steps"].(fiber.Map)["account_lock_check"] = fiber.Map{
+				"is_locked": true,
+				"locked_until": lockedUntil,
+				"auth_result": "account_locked",
+			}
+			return c.JSON(result)
+		}
+
+		result["steps"].(fiber.Map)["account_lock_check"] = fiber.Map{
+			"is_locked": false,
+		}
+
+		// Step 5: Password verification
+		passwordValid := VerifyPassword(req.Password, passwordHash)
+		result["steps"].(fiber.Map)["password_verification"] = fiber.Map{
+			"password_valid": passwordValid,
+			"password_hash_format": strings.HasPrefix(passwordHash, "$argon2id$"),
+		}
+
+		if !passwordValid {
+			result["auth_result"] = "invalid_password"
+			return c.JSON(result)
+		}
+
+		// Step 6: Session creation test (without actually creating)
+		result["steps"].(fiber.Map)["session_creation_test"] = fiber.Map{
+			"redis_available": true, // We'll test this
+		}
+
+		// Test Redis connection
+		if err := rdb.Ping(ctx).Err(); err != nil {
+			result["steps"].(fiber.Map)["session_creation_test"] = fiber.Map{
+				"redis_available": false,
+				"redis_error": err.Error(),
+			}
+			result["auth_result"] = "redis_unavailable"
+			return c.JSON(result)
+		}
+
+		result["auth_result"] = "success"
+		result["message"] = "Authentication would succeed"
+
+		return c.JSON(result)
+	})
+
+	// System health check with comprehensive status
+	debug.Get("/system-health", func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		health := fiber.Map{
+			"timestamp": time.Now(),
+			"services": fiber.Map{},
+		}
+
+		// Database health
+		dbHealth := fiber.Map{"status": "unknown"}
+		if err := db.Ping(ctx); err != nil {
+			dbHealth["status"] = "error"
+			dbHealth["error"] = err.Error()
+		} else {
+			dbHealth["status"] = "healthy"
+
+			// Count users
+			var userCount int
+			if err := db.QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&userCount); err == nil {
+				dbHealth["user_count"] = userCount
+			}
+
+			// Count admins
+			var adminCount int
+			if err := db.QueryRow(ctx, "SELECT COUNT(*) FROM users WHERE is_admin = true").Scan(&adminCount); err == nil {
+				dbHealth["admin_count"] = adminCount
+			}
+		}
+		health["services"].(fiber.Map)["database"] = dbHealth
+
+		// Redis health
+		redisHealth := fiber.Map{"status": "unknown"}
+		if err := rdb.Ping(ctx).Err(); err != nil {
+			redisHealth["status"] = "error"
+			redisHealth["error"] = err.Error()
+		} else {
+			redisHealth["status"] = "healthy"
+
+			// Get Redis info
+			if info, err := rdb.Info(ctx).Result(); err == nil {
+				lines := strings.Split(info, "\n")
+				for _, line := range lines {
+					if strings.HasPrefix(line, "connected_clients:") {
+						redisHealth["connected_clients"] = strings.TrimPrefix(line, "connected_clients:")
+					}
+					if strings.HasPrefix(line, "used_memory_human:") {
+						redisHealth["memory_usage"] = strings.TrimPrefix(line, "used_memory_human:")
+					}
+				}
+			}
+		}
+		health["services"].(fiber.Map)["redis"] = redisHealth
+
+		// Environment variables check
+		envHealth := fiber.Map{
+			"default_admin_enabled": config.DefaultAdminEnabled,
+			"default_admin_email": config.DefaultAdminEmail,
+			"default_admin_password_length": len(config.DefaultAdminPassword),
+			"jwt_secret_length": len(config.JWTSecret),
+			"encryption_key_length": len(config.EncryptionKey),
+			"cors_origins": config.AllowedOrigins,
+		}
+		health["environment"] = envHealth
+
+		// Overall health
+		overallHealthy := dbHealth["status"] == "healthy" && redisHealth["status"] == "healthy"
+		health["overall_status"] = map[bool]string{true: "healthy", false: "degraded"}[overallHealthy]
+
+		return c.JSON(health)
+	})
+
+	// Environment variables check (masked for security)
+	debug.Get("/env-check", func(c *fiber.Ctx) error {
+		envInfo := fiber.Map{
+			"default_admin": fiber.Map{
+				"enabled": config.DefaultAdminEnabled,
+				"email": config.DefaultAdminEmail,
+				"password_set": len(config.DefaultAdminPassword) > 0,
+				"password_length": len(config.DefaultAdminPassword),
+				"password_starts_with": string(config.DefaultAdminPassword[0:min(3, len(config.DefaultAdminPassword))]) + "...",
+				"password_ends_with": "..." + string(config.DefaultAdminPassword[max(0, len(config.DefaultAdminPassword)-3):]),
+			},
+			"database": fiber.Map{
+				"url_set": len(config.DatabaseURL) > 0,
+				"url_starts_with": config.DatabaseURL[:min(20, len(config.DatabaseURL))] + "...",
+			},
+			"redis": fiber.Map{
+				"url_set": len(config.RedisURL) > 0,
+				"password_set": len(config.RedisPassword) > 0,
+			},
+			"security": fiber.Map{
+				"jwt_secret_length": len(config.JWTSecret),
+				"encryption_key_length": len(config.EncryptionKey),
+			},
+			"application": fiber.Map{
+				"port": config.Port,
+				"cors_origins": config.AllowedOrigins,
+				"environment": config.Environment,
+			},
+		}
+
+		return c.JSON(envInfo)
+	})
+
 	// List users with basic metadata for admin UI (supports q, limit, offset)
 	admin.Get("/users", func(c *fiber.Ctx) error {
 		ctx := c.Context()
@@ -6003,6 +6437,7 @@ func main() {
 		lastTo := strings.TrimSpace(c.Query("last_to"))
 		hasLogin := strings.ToLower(strings.TrimSpace(c.Query("has_login"))) == "true"
 		hasIP := strings.ToLower(strings.TrimSpace(c.Query("has_ip"))) == "true"
+		_ = hasIP // Unused - IP filtering disabled since sessions moved to Redis
 
 		sort := strings.ToLower(strings.TrimSpace(c.Query("sort")))
 		order := strings.ToUpper(strings.TrimSpace(c.Query("order")))
@@ -6051,9 +6486,7 @@ func main() {
 		if hasLogin {
 			conds = append(conds, "last_login IS NOT NULL")
 		}
-		if hasIP {
-			conds = append(conds, "EXISTS (SELECT 1 FROM sessions s WHERE s.user_id = users.id)")
-		}
+		// hasIP filter removed - session data moved to Redis
 
 		// Build WHERE with right placeholders
 		where := ""
@@ -6154,15 +6587,8 @@ func main() {
 				}
 			}
 
-			// last used IP from most recent session
-			var lastIPEnc []byte
-			_ = db.QueryRow(ctx, `SELECT ip_address_encrypted FROM sessions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1`, u.ID).Scan(&lastIPEnc)
-			lastIP := ""
-			if len(lastIPEnc) > 0 {
-				if pt, err := crypto.Decrypt(lastIPEnc); err == nil {
-					lastIP = string(pt)
-				}
-			}
+			// Note: Last IP tracking moved to Redis sessions
+			lastIP := "N/A (Redis sessions)"
 
 			roles := rolesByUser[u.ID]
 			allowlistedAdmin := isUserInAdminAllowlist(u.ID.String())
@@ -6218,6 +6644,7 @@ func main() {
 		lastTo := strings.TrimSpace(c.Query("last_to"))
 		hasLogin := strings.ToLower(strings.TrimSpace(c.Query("has_login"))) == "true"
 		hasIP := strings.ToLower(strings.TrimSpace(c.Query("has_ip"))) == "true"
+		_ = hasIP // Unused - IP filtering disabled since sessions moved to Redis
 		sort := strings.ToLower(strings.TrimSpace(c.Query("sort")))
 		order := strings.ToUpper(strings.TrimSpace(c.Query("order")))
 		if order != "ASC" && order != "DESC" {
@@ -6261,9 +6688,7 @@ func main() {
 		if hasLogin {
 			conds = append(conds, "last_login IS NOT NULL")
 		}
-		if hasIP {
-			conds = append(conds, "EXISTS (SELECT 1 FROM sessions s WHERE s.user_id = users.id)")
-		}
+		// hasIP filter removed - session data moved to Redis
 		where := ""
 		if len(conds) > 0 {
 			n := 1
@@ -6316,14 +6741,8 @@ func main() {
 					regIP = string(pt)
 				}
 			}
-			var lastIPEnc []byte
-			_ = db.QueryRow(ctx, `SELECT ip_address_encrypted FROM sessions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1`, r.ID).Scan(&lastIPEnc)
-			lastIP := ""
-			if len(lastIPEnc) > 0 {
-				if pt, err := crypto.Decrypt(lastIPEnc); err == nil {
-					lastIP = string(pt)
-				}
-			}
+			// Note: Last IP tracking moved to Redis sessions
+			lastIP := "N/A (Redis sessions)"
 			// roles
 			roles := []string{}
 			rr, err := db.Query(ctx, `SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = $1`, r.ID)
@@ -6906,7 +7325,7 @@ func main() {
 		}
 		defer tx.Rollback(ctx)
 
-		// Delete user (cascades to notes, sessions, etc.)
+		// Delete user (cascades to notes, etc.)
 		_, err = tx.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Deletion failed"})

@@ -97,6 +97,7 @@ This document outlines planned features and improvements for LeafLock. Items are
   - [ ] Login history and suspicious activity alerts
   - [ ] Security audit log with filtering
   - [ ] Data breach monitoring integration
+  - [ ] Password Reset
 
 ## 🤝 Collaboration Features
 

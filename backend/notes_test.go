@@ -388,7 +388,7 @@ func (suite *DatabaseIntegrationTestSuite) TearDownSuite() {
 func (suite *DatabaseIntegrationTestSuite) TearDownTest() {
 	// Clean up test data after each test
 	ctx := context.Background()
-	suite.db.Exec(ctx, "TRUNCATE users, workspaces, notes, sessions, audit_log CASCADE")
+	suite.db.Exec(ctx, "TRUNCATE users, workspaces, notes, audit_log CASCADE")
 }
 
 func (suite *DatabaseIntegrationTestSuite) TestUserRegistrationFlow() {
@@ -535,7 +535,8 @@ func (suite *DatabaseIntegrationTestSuite) TestNotesOperations() {
 	suite.Equal(0, count)
 }
 
-func (suite *DatabaseIntegrationTestSuite) TestSessionManagement() {
+// TestSessionManagement - OBSOLETE: Sessions moved to Redis
+func (suite *DatabaseIntegrationTestSuite) _TestSessionManagement_OBSOLETE() {
 	ctx := context.Background()
 
 	userID := suite.createTestUser()
