@@ -116,47 +116,6 @@ services:
       - leaflock-network
     restart: unless-stopped
 
-  # Automated backup service
-  backup:
-    build:
-      context: .
-      dockerfile: Dockerfile.backup
-    container_name: leaflock-backup
-    environment:
-      # Database connection
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: notes
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}
-
-      # S3 configuration
-      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
-      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-https://s3.amazonaws.com}
-      BACKUP_S3_ACCESS_KEY: ${BACKUP_S3_ACCESS_KEY:-}
-      BACKUP_S3_SECRET_KEY: ${BACKUP_S3_SECRET_KEY:-}
-      BACKUP_S3_REGION: ${BACKUP_S3_REGION:-us-east-1}
-
-      # Backup settings
-      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:-}
-      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
-      BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 2 * * *}
-      ENABLE_BACKUPS: ${ENABLE_BACKUPS:-true}
-      RUN_INITIAL_BACKUP: ${RUN_INITIAL_BACKUP:-false}
-
-      # Timezone
-      TZ: ${TZ:-UTC}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      backend:
-        condition: service_started
-    networks:
-      - leaflock-network
-    restart: unless-stopped
-    # Optional: Mount backup scripts as volume for development
-    # volumes:
-    #   - ./scripts:/scripts:ro
 
 
 volumes:
