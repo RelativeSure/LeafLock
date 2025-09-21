@@ -527,7 +527,7 @@ func LoadConfig() *Config {
 		TrustProxyHeaders: getEnvAsBool("TRUST_PROXY_HEADERS", false),
 		// Default admin configuration
 		DefaultAdminEnabled:  getEnvAsBool("ENABLE_DEFAULT_ADMIN", true),
-		DefaultAdminEmail:    getEnvOrDefault("DEFAULT_ADMIN_EMAIL", "admin@leaflock.local"),
+		DefaultAdminEmail:    getEnvOrDefault("DEFAULT_ADMIN_EMAIL", "admin@leaflock.app"),
 		DefaultAdminPassword: getEnvOrDefault("DEFAULT_ADMIN_PASSWORD", "AdminPass123!"),
 	}
 }
