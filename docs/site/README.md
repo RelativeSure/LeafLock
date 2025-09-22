@@ -22,11 +22,20 @@ npm run preview
 
 The site is built as a static site and can be deployed to any static hosting service:
 
+- **Cloudflare Pages**: Use `wrangler.toml` configuration (see `CLOUDFLARE.md` for details)
 - **GitHub Pages**: Deploy the `dist/` folder
 - **Netlify**: Connect to repository and set build command to `npm run build` and publish directory to `dist`
 - **Vercel**: Import project and it will auto-detect Astro settings
 - **AWS S3**: Upload `dist/` contents to S3 bucket
-- **Cloudflare Pages**: Connect repository with build command `npm run build` and output directory `dist`
+
+### Cloudflare Pages (Recommended)
+
+For Cloudflare Pages deployment:
+1. Connect your GitHub repository to Cloudflare Pages
+2. Set build command: `npm run build`
+3. Set build output directory: `dist`
+4. Set root directory: `docs/site`
+5. See `CLOUDFLARE.md` for detailed configuration
 
 ## Migration from Hugo
 

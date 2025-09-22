@@ -1,0 +1,40 @@
+name = "leaflock-docs"
+compatibility_date = "2024-09-23"
+pages_build_output_dir = "dist"
+
+[build]
+  command = "npm run build"
+  cwd = "."
+
+# Environment variables for build
+[env.production.vars]
+  NODE_ENV = "production"
+
+# Redirects and headers
+[[redirects]]
+  from = "/docs/*"
+  to = "/pages/:splat"
+  status = 301
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
