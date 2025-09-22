@@ -1,0 +1,191 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const title = "LeafLock Documentation";
+const description = "Comprehensive documentation for secure, end-to-end encrypted notes with zero-knowledge architecture.";
+---
+
+<BaseLayout title={title} description={description}>
+  <section class="hero">
+    <h1>LeafLock Documentation</h1>
+    <div class="markdown">
+      <p>Welcome to LeafLock Documentation – your comprehensive guide to deploying, managing, and understanding LeafLock's secure notes platform. Whether you're a user seeking privacy information, an administrator managing instances, or a developer integrating with our APIs, you'll find everything you need here.</p>
+      
+      <p><strong>LeafLock</strong> is built with privacy by design, featuring end-to-end encryption and zero-knowledge architecture that ensures your notes remain secure and private.</p>
+    </div>
+  </section>
+
+  <section class="documentation-overview">
+    <h2>📚 Documentation Categories</h2>
+
+    <div class="cards-grid">
+      <div class="card">
+        <h3>🔒 Legal & Privacy</h3>
+        <p>Privacy policies, GDPR compliance, and terms of use for LeafLock users.</p>
+        <ul class="doc-list">
+          <li>
+            <a href="/pages/privacy-policy/">
+              <h4>Privacy Policy</h4>
+              <p>How LeafLock collects, uses, and safeguards personal data across deployments.</p>
+            </a>
+          </li>
+          <li>
+            <a href="/pages/terms-of-use/">
+              <h4>Terms of Use</h4>
+              <p>Legal terms and conditions for using LeafLock services.</p>
+            </a>
+          </li>
+          <li>
+            <a href="/pages/gdpr-compliance/">
+              <h4>GDPR Compliance</h4>
+              <p>Comprehensive GDPR compliance guide for LeafLock deployments.</p>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>⚙️ Administration</h3>
+        <p>Guides for system administrators managing LeafLock instances.</p>
+        <ul class="doc-list">
+          <li>
+            <a href="/pages/admin-guide/">
+              <h4>Admin Guide</h4>
+              <p>Complete administration guide for LeafLock deployments.</p>
+            </a>
+          </li>
+          <li>
+            <a href="/pages/monitoring-and-backups/">
+              <h4>Monitoring & Backups</h4>
+              <p>Monitoring, logging, and backup strategies for production deployments.</p>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>💻 Development</h3>
+        <p>Technical documentation for developers and contributors.</p>
+        <ul class="doc-list">
+          <li>
+            <a href="/pages/developer-guide/">
+              <h4>Developer Guide</h4>
+              <p>API documentation, testing guides, and development workflows.</p>
+            </a>
+          </li>
+          <li>
+            <a href="/pages/global-compliance/">
+              <h4>Global Compliance</h4>
+              <p>Multi-jurisdictional compliance requirements and implementation.</p>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="all-documentation">
+    <h2>📖 All Documentation</h2>
+    <ul class="list">
+      <li>
+        <a href="/pages/privacy-policy/">
+          <h3>Privacy Policy</h3>
+          <p>How LeafLock collects, uses, and safeguards personal data across deployments.</p>
+          <div class="taxonomy-list">
+            <span class="tag">privacy</span>
+            <span class="tag">data-collection</span>
+            <span class="tag">user-rights</span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a href="/pages/terms-of-use/">
+          <h3>Terms of Use</h3>
+          <p>Legal terms and conditions for using LeafLock services.</p>
+          <div class="taxonomy-list">
+            <span class="tag">legal</span>
+            <span class="tag">agreement</span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a href="/pages/gdpr-compliance/">
+          <h3>GDPR Compliance</h3>
+          <p>Comprehensive GDPR compliance guide for LeafLock deployments.</p>
+          <div class="taxonomy-list">
+            <span class="tag">gdpr</span>
+            <span class="tag">data-protection</span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a href="/pages/admin-guide/">
+          <h3>Admin Guide</h3>
+          <p>Complete administration guide for LeafLock deployments.</p>
+          <div class="taxonomy-list">
+            <span class="tag">admin</span>
+            <span class="tag">deployment</span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a href="/pages/developer-guide/">
+          <h3>Developer Guide</h3>
+          <p>API documentation, testing guides, and development workflows.</p>
+          <div class="taxonomy-list">
+            <span class="tag">development</span>
+            <span class="tag">api</span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a href="/pages/monitoring-and-backups/">
+          <h3>Monitoring & Backups</h3>
+          <p>Monitoring, logging, and backup strategies for production deployments.</p>
+          <div class="taxonomy-list">
+            <span class="tag">monitoring</span>
+            <span class="tag">backups</span>
+          </div>
+        </a>
+      </li>
+    </ul>
+  </section>
+
+  <section class="tags-overview">
+    <h2>🏷️ Browse by Topic</h2>
+    <div class="taxonomy-list">
+      <a href="/tags/privacy/" class="tag">privacy</a>
+      <a href="/tags/gdpr/" class="tag">gdpr</a>
+      <a href="/tags/admin/" class="tag">admin</a>
+      <a href="/tags/development/" class="tag">development</a>
+      <a href="/tags/legal/" class="tag">legal</a>
+      <a href="/tags/data-protection/" class="tag">data-protection</a>
+    </div>
+  </section>
+
+  <section style="margin-top: 3rem;">
+    <h2>🚀 Quick Start</h2>
+    <p><strong>🚀 New to LeafLock?</strong> Start with our <a href="/pages/privacy-policy/">Privacy Policy</a> to understand how we protect your data.</p>
+    <p><strong>⚖️ Legal Compliance?</strong> Check our <a href="/pages/gdpr-compliance/">GDPR Compliance</a> guide and <a href="/pages/global-compliance/">Global Compliance</a> information.</p>
+    <p><strong>🔧 System Administrator?</strong> Begin with the <a href="/pages/admin-guide/">Admin Guide</a> for user management and configuration.</p>
+    <p><strong>💻 Developer?</strong> Explore our <a href="/pages/developer-guide/">Developer Guide</a> for APIs, testing, and technical documentation.</p>
+  </section>
+
+  <section style="margin-top: 3rem;">
+    <h2>🛡️ Key Features</h2>
+    <ul>
+      <li><strong>🔒 End-to-End Encryption</strong>: Your notes are encrypted on your device before reaching our servers</li>
+      <li><strong>🔍 Zero-Knowledge Architecture</strong>: We cannot read your notes even if we wanted to</li>
+      <li><strong>🌍 Global Compliance</strong>: Built to meet GDPR, CCPA, and international privacy standards</li>
+      <li><strong>⚡ Open Source</strong>: Transparent, auditable codebase you can trust</li>
+      <li><strong>🛡️ Security First</strong>: Regular security audits and best practices implementation</li>
+    </ul>
+  </section>
+
+  <section style="margin-top: 3rem;">
+    <h2>📞 Need Help?</h2>
+    <p><strong>📧 Email</strong>: <a href="mailto:contact@leaflock.app">contact@leaflock.app</a></p>
+    <p><strong>🐛 Issues</strong>: <a href="https://github.com/RelativeSure/LeafLock">GitHub Repository</a></p>
+    <p><strong>📚 Documentation</strong>: Browse the sections above or use the navigation menu</p>
+  </section>
+</BaseLayout>

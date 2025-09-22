@@ -1,0 +1,97 @@
+---
+export interface Props {
+  title?: string;
+  description?: string;
+  canonicalURL?: string;
+}
+
+const { title = "LeafLock Documentation", description = "Secure, end-to-end encrypted notes with zero-knowledge architecture", canonicalURL } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    {canonicalURL && <link rel="canonical" href={canonicalURL} />}
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="LeafLock Documentation" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    
+    <!-- Import CSS -->
+    <style is:global>
+      @import '../styles/main.css';
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <a class="brand" href="/">LeafLock</a>
+        <nav>
+          <ul>
+            <li><a href="/pages/">Documentation</a></li>
+            <li><a href="https://github.com/RelativeSure/LeafLock">Repository</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main-content" class="container">
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="footer-links">
+          <div>
+            <h2>LeafLock Docs</h2>
+            <ul>
+              <li><a href="/pages/privacy-policy/">Privacy Policy</a></li>
+              <li><a href="/pages/terms-of-use/">Terms of Use</a></li>
+              <li><a href="/pages/gdpr-compliance/">GDPR Compliance</a></li>
+            </ul>
+          </div>
+          <div>
+            <h2>Administration</h2>
+            <ul>
+              <li><a href="/pages/admin-guide/">Admin Guide</a></li>
+              <li><a href="/pages/monitoring-and-backups/">Monitoring & Backups</a></li>
+            </ul>
+          </div>
+          <div>
+            <h2>Development</h2>
+            <ul>
+              <li><a href="/pages/developer-guide/">Developer Guide</a></li>
+              <li><a href="https://github.com/RelativeSure/LeafLock">GitHub Repository</a></li>
+            </ul>
+          </div>
+        </div>
+        <div style="text-align: center; margin-top: 2rem; color: var(--text-muted); font-size: 0.9rem;">
+          © {new Date().getFullYear()} LeafLock. All rights reserved.
+        </div>
+      </div>
+    </footer>
+
+    <!-- Schema.org structured data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "LeafLock Documentation",
+      "description": "Secure, end-to-end encrypted notes with zero-knowledge architecture",
+      "url": "https://docs.leaflock.app/"
+    }
+    </script>
+  </body>
+</html>

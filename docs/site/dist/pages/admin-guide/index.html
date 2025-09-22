@@ -1,0 +1,294 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Admin Guide</title><meta name="description" content="Complete administrator guide for managing LeafLock instances and users."><link rel="icon" type="image/svg+xml" href="/favicon.svg"><!-- Open Graph --><meta property="og:title" content="Admin Guide"><meta property="og:description" content="Complete administrator guide for managing LeafLock instances and users."><meta property="og:type" content="website"><meta property="og:site_name" content="LeafLock Documentation"><!-- Twitter Card --><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Admin Guide"><meta name="twitter:description" content="Complete administrator guide for managing LeafLock instances and users."><!-- Import CSS --><link rel="stylesheet" href="/assets/admin-guide.CEgvpTZl.css"></head> <body> <header class="site-header"> <div class="container"> <a class="brand" href="/">LeafLock</a> <nav> <ul> <li><a href="/pages/">Documentation</a></li> <li><a href="https://github.com/RelativeSure/LeafLock">Repository</a></li> </ul> </nav> </div> </header> <main id="main-content" class="container">  <article class="content"> <h1>Admin Guide</h1> <div class="meta"> <span>Last updated: 2025-09-19</span> <div class="categories" style="margin-top: 0.5rem;"> <strong>Categories:</strong> <span> <a href="/categories/administration/">Administration</a>  </span> </div> <div class="taxonomy-list" style="margin-top: 0.5rem;"> <a href="/tags/admin/" class="tag">admin</a><a href="/tags/users/" class="tag">users</a><a href="/tags/database/" class="tag">database</a><a href="/tags/security/" class="tag">security</a> </div> </div> <div class="markdown">  <p><em>Last updated: 2025-09-19</em></p>
+## Overview
+
+This secure notes application is designed with end-to-end encryption where each user manages their own encrypted workspace. This guide explains how to manage users, configure admin access, and maintain the system while respecting the zero-knowledge architecture.
+
+## Current System Architecture
+
+The application uses:
+- **Zero-knowledge encryption**: Server never sees plaintext data
+- **User workspaces**: Each user has their own encrypted workspace
+- **Note-level permissions**: Users can share notes with `read`, `write`, or `admin` permissions
+- **PostgreSQL database**: User data stored in encrypted format
+
+## Admin Access Setup
+
+### Grant Admin Access (Development)
+
+1. **Get your user ID (UUID)**:
+   - Log in, then open browser DevTools → Application → Local Storage → find `current_user_id`
+   - Or decode the JWT stored in `secure_token`:
+     ```javascript
+     JSON.parse(atob(localStorage.getItem('secure_token').split('.')[1])).user_id
+     ```
+
+2. **Add to environment variables**:
+   - Add your UUID to `.env`: `ADMIN_USER_IDS=<your-uuid-here>`
+   - Multiple admins: `ADMIN_USER_IDS=<uuid-1>,<uuid-2>`
+
+3. **Restart the application**:
+   ```bash
+   make down && make up
+   ```
+
+### Database Admin Management
+
+#### Add Admin Column (One-time Setup)
+
+```sql
+-- Connect to PostgreSQL database
+psql -U postgres -d notes
+
+-- Add admin role column
+ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT false;
+
+-- Create index for faster admin queries
+CREATE INDEX idx_users_is_admin ON users(is_admin);
+```
+
+#### Make User Admin
+
+```sql
+-- Grant admin access by email
+UPDATE users
+SET is_admin = true
+WHERE email = 'admin@example.com';
+
+-- Or by user ID
+UPDATE users
+SET is_admin = true
+WHERE id = 'your-user-uuid-here';
+```
+
+#### Remove Admin Access
+
+```sql
+-- Revoke admin access
+UPDATE users
+SET is_admin = false
+WHERE email = 'user@example.com';
+```
+
+## Admin Panel Usage
+
+### Enable Admin Panel
+
+- **In builds**: Set `VITE_ENABLE_ADMIN_PANEL=true` for the frontend
+- **Local development**:
+  ```bash
+  export VITE_ENABLE_ADMIN_PANEL=true && docker compose up -d --build
+  ```
+
+### Using the Admin Panel
+
+1. Log in as an admin user
+2. Click the shield icon in the app header
+3. The Admin Panel allows you to:
+   - Toggle user's built-in `is_admin` flag
+   - Assign or remove RBAC roles (`moderator`, `auditor`)
+   - Load current roles for users
+   - Enable/disable user registration
+
+### Admin Settings
+
+- **Registration toggle**: Enable/disable public sign-ups
+  - Location: Admin Panel → User Management → "User Registration" switch
+  - Persists in database (`app_settings.registration_enabled`)
+  - On boot, backend seeds this from `ENABLE_REGISTRATION` if DB value doesn't exist
+
+## Database User Management
+
+### View All Users
+
+```sql
+-- List all users with basic info
+SELECT
+    id,
+    email,
+    COALESCE(is_admin, false) as is_admin,
+    created_at,
+    last_login,
+    failed_attempts
+FROM users
+ORDER BY created_at DESC;
+```
+
+### Find Admin Users
+
+```sql
+-- List all admin users
+SELECT
+    id,
+    email,
+    created_at,
+    last_login
+FROM users
+WHERE is_admin = true;
+```
+
+### User Activity Monitoring
+
+```sql
+-- Find inactive users (haven't logged in recently)
+SELECT
+    id,
+    email,
+    created_at,
+    last_login,
+    (NOW() - last_login) as inactive_period
+FROM users
+WHERE last_login < NOW() - INTERVAL '30 days'
+   OR last_login IS NULL;
+```
+
+### Account Security Management
+
+```sql
+-- Check users with too many failed attempts
+SELECT
+    id,
+    email,
+    failed_attempts,
+    locked_until
+FROM users
+WHERE failed_attempts > 5;
+
+-- Unlock a locked user account
+UPDATE users
+SET failed_attempts = 0,
+    locked_until = NULL
+WHERE email = 'user@example.com';
+```
+
+### User Statistics
+
+```sql
+-- Count total users
+SELECT COUNT(*) as total_users FROM users;
+
+-- Count active users (logged in last 30 days)
+SELECT COUNT(*) as active_users
+FROM users
+WHERE last_login > NOW() - INTERVAL '30 days';
+
+-- Count notes per user
+SELECT
+    u.email,
+    COUNT(n.id) as note_count
+FROM users u
+LEFT JOIN workspaces w ON u.id = w.owner_id
+LEFT JOIN notes n ON w.id = n.workspace_id
+WHERE n.deleted_at IS NULL
+GROUP BY u.id, u.email
+ORDER BY note_count DESC;
+```
+
+## Security Considerations
+
+### Zero-Knowledge Limitations
+
+Due to the zero-knowledge architecture:
+- **Admins cannot read user notes**: All content is encrypted with user keys
+- **Password resets**: Must be handled carefully to maintain encryption
+- **User data**: Only metadata (email, timestamps) is visible to admins
+
+### Recommended Admin Capabilities
+
+Safe admin operations that preserve encryption:
+- ✅ View user list and metadata
+- ✅ Monitor login attempts and security events
+- ✅ Disable/enable user accounts
+- ✅ View system statistics and usage
+- ✅ Manage system-wide settings
+- ❌ Read user notes or content
+- ❌ Reset passwords without user involvement
+
+## Database Administration
+
+### Database Connection
+
+```bash
+# Using PostgreSQL command line
+export PGPASSWORD="your-postgres-password"
+psql -h localhost -U postgres -d notes
+
+# Or connect via URL
+# postgresql://postgres:password@localhost:5432/notes
+```
+
+### Backup User Data
+
+Before making changes, always backup:
+
+```bash
+# Backup users table
+pg_dump -h localhost -U postgres -d notes -t users > users_backup.sql
+
+# Full database backup
+pg_dump -h localhost -U postgres -d notes > full_backup.sql
+```
+
+## Common Admin Tasks
+
+### Creating the First Admin
+
+```sql
+-- After first user registers, make them admin
+UPDATE users
+SET is_admin = true
+WHERE email = (
+    SELECT email FROM users
+    ORDER BY created_at ASC
+    LIMIT 1
+);
+```
+
+### Emergency Account Recovery
+
+```sql
+-- If admin is locked out, unlock manually
+UPDATE users
+SET failed_attempts = 0,
+    locked_until = NULL
+WHERE is_admin = true;
+```
+
+### System Maintenance
+
+```sql
+-- Clean up old deleted notes (after 30 days)
+DELETE FROM notes
+WHERE deleted_at IS NOT NULL
+  AND deleted_at < NOW() - INTERVAL '30 days';
+```
+
+## Monitoring and Logging
+
+For production admin management:
+
+1. **Enable PostgreSQL logging** for audit trails
+2. **Monitor authentication failures** for security
+3. **Set up alerts** for suspicious activity
+4. **Regular backups** of user data
+
+## Security Notes
+
+- Admin endpoints require valid JWT and admin role; UI gating is convenience only
+- Do not expose `ADMIN_USER_IDS` in production images
+- Manage admin status through database and role assignment flows in production
+- All admin operations respect the encryption model and user privacy principles
+
+## Contact
+
+For admin-related questions, contact `contact@leaflock.app`.
+</uuid-2></uuid-1></your-uuid-here> </div> </article>  </main> <footer class="site-footer"> <div class="container"> <div class="footer-links"> <div> <h2>LeafLock Docs</h2> <ul> <li><a href="/pages/privacy-policy/">Privacy Policy</a></li> <li><a href="/pages/terms-of-use/">Terms of Use</a></li> <li><a href="/pages/gdpr-compliance/">GDPR Compliance</a></li> </ul> </div> <div> <h2>Administration</h2> <ul> <li><a href="/pages/admin-guide/">Admin Guide</a></li> <li><a href="/pages/monitoring-and-backups/">Monitoring & Backups</a></li> </ul> </div> <div> <h2>Development</h2> <ul> <li><a href="/pages/developer-guide/">Developer Guide</a></li> <li><a href="https://github.com/RelativeSure/LeafLock">GitHub Repository</a></li> </ul> </div> </div> <div style="text-align: center; margin-top: 2rem; color: var(--text-muted); font-size: 0.9rem;">
+© 2025 LeafLock. All rights reserved.
+</div> </div> </footer> <!-- Schema.org structured data --> <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "LeafLock Documentation",
+      "description": "Secure, end-to-end encrypted notes with zero-knowledge architecture",
+      "url": "https://docs.leaflock.app/"
+    }
+    </script> </body> </html>

@@ -1,0 +1,24 @@
+{
+  "name": "leaflock-docs",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "keywords": [
+    "leaflock",
+    "documentation",
+    "astro"
+  ],
+  "author": "LeafLock Team",
+  "license": "ISC",
+  "description": "LeafLock Documentation Site built with AstroJS",
+  "dependencies": {
+    "astro": "^5.13.10",
+    "typescript": "^5.9.2"
+  }
+}

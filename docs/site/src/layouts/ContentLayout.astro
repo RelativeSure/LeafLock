@@ -1,0 +1,45 @@
+---
+export interface Props {
+  title?: string;
+  description?: string;
+  lastUpdated?: string;
+  categories?: string[];
+  tags?: string[];
+}
+
+const { title, description, lastUpdated, categories = [], tags = [] } = Astro.props;
+
+import BaseLayout from './BaseLayout.astro';
+---
+
+<BaseLayout title={title} description={description}>
+  <article class="content">
+    <h1>{title}</h1>
+    
+    <div class="meta">
+      {lastUpdated && <span>Last updated: {lastUpdated}</span>}
+      {categories.length > 0 && (
+        <div class="categories" style="margin-top: 0.5rem;">
+          <strong>Categories:</strong>
+          {categories.map((category, index) => (
+            <span>
+              <a href={`/categories/${category.toLowerCase()}/`}>{category}</a>
+              {index < categories.length - 1 && ', '}
+            </span>
+          ))}
+        </div>
+      )}
+      {tags.length > 0 && (
+        <div class="taxonomy-list" style="margin-top: 0.5rem;">
+          {tags.map(tag => (
+            <a href={`/tags/${tag}/`} class="tag">{tag}</a>
+          ))}
+        </div>
+      )}
+    </div>
+    
+    <div class="markdown">
+      <slot />
+    </div>
+  </article>
+</BaseLayout>

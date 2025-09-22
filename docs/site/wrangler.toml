@@ -1,7 +1,0 @@
-name = "leaflock"
-main = "worker.js"
-compatibility_date = "2025-09-15"
-workers_dev = false
-
-[assets]
-  directory = "public"

@@ -1,0 +1,91 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const title = "Documentation";
+const description = "Browse all LeafLock documentation pages.";
+
+const pages = [
+  {
+    title: "Privacy Policy",
+    description: "How LeafLock collects, uses, and safeguards personal data across deployments.",
+    href: "/pages/privacy-policy/",
+    tags: ["privacy", "data-collection", "personal-data", "user-rights"]
+  },
+  {
+    title: "Terms of Use",
+    description: "Conditions governing access to the LeafLock platform and services.",
+    href: "/pages/terms-of-use/",
+    tags: ["terms", "agreement", "service", "responsibilities"]
+  },
+  {
+    title: "GDPR Compliance",
+    description: "Comprehensive GDPR compliance guide for LeafLock deployments.",
+    href: "/pages/gdpr-compliance/",
+    tags: ["gdpr", "data-protection", "compliance", "european-law"]
+  },
+  {
+    title: "GDPR Operations Guide",
+    description: "Operational procedures for GDPR compliance in LeafLock deployments.",
+    href: "/pages/gdpr-operations-guide/",
+    tags: ["gdpr", "operations", "data-rights", "procedures"]
+  },
+  {
+    title: "Admin Guide",
+    description: "Complete administration guide for LeafLock deployments.",
+    href: "/pages/admin-guide/",
+    tags: ["admin", "deployment", "configuration", "user-management"]
+  },
+  {
+    title: "Developer Guide",
+    description: "API documentation, testing guides, and development workflows.",
+    href: "/pages/developer-guide/",
+    tags: ["development", "api", "testing", "workflows"]
+  },
+  {
+    title: "Monitoring & Backups",
+    description: "Monitoring, logging, and backup strategies for production deployments.",
+    href: "/pages/monitoring-and-backups/",
+    tags: ["monitoring", "backups", "logging", "production"]
+  },
+  {
+    title: "Global Compliance",
+    description: "Multi-jurisdictional compliance requirements and implementation.",
+    href: "/pages/global-compliance/",
+    tags: ["compliance", "global", "regulations", "international"]
+  },
+  {
+    title: "License",
+    description: "LeafLock software license and usage terms.",
+    href: "/pages/license/",
+    tags: ["license", "legal", "open-source", "usage"]
+  }
+];
+---
+
+<BaseLayout title={title} description={description}>
+  <section class="hero">
+    <h1>Documentation</h1>
+    <div class="markdown">
+      <p>Comprehensive documentation for LeafLock's secure notes platform. Browse all documentation pages below or use the navigation menu to jump to specific sections.</p>
+    </div>
+  </section>
+
+  <section class="all-documentation">
+    <h2>📖 All Documentation Pages</h2>
+    <ul class="list">
+      {pages.map(page => (
+        <li>
+          <a href={page.href}>
+            <h3>{page.title}</h3>
+            <p>{page.description}</p>
+            <div class="taxonomy-list">
+              {page.tags.map(tag => (
+                <span class="tag">{tag}</span>
+              ))}
+            </div>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+</BaseLayout>
