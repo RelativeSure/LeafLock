@@ -1,0 +1,29 @@
+{
+  "name": "leaflock-docs",
+  "version": "1.0.0",
+  "description": "LeafLock documentation powered by ElysiaJS",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "start": "bun dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "elysia": "^1.1.0",
+    "@elysiajs/swagger": "^1.1.0",
+    "@elysiajs/static": "^1.1.0",
+    "@elysiajs/html": "^1.1.0",
+    "marked": "^13.0.0",
+    "gray-matter": "^4.0.3",
+    "highlight.js": "^11.10.0"
+  },
+  "devDependencies": {
+    "@types/marked": "^6.0.0",
+    "typescript": "^5.5.0",
+    "bun-types": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.5.0"
+  }
+}
