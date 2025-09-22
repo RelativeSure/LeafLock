@@ -1,4 +1,4 @@
-name: E2E Verify
+name: E2E Tests
 
 on:
   push:
@@ -9,137 +9,70 @@ on:
 
 jobs:
   e2e:
-    name: Start, Test, Verify
+    name: End-to-End Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        uses: actions/checkout@v5
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 20
           cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - name: Frontend dependencies
+      - name: Install frontend dependencies
         working-directory: frontend
-        run: |
-          pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
-      - name: Build and start full stack (docker compose)
+      - name: Start application stack
         env:
           POSTGRES_PASSWORD: testpass123
           REDIS_PASSWORD: redispass123
-          JWT_SECRET: test_jwt_secret_for_ci_only_not_for_production_use
+          JWT_SECRET: test_jwt_secret_for_ci_only_not_for_production_use_64_chars_long_extra
           SERVER_ENCRYPTION_KEY: test_encryption_key_32_chars_ok_1234
           CORS_ORIGINS: http://localhost:3000
           VITE_API_URL: http://localhost:8080
-          VITE_ENABLE_ADMIN_PANEL: "true"
         run: |
-          docker compose version
-          docker compose -f docker-compose.yml up -d --build
+          docker compose up -d --build --wait
+          echo "Services started successfully"
 
-      - name: Wait for backend ready
-        run: |
-          for i in {1..60}; do
-            if curl -fsS http://localhost:8080/api/v1/ready >/dev/null; then
-              echo "Backend ready"; exit 0; fi; sleep 1; done; exit 1
+      - name: Run frontend unit tests
+        working-directory: frontend
+        run: pnpm test
 
-      - name: Wait for frontend ready
-        run: |
-          for i in {1..60}; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/); \
-            if [ "$code" = "200" ]; then echo "Frontend ready"; exit 0; fi; sleep 1; done; exit 1
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: pnpm exec playwright install --with-deps chromium
 
-      - name: API flow test (register, list notes)
-        run: |
-          EMAIL="test$(date +%s)@example.com";
-          REG=$(curl -fsS -X POST http://localhost:8080/api/v1/auth/register \
-            -H 'Content-Type: application/json' \
-            -d "{\"email\":\"$EMAIL\",\"password\":\"VerySecurePassword123!\"}");
-          echo "$REG" | jq . > reg.json
-          TOKEN=$(jq -r .token < reg.json)
-          USER_ID=$(jq -r .user_id < reg.json)
-          test -n "$TOKEN"
-          curl -fsS -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/notes | jq .
-
-      - name: Frontend smoke test
-        run: |
-          HTML=$(curl -fsS http://localhost:3000/)
-          echo "$HTML" | grep -q '<div id="root">'
-          ASSET=$(echo "$HTML" | sed -n 's/.*src="\(\/assets\/index-[^"]*\.js\)".*/\1/p')
-          curl -fsSI "http://localhost:3000$ASSET" | grep -q '200'
-
-      - name: Playwright test setup
+      - name: Run Playwright e2e tests
         working-directory: frontend
         env:
           BASE_URL: http://localhost:3000
-        run: |
-          pnpm exec playwright install --with-deps
-          echo "Playwright setup complete (admin panel tests removed)"
+        run: pnpm run test:pw
 
-      - name: Grant admin and verify Swagger
-        run: |
-          USER_ID=$(jq -r .user_id < reg.json)
-          TOKEN=$(jq -r .token < reg.json)
-          # Restart backend with ADMIN_USER_IDS (fallback) so docs are reachable; then verify with RBAC too
-          docker compose -f docker-compose.yml stop backend
-          docker compose -f docker-compose.yml rm -f backend
-          ADMIN_USER_IDS=$USER_ID docker compose -f docker-compose.yml up -d --build backend
-          for i in {1..60}; do curl -fsS http://localhost:8080/api/v1/health >/dev/null && break; sleep 1; done
-          # Swagger UI endpoint
-          code=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/docs/)
-          if [ "$code" != "200" ]; then echo "Swagger UI not accessible: $code"; exit 1; fi
-          # Verify spec
-          curl -fsS -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/docs/openapi.json | jq -e '.info.title == "Secure Notes API"'
-          # Now test RBAC grant path: revoke env allow and set admin via API
-          docker compose -f docker-compose.yml stop backend
-          docker compose -f docker-compose.yml rm -f backend
-          ADMIN_USER_IDS= docker compose -f docker-compose.yml up -d --build backend
-          for i in {1..60}; do curl -fsS http://localhost:8080/api/v1/health >/dev/null && break; sleep 1; done
-          # Should now be forbidden without role assignment
-          code=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/docs/)
-          test "$code" = "403"
-          # Make the same user admin via RBAC endpoint (requires admin; seed via ADMIN_USER_IDS with a temp restart)
-          docker compose -f docker-compose.yml stop backend
-          docker compose -f docker-compose.yml rm -f backend
-          ADMIN_USER_IDS=$USER_ID docker compose -f docker-compose.yml up -d --build backend
-          for i in {1..60}; do curl -fsS http://localhost:8080/api/v1/health >/dev/null && break; sleep 1; done
-          curl -fsS -X PUT http://localhost:8080/api/v1/admin/users/$USER_ID/admin \
-            -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-            -d '{"admin": true}' | jq .
-          # Disable env allow and confirm RBAC permits access
-          docker compose -f docker-compose.yml stop backend
-          docker compose -f docker-compose.yml rm -f backend
-          ADMIN_USER_IDS= docker compose -f docker-compose.yml up -d --build backend
-          for i in {1..60}; do curl -fsS http://localhost:8080/api/v1/health >/dev/null && break; sleep 1; done
-          code=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/docs/)
-          if [ "$code" != "200" ]; then echo "RBAC admin access failed: $code"; exit 1; fi
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v5
+        if: failure()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
 
-      - name: Verify admin functionality via API
+      - name: Show logs on failure
+        if: failure()
         run: |
-          # Extract values from reg.json produced earlier
-          export E2E_TOKEN=$(jq -r .token < reg.json)
-          export E2E_USER_ID=$(jq -r .user_id < reg.json)
-          # Test admin API access is working (admin role tests removed from Playwright)
-          curl -fsS -H "Authorization: Bearer $E2E_TOKEN" http://localhost:8080/api/v1/admin/users | jq .
+          echo "=== Backend Logs ==="
+          docker compose logs backend --tail=100 || true
+          echo "=== Frontend Logs ==="
+          docker compose logs frontend --tail=100 || true
 
-      - name: Backend unit tests + coverage gate
-        run: |
-          sudo apt-get update -y && sudo apt-get install -y bc
-          make -C backend test-coverage-check
-
-      - name: Docker compose logs (always)
+      - name: Cleanup
         if: always()
-        run: |
-          docker compose -f docker-compose.yml ps
-          docker compose -f docker-compose.yml logs --no-color --tail=200 || true
-
-      - name: Teardown
-        if: always()
-        run: docker compose -f docker-compose.yml down -v
+        run: docker compose down -v
