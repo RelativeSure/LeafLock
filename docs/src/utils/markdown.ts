@@ -3,6 +3,13 @@ import matter from 'gray-matter'
 import hljs from 'highlight.js'
 import fs from 'fs/promises'
 import path from 'path'
+import createDOMPurify from 'dompurify'
+import { JSDOM } from 'jsdom'
+import validator from 'validator'
+
+// Set up DOMPurify for server-side HTML sanitization
+const window = new JSDOM('').window
+const DOMPurify = createDOMPurify(window as any)
 
 // Configure marked with syntax highlighting
 marked.setOptions({
@@ -42,23 +49,66 @@ interface NavigationItem {
   children?: NavigationItem[]
 }
 
+// Cache for rendered markdown content
+const markdownCache = new Map<string, { html: string; timestamp: number }>()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+/**
+ * Validates and sanitizes page parameter to prevent path traversal attacks
+ */
+function validatePageParameter(page: string): string {
+  // Remove any path traversal attempts
+  const sanitized = page.replace(/[\/\\]/g, '').replace(/\.\./g, '')
+  
+  // Whitelist allowed characters (alphanumeric, hyphens, underscores)
+  if (!validator.matches(sanitized, /^[a-zA-Z0-9_-]+$/)) {
+    throw new Error('Invalid page parameter')
+  }
+  
+  return sanitized
+}
+
+/**
+ * Validates that the resolved file path is within the content directory
+ */
+function validateFilePath(filePath: string, contentDir: string): boolean {
+  const resolvedPath = path.resolve(filePath)
+  const resolvedContentDir = path.resolve(contentDir)
+  return resolvedPath.startsWith(resolvedContentDir)
+}
+
 export async function renderMarkdownPage(page: string): Promise<string> {
+  // Validate and sanitize the page parameter
+  const sanitizedPage = validatePageParameter(page)
+  
+  // Check cache first
+  const cacheKey = sanitizedPage
+  const cached = markdownCache.get(cacheKey)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.html
+  }
+  
   const contentDir = path.join(process.cwd(), 'content')
   let filePath: string
   
-  if (page === 'index') {
+  if (sanitizedPage === 'index') {
     filePath = path.join(contentDir, 'index.md')
   } else {
     // Try to find the markdown file
     const possiblePaths = [
-      path.join(contentDir, `${page}.md`),
-      path.join(contentDir, page, 'index.md'),
-      path.join(contentDir, `${page}/index.md`)
+      path.join(contentDir, `${sanitizedPage}.md`),
+      path.join(contentDir, sanitizedPage, 'index.md'),
+      path.join(contentDir, `${sanitizedPage}/index.md`)
     ]
     
     filePath = ''
     for (const p of possiblePaths) {
       try {
+        // Validate path is within content directory
+        if (!validateFilePath(p, contentDir)) {
+          continue
+        }
+        
         await fs.access(p)
         filePath = p
         break
@@ -68,17 +118,49 @@ export async function renderMarkdownPage(page: string): Promise<string> {
     }
     
     if (!filePath) {
-      throw new Error(`Markdown file not found for page: ${page}`)
+      throw new Error(`Markdown file not found for page: ${sanitizedPage}`)
     }
+  }
+  
+  // Final validation that the resolved path is safe
+  if (!validateFilePath(filePath, contentDir)) {
+    throw new Error('Invalid file path detected')
   }
   
   const fileContent = await fs.readFile(filePath, 'utf-8')
   const { content, data } = matter(fileContent) as { content: string; data: FrontMatter }
   
   // Convert markdown to HTML
-  const html = await marked(content)
+  const rawHtml = await marked(content)
   
-  return html
+  // Sanitize HTML to prevent XSS attacks
+  const sanitizedHtml = DOMPurify.sanitize(rawHtml, {
+    ALLOWED_TAGS: [
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'p', 'br', 'hr',
+      'ul', 'ol', 'li',
+      'strong', 'em', 'b', 'i', 'u',
+      'a', 'img',
+      'pre', 'code',
+      'blockquote',
+      'table', 'thead', 'tbody', 'tr', 'th', 'td',
+      'div', 'span'
+    ],
+    ALLOWED_ATTR: [
+      'href', 'title', 'alt', 'src',
+      'class', 'id',
+      'target', 'rel'
+    ],
+    ALLOWED_URI_REGEXP: /^https?:\/\/|^\/|^#/
+  })
+  
+  // Cache the result
+  markdownCache.set(cacheKey, {
+    html: sanitizedHtml,
+    timestamp: Date.now()
+  })
+  
+  return sanitizedHtml
 }
 
 export async function getNavigation(): Promise<NavigationItem[]> {

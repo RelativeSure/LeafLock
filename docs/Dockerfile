@@ -2,9 +2,14 @@ FROM oven/bun:latest
 
 WORKDIR /app
 
+# Install curl for health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # Copy package files
-COPY package.json bun.lockb* ./
-RUN bun install --frozen-lockfile --production
+COPY package.json ./
+# Only copy lockfile if it exists, otherwise install normally
+COPY bun.lockb* ./
+RUN if [ -f bun.lockb ]; then bun install --frozen-lockfile --production; else bun install --production; fi
 
 # Copy source code and content
 COPY src/ ./src/
@@ -23,7 +28,7 @@ USER bunuser
 # Expose port
 EXPOSE 3000
 
-# Health check
+# Health check - use the dedicated health endpoint
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3000/api/health || exit 1
 
