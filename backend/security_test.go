@@ -22,10 +22,10 @@ import (
 // Security Test Suite
 type SecurityTestSuite struct {
 	suite.Suite
-	app    *fiber.App
-	config *Config
-	rdb    *redis.Client
-	crypto *CryptoService
+	app          *fiber.App
+	config       *Config
+	rdb          *redis.Client
+	crypto       *CryptoService
 	cleanupRedis func()
 }
 

@@ -43,17 +43,14 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/swagger"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/csrf"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"net/http"
-	"net/url"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/swagger"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -62,10 +59,13 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/chacha20poly1305"
 	_ "leaflock/docs/swagger" // Import generated docs
+	"net/http"
+	"net/url"
 )
 
 // AUTOMATIC DATABASE SETUP - Runs migrations on startup
@@ -408,27 +408,27 @@ CREATE INDEX IF NOT EXISTS idx_notes_folder ON notes(folder_id);
 
 // Configuration with secure defaults
 type Config struct {
-	DatabaseURL       string
-	RedisURL          string
-	RedisPassword     string
-	JWTSecret         []byte
-	EncryptionKey     []byte
-	Port              string
-	AllowedOrigins    []string
-	MaxLoginAttempts  int
+	DatabaseURL        string
+	RedisURL           string
+	RedisPassword      string
+	JWTSecret          []byte
+	EncryptionKey      []byte
+	Port               string
+	AllowedOrigins     []string
+	MaxLoginAttempts   int
 	LockoutDuration    time.Duration
 	IPLockoutDuration  time.Duration
 	MaxIPLoginAttempts int
-	SessionDuration   time.Duration
-	Environment       string
-	TrustProxyHeaders bool
+	SessionDuration    time.Duration
+	Environment        string
+	TrustProxyHeaders  bool
 	// Progressive rate limiting options
-	RateLimitMode        string        // "progressive", "lockout", or "disabled"
-	IPRateLimitEnabled   bool          // Enable/disable IP-based rate limiting
-	RateLimitDecayMinutes int          // Minutes between attempt count reductions
-	RateLimitUseSubnet   bool          // Group by subnet instead of individual IP
-	MaxDelaySeconds      int           // Maximum delay to apply in seconds
-	TrustedIPRanges      []string      // IP ranges that bypass rate limiting
+	RateLimitMode         string   // "progressive", "lockout", or "disabled"
+	IPRateLimitEnabled    bool     // Enable/disable IP-based rate limiting
+	RateLimitDecayMinutes int      // Minutes between attempt count reductions
+	RateLimitUseSubnet    bool     // Group by subnet instead of individual IP
+	MaxDelaySeconds       int      // Maximum delay to apply in seconds
+	TrustedIPRanges       []string // IP ranges that bypass rate limiting
 	// Default admin settings
 	DefaultAdminEnabled  bool
 	DefaultAdminEmail    string
@@ -504,27 +504,27 @@ func LoadConfig() *Config {
 	}
 
 	return &Config{
-		DatabaseURL:       dbURL,
-		RedisURL:          getEnvOrDefault("REDIS_URL", "localhost:6379"),
-		RedisPassword:     os.Getenv("REDIS_PASSWORD"),
-		JWTSecret:         []byte(jwtSecret),
-		EncryptionKey:     []byte(encKey),
-		Port:              getEnvOrDefault("PORT", "8080"),
-		        AllowedOrigins:    strings.Split(getEnvOrDefault("CORS_ORIGINS", "https://localhost:3000"), ","),
-		MaxLoginAttempts:  getEnvAsInt("MAX_LOGIN_ATTEMPTS", 5),
-		LockoutDuration: time.Duration(getEnvAsInt("LOCKOUT_MINUTES", 15)) * time.Minute,
+		DatabaseURL:        dbURL,
+		RedisURL:           getEnvOrDefault("REDIS_URL", "localhost:6379"),
+		RedisPassword:      os.Getenv("REDIS_PASSWORD"),
+		JWTSecret:          []byte(jwtSecret),
+		EncryptionKey:      []byte(encKey),
+		Port:               getEnvOrDefault("PORT", "8080"),
+		AllowedOrigins:     strings.Split(getEnvOrDefault("CORS_ORIGINS", "https://localhost:3000"), ","),
+		MaxLoginAttempts:   getEnvAsInt("MAX_LOGIN_ATTEMPTS", 5),
+		LockoutDuration:    time.Duration(getEnvAsInt("LOCKOUT_MINUTES", 15)) * time.Minute,
 		MaxIPLoginAttempts: getEnvAsInt("MAX_IP_LOGIN_ATTEMPTS", 15),
-		IPLockoutDuration: time.Duration(getEnvAsInt("IP_LOCKOUT_MINUTES", 15)) * time.Minute,
-		SessionDuration:   24 * time.Hour,
-		Environment:       getEnvOrDefault("APP_ENV", "development"),
-		TrustProxyHeaders: getEnvAsBool("TRUST_PROXY_HEADERS", false),
+		IPLockoutDuration:  time.Duration(getEnvAsInt("IP_LOCKOUT_MINUTES", 15)) * time.Minute,
+		SessionDuration:    24 * time.Hour,
+		Environment:        getEnvOrDefault("APP_ENV", "development"),
+		TrustProxyHeaders:  getEnvAsBool("TRUST_PROXY_HEADERS", false),
 		// Progressive rate limiting configuration
-		RateLimitMode:        getEnvOrDefault("RATE_LIMIT_MODE", "progressive"),
-		IPRateLimitEnabled:   getEnvAsBool("IP_RATE_LIMIT_ENABLED", true),
+		RateLimitMode:         getEnvOrDefault("RATE_LIMIT_MODE", "progressive"),
+		IPRateLimitEnabled:    getEnvAsBool("IP_RATE_LIMIT_ENABLED", true),
 		RateLimitDecayMinutes: getEnvAsInt("RATE_LIMIT_DECAY_MINUTES", 5),
-		RateLimitUseSubnet:   getEnvAsBool("RATE_LIMIT_USE_SUBNET", false),
-		MaxDelaySeconds:      getEnvAsInt("MAX_DELAY_SECONDS", 60),
-		TrustedIPRanges:      getEnvAsStringSlice("TRUSTED_IP_RANGES", []string{}),
+		RateLimitUseSubnet:    getEnvAsBool("RATE_LIMIT_USE_SUBNET", false),
+		MaxDelaySeconds:       getEnvAsInt("MAX_DELAY_SECONDS", 60),
+		TrustedIPRanges:       getEnvAsStringSlice("TRUSTED_IP_RANGES", []string{}),
 		// Default admin configuration
 		DefaultAdminEnabled:  getEnvAsBool("ENABLE_DEFAULT_ADMIN", true),
 		DefaultAdminEmail:    getEnvOrDefault("DEFAULT_ADMIN_EMAIL", "admin@leaflock.app"),
@@ -1263,11 +1263,11 @@ func SetupDatabase(dbURL string) (*pgxpool.Pool, error) {
 	}
 
 	// Configure connection pool for production workloads
-	config.MaxConns = 25                        // Maximum number of connections in the pool
-	config.MinConns = 5                         // Minimum number of connections to maintain
-	config.MaxConnLifetime = time.Hour          // Close connections after 1 hour
-	config.MaxConnIdleTime = 30 * time.Minute   // Close idle connections after 30 minutes
-	config.HealthCheckPeriod = 1 * time.Minute  // Health check every minute
+	config.MaxConns = 25                       // Maximum number of connections in the pool
+	config.MinConns = 5                        // Minimum number of connections to maintain
+	config.MaxConnLifetime = time.Hour         // Close connections after 1 hour
+	config.MaxConnIdleTime = 30 * time.Minute  // Close idle connections after 30 minutes
+	config.HealthCheckPeriod = 1 * time.Minute // Health check every minute
 
 	// Create the connection pool with the configured settings
 	pool, err := pgxpool.NewWithConfig(ctx, config)
@@ -1326,11 +1326,11 @@ type AuthHandler struct {
 
 // Session data structure for Redis storage
 type SessionData struct {
-	UserID            string    `json:"user_id"`
-	IPAddress         string    `json:"ip_address"`
-	UserAgent         string    `json:"user_agent"`
-	CreatedAt         time.Time `json:"created_at"`
-	ExpiresAt         time.Time `json:"expires_at"`
+	UserID    string    `json:"user_id"`
+	IPAddress string    `json:"ip_address"`
+	UserAgent string    `json:"user_agent"`
+	CreatedAt time.Time `json:"created_at"`
+	ExpiresAt time.Time `json:"expires_at"`
 }
 
 // Store session in Redis with encrypted metadata
@@ -1402,7 +1402,6 @@ func (h *AuthHandler) deleteSessionFromRedis(ctx context.Context, tokenHash []by
 	sessionKey := fmt.Sprintf("session:%x", tokenHash)
 	return h.redis.Del(ctx, sessionKey).Err()
 }
-
 
 type RegisterRequest struct {
 	Email    string `json:"email" validate:"required,email"`
@@ -1676,8 +1675,8 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		}
 
 		return c.Status(423).JSON(fiber.Map{
-			"error": fmt.Sprintf("Account locked due to too many failed login attempts. Please try again in %s.", timeMessage),
-			"locked_until": lockedUntil.Format(time.RFC3339),
+			"error":               fmt.Sprintf("Account locked due to too many failed login attempts. Please try again in %s.", timeMessage),
+			"locked_until":        lockedUntil.Format(time.RFC3339),
 			"retry_after_seconds": int(timeRemaining.Seconds()),
 		})
 	}
@@ -1730,8 +1729,8 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 			}
 
 			return c.Status(423).JSON(fiber.Map{
-				"error": fmt.Sprintf("Account locked due to too many failed login attempts. Please try again in %s.", timeMessage),
-				"locked_until": lockUntil.Format(time.RFC3339),
+				"error":               fmt.Sprintf("Account locked due to too many failed login attempts. Please try again in %s.", timeMessage),
+				"locked_until":        lockUntil.Format(time.RFC3339),
 				"retry_after_seconds": int(timeRemaining.Seconds()),
 			})
 		}
@@ -1886,9 +1885,9 @@ func (h *AuthHandler) AdminRecovery(c *fiber.Ctx) error {
 
 	if userFound && !req.ConfirmDeletion {
 		return c.JSON(fiber.Map{
-			"status": "confirmation_required",
-			"message": "An admin user exists but is unreachable due to encryption key mismatch. Continuing will delete the old user and create a new one.",
-			"user_id": existingUserID,
+			"status":          "confirmation_required",
+			"message":         "An admin user exists but is unreachable due to encryption key mismatch. Continuing will delete the old user and create a new one.",
+			"user_id":         existingUserID,
 			"action_required": "Set confirm_deletion to true to proceed",
 		})
 	}
@@ -2033,9 +2032,9 @@ func (h *AuthHandler) AdminRecovery(c *fiber.Ctx) error {
 	log.Printf("   - Email: %s", req.Email)
 
 	return c.JSON(fiber.Map{
-		"status": "success",
-		"message": "Admin user recovered successfully",
-		"user_id": newUserID,
+		"status":       "success",
+		"message":      "Admin user recovered successfully",
+		"user_id":      newUserID,
 		"workspace_id": workspaceID,
 		"instructions": "You can now login with the provided credentials",
 	})
@@ -2699,10 +2698,10 @@ func (h *NotesHandler) GetNoteVersions(c *fiber.Ctx) error {
 		}
 
 		versions = append(versions, map[string]interface{}{
-			"id":              versionID.String(),
-			"version_number":  versionNumber,
-			"created_at":      createdAt.Format(time.RFC3339),
-			"created_by":      createdByEmail,
+			"id":             versionID.String(),
+			"version_number": versionNumber,
+			"created_at":     createdAt.Format(time.RFC3339),
+			"created_by":     createdByEmail,
 		})
 	}
 
@@ -3342,8 +3341,8 @@ type UpdateTemplateRequest struct {
 }
 
 type UseTemplateRequest struct {
-	Title     string  `json:"title,omitempty"`
-	FolderID  *string `json:"folder_id,omitempty"`
+	Title    string  `json:"title,omitempty"`
+	FolderID *string `json:"folder_id,omitempty"`
 }
 
 func (h *TemplatesHandler) GetTemplates(c *fiber.Ctx) error {
@@ -3393,15 +3392,15 @@ func (h *TemplatesHandler) GetTemplates(c *fiber.Ctx) error {
 
 		// Don't decrypt content for listing (performance)
 		template := map[string]interface{}{
-			"id":           id,
-			"name":         name,
-			"description":  description,
-			"tags":         tags,
-			"icon":         icon,
-			"is_public":    isPublic,
-			"usage_count":  usageCount,
-			"created_at":   createdAt,
-			"updated_at":   updatedAt,
+			"id":          id,
+			"name":        name,
+			"description": description,
+			"tags":        tags,
+			"icon":        icon,
+			"is_public":   isPublic,
+			"usage_count": usageCount,
+			"created_at":  createdAt,
+			"updated_at":  updatedAt,
 		}
 
 		templates = append(templates, template)
@@ -3456,16 +3455,16 @@ func (h *TemplatesHandler) GetTemplate(c *fiber.Ctx) error {
 	content := string(contentBytes)
 
 	template := map[string]interface{}{
-		"id":           templateID,
-		"name":         name,
-		"description":  description,
-		"content":      content,
-		"tags":         tags,
-		"icon":         icon,
-		"is_public":    isPublic,
-		"usage_count":  usageCount,
-		"created_at":   createdAt,
-		"updated_at":   updatedAt,
+		"id":          templateID,
+		"name":        name,
+		"description": description,
+		"content":     content,
+		"tags":        tags,
+		"icon":        icon,
+		"is_public":   isPublic,
+		"usage_count": usageCount,
+		"created_at":  createdAt,
+		"updated_at":  updatedAt,
 	}
 
 	return c.JSON(template)
@@ -3821,13 +3820,13 @@ func (h *CollaborationHandler) ShareNote(c *fiber.Ctx) error {
 
 	// Log the action
 	auditLog(h.db, userID, "share_note", fiber.Map{
-		"note_id":      noteID,
-		"target_user":  targetUserID,
-		"permission":   req.Permission,
+		"note_id":     noteID,
+		"target_user": targetUserID,
+		"permission":  req.Permission,
 	})
 
 	return c.Status(201).JSON(fiber.Map{
-		"message":         "Note shared successfully",
+		"message":          "Note shared successfully",
 		"collaboration_id": collaborationID,
 	})
 }
@@ -4010,13 +4009,13 @@ type AttachmentUploadRequest struct {
 }
 
 type AttachmentResponse struct {
-	ID           string `json:"id"`
-	NoteID       string `json:"note_id"`
-	Filename     string `json:"filename"`
-	MimeType     string `json:"mime_type"`
-	SizeBytes    int64  `json:"size_bytes"`
-	CreatedAt    string `json:"created_at"`
-	DownloadURL  string `json:"download_url"`
+	ID          string `json:"id"`
+	NoteID      string `json:"note_id"`
+	Filename    string `json:"filename"`
+	MimeType    string `json:"mime_type"`
+	SizeBytes   int64  `json:"size_bytes"`
+	CreatedAt   string `json:"created_at"`
+	DownloadURL string `json:"download_url"`
 }
 
 // Upload attachment to a note
@@ -4548,10 +4547,10 @@ func (h *ImportExportHandler) GetStorageInfo(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"storage_used":       storageUsed,
-		"storage_limit":      storageLimit,
-		"storage_remaining":  storageLimit - storageUsed,
-		"usage_percentage":   float64(storageUsed) / float64(storageLimit) * 100,
+		"storage_used":      storageUsed,
+		"storage_limit":     storageLimit,
+		"storage_remaining": storageLimit - storageUsed,
+		"usage_percentage":  float64(storageUsed) / float64(storageLimit) * 100,
 	})
 }
 
@@ -4774,9 +4773,9 @@ func (h *ImportExportHandler) BulkImport(c *fiber.Ctx) error {
 		// Validate file content and security
 		if err := validateFileContent(file.Content, file.Format); err != nil {
 			failed = append(failed, map[string]interface{}{
-				"index":  i,
-				"title":  file.Title,
-				"error":  fmt.Sprintf("Invalid file content: %s", err.Error()),
+				"index": i,
+				"title": file.Title,
+				"error": fmt.Sprintf("Invalid file content: %s", err.Error()),
 			})
 			continue
 		}
@@ -4797,9 +4796,9 @@ func (h *ImportExportHandler) BulkImport(c *fiber.Ctx) error {
 		content, err := convertToMarkdown(file.Content, file.Format)
 		if err != nil {
 			failed = append(failed, map[string]interface{}{
-				"index":  i,
-				"title":  title,
-				"error":  fmt.Sprintf("Failed to convert %s: %s", file.Format, err.Error()),
+				"index": i,
+				"title": title,
+				"error": fmt.Sprintf("Failed to convert %s: %s", file.Format, err.Error()),
 			})
 			continue
 		}
@@ -4808,9 +4807,9 @@ func (h *ImportExportHandler) BulkImport(c *fiber.Ctx) error {
 		titleEncrypted, err := h.crypto.Encrypt([]byte(title))
 		if err != nil {
 			failed = append(failed, map[string]interface{}{
-				"index":  i,
-				"title":  title,
-				"error":  "Failed to encrypt title",
+				"index": i,
+				"title": title,
+				"error": "Failed to encrypt title",
 			})
 			continue
 		}
@@ -4818,9 +4817,9 @@ func (h *ImportExportHandler) BulkImport(c *fiber.Ctx) error {
 		contentEncrypted, err := h.crypto.Encrypt([]byte(content))
 		if err != nil {
 			failed = append(failed, map[string]interface{}{
-				"index":  i,
-				"title":  title,
-				"error":  "Failed to encrypt content",
+				"index": i,
+				"title": title,
+				"error": "Failed to encrypt content",
 			})
 			continue
 		}
@@ -4833,9 +4832,9 @@ func (h *ImportExportHandler) BulkImport(c *fiber.Ctx) error {
 
 		if err != nil {
 			failed = append(failed, map[string]interface{}{
-				"index":  i,
-				"title":  title,
-				"error":  "Failed to save note",
+				"index": i,
+				"title": title,
+				"error": "Failed to save note",
 			})
 			continue
 		}
@@ -6248,14 +6247,14 @@ func main() {
 
 	// CSRF Protection
 	app.Use(csrf.New(csrf.Config{
-		KeyLookup:         "header:X-CSRF-Token",
-		CookieName:        "csrf_token",
-		CookieSameSite:    "Strict",
-		CookieSecure:      true,
-		CookieHTTPOnly:    true,
-		Expiration:        1 * time.Hour,
-		KeyGenerator:      uuid.NewString,
-		ContextKey:        "csrf",
+		KeyLookup:      "header:X-CSRF-Token",
+		CookieName:     "csrf_token",
+		CookieSameSite: "Strict",
+		CookieSecure:   true,
+		CookieHTTPOnly: true,
+		Expiration:     1 * time.Hour,
+		KeyGenerator:   uuid.NewString,
+		ContextKey:     "csrf",
 		Next: func(c *fiber.Ctx) bool {
 			// Skip CSRF for safe methods, health endpoints, and auth endpoints
 			method := c.Method()
@@ -6757,23 +6756,23 @@ func main() {
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				return c.JSON(fiber.Map{
-					"admin_exists": false,
-					"default_email": defaultEmail,
+					"admin_exists":             false,
+					"default_email":            defaultEmail,
 					"email_search_hash_length": len(emailSearchHash),
-					"message": "Default admin user not found",
+					"message":                  "Default admin user not found",
 				})
 			}
 			return c.Status(500).JSON(fiber.Map{"error": "Database query failed", "details": err.Error()})
 		}
 
 		return c.JSON(fiber.Map{
-			"admin_exists": true,
-			"admin_id": adminID,
-			"email": defaultEmail,
-			"is_admin": isAdmin,
-			"created_at": nilIfInvalid(created),
-			"last_login": nilIfInvalid(lastLogin),
-			"failed_attempts": failedAttempts,
+			"admin_exists":             true,
+			"admin_id":                 adminID,
+			"email":                    defaultEmail,
+			"is_admin":                 isAdmin,
+			"created_at":               nilIfInvalid(created),
+			"last_login":               nilIfInvalid(lastLogin),
+			"failed_attempts":          failedAttempts,
 			"email_search_hash_length": len(emailSearchHash),
 		})
 	})
@@ -6822,16 +6821,16 @@ func main() {
 			}
 
 			users = append(users, fiber.Map{
-				"id": id,
-				"email": email,
+				"id":                       id,
+				"email":                    email,
 				"email_search_hash_length": len(emailSearchHash),
-				"is_admin": isAdmin,
-				"mfa_enabled": mfaEnabled,
-				"created_at": nilIfInvalid(created),
-				"last_login": nilIfInvalid(lastLogin),
-				"failed_attempts": failedAttempts,
-				"is_locked": lockedUntil.Valid && lockedUntil.Time.After(time.Now()),
-				"locked_until": nilIfInvalid(lockedUntil),
+				"is_admin":                 isAdmin,
+				"mfa_enabled":              mfaEnabled,
+				"created_at":               nilIfInvalid(created),
+				"last_login":               nilIfInvalid(lastLogin),
+				"failed_attempts":          failedAttempts,
+				"is_locked":                lockedUntil.Valid && lockedUntil.Time.After(time.Now()),
+				"locked_until":             nilIfInvalid(lockedUntil),
 			})
 		}
 
@@ -6876,8 +6875,8 @@ func main() {
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				return c.JSON(fiber.Map{
-					"user_exists": false,
-					"searched_email": email,
+					"user_exists":              false,
+					"searched_email":           email,
 					"email_search_hash_length": len(emailSearchHash),
 				})
 			}
@@ -6891,19 +6890,19 @@ func main() {
 		}
 
 		return c.JSON(fiber.Map{
-			"user_exists": true,
-			"id": id,
-			"searched_email": email,
-			"stored_email": decryptedEmail,
-			"email_search_hash_length": len(emailSearchHash),
-			"is_admin": isAdmin,
-			"mfa_enabled": mfaEnabled,
-			"created_at": nilIfInvalid(created),
-			"last_login": nilIfInvalid(lastLogin),
-			"failed_attempts": failedAttempts,
-			"is_locked": lockedUntil.Valid && lockedUntil.Time.After(time.Now()),
-			"locked_until": nilIfInvalid(lockedUntil),
-			"password_hash_length": len(passwordHash),
+			"user_exists":               true,
+			"id":                        id,
+			"searched_email":            email,
+			"stored_email":              decryptedEmail,
+			"email_search_hash_length":  len(emailSearchHash),
+			"is_admin":                  isAdmin,
+			"mfa_enabled":               mfaEnabled,
+			"created_at":                nilIfInvalid(created),
+			"last_login":                nilIfInvalid(lastLogin),
+			"failed_attempts":           failedAttempts,
+			"is_locked":                 lockedUntil.Valid && lockedUntil.Time.After(time.Now()),
+			"locked_until":              nilIfInvalid(lockedUntil),
+			"password_hash_length":      len(passwordHash),
 			"password_hash_starts_with": passwordHash[:min(10, len(passwordHash))] + "...",
 		})
 	})
@@ -6921,17 +6920,17 @@ func main() {
 
 		ctx := c.Context()
 		result := fiber.Map{
-			"test_email": req.Email,
+			"test_email":      req.Email,
 			"password_length": len(req.Password),
-			"steps": fiber.Map{},
+			"steps":           fiber.Map{},
 		}
 
 		// Step 1: Email normalization
 		normalizedEmail := strings.ToLower(req.Email)
 		result["steps"].(fiber.Map)["email_normalization"] = fiber.Map{
-			"original": req.Email,
+			"original":   req.Email,
 			"normalized": normalizedEmail,
-			"changed": req.Email != normalizedEmail,
+			"changed":    req.Email != normalizedEmail,
 		}
 
 		// Step 2: Create email search hash
@@ -6939,13 +6938,13 @@ func main() {
 		if err != nil {
 			result["steps"].(fiber.Map)["email_hash_creation"] = fiber.Map{
 				"success": false,
-				"error": err.Error(),
+				"error":   err.Error(),
 			}
 			return c.JSON(result)
 		}
 
 		result["steps"].(fiber.Map)["email_hash_creation"] = fiber.Map{
-			"success": true,
+			"success":     true,
 			"hash_length": len(emailSearchHash),
 		}
 
@@ -6966,35 +6965,35 @@ func main() {
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				result["steps"].(fiber.Map)["database_lookup"] = fiber.Map{
-					"success": false,
+					"success":    false,
 					"user_found": false,
-					"error": "User not found",
+					"error":      "User not found",
 				}
 			} else {
 				result["steps"].(fiber.Map)["database_lookup"] = fiber.Map{
 					"success": false,
-					"error": err.Error(),
+					"error":   err.Error(),
 				}
 			}
 			return c.JSON(result)
 		}
 
 		result["steps"].(fiber.Map)["database_lookup"] = fiber.Map{
-			"success": true,
-			"user_found": true,
-			"user_id": userID,
-			"failed_attempts": failedAttempts,
-			"is_locked": lockedUntil != nil && lockedUntil.After(time.Now()),
-			"mfa_enabled": mfaEnabled,
+			"success":              true,
+			"user_found":           true,
+			"user_id":              userID,
+			"failed_attempts":      failedAttempts,
+			"is_locked":            lockedUntil != nil && lockedUntil.After(time.Now()),
+			"mfa_enabled":          mfaEnabled,
 			"password_hash_length": len(passwordHash),
 		}
 
 		// Step 4: Check if account is locked
 		if lockedUntil != nil && lockedUntil.After(time.Now()) {
 			result["steps"].(fiber.Map)["account_lock_check"] = fiber.Map{
-				"is_locked": true,
+				"is_locked":    true,
 				"locked_until": lockedUntil,
-				"auth_result": "account_locked",
+				"auth_result":  "account_locked",
 			}
 			return c.JSON(result)
 		}
@@ -7006,7 +7005,7 @@ func main() {
 		// Step 5: Password verification
 		passwordValid := VerifyPassword(req.Password, passwordHash)
 		result["steps"].(fiber.Map)["password_verification"] = fiber.Map{
-			"password_valid": passwordValid,
+			"password_valid":       passwordValid,
 			"password_hash_format": strings.HasPrefix(passwordHash, "$argon2id$"),
 		}
 
@@ -7024,7 +7023,7 @@ func main() {
 		if err := rdb.Ping(ctx).Err(); err != nil {
 			result["steps"].(fiber.Map)["session_creation_test"] = fiber.Map{
 				"redis_available": false,
-				"redis_error": err.Error(),
+				"redis_error":     err.Error(),
 			}
 			result["auth_result"] = "redis_unavailable"
 			return c.JSON(result)
@@ -7041,7 +7040,7 @@ func main() {
 		ctx := c.Context()
 		health := fiber.Map{
 			"timestamp": time.Now(),
-			"services": fiber.Map{},
+			"services":  fiber.Map{},
 		}
 
 		// Database health
@@ -7091,12 +7090,12 @@ func main() {
 
 		// Environment variables check
 		envHealth := fiber.Map{
-			"default_admin_enabled": config.DefaultAdminEnabled,
-			"default_admin_email": config.DefaultAdminEmail,
+			"default_admin_enabled":         config.DefaultAdminEnabled,
+			"default_admin_email":           config.DefaultAdminEmail,
 			"default_admin_password_length": len(config.DefaultAdminPassword),
-			"jwt_secret_length": len(config.JWTSecret),
-			"encryption_key_length": len(config.EncryptionKey),
-			"cors_origins": config.AllowedOrigins,
+			"jwt_secret_length":             len(config.JWTSecret),
+			"encryption_key_length":         len(config.EncryptionKey),
+			"cors_origins":                  config.AllowedOrigins,
 		}
 		health["environment"] = envHealth
 
@@ -7111,29 +7110,29 @@ func main() {
 	debug.Get("/env-check", func(c *fiber.Ctx) error {
 		envInfo := fiber.Map{
 			"default_admin": fiber.Map{
-				"enabled": config.DefaultAdminEnabled,
-				"email": config.DefaultAdminEmail,
-				"password_set": len(config.DefaultAdminPassword) > 0,
-				"password_length": len(config.DefaultAdminPassword),
+				"enabled":              config.DefaultAdminEnabled,
+				"email":                config.DefaultAdminEmail,
+				"password_set":         len(config.DefaultAdminPassword) > 0,
+				"password_length":      len(config.DefaultAdminPassword),
 				"password_starts_with": string(config.DefaultAdminPassword[0:min(3, len(config.DefaultAdminPassword))]) + "...",
-				"password_ends_with": "..." + string(config.DefaultAdminPassword[max(0, len(config.DefaultAdminPassword)-3):]),
+				"password_ends_with":   "..." + string(config.DefaultAdminPassword[max(0, len(config.DefaultAdminPassword)-3):]),
 			},
 			"database": fiber.Map{
-				"url_set": len(config.DatabaseURL) > 0,
+				"url_set":         len(config.DatabaseURL) > 0,
 				"url_starts_with": config.DatabaseURL[:min(20, len(config.DatabaseURL))] + "...",
 			},
 			"redis": fiber.Map{
-				"url_set": len(config.RedisURL) > 0,
+				"url_set":      len(config.RedisURL) > 0,
 				"password_set": len(config.RedisPassword) > 0,
 			},
 			"security": fiber.Map{
-				"jwt_secret_length": len(config.JWTSecret),
+				"jwt_secret_length":     len(config.JWTSecret),
 				"encryption_key_length": len(config.EncryptionKey),
 			},
 			"application": fiber.Map{
-				"port": config.Port,
+				"port":         config.Port,
 				"cors_origins": config.AllowedOrigins,
-				"environment": config.Environment,
+				"environment":  config.Environment,
 			},
 		}
 
@@ -8006,7 +8005,6 @@ func main() {
 
 		return c.JSON(fiber.Map{"message": "Announcement deleted successfully"})
 	})
-
 
 	// GDPR compliance endpoints
 	api.Post("/gdpr/request", func(c *fiber.Ctx) error {

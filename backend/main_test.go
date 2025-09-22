@@ -889,8 +889,6 @@ func TestRegister_Disabled(t *testing.T) {
 	assert.Equal(t, 403, resp.StatusCode)
 }
 
-
-
 type LockoutTestSuite struct {
 	suite.Suite
 	app          *fiber.App
