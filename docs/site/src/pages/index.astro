@@ -6,186 +6,366 @@ const description = "Comprehensive documentation for secure, end-to-end encrypte
 ---
 
 <BaseLayout title={title} description={description}>
-  <section class="hero">
-    <h1>LeafLock Documentation</h1>
-    <div class="markdown">
-      <p>Welcome to LeafLock Documentation – your comprehensive guide to deploying, managing, and understanding LeafLock's secure notes platform. Whether you're a user seeking privacy information, an administrator managing instances, or a developer integrating with our APIs, you'll find everything you need here.</p>
+  <!-- Hero Section with animated background -->
+  <section class="relative overflow-hidden">
+    <!-- Animated background patterns -->
+    <div class="absolute inset-0 bg-gradient-to-br from-emerald-50 via-blue-50 to-violet-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.05"%3E%3Ccircle cx="30" cy="30" r="4"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+    </div>
+    
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
+      <div class="text-center animate-fade-in">
+        <!-- Main title with gradient -->
+        <h1 class="text-5xl md:text-7xl font-bold mb-8 bg-gradient-to-r from-emerald-600 via-blue-600 to-violet-600 bg-clip-text text-transparent leading-tight">
+          LeafLock
+          <span class="block text-3xl md:text-5xl mt-4 text-slate-700 dark:text-slate-300">
+            Documentation
+          </span>
+        </h1>
+        
+        <!-- Subtitle -->
+        <p class="text-xl md:text-2xl text-slate-600 dark:text-slate-300 mb-12 max-w-4xl mx-auto leading-relaxed">
+          Your comprehensive guide to <span class="font-semibold text-emerald-600 dark:text-emerald-400">secure, encrypted notes</span> 
+          with zero-knowledge architecture. Built for developers, by developers.
+        </p>
+        
+        <!-- CTA buttons -->
+        <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+          <a href="/pages/" class="leaf-button animate-glow">
+            📚 Browse Documentation
+          </a>
+          <a href="https://github.com/RelativeSure/LeafLock" target="_blank" class="inline-flex items-center px-6 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold rounded-lg shadow-lg hover:shadow-xl border border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 transition-all duration-200">
+            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+            </svg>
+            View Source
+          </a>
+        </div>
+        
+        <!-- Feature badges -->
+        <div class="flex flex-wrap justify-center gap-3 text-sm">
+          <span class="px-4 py-2 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 rounded-full font-medium border border-emerald-200 dark:border-emerald-700">
+            🔒 End-to-End Encrypted
+          </span>
+          <span class="px-4 py-2 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 rounded-full font-medium border border-blue-200 dark:border-blue-700">
+            🔍 Zero-Knowledge
+          </span>
+          <span class="px-4 py-2 bg-violet-100 dark:bg-violet-900/50 text-violet-800 dark:text-violet-300 rounded-full font-medium border border-violet-200 dark:border-violet-700">
+            ⚡ Open Source
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Documentation Categories -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+        📚 Documentation Categories
+      </h2>
+      <p class="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
+        Everything you need to deploy, manage, and understand LeafLock's secure platform.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+      <!-- Legal & Privacy Card -->
+      <div class="group bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 p-8 card-hover">
+        <div class="mb-6">
+          <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg mb-4">
+            <span class="text-2xl">🔒</span>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-3">Legal & Privacy</h3>
+          <p class="text-slate-600 dark:text-slate-300">Privacy policies, GDPR compliance, and terms of use for LeafLock users.</p>
+        </div>
+        <div class="space-y-3">
+          <a href="/pages/privacy-policy/" class="block p-4 bg-slate-50 dark:bg-slate-700 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors duration-200 group/item">
+            <h4 class="font-semibold text-slate-900 dark:text-white group-hover/item:text-emerald-600 dark:group-hover/item:text-emerald-400 transition-colors duration-200">Privacy Policy</h4>
+            <p class="text-sm text-slate-600 dark:text-slate-400">How LeafLock protects your data</p>
+          </a>
+          <a href="/pages/terms-of-use/" class="block p-4 bg-slate-50 dark:bg-slate-700 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors duration-200 group/item">
+            <h4 class="font-semibold text-slate-900 dark:text-white group-hover/item:text-emerald-600 dark:group-hover/item:text-emerald-400 transition-colors duration-200">Terms of Use</h4>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Legal terms and conditions</p>
+          </a>
+          <a href="/pages/gdpr-compliance/" class="block p-4 bg-slate-50 dark:bg-slate-700 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors duration-200 group/item">
+            <h4 class="font-semibold text-slate-900 dark:text-white group-hover/item:text-emerald-600 dark:group-hover/item:text-emerald-400 transition-colors duration-200">GDPR Compliance</h4>
+            <p class="text-sm text-slate-600 dark:text-slate-400">European data protection</p>
+          </a>
+        </div>
+      </div>
+
+      <!-- Administration Card -->
+      <div class="group bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 p-8 card-hover">
+        <div class="mb-6">
+          <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg mb-4">
+            <span class="text-2xl">⚙️</span>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-3">Administration</h3>
+          <p class="text-slate-600 dark:text-slate-300">Guides for system administrators managing LeafLock instances.</p>
+        </div>
+        <div class="space-y-3">
+          <a href="/pages/admin-guide/" class="block p-4 bg-slate-50 dark:bg-slate-700 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors duration-200 group/item">
+            <h4 class="font-semibold text-slate-900 dark:text-white group-hover/item:text-emerald-600 dark:group-hover/item:text-emerald-400 transition-colors duration-200">Admin Guide</h4>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Complete administration guide</p>
+          </a>
+          <a href="/pages/monitoring-and-backups/" class="block p-4 bg-slate-50 dark:bg-slate-700 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors duration-200 group/item">
+            <h4 class="font-semibold text-slate-900 dark:text-white group-hover/item:text-emerald-600 dark:group-hover/item:text-emerald-400 transition-colors duration-200">Monitoring & Backups</h4>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Production deployment strategies</p>
+          </a>
+        </div>
+      </div>
+
+      <!-- Development Card -->
+      <div class="group bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 p-8 card-hover">
+        <div class="mb-6">
+          <div class="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg mb-4">
+            <span class="text-2xl">💻</span>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-3">Development</h3>
+          <p class="text-slate-600 dark:text-slate-300">Technical documentation for developers and contributors.</p>
+        </div>
+        <div class="space-y-3">
+          <a href="/pages/developer-guide/" class="block p-4 bg-slate-50 dark:bg-slate-700 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors duration-200 group/item">
+            <h4 class="font-semibold text-slate-900 dark:text-white group-hover/item:text-emerald-600 dark:group-hover/item:text-emerald-400 transition-colors duration-200">Developer Guide</h4>
+            <p class="text-sm text-slate-600 dark:text-slate-400">APIs, testing, and workflows</p>
+          </a>
+          <a href="/pages/global-compliance/" class="block p-4 bg-slate-50 dark:bg-slate-700 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors duration-200 group/item">
+            <h4 class="font-semibold text-slate-900 dark:text-white group-hover/item:text-emerald-600 dark:group-hover/item:text-emerald-400 transition-colors duration-200">Global Compliance</h4>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Multi-jurisdictional compliance</p>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Start Section -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div class="bg-gradient-to-r from-emerald-600 to-blue-600 rounded-3xl shadow-2xl p-8 md:p-12 text-white">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <h2 class="text-3xl md:text-4xl font-bold mb-6">🚀 Quick Start</h2>
+          <div class="space-y-4">
+            <div class="flex items-start space-x-3">
+              <div class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center mt-1">
+                <span class="text-xs font-bold">1</span>
+              </div>
+              <div>
+                <p class="font-semibold">New to LeafLock?</p>
+                <p class="text-emerald-100">Start with our <a href="/pages/privacy-policy/" class="underline hover:text-white transition-colors duration-200">Privacy Policy</a></p>
+              </div>
+            </div>
+            <div class="flex items-start space-x-3">
+              <div class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center mt-1">
+                <span class="text-xs font-bold">2</span>
+              </div>
+              <div>
+                <p class="font-semibold">System Administrator?</p>
+                <p class="text-emerald-100">Check the <a href="/pages/admin-guide/" class="underline hover:text-white transition-colors duration-200">Admin Guide</a></p>
+              </div>
+            </div>
+            <div class="flex items-start space-x-3">
+              <div class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center mt-1">
+                <span class="text-xs font-bold">3</span>
+              </div>
+              <div>
+                <p class="font-semibold">Developer?</p>
+                <p class="text-emerald-100">Explore our <a href="/pages/developer-guide/" class="underline hover:text-white transition-colors duration-200">Developer Guide</a></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Code preview -->
+        <div class="bg-slate-900 rounded-xl p-6 shadow-2xl">
+          <div class="flex items-center space-x-2 mb-4">
+            <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+            <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+            <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+            <span class="text-slate-400 text-sm ml-4">~/leaflock</span>
+          </div>
+          <pre class="text-emerald-400 text-sm leading-relaxed overflow-x-auto"><code>{`# Deploy LeafLock securely
+git clone https://github.com/RelativeSure/LeafLock
+cd LeafLock
+
+# Configure environment
+cp .env.example .env
+# Edit JWT_SECRET, SERVER_ENCRYPTION_KEY
+
+# Start with containers  
+make up
+
+# Your secure notes are ready! 🎉`}</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+        🛡️ Why Choose LeafLock?
+      </h2>
+      <p class="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
+        Built with security and developer experience in mind.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div class="text-center p-6 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 card-hover">
+        <div class="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-3">End-to-End Encryption</h3>
+        <p class="text-slate-600 dark:text-slate-300">Your notes are encrypted on your device before reaching our servers</p>
+      </div>
+
+      <div class="text-center p-6 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 card-hover">
+        <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-3">Zero-Knowledge Architecture</h3>
+        <p class="text-slate-600 dark:text-slate-300">We cannot read your notes even if we wanted to</p>
+      </div>
+
+      <div class="text-center p-6 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 card-hover">
+        <div class="w-16 h-16 bg-gradient-to-br from-violet-500 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-3">Open Source</h3>
+        <p class="text-slate-600 dark:text-slate-300">Transparent, auditable codebase you can trust</p>
+      </div>
+
+      <div class="text-center p-6 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 card-hover">
+        <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-3">Global Compliance</h3>
+        <p class="text-slate-600 dark:text-slate-300">Built to meet GDPR, CCPA, and international standards</p>
+      </div>
+
+      <div class="text-center p-6 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 card-hover">
+        <div class="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-3">Security First</h3>
+        <p class="text-slate-600 dark:text-slate-300">Regular security audits and best practices implementation</p>
+      </div>
+
+      <div class="text-center p-6 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 card-hover">
+        <div class="w-16 h-16 bg-gradient-to-br from-pink-500 to-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-3">Lightning Fast</h3>
+        <p class="text-slate-600 dark:text-slate-300">Optimized performance with modern web technologies</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- All Documentation Section -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 p-8 md:p-12">
+      <h2 class="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-8 text-center">
+        📖 All Documentation
+      </h2>
       
-      <p><strong>LeafLock</strong> is built with privacy by design, featuring end-to-end encryption and zero-knowledge architecture that ensures your notes remain secure and private.</p>
-    </div>
-  </section>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <a href="/pages/privacy-policy/" class="group p-6 bg-slate-50 dark:bg-slate-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-200 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-700">
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 mb-2 transition-colors duration-200">Privacy Policy</h3>
+          <p class="text-slate-600 dark:text-slate-400 text-sm mb-3">How LeafLock collects, uses, and safeguards personal data across deployments.</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="tag-modern">privacy</span>
+            <span class="tag-modern">data-collection</span>
+            <span class="tag-modern">user-rights</span>
+          </div>
+        </a>
 
-  <section class="documentation-overview">
-    <h2>📚 Documentation Categories</h2>
+        <a href="/pages/terms-of-use/" class="group p-6 bg-slate-50 dark:bg-slate-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-200 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-700">
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 mb-2 transition-colors duration-200">Terms of Use</h3>
+          <p class="text-slate-600 dark:text-slate-400 text-sm mb-3">Legal terms and conditions for using LeafLock services.</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="tag-modern">legal</span>
+            <span class="tag-modern">agreement</span>
+          </div>
+        </a>
 
-    <div class="cards-grid">
-      <div class="card">
-        <h3>🔒 Legal & Privacy</h3>
-        <p>Privacy policies, GDPR compliance, and terms of use for LeafLock users.</p>
-        <ul class="doc-list">
-          <li>
-            <a href="/pages/privacy-policy/">
-              <h4>Privacy Policy</h4>
-              <p>How LeafLock collects, uses, and safeguards personal data across deployments.</p>
-            </a>
-          </li>
-          <li>
-            <a href="/pages/terms-of-use/">
-              <h4>Terms of Use</h4>
-              <p>Legal terms and conditions for using LeafLock services.</p>
-            </a>
-          </li>
-          <li>
-            <a href="/pages/gdpr-compliance/">
-              <h4>GDPR Compliance</h4>
-              <p>Comprehensive GDPR compliance guide for LeafLock deployments.</p>
-            </a>
-          </li>
-        </ul>
-      </div>
+        <a href="/pages/gdpr-compliance/" class="group p-6 bg-slate-50 dark:bg-slate-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-200 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-700">
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 mb-2 transition-colors duration-200">GDPR Compliance</h3>
+          <p class="text-slate-600 dark:text-slate-400 text-sm mb-3">Comprehensive GDPR compliance guide for LeafLock deployments.</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="tag-modern">gdpr</span>
+            <span class="tag-modern">data-protection</span>
+          </div>
+        </a>
 
-      <div class="card">
-        <h3>⚙️ Administration</h3>
-        <p>Guides for system administrators managing LeafLock instances.</p>
-        <ul class="doc-list">
-          <li>
-            <a href="/pages/admin-guide/">
-              <h4>Admin Guide</h4>
-              <p>Complete administration guide for LeafLock deployments.</p>
-            </a>
-          </li>
-          <li>
-            <a href="/pages/monitoring-and-backups/">
-              <h4>Monitoring & Backups</h4>
-              <p>Monitoring, logging, and backup strategies for production deployments.</p>
-            </a>
-          </li>
-        </ul>
-      </div>
+        <a href="/pages/admin-guide/" class="group p-6 bg-slate-50 dark:bg-slate-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-200 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-700">
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 mb-2 transition-colors duration-200">Admin Guide</h3>
+          <p class="text-slate-600 dark:text-slate-400 text-sm mb-3">Complete administration guide for LeafLock deployments.</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="tag-modern">admin</span>
+            <span class="tag-modern">deployment</span>
+          </div>
+        </a>
 
-      <div class="card">
-        <h3>💻 Development</h3>
-        <p>Technical documentation for developers and contributors.</p>
-        <ul class="doc-list">
-          <li>
-            <a href="/pages/developer-guide/">
-              <h4>Developer Guide</h4>
-              <p>API documentation, testing guides, and development workflows.</p>
-            </a>
-          </li>
-          <li>
-            <a href="/pages/global-compliance/">
-              <h4>Global Compliance</h4>
-              <p>Multi-jurisdictional compliance requirements and implementation.</p>
-            </a>
-          </li>
-        </ul>
+        <a href="/pages/developer-guide/" class="group p-6 bg-slate-50 dark:bg-slate-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-200 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-700">
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 mb-2 transition-colors duration-200">Developer Guide</h3>
+          <p class="text-slate-600 dark:text-slate-400 text-sm mb-3">API documentation, testing guides, and development workflows.</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="tag-modern">development</span>
+            <span class="tag-modern">api</span>
+          </div>
+        </a>
+
+        <a href="/pages/monitoring-and-backups/" class="group p-6 bg-slate-50 dark:bg-slate-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-200 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-700">
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 mb-2 transition-colors duration-200">Monitoring & Backups</h3>
+          <p class="text-slate-600 dark:text-slate-400 text-sm mb-3">Monitoring, logging, and backup strategies for production deployments.</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="tag-modern">monitoring</span>
+            <span class="tag-modern">backups</span>
+          </div>
+        </a>
       </div>
     </div>
   </section>
 
-  <section class="all-documentation">
-    <h2>📖 All Documentation</h2>
-    <ul class="list">
-      <li>
-        <a href="/pages/privacy-policy/">
-          <h3>Privacy Policy</h3>
-          <p>How LeafLock collects, uses, and safeguards personal data across deployments.</p>
-          <div class="taxonomy-list">
-            <span class="tag">privacy</span>
-            <span class="tag">data-collection</span>
-            <span class="tag">user-rights</span>
-          </div>
+  <!-- Contact section -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div class="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-8 md:p-12 text-center border border-slate-200 dark:border-slate-700">
+      <h2 class="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-6">
+        📞 Need Help?
+      </h2>
+      <p class="text-lg text-slate-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto">
+        Have questions about LeafLock? We're here to help with deployment, configuration, or development questions.
+      </p>
+      
+      <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+        <a href="mailto:contact@leaflock.app" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold rounded-lg shadow-lg hover:from-emerald-700 hover:to-emerald-600 transition-all duration-200 hover:shadow-xl">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+          </svg>
+          Email Support
         </a>
-      </li>
-      <li>
-        <a href="/pages/terms-of-use/">
-          <h3>Terms of Use</h3>
-          <p>Legal terms and conditions for using LeafLock services.</p>
-          <div class="taxonomy-list">
-            <span class="tag">legal</span>
-            <span class="tag">agreement</span>
-          </div>
+        
+        <a href="https://github.com/RelativeSure/LeafLock" target="_blank" class="inline-flex items-center px-6 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold rounded-lg shadow-lg hover:shadow-xl border border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 transition-all duration-200">
+          <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          GitHub Issues
         </a>
-      </li>
-      <li>
-        <a href="/pages/gdpr-compliance/">
-          <h3>GDPR Compliance</h3>
-          <p>Comprehensive GDPR compliance guide for LeafLock deployments.</p>
-          <div class="taxonomy-list">
-            <span class="tag">gdpr</span>
-            <span class="tag">data-protection</span>
-          </div>
-        </a>
-      </li>
-      <li>
-        <a href="/pages/admin-guide/">
-          <h3>Admin Guide</h3>
-          <p>Complete administration guide for LeafLock deployments.</p>
-          <div class="taxonomy-list">
-            <span class="tag">admin</span>
-            <span class="tag">deployment</span>
-          </div>
-        </a>
-      </li>
-      <li>
-        <a href="/pages/developer-guide/">
-          <h3>Developer Guide</h3>
-          <p>API documentation, testing guides, and development workflows.</p>
-          <div class="taxonomy-list">
-            <span class="tag">development</span>
-            <span class="tag">api</span>
-          </div>
-        </a>
-      </li>
-      <li>
-        <a href="/pages/monitoring-and-backups/">
-          <h3>Monitoring & Backups</h3>
-          <p>Monitoring, logging, and backup strategies for production deployments.</p>
-          <div class="taxonomy-list">
-            <span class="tag">monitoring</span>
-            <span class="tag">backups</span>
-          </div>
-        </a>
-      </li>
-    </ul>
-  </section>
-
-  <section class="tags-overview">
-    <h2>🏷️ Browse by Topic</h2>
-    <div class="taxonomy-list">
-      <a href="/tags/privacy/" class="tag">privacy</a>
-      <a href="/tags/gdpr/" class="tag">gdpr</a>
-      <a href="/tags/admin/" class="tag">admin</a>
-      <a href="/tags/development/" class="tag">development</a>
-      <a href="/tags/legal/" class="tag">legal</a>
-      <a href="/tags/data-protection/" class="tag">data-protection</a>
+      </div>
     </div>
-  </section>
-
-  <section style="margin-top: 3rem;">
-    <h2>🚀 Quick Start</h2>
-    <p><strong>🚀 New to LeafLock?</strong> Start with our <a href="/pages/privacy-policy/">Privacy Policy</a> to understand how we protect your data.</p>
-    <p><strong>⚖️ Legal Compliance?</strong> Check our <a href="/pages/gdpr-compliance/">GDPR Compliance</a> guide and <a href="/pages/global-compliance/">Global Compliance</a> information.</p>
-    <p><strong>🔧 System Administrator?</strong> Begin with the <a href="/pages/admin-guide/">Admin Guide</a> for user management and configuration.</p>
-    <p><strong>💻 Developer?</strong> Explore our <a href="/pages/developer-guide/">Developer Guide</a> for APIs, testing, and technical documentation.</p>
-  </section>
-
-  <section style="margin-top: 3rem;">
-    <h2>🛡️ Key Features</h2>
-    <ul>
-      <li><strong>🔒 End-to-End Encryption</strong>: Your notes are encrypted on your device before reaching our servers</li>
-      <li><strong>🔍 Zero-Knowledge Architecture</strong>: We cannot read your notes even if we wanted to</li>
-      <li><strong>🌍 Global Compliance</strong>: Built to meet GDPR, CCPA, and international privacy standards</li>
-      <li><strong>⚡ Open Source</strong>: Transparent, auditable codebase you can trust</li>
-      <li><strong>🛡️ Security First</strong>: Regular security audits and best practices implementation</li>
-    </ul>
-  </section>
-
-  <section style="margin-top: 3rem;">
-    <h2>📞 Need Help?</h2>
-    <p><strong>📧 Email</strong>: <a href="mailto:contact@leaflock.app">contact@leaflock.app</a></p>
-    <p><strong>🐛 Issues</strong>: <a href="https://github.com/RelativeSure/LeafLock">GitHub Repository</a></p>
-    <p><strong>📚 Documentation</strong>: Browse the sections above or use the navigation menu</p>
   </section>
 </BaseLayout>
