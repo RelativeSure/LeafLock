@@ -44,7 +44,7 @@ The documentation site will be available at:
 ### Project Structure
 
 ```
-docs-elysia/
+docs/
 ├── src/
 │   ├── index.ts              # Main application entry
 │   ├── routes/
