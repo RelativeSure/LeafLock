@@ -2,19 +2,19 @@ package main
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
-	"testing"
 	"golang.org/x/crypto/argon2"
-	"crypto/subtle"
 	"strings"
+	"testing"
 )
 
 func TestDebugPasswordFlow(t *testing.T) {
 	// Test the exact password from logs
 	passwords := []string{
 		"#wmR8xWxZ&#JHZPd8HTYmafctWSe0N*jgPG%bYS@", // Complex test password
-		"AdminPass123!",                              // Default from .env
+		"AdminPass123!", // Default from .env
 	}
 
 	for _, password := range passwords {
