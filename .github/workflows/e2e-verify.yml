@@ -76,6 +76,11 @@ jobs:
           go-version: '1.23'
           cache-dependency-path: backend/go.sum
 
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
       - name: Wait for Services
         run: |
           echo "Waiting for PostgreSQL..."
