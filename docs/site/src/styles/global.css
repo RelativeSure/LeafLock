@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom CSS variables for LeafLock branding */
+:root {
+  --primary-gradient: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  --dark-gradient: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  --leaf-green: #059669;
+  --leaf-light: #10b981;
+  --leaf-dark: #047857;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  }
+}
+
+/* Custom components */
+@layer components {
+  .hero-gradient {
+    @apply bg-gradient-to-br from-emerald-50 via-blue-50 to-violet-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900;
+  }
+  
+  .card-hover {
+    @apply transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-emerald-500/20;
+  }
+  
+  .leaf-button {
+    @apply inline-flex items-center px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold rounded-lg shadow-lg hover:from-emerald-700 hover:to-emerald-600 transition-all duration-200 hover:shadow-xl;
+  }
+  
+  .code-block {
+    @apply bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto font-mono text-sm border border-slate-700;
+  }
+  
+  .tag-modern {
+    @apply inline-flex items-center px-3 py-1 bg-gradient-to-r from-emerald-100 to-blue-100 dark:from-emerald-900 dark:to-blue-900 text-emerald-800 dark:text-emerald-200 text-xs font-medium rounded-full border border-emerald-200 dark:border-emerald-700;
+  }
+}
+
+/* Base styling improvements */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-200;
+}
+
+/* Typography improvements */
+h1, h2, h3, h4, h5, h6 {
+  @apply font-bold text-slate-900 dark:text-white;
+}
+
+h1 {
+  @apply text-4xl md:text-5xl lg:text-6xl mb-6;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+h2 {
+  @apply text-2xl md:text-3xl mb-4 border-b border-slate-200 dark:border-slate-700 pb-2;
+}
+
+h3 {
+  @apply text-xl md:text-2xl mb-3;
+}
+
+/* Link styling */
+a {
+  @apply text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors duration-200;
+}
+
+/* Code styling */
+code {
+  @apply bg-slate-100 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 px-2 py-1 rounded text-sm font-mono;
+}
+
+pre {
+  @apply bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto font-mono text-sm border border-slate-700 my-4;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  @apply w-2 h-2;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-100 dark:bg-slate-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-emerald-500 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-emerald-600;
+}
