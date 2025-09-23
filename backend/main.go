@@ -499,7 +499,7 @@ func LoadConfig() *Config {
 			dbURL = built
 		} else {
 			// Safe local default for dev
-			dbURL = "postgres://postgres:postgres@localhost:5432/notes?sslmode=prefer"
+			dbURL = "postgres://postgres:postgres@localhost:5432/leaflock?sslmode=prefer"
 		}
 	}
 
