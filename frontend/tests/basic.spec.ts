@@ -7,8 +7,8 @@ test.describe('Basic App Functionality', () => {
     // Check that the root element is visible
     await expect(page.locator('#root')).toBeVisible()
     
-    // Check for sign in elements
-    await expect(page.getByText('Sign In')).toBeVisible()
+    // Check for login elements
+    await expect(page.getByRole('button', { name: 'Login' })).toBeVisible()
     
     // Check for basic form elements
     await expect(page.locator('input[type="email"]')).toBeVisible()
@@ -19,7 +19,7 @@ test.describe('Basic App Functionality', () => {
     await page.goto('/')
     
     // Look for registration link/button
-    const registerLink = page.getByText('Sign Up')
+    const registerLink = page.getByText('Need an account? Register')
     if (await registerLink.isVisible()) {
       await registerLink.click()
       await expect(page.getByText('Create Account')).toBeVisible()
@@ -28,6 +28,7 @@ test.describe('Basic App Functionality', () => {
 
   test('health check endpoint works', async ({ request }) => {
     const response = await request.get('/api/v1/health')
+    expect(response.status()).toBe(200)
     expect(response.ok()).toBeTruthy()
   })
 })
