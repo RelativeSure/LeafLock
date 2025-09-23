@@ -90,7 +90,7 @@ jobs:
 
           echo "Waiting for Redis..."
           for i in {1..30}; do
-            if redis-cli -h localhost -p 6379 ping | grep -q PONG; then
+            if timeout 2 bash -c "</dev/tcp/localhost/6379"; then
               echo "Redis is ready!"
               break
             fi
