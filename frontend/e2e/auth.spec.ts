@@ -51,25 +51,24 @@ test.describe('Authentication', () => {
     // Try with weak password
     await authPage.emailInput.fill(email)
     await authPage.passwordInput.fill('123')
-    await authPage.confirmPasswordInput.fill('123')
     await authPage.registerButton.click()
 
     // Should stay on registration page
     await expect(page).toHaveURL('/')
   })
 
-  test('should validate password confirmation match', async ({ authPage, page }) => {
+  test('should show password strength indicator during registration', async ({ authPage, page }) => {
     const email = generateUniqueEmail()
 
     await authPage.goto()
     await authPage.toggleToRegisterLink.click()
 
     await authPage.emailInput.fill(email)
-    await authPage.passwordInput.fill('VerySecurePassword123!')
-    await authPage.confirmPasswordInput.fill('DifferentPassword123!')
-    await authPage.registerButton.click()
 
-    // Should stay on registration page
-    await expect(page).toHaveURL('/')
+    // Password strength indicator should be visible when registering
+    await authPage.passwordInput.fill('VerySecurePassword123!')
+
+    // Check that we're still in registration mode (password strength visible)
+    await expect(page.locator('text=Use 12+ characters')).toBeVisible()
   })
 })
