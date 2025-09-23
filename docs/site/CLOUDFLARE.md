@@ -2,7 +2,7 @@
 
 ## Build Settings
 
-- **Build command**: `npm run build`
+- **Build command**: `pnpm run build`
 - **Build output directory**: `dist`
 - **Root directory**: `docs/site`
 - **Node.js version**: `20.x`
@@ -25,7 +25,7 @@ If you're using a custom domain like `docs.leaflock.app`:
 ## Deployment via GitHub
 
 1. Connect your GitHub repository to Cloudflare Pages
-2. Set build command: `npm run build`
+2. Set build command: `pnpm run build`
 3. Set build output directory: `dist`
 4. Set root directory: `docs/site`
 5. Deploy automatically on push to main branch
@@ -34,12 +34,12 @@ If you're using a custom domain like `docs.leaflock.app`:
 
 ```bash
 # Install Wrangler CLI
-npm install -g wrangler
+pnpm add -g wrangler
 
 # Login to Cloudflare
 wrangler login
 
-# Develop locally (optional - you can use npm run dev instead)
+# Develop locally (optional - you can use pnpm run dev instead)
 wrangler pages dev dist --port 8788
 
 # Deploy manually (optional - auto-deploy via GitHub is recommended)

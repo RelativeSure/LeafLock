@@ -6,17 +6,19 @@ This directory contains the new AstroJS-based documentation site for LeafLock.
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Start development server
-npm run dev
+pnpm run dev
 
 # Build for production
-npm run build
+pnpm run build
 
 # Preview production build
-npm run preview
+pnpm run preview
 ```
+
+> **Note**: When running `pnpm install` for the first time, it will regenerate the complete `pnpm-lock.yaml` with all resolved dependencies and integrity hashes.
 
 ## Deployment
 
@@ -24,7 +26,7 @@ The site is built as a static site and can be deployed to any static hosting ser
 
 - **Cloudflare Pages**: Use `wrangler.toml` configuration (see `CLOUDFLARE.md` for details)
 - **GitHub Pages**: Deploy the `dist/` folder
-- **Netlify**: Connect to repository and set build command to `npm run build` and publish directory to `dist`
+- **Netlify**: Connect to repository and set build command to `pnpm run build` and publish directory to `dist`
 - **Vercel**: Import project and it will auto-detect Astro settings
 - **AWS S3**: Upload `dist/` contents to S3 bucket
 
@@ -32,7 +34,7 @@ The site is built as a static site and can be deployed to any static hosting ser
 
 For Cloudflare Pages deployment:
 1. Connect your GitHub repository to Cloudflare Pages
-2. Set build command: `npm run build`
+2. Set build command: `pnpm run build`
 3. Set build output directory: `dist`
 4. Set root directory: `docs/site`
 5. See `CLOUDFLARE.md` for detailed configuration
