@@ -26,14 +26,26 @@ export class AuthPage {
   async login(email: string, password: string) {
     await this.emailInput.fill(email)
     await this.passwordInput.fill(password)
+
+    // Wait for the login button to be ready and click it
+    await expect(this.loginButton).toBeEnabled()
     await this.loginButton.click()
+
+    // Wait for any loading state to complete
+    await expect(this.loginButton).not.toHaveText('Processing...')
   }
 
   async register(email: string, password: string) {
     await this.toggleToRegisterLink.click()
     await this.emailInput.fill(email)
     await this.passwordInput.fill(password)
+
+    // Wait for the register button to be ready and click it
+    await expect(this.registerButton).toBeEnabled()
     await this.registerButton.click()
+
+    // Wait for any loading state to complete
+    await expect(this.registerButton).not.toHaveText('Processing...')
   }
 
   async expectToBeOnAuthPage() {
@@ -42,7 +54,13 @@ export class AuthPage {
   }
 
   async expectToBeRedirectedToNotes() {
-    await this.page.waitForURL('**/notes')
-    await expect(this.page).toHaveURL(/\/notes/)
+    // Wait for the notes view to appear (app uses state-based routing, not URL routing)
+    await expect(this.page.getByRole('button', { name: 'New Note' })).toBeVisible({ timeout: 10000 })
+    // Additional verification that we're in the notes interface
+    await expect(
+      this.page.locator('[data-testid="notes-list"]')
+        .or(this.page.getByText('No notes yet'))
+        .or(this.page.getByText('No notes found'))
+    ).toBeVisible()
   }
 }

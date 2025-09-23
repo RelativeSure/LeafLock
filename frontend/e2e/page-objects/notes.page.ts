@@ -24,12 +24,18 @@ export class NotesPage {
   }
 
   async goto() {
-    await this.page.goto('/notes')
+    // App uses state-based routing - we should already be in notes view after auth
+    await this.expectToBeOnNotesPage()
   }
 
   async expectToBeOnNotesPage() {
-    await expect(this.page).toHaveURL(/\/notes/)
+    // Check for notes interface elements instead of URL
     await expect(this.newNoteButton).toBeVisible()
+    await expect(
+      this.notesList
+        .or(this.page.getByText('No notes yet'))
+        .or(this.page.getByText('No notes found'))
+    ).toBeVisible()
   }
 
   async createNewNote() {
