@@ -1,7 +1,10 @@
 name = "leaflock"
-main = "worker.js"
-compatibility_date = "2025-09-15"
-workers_dev = false
+compatibility_date = "2025-08-07"
 
 [assets]
-  directory = "public"
+directory = "./dist"
+
+[vars]
+NODE_VERSION = "v24"
+PNPM_VERSION = "10"
+

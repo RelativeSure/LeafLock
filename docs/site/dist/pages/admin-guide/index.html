@@ -1,0 +1,309 @@
+<!DOCTYPE html><html lang="en" class="scroll-smooth"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Admin Guide</title><meta name="description" content="Complete administrator guide for managing LeafLock instances and users."><link rel="icon" type="image/svg+xml" href="/favicon.svg"><!-- Preload fonts --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><!-- Open Graph --><meta property="og:title" content="Admin Guide"><meta property="og:description" content="Complete administrator guide for managing LeafLock instances and users."><meta property="og:type" content="website"><meta property="og:site_name" content="LeafLock Documentation"><!-- Twitter Card --><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Admin Guide"><meta name="twitter:description" content="Complete administrator guide for managing LeafLock instances and users."><link rel="stylesheet" href="/assets/index.sIBFf60m.css"></head> <body class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 font-['Inter'] transition-all duration-300"> <!-- Header with gradient background --> <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-700 shadow-sm"> <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> <div class="flex items-center justify-between h-16"> <!-- Logo --> <a href="/" class="flex items-center space-x-3 hover:scale-105 transition-transform duration-200"> <div class="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-lg"> <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path> </svg> </div> <span class="text-xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
+LeafLock
+</span> </a> <!-- Navigation --> <nav class="hidden md:flex items-center space-x-8"> <a href="/pages/" class="text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 font-medium transition-colors duration-200">
+Documentation
+</a> <a href="https://github.com/RelativeSure/LeafLock" target="_blank" class="flex items-center space-x-2 text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 font-medium transition-colors duration-200"> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"> <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"></path> </svg> <span>Repository</span> </a> </nav> <!-- Mobile menu button --> <button class="md:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200" id="mobile-menu-button"> <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path> </svg> </button> </div> </div> <!-- Mobile menu --> <div class="md:hidden hidden" id="mobile-menu"> <div class="px-4 py-2 space-y-2 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700"> <a href="/pages/" class="block px-3 py-2 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/50 transition-colors duration-200">
+Documentation
+</a> <a href="https://github.com/RelativeSure/LeafLock" target="_blank" class="block px-3 py-2 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/50 transition-colors duration-200">
+Repository
+</a> </div> </div> </header> <main class="min-h-screen">  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12"> <!-- Header section with gradient --> <div class="mb-12"> <div class="bg-gradient-to-br from-emerald-50 via-blue-50 to-violet-50 dark:from-slate-800 dark:via-slate-800 dark:to-emerald-900/20 rounded-2xl p-8 shadow-lg border border-slate-200 dark:border-slate-700"> <h1 class="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-emerald-600 via-blue-600 to-violet-600 bg-clip-text text-transparent"> Admin Guide </h1> <p class="text-lg text-slate-600 dark:text-slate-300 mb-6 leading-relaxed"> Complete administrator guide for managing LeafLock instances and users. </p> <!-- Metadata section --> <div class="flex flex-wrap items-center gap-4 text-sm"> <div class="flex items-center space-x-2 text-slate-500 dark:text-slate-400"> <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path> </svg> <span>Updated 2025-09-19</span> </div> <div class="flex items-center space-x-2"> <svg class="w-4 h-4 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path> </svg> <div class="flex flex-wrap gap-2"> <a href="/categories/administration/" class="px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 rounded-full text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-900/70 transition-colors duration-200"> Administration </a> </div> </div> </div> <div class="flex flex-wrap gap-2 mt-4"> <a href="/tags/admin/" class="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 rounded-full text-xs font-medium hover:bg-emerald-200 dark:hover:bg-emerald-900/70 transition-colors duration-200 border border-emerald-200 dark:border-emerald-700">
+#admin </a><a href="/tags/users/" class="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 rounded-full text-xs font-medium hover:bg-emerald-200 dark:hover:bg-emerald-900/70 transition-colors duration-200 border border-emerald-200 dark:border-emerald-700">
+#users </a><a href="/tags/database/" class="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 rounded-full text-xs font-medium hover:bg-emerald-200 dark:hover:bg-emerald-900/70 transition-colors duration-200 border border-emerald-200 dark:border-emerald-700">
+#database </a><a href="/tags/security/" class="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 rounded-full text-xs font-medium hover:bg-emerald-200 dark:hover:bg-emerald-900/70 transition-colors duration-200 border border-emerald-200 dark:border-emerald-700">
+#security </a> </div> </div> </div> <!-- Content section --> <article class="prose prose-lg prose-slate dark:prose-invert max-w-none"> <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-8">  <p><em>Last updated: 2025-09-19</em></p>
+## Overview
+
+This secure notes application is designed with end-to-end encryption where each user manages their own encrypted workspace. This guide explains how to manage users, configure admin access, and maintain the system while respecting the zero-knowledge architecture.
+
+## Current System Architecture
+
+The application uses:
+- **Zero-knowledge encryption**: Server never sees plaintext data
+- **User workspaces**: Each user has their own encrypted workspace
+- **Note-level permissions**: Users can share notes with `read`, `write`, or `admin` permissions
+- **PostgreSQL database**: User data stored in encrypted format
+
+## Admin Access Setup
+
+### Grant Admin Access (Development)
+
+1. **Get your user ID (UUID)**:
+   - Log in, then open browser DevTools → Application → Local Storage → find `current_user_id`
+   - Or decode the JWT stored in `secure_token`:
+     ```javascript
+     JSON.parse(atob(localStorage.getItem('secure_token').split('.')[1])).user_id
+     ```
+
+2. **Add to environment variables**:
+   - Add your UUID to `.env`: `ADMIN_USER_IDS=<your-uuid-here>`
+   - Multiple admins: `ADMIN_USER_IDS=<uuid-1>,<uuid-2>`
+
+3. **Restart the application**:
+   ```bash
+   make down && make up
+   ```
+
+### Database Admin Management
+
+#### Add Admin Column (One-time Setup)
+
+```sql
+-- Connect to PostgreSQL database
+psql -U postgres -d notes
+
+-- Add admin role column
+ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT false;
+
+-- Create index for faster admin queries
+CREATE INDEX idx_users_is_admin ON users(is_admin);
+```
+
+#### Make User Admin
+
+```sql
+-- Grant admin access by email
+UPDATE users
+SET is_admin = true
+WHERE email = 'admin@example.com';
+
+-- Or by user ID
+UPDATE users
+SET is_admin = true
+WHERE id = 'your-user-uuid-here';
+```
+
+#### Remove Admin Access
+
+```sql
+-- Revoke admin access
+UPDATE users
+SET is_admin = false
+WHERE email = 'user@example.com';
+```
+
+## Admin Panel Usage
+
+### Enable Admin Panel
+
+- **In builds**: Set `VITE_ENABLE_ADMIN_PANEL=true` for the frontend
+- **Local development**:
+  ```bash
+  export VITE_ENABLE_ADMIN_PANEL=true && docker compose up -d --build
+  ```
+
+### Using the Admin Panel
+
+1. Log in as an admin user
+2. Click the shield icon in the app header
+3. The Admin Panel allows you to:
+   - Toggle user's built-in `is_admin` flag
+   - Assign or remove RBAC roles (`moderator`, `auditor`)
+   - Load current roles for users
+   - Enable/disable user registration
+
+### Admin Settings
+
+- **Registration toggle**: Enable/disable public sign-ups
+  - Location: Admin Panel → User Management → "User Registration" switch
+  - Persists in database (`app_settings.registration_enabled`)
+  - On boot, backend seeds this from `ENABLE_REGISTRATION` if DB value doesn't exist
+
+## Database User Management
+
+### View All Users
+
+```sql
+-- List all users with basic info
+SELECT
+    id,
+    email,
+    COALESCE(is_admin, false) as is_admin,
+    created_at,
+    last_login,
+    failed_attempts
+FROM users
+ORDER BY created_at DESC;
+```
+
+### Find Admin Users
+
+```sql
+-- List all admin users
+SELECT
+    id,
+    email,
+    created_at,
+    last_login
+FROM users
+WHERE is_admin = true;
+```
+
+### User Activity Monitoring
+
+```sql
+-- Find inactive users (haven't logged in recently)
+SELECT
+    id,
+    email,
+    created_at,
+    last_login,
+    (NOW() - last_login) as inactive_period
+FROM users
+WHERE last_login < NOW() - INTERVAL '30 days'
+   OR last_login IS NULL;
+```
+
+### Account Security Management
+
+```sql
+-- Check users with too many failed attempts
+SELECT
+    id,
+    email,
+    failed_attempts,
+    locked_until
+FROM users
+WHERE failed_attempts > 5;
+
+-- Unlock a locked user account
+UPDATE users
+SET failed_attempts = 0,
+    locked_until = NULL
+WHERE email = 'user@example.com';
+```
+
+### User Statistics
+
+```sql
+-- Count total users
+SELECT COUNT(*) as total_users FROM users;
+
+-- Count active users (logged in last 30 days)
+SELECT COUNT(*) as active_users
+FROM users
+WHERE last_login > NOW() - INTERVAL '30 days';
+
+-- Count notes per user
+SELECT
+    u.email,
+    COUNT(n.id) as note_count
+FROM users u
+LEFT JOIN workspaces w ON u.id = w.owner_id
+LEFT JOIN notes n ON w.id = n.workspace_id
+WHERE n.deleted_at IS NULL
+GROUP BY u.id, u.email
+ORDER BY note_count DESC;
+```
+
+## Security Considerations
+
+### Zero-Knowledge Limitations
+
+Due to the zero-knowledge architecture:
+- **Admins cannot read user notes**: All content is encrypted with user keys
+- **Password resets**: Must be handled carefully to maintain encryption
+- **User data**: Only metadata (email, timestamps) is visible to admins
+
+### Recommended Admin Capabilities
+
+Safe admin operations that preserve encryption:
+- ✅ View user list and metadata
+- ✅ Monitor login attempts and security events
+- ✅ Disable/enable user accounts
+- ✅ View system statistics and usage
+- ✅ Manage system-wide settings
+- ❌ Read user notes or content
+- ❌ Reset passwords without user involvement
+
+## Database Administration
+
+### Database Connection
+
+```bash
+# Using PostgreSQL command line
+export PGPASSWORD="your-postgres-password"
+psql -h localhost -U postgres -d notes
+
+# Or connect via URL
+# postgresql://postgres:password@localhost:5432/notes
+```
+
+### Backup User Data
+
+Before making changes, always backup:
+
+```bash
+# Backup users table
+pg_dump -h localhost -U postgres -d notes -t users > users_backup.sql
+
+# Full database backup
+pg_dump -h localhost -U postgres -d notes > full_backup.sql
+```
+
+## Common Admin Tasks
+
+### Creating the First Admin
+
+```sql
+-- After first user registers, make them admin
+UPDATE users
+SET is_admin = true
+WHERE email = (
+    SELECT email FROM users
+    ORDER BY created_at ASC
+    LIMIT 1
+);
+```
+
+### Emergency Account Recovery
+
+```sql
+-- If admin is locked out, unlock manually
+UPDATE users
+SET failed_attempts = 0,
+    locked_until = NULL
+WHERE is_admin = true;
+```
+
+### System Maintenance
+
+```sql
+-- Clean up old deleted notes (after 30 days)
+DELETE FROM notes
+WHERE deleted_at IS NOT NULL
+  AND deleted_at < NOW() - INTERVAL '30 days';
+```
+
+## Monitoring and Logging
+
+For production admin management:
+
+1. **Enable PostgreSQL logging** for audit trails
+2. **Monitor authentication failures** for security
+3. **Set up alerts** for suspicious activity
+4. **Regular backups** of user data
+
+## Security Notes
+
+- Admin endpoints require valid JWT and admin role; UI gating is convenience only
+- Do not expose `ADMIN_USER_IDS` in production images
+- Manage admin status through database and role assignment flows in production
+- All admin operations respect the encryption model and user privacy principles
+
+## Contact
+
+For admin-related questions, contact `contact@leaflock.app`.
+</uuid-2></uuid-1></your-uuid-here> </div> </article> <!-- Navigation footer --> <div class="mt-12 flex justify-between items-center p-6 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700"> <a href="/pages/" class="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors duration-200"> <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path> </svg> <span>Back to Documentation</span> </a> <a href="https://github.com/RelativeSure/LeafLock" target="_blank" class="flex items-center space-x-2 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors duration-200"> <span>View on GitHub</span> <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path> </svg> </a> </div> </div>  </main> <!-- Modern footer --> <footer class="bg-slate-900 text-slate-300 border-t border-slate-700"> <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12"> <div class="grid grid-cols-1 md:grid-cols-4 gap-8"> <!-- Brand section --> <div class="col-span-1 md:col-span-2"> <div class="flex items-center space-x-3 mb-4"> <div class="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-lg"> <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path> </svg> </div> <span class="text-xl font-bold text-white">LeafLock</span> </div> <p class="text-slate-400 max-w-md">
+Secure, end-to-end encrypted notes with zero-knowledge architecture. 
+              Your privacy is our priority.
+</p> <div class="flex items-center space-x-4 mt-4"> <a href="https://github.com/RelativeSure/LeafLock" target="_blank" class="text-slate-400 hover:text-emerald-400 transition-colors duration-200"> <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"> <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"></path> </svg> </a> </div> </div> <!-- Documentation links --> <div> <h3 class="text-white font-semibold mb-4">Legal & Privacy</h3> <ul class="space-y-2"> <li><a href="/pages/privacy-policy/" class="text-slate-400 hover:text-emerald-400 transition-colors duration-200">Privacy Policy</a></li> <li><a href="/pages/terms-of-use/" class="text-slate-400 hover:text-emerald-400 transition-colors duration-200">Terms of Use</a></li> <li><a href="/pages/gdpr-compliance/" class="text-slate-400 hover:text-emerald-400 transition-colors duration-200">GDPR Compliance</a></li> </ul> </div> <!-- Admin links --> <div> <h3 class="text-white font-semibold mb-4">Administration</h3> <ul class="space-y-2"> <li><a href="/pages/admin-guide/" class="text-slate-400 hover:text-emerald-400 transition-colors duration-200">Admin Guide</a></li> <li><a href="/pages/monitoring-and-backups/" class="text-slate-400 hover:text-emerald-400 transition-colors duration-200">Monitoring & Backups</a></li> <li><a href="/pages/developer-guide/" class="text-slate-400 hover:text-emerald-400 transition-colors duration-200">Developer Guide</a></li> </ul> </div> </div> <!-- Bottom section --> <div class="border-t border-slate-700 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center"> <p class="text-slate-400 text-sm">
+© 2025 LeafLock. All rights reserved.
+</p> <div class="flex items-center space-x-6 mt-4 md:mt-0"> <span class="text-slate-500 text-sm">Made with</span> <div class="flex items-center space-x-2"> <svg class="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"> <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path> </svg> <span class="text-emerald-400 font-medium">AstroJS</span> </div> </div> </div> </div> </footer> <!-- Mobile menu script --> <script type="module">document.addEventListener("DOMContentLoaded",function(){const e=document.getElementById("mobile-menu-button"),n=document.getElementById("mobile-menu");e?.addEventListener("click",function(){n?.classList.toggle("hidden")})});</script> <!-- Schema.org structured data --> <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "LeafLock Documentation",
+      "description": "Secure, end-to-end encrypted notes with zero-knowledge architecture",
+      "url": "https://docs.leaflock.app/"
+    }
+    </script> </body> </html>
