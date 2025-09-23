@@ -4,7 +4,6 @@ export class AuthPage {
   readonly page: Page
   readonly emailInput: Locator
   readonly passwordInput: Locator
-  readonly confirmPasswordInput: Locator
   readonly loginButton: Locator
   readonly registerButton: Locator
   readonly toggleToRegisterLink: Locator
@@ -13,12 +12,11 @@ export class AuthPage {
   constructor(page: Page) {
     this.page = page
     this.emailInput = page.locator('input[type="email"]')
-    this.passwordInput = page.locator('input[type="password"]').first()
-    this.confirmPasswordInput = page.locator('input[type="password"]').nth(1)
-    this.loginButton = page.getByRole('button', { name: /sign in/i })
-    this.registerButton = page.getByRole('button', { name: /sign up/i })
-    this.toggleToRegisterLink = page.getByText(/sign up/i)
-    this.toggleToLoginLink = page.getByText(/sign in/i)
+    this.passwordInput = page.locator('input[type="password"]')
+    this.loginButton = page.getByRole('button', { name: 'Login' })
+    this.registerButton = page.getByRole('button', { name: 'Create Account' })
+    this.toggleToRegisterLink = page.getByRole('button', { name: 'Need an account? Register' })
+    this.toggleToLoginLink = page.getByRole('button', { name: 'Already have an account? Login' })
   }
 
   async goto() {
@@ -35,7 +33,6 @@ export class AuthPage {
     await this.toggleToRegisterLink.click()
     await this.emailInput.fill(email)
     await this.passwordInput.fill(password)
-    await this.confirmPasswordInput.fill(password)
     await this.registerButton.click()
   }
 
