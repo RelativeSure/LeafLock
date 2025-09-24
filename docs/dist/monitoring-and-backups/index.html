@@ -1,0 +1,185 @@
+<!DOCTYPE html><meta charset="utf-8"/><p>LeafLock now includes comprehensive monitoring with Prometheus metrics and automated backup capabilities with S3 support.</p>
+<h2 id="prometheus-metrics">Prometheus Metrics</h2>
+<h3 id="enabling-metrics">Enabling Metrics</h3>
+<p>Metrics are enabled by default. To disable them, set <code>ENABLE_METRICS=false</code> in your environment.</p>
+<h3 id="available-metrics">Available Metrics</h3>
+<p>The application exposes the following metrics at <code>/metrics</code>:</p>
+<h4 id="http-metrics">HTTP Metrics</h4>
+<ul>
+<li><code>leaflock_http_requests_total</code> - Total HTTP requests by method, endpoint, and status code</li>
+<li><code>leaflock_http_request_duration_seconds</code> - HTTP request duration histogram</li>
+</ul>
+<h4 id="application-metrics">Application Metrics</h4>
+<ul>
+<li><code>leaflock_active_users</code> - Number of currently active users</li>
+<li><code>leaflock_notes_total</code> - Total notes operations (create, update, delete)</li>
+<li><code>leaflock_collaborations_active</code> - Number of active collaborations</li>
+<li><code>leaflock_websocket_connections</code> - Active WebSocket connections</li>
+</ul>
+<h4 id="database-metrics">Database Metrics</h4>
+<ul>
+<li><code>leaflock_db_connections_active</code> - Active database connections</li>
+<li><code>leaflock_db_connections_idle</code> - Idle database connections</li>
+<li><code>leaflock_db_queries_total</code> - Total database queries by operation</li>
+</ul>
+<h4 id="redis-metrics">Redis Metrics</h4>
+<ul>
+<li><code>leaflock_redis_connections_active</code> - Active Redis connections</li>
+<li><code>leaflock_redis_operations_total</code> - Total Redis operations</li>
+</ul>
+<h4 id="error-metrics">Error Metrics</h4>
+<ul>
+<li><code>leaflock_errors_total</code> - Total errors by type and component</li>
+</ul>
+<h4 id="backup-metrics">Backup Metrics</h4>
+<ul>
+<li><code>leaflock_backups_total</code> - Total backup operations by status</li>
+<li><code>leaflock_backup_duration_seconds</code> - Backup duration histogram</li>
+<li><code>leaflock_backup_size_bytes</code> - Last backup size</li>
+</ul>
+<h3 id="accessing-metrics">Accessing Metrics</h3>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A9955"># Check if metrics are enabled</span></span>
+<span class="line"><span style="color:#DCDCAA">curl</span><span style="color:#CE9178"> http://localhost:8080/metrics</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955"># View specific metrics</span></span>
+<span class="line"><span style="color:#DCDCAA">curl</span><span style="color:#CE9178"> http://localhost:8080/metrics</span><span style="color:#D4D4D4"> | </span><span style="color:#DCDCAA">grep</span><span style="color:#CE9178"> leaflock_notes_total</span></span></code></pre>
+<h2 id="automated-s3-backups">Automated S3 Backups</h2>
+<h3 id="configuration">Configuration</h3>
+<p>Add the following environment variables to your <code>.env</code> file:</p>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A9955"># Enable backups</span></span>
+<span class="line"><span style="color:#9CDCFE">ENABLE_BACKUPS</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">true</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955"># S3 Configuration</span></span>
+<span class="line"><span style="color:#9CDCFE">BACKUP_S3_BUCKET</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">your-backup-bucket-name</span></span>
+<span class="line"><span style="color:#9CDCFE">BACKUP_S3_ACCESS_KEY</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">your_access_key</span></span>
+<span class="line"><span style="color:#9CDCFE">BACKUP_S3_SECRET_KEY</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">your_secret_key</span></span>
+<span class="line"><span style="color:#9CDCFE">BACKUP_S3_REGION</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">us-east-1</span></span>
+<span class="line"><span style="color:#9CDCFE">BACKUP_S3_ENDPOINT</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">https://s3.amazonaws.com</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955"># Backup encryption (32 characters)</span></span>
+<span class="line"><span style="color:#9CDCFE">BACKUP_ENCRYPTION_KEY</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">your_32_character_encryption_key</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955"># Schedule (cron format) - default: daily at 2 AM</span></span>
+<span class="line"><span style="color:#9CDCFE">BACKUP_SCHEDULE</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">0</span><span style="color:#DCDCAA"> 2</span><span style="color:#569CD6"> *</span><span style="color:#569CD6"> *</span><span style="color:#569CD6"> *</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955"># Retention (days) - default: 30 days</span></span>
+<span class="line"><span style="color:#9CDCFE">BACKUP_RETENTION_DAYS</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">30</span></span></code></pre>
+<h3 id="s3-bucket-setup">S3 Bucket Setup</h3>
+<ol>
+<li>Create an S3 bucket for backups</li>
+<li>Create an IAM user with the following policy:</li>
+</ol>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="json"><code><span class="line"><span style="color:#D4D4D4">{</span></span>
+<span class="line"><span style="color:#9CDCFE">    &quot;Version&quot;</span><span style="color:#D4D4D4">: </span><span style="color:#CE9178">&quot;2012-10-17&quot;</span><span style="color:#D4D4D4">,</span></span>
+<span class="line"><span style="color:#9CDCFE">    &quot;Statement&quot;</span><span style="color:#D4D4D4">: [</span></span>
+<span class="line"><span style="color:#D4D4D4">        {</span></span>
+<span class="line"><span style="color:#9CDCFE">            &quot;Effect&quot;</span><span style="color:#D4D4D4">: </span><span style="color:#CE9178">&quot;Allow&quot;</span><span style="color:#D4D4D4">,</span></span>
+<span class="line"><span style="color:#9CDCFE">            &quot;Action&quot;</span><span style="color:#D4D4D4">: [</span></span>
+<span class="line"><span style="color:#CE9178">                &quot;s3:PutObject&quot;</span><span style="color:#D4D4D4">,</span></span>
+<span class="line"><span style="color:#CE9178">                &quot;s3:GetObject&quot;</span><span style="color:#D4D4D4">,</span></span>
+<span class="line"><span style="color:#CE9178">                &quot;s3:DeleteObject&quot;</span><span style="color:#D4D4D4">,</span></span>
+<span class="line"><span style="color:#CE9178">                &quot;s3:ListBucket&quot;</span></span>
+<span class="line"><span style="color:#D4D4D4">            ],</span></span>
+<span class="line"><span style="color:#9CDCFE">            &quot;Resource&quot;</span><span style="color:#D4D4D4">: [</span></span>
+<span class="line"><span style="color:#CE9178">                &quot;arn:aws:s3:::your-backup-bucket/*&quot;</span><span style="color:#D4D4D4">,</span></span>
+<span class="line"><span style="color:#CE9178">                &quot;arn:aws:s3:::your-backup-bucket&quot;</span></span>
+<span class="line"><span style="color:#D4D4D4">            ]</span></span>
+<span class="line"><span style="color:#D4D4D4">        }</span></span>
+<span class="line"><span style="color:#D4D4D4">    ]</span></span>
+<span class="line"><span style="color:#D4D4D4">}</span></span></code></pre>
+<h3 id="backup-features">Backup Features</h3>
+<ul>
+<li><strong>Encrypted backups</strong>: All backups are encrypted with AES-256</li>
+<li><strong>Automatic retention</strong>: Old backups are automatically cleaned up</li>
+<li><strong>Health monitoring</strong>: Backup status is exposed via Prometheus metrics</li>
+<li><strong>Manual restore</strong>: Use the restore script for point-in-time recovery</li>
+</ul>
+<h3 id="running-backups">Running Backups</h3>
+<h4 id="with-docker-compose">With Docker Compose</h4>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A9955"># Start with backup service</span></span>
+<span class="line"><span style="color:#DCDCAA">make</span><span style="color:#CE9178"> up</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955"># Run immediate backup</span></span>
+<span class="line"><span style="color:#DCDCAA">docker</span><span style="color:#CE9178"> compose</span><span style="color:#CE9178"> exec</span><span style="color:#CE9178"> backup</span><span style="color:#CE9178"> /usr/local/bin/backup.sh</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955"># View backup logs</span></span>
+<span class="line"><span style="color:#DCDCAA">docker</span><span style="color:#CE9178"> compose</span><span style="color:#CE9178"> logs</span><span style="color:#CE9178"> backup</span><span style="color:#569CD6"> -f</span></span></code></pre>
+<h4 id="manual-backup">Manual Backup</h4>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A9955"># Run backup script directly</span></span>
+<span class="line"><span style="color:#DCDCAA">./scripts/backup.sh</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955"># List available backups</span></span>
+<span class="line"><span style="color:#DCDCAA">./scripts/restore.sh</span><span style="color:#569CD6"> --list</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955"># Restore from specific backup</span></span>
+<span class="line"><span style="color:#DCDCAA">./scripts/restore.sh</span><span style="color:#569CD6"> --file</span><span style="color:#CE9178"> backups/2025/01/21/leaflock_backup_20250121_020000.sql.gz.enc</span></span></code></pre>
+<h3 id="backup-storage-structure">Backup Storage Structure</h3>
+<p>Backups are stored in S3 with the following structure:</p>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="plaintext"><code><span class="line"><span>s3://your-bucket/</span></span>
+<span class="line"><span>└── backups/</span></span>
+<span class="line"><span>    └── 2025/</span></span>
+<span class="line"><span>        └── 01/</span></span>
+<span class="line"><span>            └── 21/</span></span>
+<span class="line"><span>                ├── leaflock_backup_20250121_020000.sql.gz.enc</span></span>
+<span class="line"><span>                ├── leaflock_backup_20250121_140000.sql.gz.enc</span></span>
+<span class="line"><span>                └── ...</span></span></code></pre>
+<h2 id="kubernetes-monitoring">Kubernetes Monitoring</h2>
+<p>When deploying with Helm, monitoring is automatically configured:</p>
+<h3 id="servicemonitor">ServiceMonitor</h3>
+<p>The chart creates a ServiceMonitor for Prometheus Operator:</p>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="yaml"><code><span class="line"><span style="color:#569CD6">monitoring</span><span style="color:#D4D4D4">:</span></span>
+<span class="line"><span style="color:#569CD6">  enabled</span><span style="color:#D4D4D4">: </span><span style="color:#569CD6">true</span></span>
+<span class="line"><span style="color:#569CD6">  serviceMonitor</span><span style="color:#D4D4D4">:</span></span>
+<span class="line"><span style="color:#569CD6">    enabled</span><span style="color:#D4D4D4">: </span><span style="color:#569CD6">true</span></span>
+<span class="line"><span style="color:#569CD6">    namespace</span><span style="color:#D4D4D4">: </span><span style="color:#CE9178">monitoring</span></span>
+<span class="line"><span style="color:#569CD6">    interval</span><span style="color:#D4D4D4">: </span><span style="color:#CE9178">30s</span></span></code></pre>
+<h3 id="prometheus-rules">Prometheus Rules</h3>
+<p>Pre-configured alerts include:</p>
+<ul>
+<li><code>LeafLockBackendDown</code> - Backend service is unavailable</li>
+<li><code>LeafLockHighErrorRate</code> - High error rate detected</li>
+<li><code>LeafLockBackupFailed</code> - Backup operation failed</li>
+</ul>
+<h3 id="backup-cronjob">Backup CronJob</h3>
+<p>Automated backups run as a Kubernetes CronJob:</p>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="yaml"><code><span class="line"><span style="color:#569CD6">backup</span><span style="color:#D4D4D4">:</span></span>
+<span class="line"><span style="color:#569CD6">  enabled</span><span style="color:#D4D4D4">: </span><span style="color:#569CD6">true</span></span>
+<span class="line"><span style="color:#569CD6">  schedule</span><span style="color:#D4D4D4">: </span><span style="color:#CE9178">&quot;0 2 * * *&quot;</span></span>
+<span class="line"><span style="color:#569CD6">  retentionDays</span><span style="color:#D4D4D4">: </span><span style="color:#B5CEA8">30</span></span></code></pre>
+<h2 id="grafana-dashboard">Grafana Dashboard</h2>
+<p>A sample Grafana dashboard is available at <code>docs/grafana-dashboard.json</code> with:</p>
+<ul>
+<li>Request rate and latency graphs</li>
+<li>Error rate monitoring</li>
+<li>Database and Redis connection metrics</li>
+<li>Backup status and size tracking</li>
+<li>Active user and collaboration counts</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="metrics-not-working">Metrics Not Working</h3>
+<ol>
+<li>Check <code>ENABLE_METRICS</code> environment variable</li>
+<li>Verify <code>/metrics</code> endpoint is accessible</li>
+<li>Check application logs for errors</li>
+</ol>
+<h3 id="backup-failures">Backup Failures</h3>
+<ol>
+<li>Verify S3 credentials and permissions</li>
+<li>Check <code>BACKUP_ENCRYPTION_KEY</code> is set</li>
+<li>Review backup logs: <code>docker compose logs backup</code></li>
+<li>Test S3 connectivity manually</li>
+</ol>
+<h3 id="common-issues">Common Issues</h3>
+<ul>
+<li><strong>Permission denied</strong>: Ensure backup user has write access to <code>/tmp/backups</code></li>
+<li><strong>S3 access denied</strong>: Verify IAM policy allows required S3 operations</li>
+<li><strong>Encryption errors</strong>: Ensure <code>BACKUP_ENCRYPTION_KEY</code> is exactly 32 characters</li>
+<li><strong>Database connection</strong>: Check PostgreSQL connection from backup container</li>
+</ul>
+<h2 id="security-considerations">Security Considerations</h2>
+<ul>
+<li>Backup encryption keys should be stored securely</li>
+<li>S3 credentials should use least-privilege IAM policies</li>
+<li>Regular backup restore testing is recommended</li>
+<li>Metrics endpoint should be secured in production environments</li>
+</ul>

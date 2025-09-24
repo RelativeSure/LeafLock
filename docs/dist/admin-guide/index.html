@@ -1,0 +1,229 @@
+<!DOCTYPE html><meta charset="utf-8"/><p><em>Last updated: 2025-09-19</em></p>
+<h2 id="overview">Overview</h2>
+<p>This secure notes application is designed with end-to-end encryption where each user manages their own encrypted workspace. This guide explains how to manage users, configure admin access, and maintain the system while respecting the zero-knowledge architecture.</p>
+<h2 id="current-system-architecture">Current System Architecture</h2>
+<p>The application uses:</p>
+<ul>
+<li><strong>Zero-knowledge encryption</strong>: Server never sees plaintext data</li>
+<li><strong>User workspaces</strong>: Each user has their own encrypted workspace</li>
+<li><strong>Note-level permissions</strong>: Users can share notes with <code>read</code>, <code>write</code>, or <code>admin</code> permissions</li>
+<li><strong>PostgreSQL database</strong>: User data stored in encrypted format</li>
+</ul>
+<h2 id="admin-access-setup">Admin Access Setup</h2>
+<h3 id="grant-admin-access-development">Grant Admin Access (Development)</h3>
+<ol>
+<li>
+<p><strong>Get your user ID (UUID)</strong>:</p>
+<ul>
+<li>Log in, then open browser DevTools → Application → Local Storage → find <code>current_user_id</code></li>
+<li>Or decode the JWT stored in <code>secure_token</code>:
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="javascript"><code><span class="line"><span style="color:#4FC1FF">JSON</span><span style="color:#D4D4D4">.</span><span style="color:#DCDCAA">parse</span><span style="color:#D4D4D4">(</span><span style="color:#DCDCAA">atob</span><span style="color:#D4D4D4">(</span><span style="color:#9CDCFE">localStorage</span><span style="color:#D4D4D4">.</span><span style="color:#DCDCAA">getItem</span><span style="color:#D4D4D4">(</span><span style="color:#CE9178">&#39;secure_token&#39;</span><span style="color:#D4D4D4">).</span><span style="color:#DCDCAA">split</span><span style="color:#D4D4D4">(</span><span style="color:#CE9178">&#39;.&#39;</span><span style="color:#D4D4D4">)[</span><span style="color:#B5CEA8">1</span><span style="color:#D4D4D4">])).</span><span style="color:#9CDCFE">user_id</span></span></code></pre>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Add to environment variables</strong>:</p>
+<ul>
+<li>Add your UUID to <code>.env</code>: <code>ADMIN_USER_IDS=&lt;your-uuid-here&gt;</code></li>
+<li>Multiple admins: <code>ADMIN_USER_IDS=&lt;uuid-1&gt;,&lt;uuid-2&gt;</code></li>
+</ul>
+</li>
+<li>
+<p><strong>Restart the application</strong>:</p>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#DCDCAA">make</span><span style="color:#CE9178"> down</span><span style="color:#D4D4D4"> &amp;&amp; </span><span style="color:#DCDCAA">make</span><span style="color:#CE9178"> up</span></span></code></pre>
+</li>
+</ol>
+<h3 id="database-admin-management">Database Admin Management</h3>
+<h4 id="add-admin-column-one-time-setup">Add Admin Column (One-time Setup)</h4>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A9955">-- Connect to PostgreSQL database</span></span>
+<span class="line"><span style="color:#D4D4D4">psql -U postgres -d notes</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">-- Add admin role column</span></span>
+<span class="line"><span style="color:#569CD6">ALTER</span><span style="color:#569CD6"> TABLE</span><span style="color:#D4D4D4"> users </span><span style="color:#569CD6">ADD</span><span style="color:#D4D4D4"> COLUMN is_admin </span><span style="color:#569CD6">BOOLEAN</span><span style="color:#569CD6"> DEFAULT</span><span style="color:#D4D4D4"> false;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">-- Create index for faster admin queries</span></span>
+<span class="line"><span style="color:#569CD6">CREATE</span><span style="color:#569CD6"> INDEX</span><span style="color:#DCDCAA"> idx_users_is_admin</span><span style="color:#569CD6"> ON</span><span style="color:#D4D4D4"> users(is_admin);</span></span></code></pre>
+<h4 id="make-user-admin">Make User Admin</h4>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A9955">-- Grant admin access by email</span></span>
+<span class="line"><span style="color:#569CD6">UPDATE</span><span style="color:#D4D4D4"> users</span></span>
+<span class="line"><span style="color:#569CD6">SET</span><span style="color:#D4D4D4"> is_admin = true</span></span>
+<span class="line"><span style="color:#569CD6">WHERE</span><span style="color:#D4D4D4"> email = </span><span style="color:#CE9178">&#39;admin@example.com&#39;</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">-- Or by user ID</span></span>
+<span class="line"><span style="color:#569CD6">UPDATE</span><span style="color:#D4D4D4"> users</span></span>
+<span class="line"><span style="color:#569CD6">SET</span><span style="color:#D4D4D4"> is_admin = true</span></span>
+<span class="line"><span style="color:#569CD6">WHERE</span><span style="color:#D4D4D4"> id = </span><span style="color:#CE9178">&#39;your-user-uuid-here&#39;</span><span style="color:#D4D4D4">;</span></span></code></pre>
+<h4 id="remove-admin-access">Remove Admin Access</h4>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A9955">-- Revoke admin access</span></span>
+<span class="line"><span style="color:#569CD6">UPDATE</span><span style="color:#D4D4D4"> users</span></span>
+<span class="line"><span style="color:#569CD6">SET</span><span style="color:#D4D4D4"> is_admin = false</span></span>
+<span class="line"><span style="color:#569CD6">WHERE</span><span style="color:#D4D4D4"> email = </span><span style="color:#CE9178">&#39;user@example.com&#39;</span><span style="color:#D4D4D4">;</span></span></code></pre>
+<h2 id="admin-panel-usage">Admin Panel Usage</h2>
+<h3 id="enable-admin-panel">Enable Admin Panel</h3>
+<ul>
+<li><strong>In builds</strong>: Set <code>VITE_ENABLE_ADMIN_PANEL=true</code> for the frontend</li>
+<li><strong>Local development</strong>:
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#569CD6">export</span><span style="color:#9CDCFE"> VITE_ENABLE_ADMIN_PANEL</span><span style="color:#D4D4D4">=</span><span style="color:#9CDCFE">true</span><span style="color:#D4D4D4"> &amp;&amp; </span><span style="color:#DCDCAA">docker</span><span style="color:#CE9178"> compose</span><span style="color:#CE9178"> up</span><span style="color:#569CD6"> -d</span><span style="color:#569CD6"> --build</span></span></code></pre>
+</li>
+</ul>
+<h3 id="using-the-admin-panel">Using the Admin Panel</h3>
+<ol>
+<li>Log in as an admin user</li>
+<li>Click the shield icon in the app header</li>
+<li>The Admin Panel allows you to:
+<ul>
+<li>Toggle user’s built-in <code>is_admin</code> flag</li>
+<li>Assign or remove RBAC roles (<code>moderator</code>, <code>auditor</code>)</li>
+<li>Load current roles for users</li>
+<li>Enable/disable user registration</li>
+</ul>
+</li>
+</ol>
+<h3 id="admin-settings">Admin Settings</h3>
+<ul>
+<li><strong>Registration toggle</strong>: Enable/disable public sign-ups
+<ul>
+<li>Location: Admin Panel → User Management → “User Registration” switch</li>
+<li>Persists in database (<code>app_settings.registration_enabled</code>)</li>
+<li>On boot, backend seeds this from <code>ENABLE_REGISTRATION</code> if DB value doesn’t exist</li>
+</ul>
+</li>
+</ul>
+<h2 id="database-user-management">Database User Management</h2>
+<h3 id="view-all-users">View All Users</h3>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A9955">-- List all users with basic info</span></span>
+<span class="line"><span style="color:#569CD6">SELECT</span></span>
+<span class="line"><span style="color:#D4D4D4">    id,</span></span>
+<span class="line"><span style="color:#D4D4D4">    email,</span></span>
+<span class="line"><span style="color:#DCDCAA">    COALESCE</span><span style="color:#D4D4D4">(is_admin, false) </span><span style="color:#569CD6">as</span><span style="color:#D4D4D4"> is_admin,</span></span>
+<span class="line"><span style="color:#D4D4D4">    created_at,</span></span>
+<span class="line"><span style="color:#D4D4D4">    last_login,</span></span>
+<span class="line"><span style="color:#D4D4D4">    failed_attempts</span></span>
+<span class="line"><span style="color:#569CD6">FROM</span><span style="color:#D4D4D4"> users</span></span>
+<span class="line"><span style="color:#569CD6">ORDER BY</span><span style="color:#D4D4D4"> created_at </span><span style="color:#569CD6">DESC</span><span style="color:#D4D4D4">;</span></span></code></pre>
+<h3 id="find-admin-users">Find Admin Users</h3>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A9955">-- List all admin users</span></span>
+<span class="line"><span style="color:#569CD6">SELECT</span></span>
+<span class="line"><span style="color:#D4D4D4">    id,</span></span>
+<span class="line"><span style="color:#D4D4D4">    email,</span></span>
+<span class="line"><span style="color:#D4D4D4">    created_at,</span></span>
+<span class="line"><span style="color:#D4D4D4">    last_login</span></span>
+<span class="line"><span style="color:#569CD6">FROM</span><span style="color:#D4D4D4"> users</span></span>
+<span class="line"><span style="color:#569CD6">WHERE</span><span style="color:#D4D4D4"> is_admin = true;</span></span></code></pre>
+<h3 id="user-activity-monitoring">User Activity Monitoring</h3>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A9955">-- Find inactive users (haven&#39;t logged in recently)</span></span>
+<span class="line"><span style="color:#569CD6">SELECT</span></span>
+<span class="line"><span style="color:#D4D4D4">    id,</span></span>
+<span class="line"><span style="color:#D4D4D4">    email,</span></span>
+<span class="line"><span style="color:#D4D4D4">    created_at,</span></span>
+<span class="line"><span style="color:#D4D4D4">    last_login,</span></span>
+<span class="line"><span style="color:#D4D4D4">    (</span><span style="color:#569CD6">NOW</span><span style="color:#D4D4D4">() - last_login) </span><span style="color:#569CD6">as</span><span style="color:#D4D4D4"> inactive_period</span></span>
+<span class="line"><span style="color:#569CD6">FROM</span><span style="color:#D4D4D4"> users</span></span>
+<span class="line"><span style="color:#569CD6">WHERE</span><span style="color:#D4D4D4"> last_login &lt; </span><span style="color:#569CD6">NOW</span><span style="color:#D4D4D4">() - INTERVAL </span><span style="color:#CE9178">&#39;30 days&#39;</span></span>
+<span class="line"><span style="color:#569CD6">   OR</span><span style="color:#D4D4D4"> last_login </span><span style="color:#569CD6">IS</span><span style="color:#569CD6"> NULL</span><span style="color:#D4D4D4">;</span></span></code></pre>
+<h3 id="account-security-management">Account Security Management</h3>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A9955">-- Check users with too many failed attempts</span></span>
+<span class="line"><span style="color:#569CD6">SELECT</span></span>
+<span class="line"><span style="color:#D4D4D4">    id,</span></span>
+<span class="line"><span style="color:#D4D4D4">    email,</span></span>
+<span class="line"><span style="color:#D4D4D4">    failed_attempts,</span></span>
+<span class="line"><span style="color:#D4D4D4">    locked_until</span></span>
+<span class="line"><span style="color:#569CD6">FROM</span><span style="color:#D4D4D4"> users</span></span>
+<span class="line"><span style="color:#569CD6">WHERE</span><span style="color:#D4D4D4"> failed_attempts &gt; </span><span style="color:#B5CEA8">5</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">-- Unlock a locked user account</span></span>
+<span class="line"><span style="color:#569CD6">UPDATE</span><span style="color:#D4D4D4"> users</span></span>
+<span class="line"><span style="color:#569CD6">SET</span><span style="color:#D4D4D4"> failed_attempts = </span><span style="color:#B5CEA8">0</span><span style="color:#D4D4D4">,</span></span>
+<span class="line"><span style="color:#D4D4D4">    locked_until = </span><span style="color:#569CD6">NULL</span></span>
+<span class="line"><span style="color:#569CD6">WHERE</span><span style="color:#D4D4D4"> email = </span><span style="color:#CE9178">&#39;user@example.com&#39;</span><span style="color:#D4D4D4">;</span></span></code></pre>
+<h3 id="user-statistics">User Statistics</h3>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A9955">-- Count total users</span></span>
+<span class="line"><span style="color:#569CD6">SELECT</span><span style="color:#DCDCAA"> COUNT</span><span style="color:#D4D4D4">(*) </span><span style="color:#569CD6">as</span><span style="color:#D4D4D4"> total_users </span><span style="color:#569CD6">FROM</span><span style="color:#D4D4D4"> users;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">-- Count active users (logged in last 30 days)</span></span>
+<span class="line"><span style="color:#569CD6">SELECT</span><span style="color:#DCDCAA"> COUNT</span><span style="color:#D4D4D4">(*) </span><span style="color:#569CD6">as</span><span style="color:#D4D4D4"> active_users</span></span>
+<span class="line"><span style="color:#569CD6">FROM</span><span style="color:#D4D4D4"> users</span></span>
+<span class="line"><span style="color:#569CD6">WHERE</span><span style="color:#D4D4D4"> last_login &gt; </span><span style="color:#569CD6">NOW</span><span style="color:#D4D4D4">() - INTERVAL </span><span style="color:#CE9178">&#39;30 days&#39;</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">-- Count notes per user</span></span>
+<span class="line"><span style="color:#569CD6">SELECT</span></span>
+<span class="line"><span style="color:#D4D4D4">    u.email,</span></span>
+<span class="line"><span style="color:#DCDCAA">    COUNT</span><span style="color:#D4D4D4">(n.id) </span><span style="color:#569CD6">as</span><span style="color:#D4D4D4"> note_count</span></span>
+<span class="line"><span style="color:#569CD6">FROM</span><span style="color:#D4D4D4"> users u</span></span>
+<span class="line"><span style="color:#569CD6">LEFT JOIN</span><span style="color:#D4D4D4"> workspaces w </span><span style="color:#569CD6">ON</span><span style="color:#D4D4D4"> u.id = w.owner_id</span></span>
+<span class="line"><span style="color:#569CD6">LEFT JOIN</span><span style="color:#D4D4D4"> notes n </span><span style="color:#569CD6">ON</span><span style="color:#D4D4D4"> w.id = n.workspace_id</span></span>
+<span class="line"><span style="color:#569CD6">WHERE</span><span style="color:#D4D4D4"> n.deleted_at </span><span style="color:#569CD6">IS</span><span style="color:#569CD6"> NULL</span></span>
+<span class="line"><span style="color:#569CD6">GROUP BY</span><span style="color:#D4D4D4"> u.id, u.email</span></span>
+<span class="line"><span style="color:#569CD6">ORDER BY</span><span style="color:#D4D4D4"> note_count </span><span style="color:#569CD6">DESC</span><span style="color:#D4D4D4">;</span></span></code></pre>
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="zero-knowledge-limitations">Zero-Knowledge Limitations</h3>
+<p>Due to the zero-knowledge architecture:</p>
+<ul>
+<li><strong>Admins cannot read user notes</strong>: All content is encrypted with user keys</li>
+<li><strong>Password resets</strong>: Must be handled carefully to maintain encryption</li>
+<li><strong>User data</strong>: Only metadata (email, timestamps) is visible to admins</li>
+</ul>
+<h3 id="recommended-admin-capabilities">Recommended Admin Capabilities</h3>
+<p>Safe admin operations that preserve encryption:</p>
+<ul>
+<li>✅ View user list and metadata</li>
+<li>✅ Monitor login attempts and security events</li>
+<li>✅ Disable/enable user accounts</li>
+<li>✅ View system statistics and usage</li>
+<li>✅ Manage system-wide settings</li>
+<li>❌ Read user notes or content</li>
+<li>❌ Reset passwords without user involvement</li>
+</ul>
+<h2 id="database-administration">Database Administration</h2>
+<h3 id="database-connection">Database Connection</h3>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A9955"># Using PostgreSQL command line</span></span>
+<span class="line"><span style="color:#569CD6">export</span><span style="color:#9CDCFE"> PGPASSWORD</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;your-postgres-password&quot;</span></span>
+<span class="line"><span style="color:#DCDCAA">psql</span><span style="color:#569CD6"> -h</span><span style="color:#CE9178"> localhost</span><span style="color:#569CD6"> -U</span><span style="color:#CE9178"> postgres</span><span style="color:#569CD6"> -d</span><span style="color:#CE9178"> notes</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955"># Or connect via URL</span></span>
+<span class="line"><span style="color:#6A9955"># postgresql://postgres:password@localhost:5432/notes</span></span></code></pre>
+<h3 id="backup-user-data">Backup User Data</h3>
+<p>Before making changes, always backup:</p>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A9955"># Backup users table</span></span>
+<span class="line"><span style="color:#DCDCAA">pg_dump</span><span style="color:#569CD6"> -h</span><span style="color:#CE9178"> localhost</span><span style="color:#569CD6"> -U</span><span style="color:#CE9178"> postgres</span><span style="color:#569CD6"> -d</span><span style="color:#CE9178"> notes</span><span style="color:#569CD6"> -t</span><span style="color:#CE9178"> users</span><span style="color:#D4D4D4"> &gt; </span><span style="color:#CE9178">users_backup.sql</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955"># Full database backup</span></span>
+<span class="line"><span style="color:#DCDCAA">pg_dump</span><span style="color:#569CD6"> -h</span><span style="color:#CE9178"> localhost</span><span style="color:#569CD6"> -U</span><span style="color:#CE9178"> postgres</span><span style="color:#569CD6"> -d</span><span style="color:#CE9178"> notes</span><span style="color:#D4D4D4"> &gt; </span><span style="color:#CE9178">full_backup.sql</span></span></code></pre>
+<h2 id="common-admin-tasks">Common Admin Tasks</h2>
+<h3 id="creating-the-first-admin">Creating the First Admin</h3>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A9955">-- After first user registers, make them admin</span></span>
+<span class="line"><span style="color:#569CD6">UPDATE</span><span style="color:#D4D4D4"> users</span></span>
+<span class="line"><span style="color:#569CD6">SET</span><span style="color:#D4D4D4"> is_admin = true</span></span>
+<span class="line"><span style="color:#569CD6">WHERE</span><span style="color:#D4D4D4"> email = (</span></span>
+<span class="line"><span style="color:#569CD6">    SELECT</span><span style="color:#D4D4D4"> email </span><span style="color:#569CD6">FROM</span><span style="color:#D4D4D4"> users</span></span>
+<span class="line"><span style="color:#569CD6">    ORDER BY</span><span style="color:#D4D4D4"> created_at </span><span style="color:#569CD6">ASC</span></span>
+<span class="line"><span style="color:#569CD6">    LIMIT</span><span style="color:#B5CEA8"> 1</span></span>
+<span class="line"><span style="color:#D4D4D4">);</span></span></code></pre>
+<h3 id="emergency-account-recovery">Emergency Account Recovery</h3>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A9955">-- If admin is locked out, unlock manually</span></span>
+<span class="line"><span style="color:#569CD6">UPDATE</span><span style="color:#D4D4D4"> users</span></span>
+<span class="line"><span style="color:#569CD6">SET</span><span style="color:#D4D4D4"> failed_attempts = </span><span style="color:#B5CEA8">0</span><span style="color:#D4D4D4">,</span></span>
+<span class="line"><span style="color:#D4D4D4">    locked_until = </span><span style="color:#569CD6">NULL</span></span>
+<span class="line"><span style="color:#569CD6">WHERE</span><span style="color:#D4D4D4"> is_admin = true;</span></span></code></pre>
+<h3 id="system-maintenance">System Maintenance</h3>
+<pre class="astro-code dark-plus" style="background-color:#1E1E1E;color:#D4D4D4;overflow-x:auto" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A9955">-- Clean up old deleted notes (after 30 days)</span></span>
+<span class="line"><span style="color:#569CD6">DELETE</span><span style="color:#569CD6"> FROM</span><span style="color:#D4D4D4"> notes</span></span>
+<span class="line"><span style="color:#569CD6">WHERE</span><span style="color:#D4D4D4"> deleted_at </span><span style="color:#569CD6">IS NOT NULL</span></span>
+<span class="line"><span style="color:#569CD6">  AND</span><span style="color:#D4D4D4"> deleted_at &lt; </span><span style="color:#569CD6">NOW</span><span style="color:#D4D4D4">() - INTERVAL </span><span style="color:#CE9178">&#39;30 days&#39;</span><span style="color:#D4D4D4">;</span></span></code></pre>
+<h2 id="monitoring-and-logging">Monitoring and Logging</h2>
+<p>For production admin management:</p>
+<ol>
+<li><strong>Enable PostgreSQL logging</strong> for audit trails</li>
+<li><strong>Monitor authentication failures</strong> for security</li>
+<li><strong>Set up alerts</strong> for suspicious activity</li>
+<li><strong>Regular backups</strong> of user data</li>
+</ol>
+<h2 id="security-notes">Security Notes</h2>
+<ul>
+<li>Admin endpoints require valid JWT and admin role; UI gating is convenience only</li>
+<li>Do not expose <code>ADMIN_USER_IDS</code> in production images</li>
+<li>Manage admin status through database and role assignment flows in production</li>
+<li>All admin operations respect the encryption model and user privacy principles</li>
+</ul>
+<h2 id="contact">Contact</h2>
+<p>For admin-related questions, contact <code>contact@leaflock.app</code>.</p>
