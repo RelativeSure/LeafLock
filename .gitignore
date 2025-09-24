@@ -27,13 +27,13 @@ pnpm-debug.log*
 .idea/
 
 # build output
-dist/
+docs/dist/
 
 # generated types
-.astro/
+docs/.astro/
 
 # dependencies
-node_modules/
+docs/node_modules/
 
 
 
