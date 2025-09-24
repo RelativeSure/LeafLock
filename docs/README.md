@@ -1,75 +1,49 @@
-# AstroJS Documentation Site
+# Starlight Starter Kit: Basics
 
-This directory contains the new AstroJS-based documentation site for LeafLock.
+[![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
 
-## Development
-
-```bash
-# Install dependencies
-pnpm install
-
-# Start development server
-pnpm run dev
-
-# Build for production
-pnpm run build
-
-# Preview production build
-pnpm run preview
+```
+pnpm create astro@latest -- --template starlight
 ```
 
-> **Note**: When running `pnpm install` for the first time, it will regenerate the complete `pnpm-lock.yaml` with all resolved dependencies and integrity hashes.
+> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
 
-## Deployment
+## 🚀 Project Structure
 
-The site is built as a static site and can be deployed to any static hosting service:
+Inside of your Astro + Starlight project, you'll see the following folders and files:
 
-- **Cloudflare Pages**: Use `wrangler.toml` configuration (see `CLOUDFLARE.md` for details)
-- **GitHub Pages**: Deploy the `dist/` folder
-- **Netlify**: Connect to repository and set build command to `pnpm run build` and publish directory to `dist`
-- **Vercel**: Import project and it will auto-detect Astro settings
-- **AWS S3**: Upload `dist/` contents to S3 bucket
+```
+.
+├── public/
+├── src/
+│   ├── assets/
+│   ├── content/
+│   │   └── docs/
+│   └── content.config.ts
+├── astro.config.mjs
+├── package.json
+└── tsconfig.json
+```
 
-### Cloudflare Pages (Recommended)
+Starlight looks for `.md` or `.mdx` files in the `src/content/docs/` directory. Each file is exposed as a route based on its file name.
 
-For Cloudflare Pages deployment:
-1. Connect your GitHub repository to Cloudflare Pages
-2. Set build command: `pnpm run build`
-3. Set build output directory: `dist`
-4. Set root directory: `docs/site`
-5. See `CLOUDFLARE.md` for detailed configuration
+Images can be added to `src/assets/` and embedded in Markdown with a relative link.
 
-## Migration from Hugo
+Static assets, like favicons, can be placed in the `public/` directory.
 
-All content has been migrated from the previous Hugo site:
+## 🧞 Commands
 
-- **✅ All markdown content converted to Astro pages**
-- **✅ Styling preserved from original Hugo theme**
-- **✅ Navigation structure maintained**
-- **✅ SEO metadata preserved**
-- **✅ Category and tag system preserved**
+All commands are run from the root of the project, from a terminal:
 
-## Features
+| Command                   | Action                                           |
+| :------------------------ | :----------------------------------------------- |
+| `pnpm install`             | Installs dependencies                            |
+| `pnpm dev`             | Starts local dev server at `localhost:4321`      |
+| `pnpm build`           | Build your production site to `./dist/`          |
+| `pnpm preview`         | Preview your build locally, before deploying     |
+| `pnpm astro ...`       | Run CLI commands like `astro add`, `astro check` |
+| `pnpm astro -- --help` | Get help using the Astro CLI                     |
 
-- 🚀 **Fast builds** with Astro
-- 📱 **Responsive design** 
-- 🎨 **Custom styling** preserved from Hugo
-- 🔍 **SEO optimized** with meta tags and structured data
-- 📝 **Easy content management** with Astro components
-- 🏗️ **Static generation** for fast loading
+## 👀 Want to learn more?
 
-## Pages Included
-
-- Privacy Policy
-- Terms of Use  
-- GDPR Compliance
-- GDPR Operations Guide
-- Admin Guide
-- Developer Guide
-- Monitoring & Backups
-- Global Compliance
-- License
-
-## Backup
-
-The original Hugo site has been backed up to `../site-hugo-backup/` for reference.
+Check out [Starlight’s docs](https://starlight.astro.build/), read [the Astro documentation](https://docs.astro.build), or jump into the [Astro Discord server](https://astro.build/chat).

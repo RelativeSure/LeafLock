@@ -1,0 +1,56 @@
+---
+title: LeafLock Documentation
+description: Comprehensive documentation for secure, end-to-end encrypted notes with zero-knowledge architecture
+template: splash
+hero:
+  tagline: Secure, encrypted notes with zero-knowledge architecture. Built for developers, by developers.
+  actions:
+    - text: Get Started
+      link: /guides/developer-guide/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/RelativeSure/LeafLock
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Quick Start
+
+LeafLock is a secure notes application with end-to-end encryption, featuring a Go backend with Fiber framework and a React TypeScript frontend. The application uses PostgreSQL for data storage, Redis for session management, and implements zero-knowledge architecture where the server never sees plaintext data.
+
+### Key Features
+
+- **End-to-End Encryption**: All note content is encrypted client-side using XChaCha20-Poly1305
+- **Zero-Knowledge Architecture**: Server never sees plaintext data  
+- **Modern Tech Stack**: Go backend, React frontend, PostgreSQL database
+- **Production Ready**: Docker support, monitoring, and backup capabilities
+
+### Documentation Sections
+
+<CardGrid stagger>
+  <Card title="Getting Started" icon="rocket">
+    Developer guides and setup instructions for getting LeafLock running locally or in production.
+  </Card>
+  <Card title="Administration" icon="setting">
+    Complete guides for system administrators managing LeafLock instances and users.
+  </Card>
+  <Card title="Compliance & Legal" icon="document">
+    Privacy policies, GDPR compliance documentation, and legal information.
+  </Card>
+</CardGrid>
+
+### Technology Stack
+
+- **Backend**: Go 1.23+ with Fiber v2, PostgreSQL (pgx driver), Redis, JWT authentication
+- **Frontend**: React 18, TypeScript, Vite 5, Zustand (state management), TipTap (editor)
+- **Encryption**: XChaCha20-Poly1305 (client-side), Argon2id (password hashing)
+- **Infrastructure**: Docker/Podman, PostgreSQL 15, Redis 7
+
+### Quick Links
+
+- [Developer Guide](/guides/developer-guide/) - Technical setup and development
+- [Admin Guide](/admin/admin-guide/) - System administration
+- [Privacy Policy](/legal/privacy-policy/) - Data protection information
+- [GitHub Repository](https://github.com/RelativeSure/LeafLock) - Source code
