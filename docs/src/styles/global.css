@@ -1,0 +1,622 @@
+@import "tailwindcss";
+
+@theme {
+  /* Custom LeafLock color palette using oklch for wider gamut */
+  --color-leaf-50: oklch(0.982 0.007 160);
+  --color-leaf-100: oklch(0.972 0.011 160);
+  --color-leaf-200: oklch(0.94 0.032 160);
+  --color-leaf-300: oklch(0.884 0.061 159);
+  --color-leaf-400: oklch(0.782 0.081 159);
+  --color-leaf-500: oklch(0.665 0.085 159);
+  --color-leaf-600: oklch(0.541 0.074 158);
+  --color-leaf-700: oklch(0.457 0.063 158);
+  --color-leaf-800: oklch(0.375 0.051 158);
+  --color-leaf-900: oklch(0.307 0.045 158);
+  --color-leaf-950: oklch(0.192 0.032 156);
+  
+  /* Custom font family for monospace */
+  --font-mono: "JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace;
+  
+  /* Custom animations */
+  --animate-fade-in: fade-in 0.5s ease-in-out;
+  --animate-slide-up: slide-up 0.5s ease-out;
+  --animate-glow: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slide-up {
+  0% { 
+    transform: translateY(20px); 
+    opacity: 0; 
+  }
+  100% { 
+    transform: translateY(0); 
+    opacity: 1; 
+  }
+}
+
+@keyframes glow {
+  0% { box-shadow: 0 0 20px oklch(0.665 0.085 159 / 0.3); }
+  100% { box-shadow: 0 0 30px oklch(0.665 0.085 159 / 0.6); }
+}
+
+/* Enhanced CSS variables for LeafLock branding */
+:root {
+  --primary-gradient: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  --hero-gradient: linear-gradient(135deg, #059669 0%, #3b82f6 50%, #8b5cf6 100%);
+  --dark-gradient: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  --leaf-green: #059669;
+  --leaf-light: #10b981;
+  --leaf-dark: #047857;
+  
+  /* Enhanced color system */
+  --color-emerald-50: #ecfdf5;
+  --color-emerald-100: #d1fae5;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+  --color-emerald-700: #047857;
+  --color-blue-50: #eff6ff;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-violet-500: #8b5cf6;
+  --color-violet-600: #7c3aed;
+  
+  /* Typography scale */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
+  --font-size-5xl: 3rem;
+  --font-size-6xl: 3.75rem;
+  
+  /* Spacing scale */
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-5: 1.25rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+  --spacing-10: 2.5rem;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
+  
+  /* Border radius scale */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+  
+  /* Shadow system */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-emerald: 0 10px 15px -3px rgb(16 185 129 / 0.2), 0 4px 6px -4px rgb(16 185 129 / 0.1);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  }
+}
+
+/* Enhanced custom components - Tailwind v4 compatible */
+@layer components {
+  .hero-gradient {
+    background: linear-gradient(135deg, 
+      var(--color-leaf-50) 0%, 
+      oklch(0.972 0.011 200) 25%, 
+      oklch(0.972 0.011 260) 50%, 
+      var(--color-leaf-50) 100%
+    );
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    .hero-gradient {
+      background: linear-gradient(135deg, 
+        oklch(0.15 0.01 240) 0%, 
+        oklch(0.12 0.01 240) 50%, 
+        oklch(0.08 0.01 240) 100%
+      );
+    }
+  }
+  
+  .card-hover {
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    
+    &:hover {
+      transform: scale(1.02) translateY(-4px);
+      box-shadow: 0 25px 50px -12px oklch(var(--color-leaf-500) / 0.2);
+    }
+  }
+  
+  .card-hover-subtle {
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px oklch(var(--color-leaf-500) / 0.1);
+    }
+  }
+  
+  .leaf-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(90deg, var(--color-leaf-600), var(--color-leaf-500));
+    color: white;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px oklch(0 0 0 / 0.1);
+    transition: all 200ms ease;
+    
+    &:hover {
+      background: linear-gradient(90deg, var(--color-leaf-700), var(--color-leaf-600));
+      box-shadow: 0 20px 25px -5px oklch(0 0 0 / 0.1);
+      transform: scale(1.05);
+    }
+    
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+  
+  .leaf-button-secondary {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    background-color: white;
+    color: var(--color-leaf-600);
+    font-weight: 600;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px oklch(0 0 0 / 0.1);
+    border: 1px solid var(--color-leaf-200);
+    transition: all 200ms ease;
+    
+    &:hover {
+      background-color: var(--color-leaf-50);
+      box-shadow: 0 20px 25px -5px oklch(0 0 0 / 0.1);
+      transform: scale(1.05);
+    }
+    
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    .leaf-button-secondary {
+      background-color: oklch(0.15 0.01 240);
+      color: var(--color-leaf-400);
+      border-color: var(--color-leaf-700);
+      
+      &:hover {
+        background-color: oklch(var(--color-leaf-900) / 0.2);
+      }
+    }
+  }
+  
+  .leaf-button-outline {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    border: 2px solid var(--color-leaf-600);
+    color: var(--color-leaf-600);
+    font-weight: 600;
+    border-radius: 0.5rem;
+    transition: all 200ms ease;
+    background-color: transparent;
+    
+    &:hover {
+      background-color: var(--color-leaf-600);
+      color: white;
+      box-shadow: 0 10px 15px -3px oklch(0 0 0 / 0.1);
+    }
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    .leaf-button-outline {
+      color: var(--color-leaf-400);
+      border-color: var(--color-leaf-400);
+      
+      &:hover {
+        background-color: var(--color-leaf-400);
+        color: oklch(0.08 0.01 240);
+      }
+    }
+  }
+  
+  .code-block {
+    background-color: oklch(0.15 0.01 240);
+    color: oklch(0.95 0.01 240);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    border: 1px solid oklch(0.25 0.01 240);
+  }
+  
+  .tag-modern {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    background: linear-gradient(90deg, 
+      var(--color-leaf-100), 
+      oklch(0.972 0.011 200)
+    );
+    color: var(--color-leaf-800);
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 9999px;
+    border: 1px solid var(--color-leaf-200);
+    transition: all 200ms ease;
+    
+    &:hover {
+      transform: scale(1.05);
+    }
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    .tag-modern {
+      background: linear-gradient(90deg, 
+        oklch(var(--color-leaf-900) / 0.8), 
+        oklch(0.25 0.02 200)
+      );
+      color: var(--color-leaf-200);
+      border-color: var(--color-leaf-700);
+    }
+  }
+  
+  .glass-card {
+    background-color: oklch(1 0 0 / 0.8);
+    backdrop-filter: blur(24px);
+    border: 1px solid oklch(1 0 0 / 0.2);
+    box-shadow: 0 20px 25px -5px oklch(0 0 0 / 0.1);
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    .glass-card {
+      background-color: oklch(0.15 0.01 240 / 0.8);
+      border-color: oklch(0.25 0.01 240 / 0.5);
+    }
+  }
+  
+  .gradient-text {
+    background: linear-gradient(90deg, var(--color-leaf-600), oklch(0.6 0.12 240), oklch(0.65 0.15 280));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  .gradient-text-emerald {
+    background: linear-gradient(90deg, var(--color-leaf-600), var(--color-leaf-500));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+/* Base styling improvements */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: white;
+  color: oklch(0.15 0.01 240);
+  transition: color 200ms ease, background-color 200ms ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: oklch(0.08 0.01 240);
+    color: oklch(0.95 0.01 240);
+  }
+}
+
+/* Modern animations and keyframes */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(-25%);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgb(16 185 129 / 0.5), 0 0 20px rgb(16 185 129 / 0.2);
+  }
+  50% {
+    box-shadow: 0 0 20px rgb(16 185 129 / 0.8), 0 0 40px rgb(16 185 129 / 0.4);
+  }
+}
+
+/* Animation utility classes */
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.6s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.6s ease-out;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  background-size: 200px 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Stagger animation delays */
+.animate-delay-100 { animation-delay: 0.1s; }
+.animate-delay-200 { animation-delay: 0.2s; }
+.animate-delay-300 { animation-delay: 0.3s; }
+.animate-delay-400 { animation-delay: 0.4s; }
+.animate-delay-500 { animation-delay: 0.5s; }
+
+/* Typography improvements */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  color: oklch(0.15 0.01 240);
+}
+
+@media (prefers-color-scheme: dark) {
+  h1, h2, h3, h4, h5, h6 {
+    color: white;
+  }
+}
+
+h1 {
+  font-size: clamp(2.25rem, 4vw, 4rem);
+  margin-bottom: 1.5rem;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+h2 {
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid oklch(0.9 0.01 240);
+}
+
+@media (prefers-color-scheme: dark) {
+  h2 {
+    border-bottom-color: oklch(0.3 0.01 240);
+  }
+}
+
+h3 {
+  font-size: clamp(1.25rem, 2.5vw, 1.875rem);
+  margin-bottom: 0.75rem;
+}
+
+/* Link styling */
+a {
+  color: var(--color-leaf-600);
+  transition: color 200ms ease;
+}
+
+a:hover {
+  color: var(--color-leaf-700);
+}
+
+@media (prefers-color-scheme: dark) {
+  a {
+    color: var(--color-leaf-400);
+  }
+  
+  a:hover {
+    color: var(--color-leaf-300);
+  }
+}
+
+/* Code styling */
+code {
+  background-color: oklch(0.95 0.01 240);
+  color: var(--color-leaf-600);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  font-family: var(--font-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  code {
+    background-color: oklch(0.2 0.01 240);
+    color: var(--color-leaf-400);
+  }
+}
+
+pre {
+  background-color: oklch(0.15 0.01 240);
+  color: oklch(0.95 0.01 240);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  border: 1px solid oklch(0.25 0.01 240);
+  margin: 1rem 0;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
+::-webkit-scrollbar-track {
+  background-color: oklch(0.95 0.01 240);
+}
+
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-track {
+    background-color: oklch(0.2 0.01 240);
+  }
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-leaf-500);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-leaf-600);
+}
+
+/* Enhanced accessibility and interaction improvements */
+*:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+*:focus-visible {
+  outline: 2px solid rgb(16 185 129);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Better text selection styling */
+::selection {
+  background: rgb(16 185 129 / 0.3);
+  color: rgb(6 78 59);
+}
+
+::-moz-selection {
+  background: rgb(16 185 129 / 0.3);
+  color: rgb(6 78 59);
+}
+
+/* Responsive image improvements */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Better button focus states */
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid rgb(16 185 129);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Enhanced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Dark mode improvements */
+@media (prefers-color-scheme: dark) {
+  ::selection {
+    background: rgb(16 185 129 / 0.4);
+    color: rgb(187 247 208);
+  }
+  
+  ::-moz-selection {
+    background: rgb(16 185 129 / 0.4);
+    color: rgb(187 247 208);
+  }
+}
