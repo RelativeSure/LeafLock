@@ -1,9 +1,0 @@
-# Redirects for legacy URLs
-/docs/* /pages/:splat 301
-
-# Redirect old Hugo-style URLs to new structure
-/privacy/ /pages/privacy-policy/ 301
-/terms/ /pages/terms-of-use/ 301
-/gdpr/ /pages/gdpr-compliance/ 301
-/admin/ /pages/admin-guide/ 301
-/developer/ /pages/developer-guide/ 301

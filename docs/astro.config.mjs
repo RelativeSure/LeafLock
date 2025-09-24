@@ -1,22 +1,31 @@
+// @ts-check
 import { defineConfig } from 'astro/config';
-import tailwindcss from '@tailwindcss/vite';
-import mdx from '@astrojs/mdx';
+import starlight from '@astrojs/starlight';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://docs.leaflock.app/',
-  base: '/',
-  integrations: [mdx()],
-  vite: {
-    plugins: [tailwindcss()],
-  },
-  output: 'static',
-  markdown: {
-    shikiConfig: {
-      theme: 'dark-plus',
-    },
-  },
-  build: {
-    assets: 'assets'
-  }
+	integrations: [
+		starlight({
+			title: 'LeafLock',
+			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/RelativeSure/LeafLock' }],
+			sidebar: [
+				{
+					label: 'Admin',
+					autogenerate: { directory: 'admin' },
+				},
+				{
+					label: 'Guides',
+					autogenerate: { directory: 'guides' },
+				},
+				{
+					label: 'Legal',
+					autogenerate: { directory: 'legal' },
+				},
+				{
+					label: 'Reference',
+					autogenerate: { directory: 'reference' },
+				},
+			],
+		}),
+	],
 });
