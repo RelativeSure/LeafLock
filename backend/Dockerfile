@@ -32,8 +32,8 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
 # Final stage - minimal runtime with shell support for health checks
 FROM alpine:3.22@sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1
 
-# Install runtime dependencies and curl so Docker health checks can probe HTTP
-RUN apk --no-cache add ca-certificates tzdata curl
+# Install runtime dependencies for health checks and HTTP probing
+RUN apk --no-cache add ca-certificates tzdata curl wget netcat-openbsd
 
 # Copy binaries from builder with explicit execute permissions
 COPY --from=builder --chmod=0755 /app/main /app/main
@@ -51,10 +51,6 @@ USER app
 
 # Expose port
 EXPOSE 8080
-
-# Health check fallback for Docker environments
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8080/api/v1/health/live || exit 1
 
 # Explicit entrypoint wrapper handles env defaults then execs main
 ENV BACKEND_BINARY=/app/main
