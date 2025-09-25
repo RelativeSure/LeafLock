@@ -123,10 +123,13 @@ services:
         condition: service_healthy
     networks:
       - leaflock-network
-    # Disable Docker Compose health checks - let Coolify handle health checking
-    # Coolify has its own health check mechanism that's more reliable for deployments
+    # Health check for container orchestration - using fast liveness endpoint
     healthcheck:
-      disable: true
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider --timeout=3 http://localhost:8080/api/v1/health/live || exit 1"]
+      interval: 5s
+      timeout: 3s
+      start_period: 15s
+      retries: 3
     # Resource limits for backend
     deploy:
       resources:

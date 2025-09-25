@@ -113,7 +113,8 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     last_login TIMESTAMPTZ,
     failed_attempts INT DEFAULT 0,
-    locked_until TIMESTAMPTZ
+    locked_until TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ
 );
 
 -- Ensure admin flag exists
@@ -4843,7 +4844,7 @@ func (h *SearchHandler) SearchNotes(c *fiber.Ctx) error {
 	query := `
 		SELECT id, title_encrypted, content_encrypted, created_at, updated_at
 		FROM notes
-		WHERE user_id = $1 AND deleted_at IS NULL
+		WHERE created_by = $1 AND deleted_at IS NULL
 		ORDER BY updated_at DESC
 		LIMIT $2`
 
