@@ -4,10 +4,10 @@
 [![Build Containers](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/build-containers.yml?branch=main&label=build%20containers)](https://github.com/RelativeSure/LeafLock/actions/workflows/build-containers.yml)
 [![E2E Verify](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/e2e-verify.yml?branch=main&label=e2e%20verify)](https://github.com/RelativeSure/LeafLock/actions/workflows/e2e-verify.yml)
 [![Docs](https://img.shields.io/badge/docs-reference-blue)](./docs)
-[![Go Version](https://img.shields.io/badge/go-1.24-00ADD8?logo=go)](https://go.dev/dl/)
+[![Go Version](https://img.shields.io/badge/go-1.25-00ADD8?logo=go)](https://go.dev/dl/)
 [![pnpm](https://img.shields.io/badge/pnpm-10.x-ffd831?logo=pnpm)](https://pnpm.io/)
 [![Coverage](https://img.shields.io/badge/coverage-72%25-brightgreen)](./backend)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm_Noncommercial-blue.svg)](https://polyformproject.org/licenses/noncommercial/1.0.0)
 
 LeafLock is a privacy-first notes application with end-to-end encryption, real-time collaboration, and a Go backend. Everything can be self-hosted and kept under your control.
 
@@ -89,7 +89,7 @@ To disable automatic admin creation entirely, set `ENABLE_DEFAULT_ADMIN=false` i
 
 ⚠️ **SECURITY WARNING**: Change the default password immediately after your first login! These credentials are publicly documented and should never be used in production.
 
-For user management instructions, see [USER_MANAGEMENT.md](./USER_MANAGEMENT.md).
+For user management instructions, see [docs/development/user-management.md](./docs/src/content/docs/development/user-management.md).
 
 ## Project Structure
 
@@ -161,4 +161,4 @@ We welcome contributions of any size. Review `CONTRIBUTING.md` and run the provi
 
 ## License
 
-LeafLock is released under the MIT License. See `LICENSE` for details.
+LeafLock is released under the PolyForm Noncommercial License 1.0.0. See `LICENSE` for details.

@@ -451,4 +451,4 @@ For issues and questions:
 
 ## License
 
-This Helm chart is licensed under the MIT License. See LICENSE file for details.
+This Helm chart is licensed under the PolyForm Noncommercial License 1.0.0. See LICENSE file for details.

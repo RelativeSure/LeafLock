@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       command:
-        description: "leaflock.sh command (e.g., icons, test, docker:build)"
+        description: "scripts/leaflock.sh command (e.g., icons, test, docker:build)"
         required: true
         default: "help"
 
@@ -15,8 +15,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Run leaflock.sh
+      - name: Run scripts/leaflock.sh
         run: |
-          chmod +x ./leaflock.sh || true
-          echo "Running: ./leaflock.sh ${{ github.event.inputs.command }}"
-          ./leaflock.sh ${{ github.event.inputs.command }}
+          chmod +x ./scripts/leaflock.sh || true
+          echo "Running: ./scripts/leaflock.sh ${{ github.event.inputs.command }}"
+          ./scripts/leaflock.sh ${{ github.event.inputs.command }}

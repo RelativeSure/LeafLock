@@ -69,7 +69,7 @@ linters-settings:
         YEAR: "20\\d\\d"
     template: |-
       // Copyright (c) {{ YEAR }} {{ COMPANY }}
-      // SPDX-License-Identifier: MIT
+      // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
   # Line length
   lll:
