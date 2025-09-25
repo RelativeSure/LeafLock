@@ -1,4 +1,4 @@
-FROM golang:1.25-alpine@sha256:b6ed3fd0452c0e9bcdef5597f29cc1418f61672e9d3a2f55bf02e7222c014abd AS builder
+FROM golang:1.24-alpine AS builder
 
 # Add security updates and build tools
 RUN apk --no-cache add git ca-certificates tzdata
@@ -52,7 +52,9 @@ USER app
 # Expose port
 EXPOSE 8080
 
-# Health check will be handled by docker-compose
+# Health check fallback for Docker environments
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8080/api/v1/health/live || exit 1
 
 # Explicit entrypoint wrapper handles env defaults then execs main
 ENV BACKEND_BINARY=/app/main

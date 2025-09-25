@@ -116,13 +116,13 @@ services:
         condition: service_healthy
     networks:
       - leaflock-network
-    # Progressive health checks - start aggressive, then back off
+    # Progressive health checks - more generous timing for Coolify deployment
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/v1/health/live || exit 1"]
-      interval: 5s
-      timeout: 3s
-      start_period: 15s
-      retries: 4
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/v1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      start_period: 45s
+      retries: 6
     # Resource limits for backend
     deploy:
       resources:
