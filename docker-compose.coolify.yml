@@ -40,7 +40,7 @@ services:
     networks:
       - leaflock-network
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"${REDIS_PASSWORD}\" --no-auth-warning ping | grep -q PONG"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?Please set REDIS_PASSWORD in Coolify environment variables}", "--no-auth-warning", "PING"]
       interval: 10s
       timeout: 5s
       retries: 3

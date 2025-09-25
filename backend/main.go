@@ -7349,8 +7349,12 @@ func main() {
 		var args []any
 		add := func(clause string, val any) { conds = append(conds, clause); args = append(args, val) }
 
+		// Email search disabled - emails are encrypted
+		// Searching encrypted emails would require decryption which is not performant
+		// Future enhancement: implement encrypted search if needed
 		if q != "" {
-			add("LOWER(email) LIKE $%d", "%"+strings.ToLower(q)+"%")
+			// Skip email search for encrypted emails
+			// Could add other searchable fields here if implemented
 		}
 		if role != "" {
 			add("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id=r.id WHERE ur.user_id = users.id AND r.name = $%d)", role)
