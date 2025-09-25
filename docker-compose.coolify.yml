@@ -144,8 +144,8 @@ services:
       dockerfile: Dockerfile
       args:
         # Build-time environment variables for frontend API connection
-        # Use your actual domain instead of localhost for Coolify deployment
-        VITE_API_URL: ${VITE_API_URL:-https://leaflock.app/api/v1}
+        # Use your actual domain without /api/v1 suffix (added by frontend)
+        VITE_API_URL: ${VITE_API_URL:-https://leaflock.app}
         VITE_ENABLE_ADMIN_PANEL: ${VITE_ENABLE_ADMIN_PANEL:-false}
     container_name: leaflock-frontend
     environment:
