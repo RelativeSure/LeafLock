@@ -13,7 +13,10 @@
 .gitignore
 README.md
 *.md
+
+# Keep docs/openapi.json for Go embed but exclude other docs
 docs/
+!docs/openapi.json
 
 # IDE and editor files
 .vscode/
