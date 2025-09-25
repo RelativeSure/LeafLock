@@ -1603,7 +1603,6 @@ func SetupDatabase(dbURL string) (*pgxpool.Pool, error) {
 
 	// Optimize connection parameters for performance
 	config.ConnConfig.ConnectTimeout = 5 * time.Second  // Faster timeout for startup
-	config.ConnConfig.RuntimeParams["shared_preload_libraries"] = ""
 	config.ConnConfig.RuntimeParams["jit"] = "off" // Disable JIT for faster startup
 	
 	// Configure faster health check query
