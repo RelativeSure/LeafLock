@@ -8,7 +8,7 @@
 # only use secrets as runtime environment variables, not during the build phase.
 # Warnings like "SecretsUsedInArgOrEnv: ARG DEFAULT_ADMIN_PASSWORD" can be safely ignored.
 
-version: '3.8'
+# version: '3.8' - Removed to avoid obsolete attribute warning
 
 services:
   # PostgreSQL Database
@@ -123,13 +123,10 @@ services:
         condition: service_healthy
     networks:
       - leaflock-network
-    # Progressive health checks - more generous timing for Coolify deployment
+    # Disable Docker Compose health checks - let Coolify handle health checking
+    # Coolify has its own health check mechanism that's more reliable for deployments
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 8080 || wget --spider -q --timeout=3 http://localhost:8080/api/v1/health || exit 1"]
-      interval: 5s
-      timeout: 5s
-      start_period: 60s
-      retries: 10
+      disable: true
     # Resource limits for backend
     deploy:
       resources:
