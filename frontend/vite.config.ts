@@ -5,7 +5,14 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 export default defineConfig({
   plugins: [
-    react(),
+    react({
+      // Enable fast refresh for better dev experience
+      fastRefresh: true,
+      // Optimize babel for faster builds
+      babel: {
+        compact: process.env.NODE_ENV === 'production',
+      },
+    }),
     nodePolyfills({
       globals: {
         Buffer: true,
@@ -23,6 +30,40 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['buffer', 'crypto-browserify', 'process'],
+    // Force optimization of frequently used dependencies
+    force: process.env.NODE_ENV === 'development',
+  },
+  build: {
+    // Optimize build performance and bundle size
+    target: 'esnext',
+    minify: 'terser',
+    cssCodeSplit: true,
+    sourcemap: false, // Disable sourcemaps for production for faster builds
+    rollupOptions: {
+      output: {
+        // Enable code splitting for better caching
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          crypto: ['libsodium-wrappers', 'crypto-browserify'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-label', '@radix-ui/react-select'],
+          editor: ['@tiptap/react', '@tiptap/starter-kit', '@tiptap/extension-table'],
+          utils: ['zustand', '@tanstack/react-query', 'clsx', 'tailwind-merge'],
+        },
+        // Optimize chunk loading
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js',
+        assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
+      },
+    },
+    // Increase chunk size warning threshold
+    chunkSizeWarningLimit: 1000,
+    // Optimize terser for faster builds
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
   },
   server: {
     port: 3000,

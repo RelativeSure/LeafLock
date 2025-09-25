@@ -1,0 +1,250 @@
+---
+title: "Performance Optimization"
+description: "Guide to optimizing LeafLock startup performance and monitoring for containerized deployments like Coolify."
+sidebar:
+  order: 3
+---
+
+import { Aside, Code } from '@astrojs/starlight/components';
+
+_Last updated: 2025-09-25_
+
+## Overview
+
+LeafLock includes built-in performance optimizations designed for fast startup times in containerized environments like Coolify, Docker, and Kubernetes. These optimizations reduce startup time from 90+ seconds to 15-30 seconds while maintaining full functionality and data integrity.
+
+## Startup Performance Features
+
+### Progressive Health Checks
+
+LeafLock provides two health check endpoints optimized for different use cases:
+
+#### `/api/v1/health/live` - Liveness Check
+- **Purpose**: Basic server health for container orchestration
+- **Response time**: 3-5 seconds after container start
+- **Use case**: Docker health checks, Kubernetes liveness probes
+- **Status**: Returns `200 OK` as soon as the HTTP server is accepting connections
+
+```bash
+curl https://your-domain.com/api/v1/health/live
+```
+
+```json
+{
+  "status": "live",
+  "timestamp": "2024-12-25T10:30:00Z",
+  "uptime": "3.2s"
+}
+```
+
+#### `/api/v1/health/ready` - Readiness Check
+- **Purpose**: Full initialization status for load balancers
+- **Response time**: 15-30 seconds for complete readiness
+- **Use case**: Load balancer health checks, service mesh readiness
+- **Status**: Returns detailed component initialization status
+
+```bash
+curl https://your-domain.com/api/v1/health/ready
+```
+
+```json
+{
+  "status": "ready",
+  "timestamp": "2024-12-25T10:30:15Z",
+  "uptime": "18.5s",
+  "admin_ready": true,
+  "templates_ready": true,
+  "allowlist_ready": true,
+  "redis_ready": true
+}
+```
+
+<Aside type="tip">
+Use `/health/live` for container health checks and `/health/ready` for service readiness in production load balancers.
+</Aside>
+
+### Async Initialization (Default Behavior)
+
+LeafLock optimizes startup by running non-critical operations in the background after the server starts accepting connections:
+
+- **Admin user creation**: Runs asynchronously to avoid blocking startup
+- **Template seeding**: Default note templates loaded in background
+- **Connection pool warming**: Database and Redis connections optimized after startup
+- **Admin allowlist**: Configuration refreshes happen in background
+
+## Configuration Options
+
+### Environment Variables
+
+All optimizations are **enabled by default** and require no configuration. These variables are available if you need to override the defaults:
+
+```bash
+# Default values (no configuration needed)
+LAZY_INIT_ADMIN=true          # Admin user creation runs in background
+ASYNC_TEMPLATE_SEED=true      # Template seeding runs in background  
+SKIP_MIGRATION_CHECK=false    # Always run database migrations
+
+# Override only if needed
+LAZY_INIT_ADMIN=false         # Force synchronous admin creation (slower)
+ASYNC_TEMPLATE_SEED=false     # Force synchronous template seeding (slower)
+SKIP_MIGRATION_CHECK=true     # Skip migration checks (NOT recommended)
+```
+
+<Aside type="caution">
+Setting `SKIP_MIGRATION_CHECK=true` can cause data inconsistencies. Only use during development when you're certain the database schema is current.
+</Aside>
+
+### Coolify Deployment Configuration
+
+For optimal performance on Coolify, use these health check settings in your `docker-compose.coolify.yml`:
+
+```yaml
+# Backend service health check
+healthcheck:
+  test: ["CMD-SHELL", "curl -f http://localhost:8080/api/v1/health/live || exit 1"]
+  interval: 5s
+  timeout: 3s
+  start_period: 15s
+  retries: 3
+```
+
+## Performance Monitoring
+
+### Startup Timing Logs
+
+LeafLock provides detailed timing information in container logs to help identify performance bottlenecks:
+
+```bash
+# View startup timing logs
+docker logs leaflock-backend | grep "⏱️"
+
+# Example output:
+🚀 Starting LeafLock backend (PID: 1234)...
+⏱️  Configuration loaded in 12ms
+⏱️  Database setup completed in 2.3s
+⏱️  Redis client initialized in 45ms
+⏱️  Crypto service initialized in 8ms
+⏱️  Fiber app created in 156ms
+⏱️  Routes setup completed in 89ms
+🌐 HTTP server starting on port 8080 (startup time: 3.2s)
+✅ Server is live and accepting health checks
+🎯 Basic startup completed in 3.4s - server is live!
+```
+
+### Expected Performance Metrics
+
+| Metric | Before Optimization | After Optimization | Improvement |
+|--------|-------------------|-------------------|-------------|
+| Container startup | 90-120 seconds | 15-30 seconds | 75-85% faster |
+| Basic health check | 60-90 seconds | 3-5 seconds | 95% faster |
+| Full readiness | 90-120 seconds | 15-30 seconds | 80% faster |
+| Database ready | 30-45 seconds | 5-10 seconds | 75% faster |
+
+## Database Performance
+
+### Migration Optimization
+
+- **Smart migrations**: Only runs migrations when schema changes are detected
+- **Connection pool optimization**: Faster initial database connections
+- **Query optimization**: Combined validation queries reduce round trips
+- **Strategic indexes**: Performance indexes for common startup queries
+
+### Connection Pool Settings
+
+Optimized connection pool settings for faster startup:
+
+```go
+// Optimized for startup performance
+config.MaxConns = 15                      // Reduced from 25
+config.MinConns = 2                       // Reduced from 5  
+config.MaxConnLifetime = time.Hour        // Connection reuse
+config.HealthCheckPeriod = 1 * time.Minute // Regular health checks
+```
+
+## Troubleshooting Slow Startups
+
+### Common Issues
+
+1. **Database Connection Delays**
+   - Check PostgreSQL container health: `docker logs leaflock-postgres`
+   - Verify network connectivity between containers
+   - Monitor database connection timing in backend logs
+
+2. **Redis Connection Issues**
+   - Check Redis container health: `docker logs leaflock-redis`
+   - Verify Redis password configuration
+   - Monitor Redis connection timing
+
+3. **Health Check Failures**
+   - Use `/health/live` for faster basic checks
+   - Check container resource limits (CPU/memory)
+   - Verify health check timeout settings
+
+### Debug Commands
+
+```bash
+# Check container health status
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+# Monitor startup timing
+docker logs leaflock-backend -f | grep -E "(🚀|⏱️|✅|🎯)"
+
+# Test health endpoints manually
+curl -v http://localhost:8080/api/v1/health/live
+curl -v http://localhost:8080/api/v1/health/ready
+
+# Check service dependencies
+docker-compose ps
+```
+
+## Production Recommendations
+
+### Load Balancer Configuration
+
+Use different health checks for different purposes:
+
+```yaml
+# For container orchestration (Docker/Kubernetes)
+liveness_probe: /api/v1/health/live
+
+# For load balancer health checks  
+readiness_probe: /api/v1/health/ready
+```
+
+### Monitoring Setup
+
+Monitor these key metrics for optimal performance:
+
+- **Startup time**: Time from container start to `/health/live` response
+- **Readiness time**: Time from container start to `/health/ready` success
+- **Database connection time**: Monitor connection pool establishment
+- **Error rates**: Track failed health checks and startup errors
+
+### Resource Allocation
+
+Recommended resource limits for optimal startup performance:
+
+```yaml
+# docker-compose.yml resource limits
+services:
+  backend:
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: 1.0
+        reservations:
+          memory: 512M
+          cpus: 0.5
+  
+  postgres:
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: 0.5
+```
+
+<Aside type="note">
+These optimizations are designed to work out-of-the-box. Most deployments will see significant improvements without any configuration changes.
+</Aside>

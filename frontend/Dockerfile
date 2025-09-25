@@ -24,14 +24,13 @@ COPY . .
 # Build the application
 RUN pnpm run build
 
-# Final stage - optimized nginx
+# Final stage - optimized nginx with faster startup
 FROM nginx:1.29-alpine@sha256:42a516af16b852e33b7682d5ef8acbd5d13fe08fecadc7ed98605ba5e3b26ab8
 
-# Install security updates
-RUN apk --no-cache add ca-certificates
-
-# Remove default nginx website
-RUN rm -rf /usr/share/nginx/html/*
+# Install security updates and curl for better health checks (smaller than wget)
+RUN apk --no-cache add ca-certificates curl && \
+    rm -rf /usr/share/nginx/html/* && \
+    rm -rf /var/cache/apk/*
 
 # Copy custom nginx config
 # Copy nginx template; resolve PORT at startup
@@ -43,13 +42,12 @@ COPY --chmod=0755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 # Copy built application
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Create non-root user for nginx
+# Create non-root user and set permissions in one layer for faster startup
 RUN addgroup -g 1001 -S nginx-user && \
-    adduser -S -D -H -u 1001 -h /var/cache/nginx -s /sbin/nologin -G nginx-user -g nginx-user nginx-user
-
-# Set proper permissions
-RUN chown -R nginx-user:nginx-user /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx/conf.d
-RUN touch /var/run/nginx.pid && chown -R nginx-user:nginx-user /var/run/nginx.pid
+    adduser -S -D -H -u 1001 -h /var/cache/nginx -s /sbin/nologin -G nginx-user -g nginx-user nginx-user && \
+    chown -R nginx-user:nginx-user /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx/conf.d && \
+    touch /var/run/nginx.pid && \
+    chown nginx-user:nginx-user /var/run/nginx.pid
 
 # Use non-root user for runtime
 USER nginx-user
@@ -61,9 +59,9 @@ ENV PORT=80
 # Document the listening port for platforms that read EXPOSE
 EXPOSE 80
 
-# Health check (uses resolved PORT)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/ || exit 1
+# Optimized health check - faster startup and response using curl
+HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f --max-time 2 --silent http://localhost:${PORT}/health || exit 1
 
 # Explicit entrypoint to generate config then start nginx
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

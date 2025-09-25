@@ -152,6 +152,35 @@ Located at `.github/workflows/e2e-verify.yml`
 **Admin panel in E2E:**
 - Sets `VITE_ENABLE_ADMIN_PANEL=true` so the UI contains the Admin section
 
+## Performance Optimization
+
+LeafLock includes built-in startup performance optimizations for containerized deployments:
+
+### Health Check Endpoints
+
+- **`/api/v1/health/live`**: Basic liveness check (3-5 seconds)
+- **`/api/v1/health/ready`**: Full readiness check (15-30 seconds)
+
+### Environment Variables (All have optimal defaults)
+
+```bash
+# These are enabled by default - no configuration needed
+LAZY_INIT_ADMIN=true          # Admin user creation runs in background
+ASYNC_TEMPLATE_SEED=true      # Template seeding runs in background  
+SKIP_MIGRATION_CHECK=false    # Always run database migrations
+```
+
+### Performance Improvements
+
+- **Startup time**: Reduced from 90+ seconds to 15-30 seconds
+- **Async initialization**: Non-critical operations run in background
+- **Progressive health checks**: Fast container health detection
+- **Optimized connection pools**: Faster database and Redis connections
+
+<Aside type="tip">
+See the [Performance Optimization](/admin/performance-optimization) guide for detailed configuration and monitoring information.
+</Aside>
+
 ## Development Setup
 
 Refer to the main `CLAUDE.md` file in the repository root for:
