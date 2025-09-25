@@ -126,6 +126,61 @@ cd frontend && pnpm run build
 ### Database Operations
 The application uses PostgreSQL with encrypted fields. Database migrations and schema are handled within the Go backend code.
 
+## Startup Performance Optimization
+
+### Fast Startup Configuration
+LeafLock is optimized for fast startup times on containerized deployments like Coolify. The application includes several performance optimizations that are **enabled by default**:
+
+#### **Progressive Health Checks**
+- **`/api/v1/health/live`**: Basic server health (responds in 3-5 seconds)
+- **`/api/v1/health/ready`**: Full initialization status (responds in 15-30 seconds)
+
+#### **Async Initialization (Default: Enabled)**
+By default, non-critical operations run in the background after the server starts accepting connections:
+- **Admin user creation**: Runs asynchronously to avoid blocking startup
+- **Template seeding**: Background operation for default note templates
+- **Connection pool warming**: Database and Redis connections pre-warm in background
+
+#### **Startup Optimization Environment Variables**
+```bash
+# These are the defaults - no configuration needed
+LAZY_INIT_ADMIN=true          # Admin user creation runs in background (default: true)
+ASYNC_TEMPLATE_SEED=true      # Template seeding runs in background (default: true)
+SKIP_MIGRATION_CHECK=false    # Always run database migrations (default: false)
+
+# Only set these if you want to override the defaults:
+LAZY_INIT_ADMIN=false         # Force synchronous admin creation (slower startup)
+ASYNC_TEMPLATE_SEED=false     # Force synchronous template seeding (slower startup)
+SKIP_MIGRATION_CHECK=true     # Skip migration checks (NOT recommended)
+```
+
+#### **Expected Startup Performance**
+- **Container startup**: 15-30 seconds (down from 90+ seconds)
+- **Basic health check**: 3-5 seconds (`/health/live`)
+- **Full readiness**: 15-30 seconds (`/health/ready`)
+- **Database ready**: 5-10 seconds
+- **All services operational**: 25-30 seconds
+
+#### **Health Check Endpoints**
+```bash
+# Quick liveness check (for container orchestration)
+curl https://your-domain.com/api/v1/health/live
+
+# Full readiness check (for load balancers)
+curl https://your-domain.com/api/v1/health/ready
+
+# Example ready response during initialization
+{
+  "status": "initializing",
+  "timestamp": "2024-12-25T10:30:00Z",
+  "uptime": "15s",
+  "admin_ready": false,
+  "templates_ready": true,
+  "allowlist_ready": true,
+  "redis_ready": true
+}
+```
+
 ## Admin User Management
 
 ### Default Admin User
@@ -166,3 +221,4 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 - **Validation**: Comprehensive password complexity and email format validation
 - **Logging**: Detailed admin user creation and login logging for debugging
 - **Error Handling**: Graceful handling of encryption key mismatches and database issues
+- When modifying the docker compose file remember the coolify docker compose
