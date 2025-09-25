@@ -1,4 +1,5 @@
 import path from 'path';
+import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
@@ -6,8 +7,6 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 export default defineConfig({
   plugins: [
     react({
-      // Enable fast refresh for better dev experience
-      fastRefresh: true,
       // Optimize babel for faster builds
       babel: {
         compact: process.env.NODE_ENV === 'production',
@@ -24,7 +23,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(path.dirname(fileURLToPath(import.meta.url)), './src'),
       crypto: 'crypto-browserify',
     },
   },
@@ -36,7 +35,7 @@ export default defineConfig({
   build: {
     // Optimize build performance and bundle size
     target: 'esnext',
-    minify: 'terser',
+    minify: 'esbuild', // Use esbuild instead of terser (faster and built-in)
     cssCodeSplit: true,
     sourcemap: false, // Disable sourcemaps for production for faster builds
     rollupOptions: {
@@ -57,12 +56,9 @@ export default defineConfig({
     },
     // Increase chunk size warning threshold
     chunkSizeWarningLimit: 1000,
-    // Optimize terser for faster builds
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
+    // ESBuild options for production optimization
+    esbuild: {
+      drop: ['console', 'debugger'],
     },
   },
   server: {

@@ -4,10 +4,13 @@ FROM node:22-alpine@sha256:d2166de198f26e17e5a442f537754dd616ab069c47cc57b889310
 RUN apk --no-cache add git
 
 WORKDIR /app
-ARG VITE_API_URL
-ARG VITE_ENABLE_ADMIN_PANEL
+
+# Build arguments with sensible defaults
+ARG VITE_API_URL=http://localhost:8080
+ARG VITE_ENABLE_ADMIN_PANEL=false
 ENV VITE_API_URL=$VITE_API_URL \
-    VITE_ENABLE_ADMIN_PANEL=$VITE_ENABLE_ADMIN_PANEL
+    VITE_ENABLE_ADMIN_PANEL=$VITE_ENABLE_ADMIN_PANEL \
+    NODE_ENV=production
 
 # Install pnpm
 RUN npm install -g pnpm@10.15.1
@@ -16,13 +19,32 @@ RUN npm install -g pnpm@10.15.1
 COPY package.json pnpm-lock.yaml ./
 
 # Install dependencies with frozen lockfile (including dev dependencies for build)
-RUN pnpm install --frozen-lockfile
+RUN echo "Installing dependencies..." && \
+    pnpm install --frozen-lockfile && \
+    echo "Dependencies installed successfully"
 
-# Copy source code
+# Copy source code (excluding files in .dockerignore)
 COPY . .
 
-# Build the application
-RUN pnpm run build
+# Debug: Show environment and verify files
+RUN echo "Build environment:" && \
+    echo "VITE_API_URL=$VITE_API_URL" && \
+    echo "VITE_ENABLE_ADMIN_PANEL=$VITE_ENABLE_ADMIN_PANEL" && \
+    echo "NODE_ENV=$NODE_ENV" && \
+    ls -la src/ && \
+    echo "Starting build..."
+
+# Build the application with better error handling
+RUN pnpm run build || (echo "Build failed. Checking for common issues..." && \
+    echo "Node version: $(node --version)" && \
+    echo "PNPM version: $(pnpm --version)" && \
+    echo "TypeScript files:" && find src -name "*.ts" -o -name "*.tsx" | head -5 && \
+    exit 1)
+
+# Verify build output
+RUN echo "Build completed successfully. Output:" && \
+    ls -la dist/ && \
+    echo "Build artifacts ready"
 
 # Final stage - optimized nginx with faster startup
 FROM nginx:1.29-alpine@sha256:42a516af16b852e33b7682d5ef8acbd5d13fe08fecadc7ed98605ba5e3b26ab8
