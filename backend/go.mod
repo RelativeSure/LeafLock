@@ -1,6 +1,6 @@
 module leaflock
 
-go 1.24
+go 1.25
 
 require (
 	github.com/gofiber/contrib/websocket v1.3.4

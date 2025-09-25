@@ -72,7 +72,9 @@ services:
     container_name: leaflock-backend
     environment:
       # Database Configuration
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?}@postgres:5432/leaflock?sslmode=prefer
+      # IMPORTANT: sslmode=disable required for containerized PostgreSQL without TLS setup
+      # DO NOT change to sslmode=prefer/require unless PostgreSQL container has proper TLS certificates
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?}@postgres:5432/leaflock?sslmode=disable
       
       # Redis Configuration
       REDIS_URL: redis:6379
