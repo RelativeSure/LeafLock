@@ -6874,12 +6874,17 @@ func main() {
 	if lazyInitAdmin {
 		log.Println("⚡ Starting admin user initialization asynchronously")
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("❌ PANIC in admin user initialization: %v", r)
+				}
+				readyState.markAdminReady()
+			}()
 			if err := seedDefaultAdminUser(db, crypto, config); err != nil {
 				log.Printf("Warning: Failed to create default admin user: %v", err)
 			} else {
 				log.Printf("✅ Admin user initialization completed")
 			}
-			readyState.markAdminReady()
 		}()
 	} else {
 		adminStart := time.Now()
@@ -6894,12 +6899,17 @@ func main() {
 	if asyncTemplateSeed {
 		log.Println("⚡ Starting template seeding asynchronously")
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("❌ PANIC in template seeding: %v", r)
+				}
+				readyState.markTemplatesReady()
+			}()
 			if err := seedDefaultTemplates(db, crypto); err != nil {
 				log.Printf("Warning: Failed to seed default templates: %v", err)
 			} else {
 				log.Printf("✅ Template seeding completed")
 			}
-			readyState.markTemplatesReady()
 		}()
 	} else {
 		templateStart := time.Now()
@@ -6912,17 +6922,27 @@ func main() {
 
 	// Start admin allowlist refresher
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("❌ PANIC in admin allowlist refresher: %v", r)
+			}
+			readyState.markAllowlistReady()
+		}()
 		startAdminAllowlistRefresher()
 		log.Printf("✅ Admin allowlist refresher started")
-		readyState.markAllowlistReady()
 	}()
 
 	// Pre-warm Redis connection pool in background
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("❌ PANIC in Redis prewarming: %v", r)
+			}
+			readyState.markRedisReady()
+		}()
 		prewarmStart := time.Now()
 		prewarmRedisPool(rdb)
 		log.Printf("✅ Redis connection pool pre-warmed in %v", time.Since(prewarmStart))
-		readyState.markRedisReady()
 	}()
 
 	log.Printf("⏱️  Async initialization tasks started in %v", time.Since(initStart))
