@@ -125,3 +125,44 @@ cd frontend && pnpm run build
 
 ### Database Operations
 The application uses PostgreSQL with encrypted fields. Database migrations and schema are handled within the Go backend code.
+
+## Admin User Management
+
+### Default Admin User
+The application creates a default admin user automatically if none exists:
+- **Email**: Configured via `DEFAULT_ADMIN_EMAIL` (default: admin@leaflock.app)
+- **Password**: Configured via `DEFAULT_ADMIN_PASSWORD` (supports complex passwords with special characters)
+- **Creation**: Automatic on first startup if no users exist
+- **Validation**: Full password complexity validation with special character support
+
+### Admin Password Requirements
+The system supports and validates complex passwords including:
+- Minimum 8 characters, maximum 128 characters
+- Must contain: uppercase, lowercase, digit, and special character
+- **Special characters fully supported**: `!@#$%^&*()_+-=[]{}|;':"\\,.<>?`
+- Complex passwords with special characters like `#wmR8xWxZ&#JHZPd8HTYmafctWSe0N*jgPG%bYS@` work correctly
+
+### Admin Configuration Environment Variables
+```bash
+ENABLE_DEFAULT_ADMIN=true                    # Enable/disable default admin creation
+DEFAULT_ADMIN_EMAIL=admin@leaflock.app       # Admin email address
+DEFAULT_ADMIN_PASSWORD=YourComplexPassword   # Admin password (supports all special chars)
+```
+
+### Testing Admin Login
+```bash
+# Via API
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@leaflock.app","password":"YourPassword"}'
+
+# Via Frontend UI
+# Navigate to http://localhost:3000 and use the login form
+```
+
+### Admin System Architecture
+- **Admin Service**: Modularized in `backend/services/admin.go`
+- **Password Security**: Argon2id hashing with 64MB memory, 3 iterations, 4 parallelism
+- **Validation**: Comprehensive password complexity and email format validation
+- **Logging**: Detailed admin user creation and login logging for debugging
+- **Error Handling**: Graceful handling of encryption key mismatches and database issues

@@ -26,6 +26,7 @@ import (
 	"crypto/subtle"
 	"database/sql"
 	"encoding/base64"
+	"errors"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -1863,7 +1864,7 @@ func (h *AuthHandler) AdminRecovery(c *fiber.Ctx) error {
 
 	// Check if this is a key mismatch situation
 	oldEmailSearchHash, err := h.findExistingUserWithDifferentKey(ctx, req.Email)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		log.Printf("❌ Error checking for existing user: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Recovery check failed"})
 	}
@@ -5841,7 +5842,7 @@ func validateEncryptionKeyAndAdminAccess(db Database, crypto *CryptoService, con
 		return nil
 	}
 
-	if err != sql.ErrNoRows {
+	if !errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("error checking admin user accessibility: %w", err)
 	}
 
@@ -5896,37 +5897,191 @@ func validateEncryptionKeyAndAdminAccess(db Database, crypto *CryptoService, con
 	return nil
 }
 
-// seedDefaultAdminUser creates a default admin user if no accessible admin exists with current encryption key
+// seedDefaultAdminUser creates a default admin user using the AdminService
 func seedDefaultAdminUser(db Database, crypto *CryptoService, config *Config) error {
-	ctx := context.Background()
+	// Import the services package (this will be handled by Go modules)
+	// services "./services" - This will be done via proper import at the top
 
-	// Check if default admin creation is enabled
-	if !config.DefaultAdminEnabled {
-		log.Println("Default admin creation disabled via ENABLE_DEFAULT_ADMIN=false")
+	// Create admin service instance
+	adminService := createAdminService(db, crypto)
+
+	// Validate admin configuration first
+	if err := adminService.ValidateAdminConfig(); err != nil {
+		log.Printf("❌ Admin configuration validation failed: %v", err)
+		return fmt.Errorf("admin configuration invalid: %w", err)
+	}
+
+	// Create the default admin user
+	if err := adminService.CreateDefaultAdminUser(); err != nil {
+		log.Printf("❌ Failed to create default admin user: %v", err)
+		return fmt.Errorf("failed to create default admin user: %w", err)
+	}
+
+	log.Printf("✅ Admin user management completed successfully")
+	log.Printf("🔑 Default password from environment: %s", config.DefaultAdminPassword)
+	log.Println("⚠️  SECURITY WARNING: Change the default password immediately!")
+	log.Println("📖 See USER_MANAGEMENT.md for user management instructions")
+
+	return nil
+}
+
+// createAdminService creates an AdminService instance (adapter function)
+func createAdminService(db Database, crypto *CryptoService) AdminServiceInterface {
+	return &adminServiceImpl{
+		db:     db,
+		crypto: crypto,
+	}
+}
+
+// AdminServiceInterface defines the interface for admin service operations
+type AdminServiceInterface interface {
+	ValidateAdminConfig() error
+	CreateDefaultAdminUser() error
+}
+
+// adminServiceImpl implements AdminServiceInterface using the services package logic
+type adminServiceImpl struct {
+	db     Database
+	crypto *CryptoService
+}
+
+func (a *adminServiceImpl) ValidateAdminConfig() error {
+	config := getAdminConfigFromEnv()
+	
+	if !config.Enabled {
 		return nil
 	}
 
-	// Check if admin user is accessible with current encryption key
-	adminEmail := config.DefaultAdminEmail
-	currentEmailSearchHash, err := crypto.EncryptDeterministic([]byte(strings.ToLower(adminEmail)), "email_search")
-	if err != nil {
-		return fmt.Errorf("failed to generate admin email search hash: %w", err)
+	if config.Email == "" {
+		return errors.New("admin email cannot be empty")
 	}
 
+	if !isValidAdminEmail(config.Email) {
+		return fmt.Errorf("invalid admin email format: %s", config.Email)
+	}
+
+	if err := validateAdminPassword(config.Password); err != nil {
+		return fmt.Errorf("admin password validation failed: %w", err)
+	}
+
+	return nil
+}
+
+func (a *adminServiceImpl) CreateDefaultAdminUser() error {
+	config := getAdminConfigFromEnv()
+	
+	if !config.Enabled {
+		log.Println("⏭️ Default admin user creation is disabled")
+		return nil
+	}
+
+	log.Printf("🔧 Starting default admin user creation process...")
+	log.Printf("   - Email: %s", config.Email)
+	log.Printf("   - Password length: %d characters", len(config.Password))
+	if len(config.Password) > 0 {
+		log.Printf("   - Password starts with: %c", config.Password[0])
+		log.Printf("   - Password ends with: %c", config.Password[len(config.Password)-1])
+	}
+
+	// Check if admin user already exists
+	exists, err := a.adminUserExists(config.Email)
+	if err != nil {
+		return fmt.Errorf("failed to check admin user existence: %w", err)
+	}
+
+	if exists {
+		log.Printf("ℹ️ Admin user already exists with email: %s", config.Email)
+		return nil
+	}
+
+	// Create the admin user using the same logic as the original function
+	return a.createAdminUserInDatabase(config)
+}
+
+// Helper functions for the admin service implementation
+
+type adminConfigStruct struct {
+	Enabled  bool
+	Email    string
+	Password string
+}
+
+func getAdminConfigFromEnv() adminConfigStruct {
+	return adminConfigStruct{
+		Enabled:  getEnvAsBool("ENABLE_DEFAULT_ADMIN", true),
+		Email:    getEnvOrDefault("DEFAULT_ADMIN_EMAIL", "admin@leaflock.app"),
+		Password: getEnvOrDefault("DEFAULT_ADMIN_PASSWORD", "AdminPass123!"),
+	}
+}
+
+func isValidAdminEmail(email string) bool {
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	return emailRegex.MatchString(email)
+}
+
+func validateAdminPassword(password string) error {
+	if len(password) < 8 {
+		return errors.New("password must be at least 8 characters long")
+	}
+
+	if len(password) > 128 {
+		return errors.New("password must be less than 128 characters long")
+	}
+
+	// Check for at least one uppercase, one lowercase, one digit, and one special char
+	hasUpper := regexp.MustCompile(`[A-Z]`).MatchString(password)
+	hasLower := regexp.MustCompile(`[a-z]`).MatchString(password)
+	hasDigit := regexp.MustCompile(`[0-9]`).MatchString(password)
+	hasSpecial := regexp.MustCompile(`[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\?]`).MatchString(password)
+
+	if !hasUpper {
+		return errors.New("password must contain at least one uppercase letter")
+	}
+	if !hasLower {
+		return errors.New("password must contain at least one lowercase letter")
+	}
+	if !hasDigit {
+		return errors.New("password must contain at least one digit")
+	}
+	if !hasSpecial {
+		return errors.New("password must contain at least one special character")
+	}
+
+	return nil
+}
+
+func (a *adminServiceImpl) adminUserExists(email string) (bool, error) {
+	ctx := context.Background()
+	
+	// Generate the email search hash using the crypto service (same as original)
+	emailSearchHash, err := a.crypto.EncryptDeterministic([]byte(strings.ToLower(email)), "email_search")
+	if err != nil {
+		return false, fmt.Errorf("failed to generate email search hash: %w", err)
+	}
+
+	// Check if admin user exists with current encryption key
 	var existingAdminID uuid.UUID
-	err = db.QueryRow(ctx, `SELECT id FROM users WHERE email_search_hash = $1`, currentEmailSearchHash).Scan(&existingAdminID)
+	err = a.db.QueryRow(ctx, `SELECT id FROM users WHERE email_search_hash = $1`, emailSearchHash).Scan(&existingAdminID)
 	if err == nil {
 		log.Printf("✅ Default admin user already exists and is accessible (ID: %s)", existingAdminID)
-		return nil
+		return true, nil
 	}
 
-	if err != sql.ErrNoRows {
-		return fmt.Errorf("failed to check for existing admin user: %w", err)
+	// Check if this is a "no rows" error (user doesn't exist)
+	if err.Error() == "no rows in result set" {
+		return false, nil
 	}
 
-	// Admin user doesn't exist with current key - check if we need to handle key mismatch
+	// Some other database error occurred
+	return false, fmt.Errorf("database query failed: %w", err)
+}
+
+func (a *adminServiceImpl) createAdminUserInDatabase(config adminConfigStruct) error {
+	ctx := context.Background()
+
+	// Check for any encryption key mismatches first
 	var totalUserCount int
-	err = db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&totalUserCount)
+	err := a.db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&totalUserCount)
 	if err != nil {
 		return fmt.Errorf("failed to check existing users: %w", err)
 	}
@@ -5942,36 +6097,25 @@ func seedDefaultAdminUser(db Database, crypto *CryptoService, config *Config) er
 
 	log.Println("⚠️  WARNING: Default admin credentials are insecure. Please change them immediately after first login!")
 
-	// Get admin credentials from config (environment variables)
-	email := config.DefaultAdminEmail
-	password := config.DefaultAdminPassword
-
-	// Debug logging for password validation
-	log.Printf("📧 Admin email: %s", email)
-	log.Printf("🔑 Password length: %d characters", len(password))
-	if len(password) > 0 {
-		log.Printf("🔑 Password starts with: %c", password[0])
-	}
-
-	// Generate salt for password hashing
+	// Generate salt for password hashing (same as main.go)
 	salt := make([]byte, 32)
 	if _, err := rand.Read(salt); err != nil {
 		return fmt.Errorf("failed to generate salt: %w", err)
 	}
 
-	// Hash password with Argon2id
-	passwordHash := HashPassword(password, salt)
+	// Hash password with Argon2id (same as main.go)
+	passwordHash := HashPassword(config.Password, salt)
 
-	// Generate user's master encryption key
+	// Generate user's master encryption key (same as main.go)
 	masterKey := make([]byte, 32)
 	if _, err := rand.Read(masterKey); err != nil {
 		return fmt.Errorf("failed to generate master key: %w", err)
 	}
 
-	// Derive key from password to encrypt master key
-	userKey := argon2.IDKey([]byte(password), salt, 1, 64*1024, 4, 32)
+	// Derive key from password to encrypt master key (same as main.go)
+	userKey := argon2.IDKey([]byte(config.Password), salt, 1, 64*1024, 4, 32)
 
-	// Encrypt master key with user's derived key
+	// Encrypt master key with user's derived key (same as main.go)
 	aead, err := chacha20poly1305.NewX(userKey)
 	if err != nil {
 		return fmt.Errorf("failed to initialize encryption: %w", err)
@@ -5984,32 +6128,35 @@ func seedDefaultAdminUser(db Database, crypto *CryptoService, config *Config) er
 
 	masterKeyEncrypted := aead.Seal(nonce, nonce, masterKey, nil)
 
-	// Generate GDPR deletion key for email encryption (same as registration)
+	// Generate GDPR deletion key for email encryption (same as main.go)
 	deletionKey := make([]byte, 32)
 	if _, err := rand.Read(deletionKey); err != nil {
 		return fmt.Errorf("failed to generate GDPR deletion key: %w", err)
 	}
 
-	// Create email hash for uniqueness and GDPR lookups (same as registration)
-	emailHash := crypto.HashEmail(email)
+	// Create email hash for uniqueness and GDPR lookups (same as main.go)
+	emailHash := a.crypto.HashEmail(config.Email)
 
-	// Encrypt email with GDPR key (same as registration)
-	emailEncrypted, err := crypto.EncryptWithGDPRKey([]byte(email), deletionKey)
+	// Encrypt email with GDPR key (same as main.go)
+	emailEncrypted, err := a.crypto.EncryptWithGDPRKey([]byte(config.Email), deletionKey)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt email: %w", err)
 	}
 
-	// Reuse the already computed email search hash with current encryption key
-	emailSearchHash := currentEmailSearchHash
+	// Generate email search hash (same as main.go)
+	emailSearchHash, err := a.crypto.EncryptDeterministic([]byte(strings.ToLower(config.Email)), "email_search")
+	if err != nil {
+		return fmt.Errorf("failed to generate email search hash: %w", err)
+	}
 
-	// Start transaction (same as registration)
-	tx, err := db.Begin(ctx)
+	// Start transaction (same as main.go)
+	tx, err := a.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
-	// Store GDPR deletion key (same as registration)
+	// Store GDPR deletion key (same as main.go)
 	_, err = tx.Exec(ctx, `
 		INSERT INTO gdpr_keys (email_hash, deletion_key)
 		VALUES ($1, $2)`,
@@ -6019,7 +6166,7 @@ func seedDefaultAdminUser(db Database, crypto *CryptoService, config *Config) er
 		return fmt.Errorf("failed to store GDPR deletion key: %w", err)
 	}
 
-	// Insert default admin user (same as registration)
+	// Insert default admin user (same as main.go)
 	_, err = tx.Exec(ctx, `
 		INSERT INTO users (
 			email_hash, email_encrypted, email_search_hash,
@@ -6037,8 +6184,8 @@ func seedDefaultAdminUser(db Database, crypto *CryptoService, config *Config) er
 		return fmt.Errorf("failed to commit admin user creation: %w", err)
 	}
 
-	log.Printf("✅ Created default admin user: %s", email)
-	log.Printf("🔑 Default password: %s", password)
+	log.Printf("✅ Created default admin user: %s", config.Email)
+	log.Printf("🔑 Default password: %s", config.Password)
 	log.Println("⚠️  SECURITY WARNING: Change the default password immediately!")
 	log.Println("📖 See USER_MANAGEMENT.md for user management instructions")
 
