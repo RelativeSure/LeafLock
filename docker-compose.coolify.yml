@@ -34,10 +34,9 @@ services:
   redis:
     image: redis:7-alpine
     container_name: leaflock-redis
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "${REDIS_PASSWORD:?Please set REDIS_PASSWORD in Coolify environment variables}"]
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Please set REDIS_PASSWORD in Coolify environment variables}"]
     volumes:
       - redis_data:/data
-      - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
     networks:
       - leaflock-network
     healthcheck:
