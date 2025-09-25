@@ -128,6 +128,9 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS email_search_hash BYTEA UNIQUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS storage_used BIGINT DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS storage_limit BIGINT DEFAULT 5242880; -- 5MB default limit
 
+-- Add soft delete column for users table (required for idx_users_count_fast index)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+
 
 -- GDPR compliance: Add table to store GDPR deletion keys for email recovery
 CREATE TABLE IF NOT EXISTS gdpr_keys (
