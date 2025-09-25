@@ -2,6 +2,11 @@
 # Optimized for fast startup on Coolify with aggressive health checks,
 # progressive timing, proper dependencies, and resource limits.
 # Target startup time: under 30 seconds
+#
+# NOTE: Docker security warnings about sensitive build arguments are expected and harmless.
+# Coolify passes ALL environment variables as build arguments by default, but our Dockerfiles
+# only use secrets as runtime environment variables, not during the build phase.
+# Warnings like "SecretsUsedInArgOrEnv: ARG DEFAULT_ADMIN_PASSWORD" can be safely ignored.
 
 version: '3.8'
 

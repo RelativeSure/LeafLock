@@ -35,7 +35,7 @@ dependencies:
 
 annotations:
   category: Applications
-  licenses: MIT
+  licenses: PolyForm-Noncommercial-1.0.0
   images: |
     - name: leaflock-backend
       image: leaflock/backend:1.0.0

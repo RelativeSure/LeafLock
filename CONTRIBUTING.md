@@ -12,9 +12,9 @@ Thanks for your interest in improving LeafLock! We welcome bug fixes, new featur
 
 - Backend: `make -C backend test` (see backend/Makefile). Coverage gate: 72%.
 - Frontend: `cd frontend && pnpm install && pnpm test`
-- Local stack: `docker compose up -d` or `./leaflock.sh docker:up`
-- Icons: `./leaflock.sh icons`
-- Railway: `./leaflock.sh railway`
+- Local stack: `docker compose up -d` or `./scripts/leaflock.sh docker:up`
+- Icons: `./scripts/leaflock.sh icons`
+- Railway: `./scripts/leaflock.sh railway`
 
 ## Style & Quality
 
