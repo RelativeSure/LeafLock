@@ -24,7 +24,9 @@ envsubst '$PORT $BACKEND_INTERNAL_URL' < /etc/nginx/nginx.conf.template > /tmp/n
 
 # Pre-test nginx configuration to catch errors early
 echo "Testing nginx configuration..."
-nginx -t -c /tmp/nginx.conf
+if ! nginx -t -c /tmp/nginx.conf; then
+  echo "WARNING: nginx config test failed; backend may not be resolvable yet. Continuing startup." >&2
+fi
 
 echo "Starting nginx on port $PORT..."
 # Start nginx in foreground with optimized settings
