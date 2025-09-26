@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-# Default port to 80 for standard web service deployment
-: "${PORT:=80}"
+# Default to unprivileged port so nginx can bind as non-root
+: "${PORT:=8080}"
 
 # Optimized startup with faster config generation
 # Require BACKEND_INTERNAL_URL (e.g., http://backend:8080). Fail fast if missing.
