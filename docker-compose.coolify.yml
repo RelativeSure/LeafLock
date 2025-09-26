@@ -2,10 +2,10 @@
 # Optimized for Coolify's deployment model with automatic service discovery
 # 
 # COOLIFY DEPLOYMENT NOTES:
-# 1. Frontend uses Traefik labels for external access via HTTPS
-# 2. Backend is internal-only, accessed via nginx proxy from frontend
-# 3. All services on same network for internal communication
-# 4. Uses `expose` instead of `ports` for container communication
+# 1. Frontend uses traefik.enable=true for external access via HTTPS
+# 2. Backend is internal-only, accessed via nginx proxy from frontend  
+# 3. No explicit networking - Coolify manages container communication
+# 4. No port mappings - Coolify handles external routing automatically
 # 5. Environment variables set in Coolify UI override defaults
 #
 # REQUIRED ENVIRONMENT VARIABLES IN COOLIFY:
@@ -14,7 +14,10 @@
 # - JWT_SECRET (64+ character string)
 # - SERVER_ENCRYPTION_KEY (32 character string)
 # - CORS_ORIGINS (your domain, e.g., https://your-app.coolify.io)
-# - COOLIFY_FQDN (automatically set by Coolify for your domain)
+#
+# DEPLOYMENT TIPS:
+# - Enable "Preserve Repository During Deployment" if build fails
+# - Check that docker-compose.coolify.yml is properly recognized
 #
 # NOTE: Docker security warnings about build arguments are expected and harmless.
 
@@ -47,8 +50,6 @@ services:
         reservations:
           memory: 256M
           cpus: '0.2'
-    networks:
-      - leaflock-network
     restart: unless-stopped
 
   # Redis Cache for Sessions  
@@ -73,8 +74,6 @@ services:
         reservations:
           memory: 64M
           cpus: '0.1'
-    networks:
-      - leaflock-network
     restart: unless-stopped
 
   # Go Backend API
@@ -145,10 +144,6 @@ services:
         reservations:
           memory: 512M
           cpus: '0.5'
-    expose:
-      - "8080"
-    networks:
-      - leaflock-network
     restart: unless-stopped
     # Backend is internal-only, no special labels needed
     # Coolify will automatically add coolify.managed=true
@@ -178,8 +173,6 @@ services:
       timeout: 5s
       start_period: 30s
       retries: 3
-    networks:
-      - leaflock-network
     # Resource limits for frontend nginx
     deploy:
       resources:
@@ -189,15 +182,10 @@ services:
         reservations:
           memory: 32M
           cpus: '0.05'
-    networks:
-      - leaflock-network
     restart: unless-stopped
     labels:
-      # Enable Traefik proxy for external access
+      # Enable Traefik proxy for external access - Coolify will auto-configure
       - "traefik.enable=true"
-      - "traefik.http.routers.leaflock-frontend.rule=Host(`${COOLIFY_FQDN}`)"
-      - "traefik.http.routers.leaflock-frontend.entryPoints=https"
-      - "traefik.http.routers.leaflock-frontend.tls.certresolver=letsencrypt"
 
 volumes:
   postgres_data:
@@ -205,9 +193,10 @@ volumes:
   redis_data:
     driver: local
 
-networks:
-  leaflock-network:
-    driver: bridge
+# Networks removed - Coolify manages networking automatically
+# networks:
+#   leaflock-network:
+#     driver: bridge
 
 # Coolify Fast Startup Optimization:
 # PERFORMANCE OPTIMIZATIONS IMPLEMENTED:
