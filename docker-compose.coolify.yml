@@ -32,8 +32,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Please set POSTGRES_PASSWORD in Coolify environment variables}
       POSTGRES_DB: leaflock
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      # Keep PGDATA at the volume root so existing data from earlier versions mounts cleanly
+      PGDATA: /var/lib/postgresql
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     networks:
       - internal
     # Aggressive health checks for fast startup
