@@ -4,7 +4,7 @@
 # COOLIFY DEPLOYMENT NOTES:
 # 1. Frontend uses traefik.enable=true for external access via HTTPS
 # 2. Backend is internal-only, accessed via nginx proxy from frontend  
-# 3. No explicit networking - Coolify manages container communication
+# 3. External Traefik network (`coolify-infra`) is required for public routing
 # 4. No port mappings - Coolify handles external routing automatically
 # 5. Environment variables set in Coolify UI override defaults
 #
@@ -26,7 +26,7 @@
 services:
   # PostgreSQL Database
   postgres:
-    image: postgres:18
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Please set POSTGRES_PASSWORD in Coolify environment variables}
@@ -34,6 +34,8 @@ services:
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
     # Aggressive health checks for fast startup
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -h localhost -p 5432"]
@@ -54,10 +56,12 @@ services:
 
   # Redis Cache for Sessions  
   redis:
-    image: redis:8
+    image: redis:8-alpine
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Please set REDIS_PASSWORD in Coolify environment variables}"]
     volumes:
       - redis_data:/data
+    networks:
+      - internal
     # Fast Redis health checks
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?Please set REDIS_PASSWORD in Coolify environment variables}", "--no-auth-warning", "PING"]
@@ -145,6 +149,8 @@ services:
           memory: 512M
           cpus: '0.5'
     restart: unless-stopped
+    networks:
+      - internal
     # Backend is internal-only, no special labels needed
     # Coolify will automatically add coolify.managed=true
 
@@ -183,6 +189,9 @@ services:
           memory: 32M
           cpus: '0.05'
     restart: unless-stopped
+    networks:
+      - internal
+      - coolify-infra
     labels:
       # Enable Traefik proxy for external access - Coolify will auto-configure
       - "traefik.enable=true"
@@ -193,7 +202,14 @@ volumes:
   redis_data:
     driver: local
 
-# Networks removed - Coolify manages networking automatically
+networks:
+  internal:
+    driver: bridge
+  coolify-infra:
+    external: true
+    name: coolify-infra
+
+# Legacy network example retained for reference only
 # networks:
 #   leaflock-network:
 #     driver: bridge
