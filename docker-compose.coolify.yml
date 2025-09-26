@@ -1,12 +1,22 @@
 # docker-compose.coolify.yml - LeafLock deployment for Coolify
-# Optimized for fast startup on Coolify with aggressive health checks,
-# progressive timing, proper dependencies, and resource limits.
-# Target startup time: under 30 seconds
+# Optimized for Coolify's deployment model with automatic service discovery
+# 
+# COOLIFY DEPLOYMENT NOTES:
+# 1. Frontend uses Traefik labels for external access via HTTPS
+# 2. Backend is internal-only, accessed via nginx proxy from frontend
+# 3. All services on same network for internal communication
+# 4. Uses `expose` instead of `ports` for container communication
+# 5. Environment variables set in Coolify UI override defaults
 #
-# NOTE: Docker security warnings about sensitive build arguments are expected and harmless.
-# Coolify passes ALL environment variables as build arguments by default, but our Dockerfiles
-# only use secrets as runtime environment variables, not during the build phase.
-# Warnings like "SecretsUsedInArgOrEnv: ARG DEFAULT_ADMIN_PASSWORD" can be safely ignored.
+# REQUIRED ENVIRONMENT VARIABLES IN COOLIFY:
+# - POSTGRES_PASSWORD (secure random string)
+# - REDIS_PASSWORD (secure random string) 
+# - JWT_SECRET (64+ character string)
+# - SERVER_ENCRYPTION_KEY (32 character string)
+# - CORS_ORIGINS (your domain, e.g., https://your-app.coolify.io)
+# - COOLIFY_FQDN (automatically set by Coolify for your domain)
+#
+# NOTE: Docker security warnings about build arguments are expected and harmless.
 
 # version: '3.8' - Removed to avoid obsolete attribute warning
 
@@ -14,7 +24,6 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: leaflock-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Please set POSTGRES_PASSWORD in Coolify environment variables}
@@ -22,8 +31,6 @@ services:
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - leaflock-network
     # Aggressive health checks for fast startup
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -h localhost -p 5432"]
@@ -40,17 +47,16 @@ services:
         reservations:
           memory: 256M
           cpus: '0.2'
+    networks:
+      - leaflock-network
     restart: unless-stopped
 
   # Redis Cache for Sessions  
   redis:
     image: redis:7-alpine
-    container_name: leaflock-redis
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Please set REDIS_PASSWORD in Coolify environment variables}"]
     volumes:
       - redis_data:/data
-    networks:
-      - leaflock-network
     # Fast Redis health checks
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?Please set REDIS_PASSWORD in Coolify environment variables}", "--no-auth-warning", "PING"]
@@ -67,6 +73,8 @@ services:
         reservations:
           memory: 64M
           cpus: '0.1'
+    networks:
+      - leaflock-network
     restart: unless-stopped
 
   # Go Backend API
@@ -74,7 +82,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: leaflock-backend
     environment:
       # Database Configuration
       # IMPORTANT: sslmode=disable required for containerized PostgreSQL without TLS setup
@@ -90,7 +97,8 @@ services:
       SERVER_ENCRYPTION_KEY: ${SERVER_ENCRYPTION_KEY:?Please set SERVER_ENCRYPTION_KEY (32 chars) in Coolify environment variables}
       
       # CORS and API Configuration - Updated for Coolify deployment
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:8080}
+      # Include your actual domain in production, e.g. https://your-app.coolify.io
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
       PORT: 8080
       
       # Application Settings
@@ -121,8 +129,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
-      - leaflock-network
     # Health check for container orchestration - extended timeouts for async initialization
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider --timeout=10 http://localhost:8080/api/v1/health/live || exit 1"]
@@ -139,15 +145,13 @@ services:
         reservations:
           memory: 512M
           cpus: '0.5'
-    ports:
-      - "3030:8080"
+    expose:
+      - "8080"
+    networks:
+      - leaflock-network
     restart: unless-stopped
-    labels:
-      - "coolify.managed=true"
-      - "coolify.type=internal"
-      - "coolify.name=leaflock-backend"
-      - "coolify.pullRequestId=0"
-      - "coolify.applicationId=${COOLIFY_APPLICATION_ID:-leaflock}"
+    # Backend is internal-only, no special labels needed
+    # Coolify will automatically add coolify.managed=true
 
   # React Frontend
   frontend:
@@ -156,29 +160,26 @@ services:
       dockerfile: Dockerfile
       args:
         # Build-time environment variables for frontend API connection
-        # Use your actual domain without /api/v1 suffix (added by frontend)
-        VITE_API_URL: ${VITE_API_URL:-https://leaflock.app}
+        # Use relative API calls that work with Coolify's proxy
+        VITE_API_URL: ${VITE_API_URL:-}
         VITE_ENABLE_ADMIN_PANEL: ${VITE_ENABLE_ADMIN_PANEL:-false}
-    container_name: leaflock-frontend
     environment:
       # Runtime environment variables for frontend
       BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8080}
-      # Use unprivileged port for Coolify compatibility
-      PORT: 8080
-    ports:
-      - "3000:8080"
+      # Use standard HTTP port - Coolify handles external routing
+      PORT: 80
     depends_on:
       backend:
         condition: service_healthy
+    # Optimized nginx health checks for Coolify
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider --timeout=2 http://localhost:80/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
     networks:
       - leaflock-network
-    # Optimized nginx health checks for fast frontend startup
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider --timeout=2 http://localhost:8080/health || exit 1"]
-      interval: 5s
-      timeout: 3s
-      start_period: 15s
-      retries: 5
     # Resource limits for frontend nginx
     deploy:
       resources:
@@ -188,13 +189,15 @@ services:
         reservations:
           memory: 32M
           cpus: '0.05'
+    networks:
+      - leaflock-network
     restart: unless-stopped
     labels:
-      - "coolify.managed=true"
-      - "coolify.type=application" 
-      - "coolify.name=leaflock-frontend"
-      - "coolify.pullRequestId=0"
-      - "coolify.applicationId=${COOLIFY_APPLICATION_ID:-leaflock}"
+      # Enable Traefik proxy for external access
+      - "traefik.enable=true"
+      - "traefik.http.routers.leaflock-frontend.rule=Host(`${COOLIFY_FQDN}`)"
+      - "traefik.http.routers.leaflock-frontend.entryPoints=https"
+      - "traefik.http.routers.leaflock-frontend.tls.certresolver=letsencrypt"
 
 volumes:
   postgres_data:
@@ -205,9 +208,6 @@ volumes:
 networks:
   leaflock-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.25.0.0/16
 
 # Coolify Fast Startup Optimization:
 # PERFORMANCE OPTIMIZATIONS IMPLEMENTED:
