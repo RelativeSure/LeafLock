@@ -89,8 +89,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Please set JWT_SECRET (64 chars) in Coolify environment variables}
       SERVER_ENCRYPTION_KEY: ${SERVER_ENCRYPTION_KEY:?Please set SERVER_ENCRYPTION_KEY (32 chars) in Coolify environment variables}
       
-      # CORS and API Configuration
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      # CORS and API Configuration - Updated for Coolify deployment
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:8080}
       PORT: 8080
       
       # Application Settings
@@ -139,10 +139,15 @@ services:
         reservations:
           memory: 512M
           cpus: '0.5'
+    ports:
+      - "8080:8080"
     restart: unless-stopped
     labels:
+      - "coolify.managed=true"
       - "coolify.type=internal"
       - "coolify.name=leaflock-backend"
+      - "coolify.pullRequestId=0"
+      - "coolify.applicationId=${COOLIFY_APPLICATION_ID:-leaflock}"
 
   # React Frontend
   frontend:
@@ -158,10 +163,10 @@ services:
     environment:
       # Runtime environment variables for frontend
       BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8080}
-      # Use unprivileged port so nginx runs as non-root
+      # Use unprivileged port for Coolify compatibility
       PORT: 8080
-    expose:
-      - "8080"
+    ports:
+      - "3000:8080"
     depends_on:
       backend:
         condition: service_healthy
@@ -169,11 +174,11 @@ services:
       - leaflock-network
     # Optimized nginx health checks for fast frontend startup
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider --timeout=2 http://localhost:8080/ || exit 1"]
-      interval: 3s
-      timeout: 2s
-      start_period: 10s
-      retries: 3
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider --timeout=2 http://localhost:8080/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      start_period: 15s
+      retries: 5
     # Resource limits for frontend nginx
     deploy:
       resources:
@@ -185,8 +190,11 @@ services:
           cpus: '0.05'
     restart: unless-stopped
     labels:
-      - "coolify.type=application"
+      - "coolify.managed=true"
+      - "coolify.type=application" 
       - "coolify.name=leaflock-frontend"
+      - "coolify.pullRequestId=0"
+      - "coolify.applicationId=${COOLIFY_APPLICATION_ID:-leaflock}"
 
 volumes:
   postgres_data:
