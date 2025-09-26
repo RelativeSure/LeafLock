@@ -140,7 +140,7 @@ services:
           memory: 512M
           cpus: '0.5'
     ports:
-      - "8080:8080"
+      - "3030:8080"
     restart: unless-stopped
     labels:
       - "coolify.managed=true"
