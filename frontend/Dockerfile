@@ -49,8 +49,8 @@ RUN echo "Build completed successfully. Output:" && \
 # Final stage - optimized nginx with faster startup
 FROM nginx:1.29-alpine@sha256:42a516af16b852e33b7682d5ef8acbd5d13fe08fecadc7ed98605ba5e3b26ab8
 
-# Install security updates, curl for health checks, and libcap-utils so nginx can bind to 80 as non-root
-RUN apk --no-cache add ca-certificates curl libcap-utils && \
+# Install security updates, curl for health checks, gettext (provides envsubst), and libcap-utils so nginx can bind to 80 as non-root
+RUN apk --no-cache add ca-certificates curl gettext libcap-utils && \
     rm -rf /usr/share/nginx/html/* && \
     rm -rf /var/cache/apk/*
 
