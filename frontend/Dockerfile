@@ -77,11 +77,11 @@ RUN setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx
 # Use non-root user for runtime
 USER nginx-user
 
-# Default port for Coolify deployment (unprivileged port)
-ENV PORT=8080
+# Default port for Coolify deployment (standard HTTP port)
+ENV PORT=80
 
 # Document the listening port for platforms that read EXPOSE  
-EXPOSE 8080
+EXPOSE 80
 
 # Optimized health check - faster startup and response using curl
 HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --retries=3 \
