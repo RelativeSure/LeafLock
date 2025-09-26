@@ -74,12 +74,12 @@ RUN addgroup -g 1001 -S nginx-user && \
 # Use non-root user for runtime
 USER nginx-user
 
-# Default port to 80 for standard web service deployment
+# Default to unprivileged port so nginx can run as non-root
 # Can be overridden by platform environment variables
-ENV PORT=80
+ENV PORT=8080
 
 # Document the listening port for platforms that read EXPOSE
-EXPOSE 80
+EXPOSE 8080
 
 # Optimized health check - faster startup and response using curl
 HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --retries=3 \
