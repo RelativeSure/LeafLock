@@ -222,3 +222,4 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 - **Logging**: Detailed admin user creation and login logging for debugging
 - **Error Handling**: Graceful handling of encryption key mismatches and database issues
 - When modifying the docker compose file remember the coolify docker compose
+- Remember to build the setup when docker-compose and coolify docker compose files and the frontendDockerfile/entrypoint when testing/verifying

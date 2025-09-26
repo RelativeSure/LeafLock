@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-# Default to unprivileged port so nginx can bind as non-root
+# Default to port 8080 for Coolify compatibility (unprivileged port)
 : "${PORT:=8080}"
 
 # Optimized startup with faster config generation
