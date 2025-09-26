@@ -26,7 +26,7 @@
 services:
   # PostgreSQL Database
   postgres:
-    image: postgres:15-alpine
+    image: postgres:18
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Please set POSTGRES_PASSWORD in Coolify environment variables}
@@ -54,7 +54,7 @@ services:
 
   # Redis Cache for Sessions  
   redis:
-    image: redis:7-alpine
+    image: redis:8
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Please set REDIS_PASSWORD in Coolify environment variables}"]
     volumes:
       - redis_data:/data
