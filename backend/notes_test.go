@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -291,10 +292,40 @@ func (suite *NotesHandlerTestSuite) TestUpdateNoteSuccess() {
 
 	noteID := uuid.New()
 
-	// Mock successful update
-	mockResult := &MockResult{}
-	mockResult.On("RowsAffected").Return(int64(1))
-	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockResult, nil)
+	mockTx := &MockTx{}
+	mockRow := &MockRow{}
+	versionResult := &MockResult{tag: "INSERT 0 1"}
+	versionResult.On("RowsAffected").Return(int64(1))
+	updateResult := &MockResult{tag: "UPDATE 1"}
+	updateResult.On("RowsAffected").Return(int64(1))
+
+	suite.mockDB.On("Begin", mock.Anything).Return(mockTx, nil).Once()
+	mockTx.On("Rollback", mock.Anything).Return(nil).Maybe()
+	mockTx.On("Commit", mock.Anything).Return(nil).Once()
+
+	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything).Return(mockRow).Once()
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		if versionPtr, ok := args[0].(*int); ok {
+			*versionPtr = 3
+		}
+		if titlePtr, ok := args[1].(*[]byte); ok {
+			*titlePtr = []byte("old-title")
+		}
+		if contentPtr, ok := args[2].(*[]byte); ok {
+			*contentPtr = []byte("old-content")
+		}
+		if hashPtr, ok := args[3].(*[]byte); ok {
+			*hashPtr = []byte("old-hash")
+		}
+	}).Return(nil).Once()
+
+	mockTx.On("Exec", mock.Anything, mock.MatchedBy(func(sql string) bool {
+		return strings.Contains(sql, "INSERT INTO note_versions")
+	}), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(versionResult, nil).Once()
+
+	mockTx.On("Exec", mock.Anything, mock.MatchedBy(func(sql string) bool {
+		return strings.Contains(sql, "UPDATE notes")
+	}), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(updateResult, nil).Once()
 
 	req := UpdateNoteRequest{
 		TitleEncrypted:   "VXBkYXRlZCBUaXRsZQ==",
@@ -321,10 +352,40 @@ func (suite *NotesHandlerTestSuite) TestUpdateNoteNotFound() {
 
 	noteID := uuid.New()
 
-	// Mock no rows affected (note not found or not owned by user)
-	mockResult := &MockResult{}
-	mockResult.On("RowsAffected").Return(int64(0))
-	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockResult, nil)
+	mockTx := &MockTx{}
+	mockRow := &MockRow{}
+	versionResult := &MockResult{tag: "INSERT 0 1"}
+	versionResult.On("RowsAffected").Return(int64(1))
+	updateResult := &MockResult{tag: "UPDATE 0"}
+	updateResult.On("RowsAffected").Return(int64(0))
+
+	suite.mockDB.On("Begin", mock.Anything).Return(mockTx, nil).Once()
+	mockTx.On("Rollback", mock.Anything).Return(nil).Once()
+	mockTx.On("Commit", mock.Anything).Return(nil).Maybe()
+
+	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything).Return(mockRow).Once()
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		if versionPtr, ok := args[0].(*int); ok {
+			*versionPtr = 1
+		}
+		if titlePtr, ok := args[1].(*[]byte); ok {
+			*titlePtr = []byte("old-title")
+		}
+		if contentPtr, ok := args[2].(*[]byte); ok {
+			*contentPtr = []byte("old-content")
+		}
+		if hashPtr, ok := args[3].(*[]byte); ok {
+			*hashPtr = []byte("old-hash")
+		}
+	}).Return(nil).Once()
+
+	mockTx.On("Exec", mock.Anything, mock.MatchedBy(func(sql string) bool {
+		return strings.Contains(sql, "INSERT INTO note_versions")
+	}), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(versionResult, nil).Once()
+
+	mockTx.On("Exec", mock.Anything, mock.MatchedBy(func(sql string) bool {
+		return strings.Contains(sql, "UPDATE notes")
+	}), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(updateResult, nil).Once()
 
 	req := UpdateNoteRequest{
 		TitleEncrypted:   "VXBkYXRlZCBUaXRsZQ==",
@@ -373,10 +434,14 @@ type DatabaseIntegrationTestSuite struct {
 	suite.Suite
 	db      *pgxpool.Pool
 	cleanup func()
+	crypto  *CryptoService
 }
 
 func (suite *DatabaseIntegrationTestSuite) SetupSuite() {
 	suite.db, suite.cleanup = setupTestDB(suite.T())
+	key := make([]byte, 32)
+	rand.Read(key)
+	suite.crypto = NewCryptoService(key)
 }
 
 func (suite *DatabaseIntegrationTestSuite) TearDownSuite() {
@@ -388,7 +453,7 @@ func (suite *DatabaseIntegrationTestSuite) TearDownSuite() {
 func (suite *DatabaseIntegrationTestSuite) TearDownTest() {
 	// Clean up test data after each test
 	ctx := context.Background()
-	suite.db.Exec(ctx, "TRUNCATE users, workspaces, notes, audit_log CASCADE")
+	suite.db.Exec(ctx, "TRUNCATE users, workspaces, notes, note_versions, collaborations, audit_log, gdpr_keys CASCADE")
 }
 
 func (suite *DatabaseIntegrationTestSuite) TestUserRegistrationFlow() {
@@ -399,18 +464,33 @@ func (suite *DatabaseIntegrationTestSuite) TestUserRegistrationFlow() {
 	salt := make([]byte, 32)
 	rand.Read(salt)
 	passwordHash := HashPassword("TestPassword123!", salt)
-
-	encryptedEmail := []byte("encrypted_email_data")
 	encryptedMasterKey := make([]byte, 64)
 	rand.Read(encryptedMasterKey)
 
+	deletionKey := make([]byte, 32)
+	rand.Read(deletionKey)
+	emailHash := suite.crypto.HashEmail(email)
+	emailSearchHash, err := suite.crypto.EncryptDeterministic([]byte(strings.ToLower(email)), "email_search")
+	suite.NoError(err)
+	encryptedEmail, err := suite.crypto.EncryptWithGDPRKey([]byte(email), deletionKey)
+	suite.NoError(err)
+
+	_, err = suite.db.Exec(ctx, `
+		INSERT INTO gdpr_keys (email_hash, deletion_key)
+		VALUES ($1, $2)
+		ON CONFLICT (email_hash) DO UPDATE
+		SET deletion_key = EXCLUDED.deletion_key,
+		    created_at = NOW()
+	`, emailHash, deletionKey)
+	suite.NoError(err)
+
 	// Test user creation
 	var userID uuid.UUID
-	err := suite.db.QueryRow(ctx, `
-		INSERT INTO users (email, email_encrypted, password_hash, salt, master_key_encrypted)
-		VALUES ($1, $2, $3, $4, $5)
+	err = suite.db.QueryRow(ctx, `
+		INSERT INTO users (email, email_hash, email_encrypted, email_search_hash, password_hash, salt, master_key_encrypted)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id`,
-		email, encryptedEmail, passwordHash, salt, encryptedMasterKey,
+		email, emailHash, encryptedEmail, emailSearchHash, passwordHash, salt, encryptedMasterKey,
 	).Scan(&userID)
 
 	suite.NoError(err)
@@ -626,20 +706,36 @@ func (suite *DatabaseIntegrationTestSuite) TestAuditLogging() {
 func (suite *DatabaseIntegrationTestSuite) createTestUser() uuid.UUID {
 	ctx := context.Background()
 
-	email := "test@example.com"
+	email := fmt.Sprintf("test-%s@example.com", uuid.NewString())
 	salt := make([]byte, 32)
 	rand.Read(salt)
 	passwordHash := HashPassword("TestPassword123!", salt)
-	encryptedEmail := []byte("encrypted_email")
 	encryptedMasterKey := make([]byte, 64)
 	rand.Read(encryptedMasterKey)
 
+	deletionKey := make([]byte, 32)
+	rand.Read(deletionKey)
+	emailHash := suite.crypto.HashEmail(email)
+	emailSearchHash, err := suite.crypto.EncryptDeterministic([]byte(strings.ToLower(email)), "email_search")
+	require.NoError(suite.T(), err)
+	encryptedEmail, err := suite.crypto.EncryptWithGDPRKey([]byte(email), deletionKey)
+	require.NoError(suite.T(), err)
+
+	_, err = suite.db.Exec(ctx, `
+		INSERT INTO gdpr_keys (email_hash, deletion_key)
+		VALUES ($1, $2)
+		ON CONFLICT (email_hash) DO UPDATE
+		SET deletion_key = EXCLUDED.deletion_key,
+		    created_at = NOW()
+	`, emailHash, deletionKey)
+	require.NoError(suite.T(), err)
+
 	var userID uuid.UUID
-	err := suite.db.QueryRow(ctx, `
-		INSERT INTO users (email, email_encrypted, password_hash, salt, master_key_encrypted)
-		VALUES ($1, $2, $3, $4, $5)
+	err = suite.db.QueryRow(ctx, `
+		INSERT INTO users (email, email_hash, email_encrypted, email_search_hash, password_hash, salt, master_key_encrypted)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id`,
-		email, encryptedEmail, passwordHash, salt, encryptedMasterKey,
+		email, emailHash, encryptedEmail, emailSearchHash, passwordHash, salt, encryptedMasterKey,
 	).Scan(&userID)
 
 	require.NoError(suite.T(), err)

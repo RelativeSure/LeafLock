@@ -1363,8 +1363,10 @@ func VerifyPassword(password, encodedHash string) bool {
 
 // Database setup and migration runner with caching and optimization
 func setupDatabaseWithRetry(dbURL string, skipMigrationCheck bool) (*pgxpool.Pool, error) {
-	const attempts = 12
+	const attempts = 24
 	const delay = 5 * time.Second
+
+	waitForDatabaseDNS(dbURL, 24, 2*time.Second)
 
 	var lastErr error
 	for attempt := 1; attempt <= attempts; attempt++ {
@@ -1390,6 +1392,35 @@ func setupDatabaseWithRetry(dbURL string, skipMigrationCheck bool) (*pgxpool.Poo
 	}
 
 	return nil, fmt.Errorf("database connection failed after %d attempts: %w", attempts, lastErr)
+}
+
+func waitForDatabaseDNS(dbURL string, attempts int, delay time.Duration) {
+	parsed, err := neturl.Parse(dbURL)
+	if err != nil {
+		return
+	}
+	host := parsed.Hostname()
+	if host == "" {
+		return
+	}
+	port := parsed.Port()
+	if port == "" {
+		port = "5432"
+	}
+	address := net.JoinHostPort(host, port)
+
+	for attempt := 1; attempt <= attempts; attempt++ {
+		conn, err := net.DialTimeout("tcp", address, 2*time.Second)
+		if err == nil {
+			conn.Close()
+			if attempt > 1 {
+				log.Printf("✅ Database host %s reachable after %d attempts", address, attempt)
+			}
+			return
+		}
+		log.Printf("⏳ Waiting for database host %s (attempt %d/%d): %v", address, attempt, attempts, err)
+		time.Sleep(delay)
+	}
 }
 
 func SetupDatabase(dbURL string) (*pgxpool.Pool, error) {
@@ -2048,7 +2079,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		} else if failedAttempts >= 6 {
 			lockDuration = 5 * time.Minute
 		} else if failedAttempts >= h.config.MaxLoginAttempts {
-			lockDuration = 1 * time.Minute
+			lockDuration = h.config.LockoutDuration
 		}
 
 		if lockDuration > 0 {
@@ -2159,13 +2190,13 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) AdminRecovery(c *fiber.Ctx) error {
-	log.Println("🚨 Admin Recovery Request - Starting emergency admin recovery process")
-
 	var req AdminRecoveryRequest
 	if err := c.BodyParser(&req); err != nil {
-		log.Printf("❌ Admin recovery body parsing failed: %v", err)
+		log.Printf("⚠️ Admin recovery rejected: invalid JSON payload (%v)", err)
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
 	}
+
+	log.Println("🚨 Admin Recovery Request - Starting emergency admin recovery process")
 
 	// Validate request
 	if req.Email == "" {
@@ -6223,7 +6254,7 @@ func seedDefaultAdminUser(db Database, crypto *CryptoService, config *Config) er
 	// services "./services" - This will be done via proper import at the top
 
 	// Create admin service instance
-	adminService := createAdminService(db, crypto)
+	adminService := createAdminService(db, crypto, config)
 
 	// Validate admin configuration first
 	if err := adminService.ValidateAdminConfig(); err != nil {
@@ -6246,10 +6277,22 @@ func seedDefaultAdminUser(db Database, crypto *CryptoService, config *Config) er
 }
 
 // createAdminService creates an AdminService instance (adapter function)
-func createAdminService(db Database, crypto *CryptoService) AdminServiceInterface {
+func createAdminService(db Database, crypto *CryptoService, cfg *Config) AdminServiceInterface {
+	resolved := getAdminConfigFromEnv()
+	if cfg != nil {
+		resolved.Enabled = cfg.DefaultAdminEnabled
+		if cfg.DefaultAdminEmail != "" {
+			resolved.Email = cfg.DefaultAdminEmail
+		}
+		if cfg.DefaultAdminPassword != "" {
+			resolved.Password = cfg.DefaultAdminPassword
+		}
+	}
+
 	return &adminServiceImpl{
 		db:     db,
 		crypto: crypto,
+		config: resolved,
 	}
 }
 
@@ -6263,10 +6306,11 @@ type AdminServiceInterface interface {
 type adminServiceImpl struct {
 	db     Database
 	crypto *CryptoService
+	config adminConfigStruct
 }
 
 func (a *adminServiceImpl) ValidateAdminConfig() error {
-	config := getAdminConfigFromEnv()
+	config := a.config
 
 	if !config.Enabled {
 		return nil
@@ -6288,7 +6332,7 @@ func (a *adminServiceImpl) ValidateAdminConfig() error {
 }
 
 func (a *adminServiceImpl) CreateDefaultAdminUser() error {
-	config := getAdminConfigFromEnv()
+	config := a.config
 
 	if !config.Enabled {
 		log.Println("⏭️ Default admin user creation is disabled")
@@ -6479,9 +6523,11 @@ func (a *adminServiceImpl) createAdminUserInDatabase(config adminConfigStruct) e
 	// Store GDPR deletion key (same as main.go)
 	_, err = tx.Exec(ctx, `
 		INSERT INTO gdpr_keys (email_hash, deletion_key)
-		VALUES ($1, $2)`,
-		emailHash, deletionKey,
-	)
+		VALUES ($1, $2)
+		ON CONFLICT (email_hash) DO UPDATE
+		SET deletion_key = EXCLUDED.deletion_key,
+		    created_at = NOW()
+	`, emailHash, deletionKey)
 	if err != nil {
 		return fmt.Errorf("failed to store GDPR deletion key: %w", err)
 	}

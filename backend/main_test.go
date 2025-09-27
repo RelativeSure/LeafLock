@@ -798,8 +798,14 @@ func setupTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 		t.Skipf("Failed to setup test schema: %v", err)
 	}
 
+	_, err = pool.Exec(ctx, "TRUNCATE users, workspaces, notes, note_versions, collaborations, audit_log, gdpr_keys, folders, tags, note_tags, search_index, attachments, templates, announcements, roles, user_roles, key_rotations, app_settings CASCADE")
+	if err != nil {
+		pool.Close()
+		t.Skipf("Failed to truncate test tables: %v", err)
+	}
+
 	cleanup := func() {
-		pool.Exec(ctx, "TRUNCATE users, workspaces, notes, note_versions, collaborations, audit_log, gdpr_keys CASCADE")
+		pool.Exec(ctx, "TRUNCATE users, workspaces, notes, note_versions, collaborations, audit_log, gdpr_keys, folders, tags, note_tags, search_index, attachments, templates, announcements, roles, user_roles, key_rotations, app_settings CASCADE")
 		pool.Close()
 	}
 
@@ -921,9 +927,21 @@ func (suite *LockoutTestSuite) SetupTest() {
 		LockoutDuration:      3 * time.Second, // Short duration for testing
 		SessionDuration:      1 * time.Hour,
 		DefaultAdminEmail:    "admin@test.com",
-		DefaultAdminPassword: "password",
+		DefaultAdminPassword: "Password123!",
 		DefaultAdminEnabled:  true,
 	}
+
+	oldEmail := os.Getenv("DEFAULT_ADMIN_EMAIL")
+	oldPassword := os.Getenv("DEFAULT_ADMIN_PASSWORD")
+	oldEnabled := os.Getenv("ENABLE_DEFAULT_ADMIN")
+	os.Setenv("DEFAULT_ADMIN_EMAIL", suite.config.DefaultAdminEmail)
+	os.Setenv("DEFAULT_ADMIN_PASSWORD", suite.config.DefaultAdminPassword)
+	os.Setenv("ENABLE_DEFAULT_ADMIN", "true")
+	suite.T().Cleanup(func() {
+		os.Setenv("DEFAULT_ADMIN_EMAIL", oldEmail)
+		os.Setenv("DEFAULT_ADMIN_PASSWORD", oldPassword)
+		os.Setenv("ENABLE_DEFAULT_ADMIN", oldEnabled)
+	})
 
 	// Test DB and Redis
 	suite.db, suite.cleanupDB = setupTestDB(suite.T())
@@ -952,7 +970,7 @@ func (suite *LockoutTestSuite) TearDownTest() {
 
 func (suite *LockoutTestSuite) TestNoArtificialRateLimitDelays() {
 	// 1. Successful login should work
-	loginReq := LoginRequest{Email: "admin@test.com", Password: "password"}
+	loginReq := LoginRequest{Email: "admin@test.com", Password: "Password123!"}
 	body, _ := json.Marshal(loginReq)
 	req := httptest.NewRequest("POST", "/auth/login", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -961,7 +979,7 @@ func (suite *LockoutTestSuite) TestNoArtificialRateLimitDelays() {
 	assert.Equal(suite.T(), http.StatusOK, resp.StatusCode, "First login should be successful")
 
 	// 2. Fail login attempts - first few should have no delay
-	for i := 0; i < 3; i++ {
+	for i := 0; i < suite.config.MaxLoginAttempts-1; i++ {
 		loginReq.Password = "wrong-password"
 		body, _ = json.Marshal(loginReq)
 		req = httptest.NewRequest("POST", "/auth/login", bytes.NewReader(body))
@@ -972,11 +990,11 @@ func (suite *LockoutTestSuite) TestNoArtificialRateLimitDelays() {
 		elapsed := time.Since(start)
 
 		require.NoError(suite.T(), err)
-		assert.Contains(suite.T(), []int{http.StatusUnauthorized, http.StatusLocked}, resp.StatusCode)
+		assert.Equal(suite.T(), http.StatusUnauthorized, resp.StatusCode)
 		assert.Less(suite.T(), elapsed.Milliseconds(), int64(500), "First few attempts should have no significant delay")
 	}
 
-	// 3. Additional attempts should still respond quickly (no artificial delays)
+	// 3. Next attempt should trigger lockout but respond immediately
 	loginReq.Password = "wrong-password"
 	body, _ = json.Marshal(loginReq)
 	req = httptest.NewRequest("POST", "/auth/login", bytes.NewReader(body))
@@ -987,17 +1005,19 @@ func (suite *LockoutTestSuite) TestNoArtificialRateLimitDelays() {
 	elapsed := time.Since(start)
 
 	require.NoError(suite.T(), err)
-	assert.Contains(suite.T(), []int{http.StatusUnauthorized, http.StatusLocked}, resp.StatusCode)
-	assert.Less(suite.T(), elapsed.Milliseconds(), int64(500), "Failed attempts should not incur artificial delays")
+	assert.Equal(suite.T(), http.StatusLocked, resp.StatusCode)
+	assert.Less(suite.T(), elapsed.Milliseconds(), int64(500), "Lockout response should not incur artificial delay")
 
-	// 4. Correct password should still work (progressive delays don't prevent correct logins)
-	loginReq.Password = "password"
+	time.Sleep(suite.config.LockoutDuration + time.Second)
+
+	// 4. Correct password should work after lockout period
+	loginReq.Password = "Password123!"
 	body, _ = json.Marshal(loginReq)
 	req = httptest.NewRequest("POST", "/auth/login", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err = suite.app.Test(req)
 	require.NoError(suite.T(), err)
-	assert.Equal(suite.T(), http.StatusOK, resp.StatusCode, "Correct password should work despite rate limiting")
+	assert.Equal(suite.T(), http.StatusOK, resp.StatusCode, "Correct password should work after lockout period")
 }
 
 func (suite *LockoutTestSuite) TestUserLockout() {
@@ -1022,7 +1042,7 @@ func (suite *LockoutTestSuite) TestUserLockout() {
 	}
 
 	// 2. User should be locked now
-	loginReq := LoginRequest{Email: "admin@test.com", Password: "password"}
+	loginReq := LoginRequest{Email: "admin@test.com", Password: "Password123!"}
 	body, _ := json.Marshal(loginReq)
 	req := httptest.NewRequest("POST", "/auth/login", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")

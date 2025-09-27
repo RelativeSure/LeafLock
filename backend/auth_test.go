@@ -85,12 +85,13 @@ func (suite *AuthTestSuite) TestAdminUserCreationWithSpecialCharacters() {
 		require.NoError(suite.T(), err)
 
 		var adminID uuid.UUID
-		var hashedPassword, encryptedEmail string
+		var hashedPassword string
+		var encryptedEmail []byte
 		var isAdmin bool
 		var createdAt time.Time
 
 		err = suite.db.QueryRow(ctx,
-			"SELECT id, encrypted_email, password_hash, is_admin, created_at FROM users WHERE email_search_hash = $1",
+			"SELECT id, email_encrypted, password_hash, is_admin, created_at FROM users WHERE email_search_hash = $1",
 			emailSearchHash).Scan(&adminID, &encryptedEmail, &hashedPassword, &isAdmin, &createdAt)
 		require.NoError(suite.T(), err, "Should find the created admin user")
 
@@ -327,16 +328,21 @@ func (suite *AuthTestSuite) TestCompleteAuthFlow() {
 		emailSearchHash, err := suite.crypto.EncryptDeterministic([]byte(strings.ToLower(suite.config.DefaultAdminEmail)), "email_search")
 		require.NoError(suite.T(), err)
 
-		var encryptedEmail string
-		err = suite.db.QueryRow(ctx, "SELECT encrypted_email FROM users WHERE email_search_hash = $1", emailSearchHash).Scan(&encryptedEmail)
+		var encryptedEmail []byte
+		var deletionKey []byte
+	err = suite.db.QueryRow(ctx, `
+		SELECT u.email_encrypted, g.deletion_key
+		FROM users u
+		JOIN gdpr_keys g ON g.email_hash = u.email_hash
+		WHERE u.email_search_hash = $1`, emailSearchHash).Scan(&encryptedEmail, &deletionKey)
 		require.NoError(suite.T(), err)
 
 		// Verify email is actually encrypted (should not be plaintext)
-		assert.NotEqual(suite.T(), suite.config.DefaultAdminEmail, encryptedEmail, "Email should be encrypted, not plaintext")
+		assert.NotEqual(suite.T(), suite.config.DefaultAdminEmail, string(encryptedEmail), "Email should be encrypted, not plaintext")
 		assert.NotEmpty(suite.T(), encryptedEmail, "Encrypted email should not be empty")
 
 		// Verify we can decrypt the email
-		decryptedEmailBytes, err := suite.crypto.Decrypt([]byte(encryptedEmail))
+		decryptedEmailBytes, err := suite.crypto.DecryptWithGDPRKey(encryptedEmail, deletionKey)
 		require.NoError(suite.T(), err, "Should be able to decrypt email")
 		decryptedEmail := string(decryptedEmailBytes)
 		assert.Equal(suite.T(), suite.config.DefaultAdminEmail, decryptedEmail, "Decrypted email should match original")
