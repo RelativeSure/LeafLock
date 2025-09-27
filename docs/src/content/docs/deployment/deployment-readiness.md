@@ -1,3 +1,8 @@
+---
+title: LeafLock Deployment Readiness Report
+description: Deployment readiness assessment for LeafLock Secure Notes v1.0.0
+---
+
 # LeafLock Deployment Readiness Report
 
 **Generated:** September 21, 2025

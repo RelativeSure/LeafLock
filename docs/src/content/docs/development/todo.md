@@ -1,3 +1,8 @@
+---
+title: LeafLock Feature Roadmap
+description: Planned features and improvements for LeafLock, organized by priority and complexity
+---
+
 # LeafLock Feature Roadmap
 
 This document outlines planned features and improvements for LeafLock. Items are organized by priority and complexity.

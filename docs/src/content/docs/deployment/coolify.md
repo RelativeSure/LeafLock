@@ -1,3 +1,8 @@
+---
+title: LeafLock Coolify Deployment Guide
+description: Step-by-step instructions for deploying LeafLock on Coolify v4+
+---
+
 # LeafLock Coolify Deployment Guide
 
 This guide provides step-by-step instructions for deploying LeafLock on Coolify v4+.
