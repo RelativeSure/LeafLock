@@ -116,13 +116,6 @@ services:
       # Admin Configuration (Optional)
       ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
 
-      # Progressive Rate Limiting Configuration
-      RATE_LIMIT_MODE: ${RATE_LIMIT_MODE:-progressive}
-      IP_RATE_LIMIT_ENABLED: ${IP_RATE_LIMIT_ENABLED:-true}
-      RATE_LIMIT_DECAY_MINUTES: ${RATE_LIMIT_DECAY_MINUTES:-5}
-      RATE_LIMIT_USE_SUBNET: ${RATE_LIMIT_USE_SUBNET:-false}
-      MAX_DELAY_SECONDS: ${MAX_DELAY_SECONDS:-60}
-      TRUSTED_IP_RANGES: ${TRUSTED_IP_RANGES:-}
 
       # Monitoring
       ENABLE_METRICS: ${ENABLE_METRICS:-true}
@@ -163,7 +156,6 @@ services:
         # Build-time environment variables for frontend API connection
         # Use relative API calls that work with Coolify's proxy
         VITE_API_URL: ${VITE_API_URL:-}
-        VITE_ENABLE_ADMIN_PANEL: ${VITE_ENABLE_ADMIN_PANEL:-false}
     environment:
       # Runtime environment variables for frontend
       BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8080}

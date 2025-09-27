@@ -7,9 +7,7 @@ WORKDIR /app
 
 # Build arguments with sensible defaults
 ARG VITE_API_URL=http://localhost:8080
-ARG VITE_ENABLE_ADMIN_PANEL=false
 ENV VITE_API_URL=$VITE_API_URL \
-    VITE_ENABLE_ADMIN_PANEL=$VITE_ENABLE_ADMIN_PANEL \
     NODE_ENV=production
 
 # Install pnpm
@@ -29,7 +27,6 @@ COPY . .
 # Debug: Show environment and verify files
 RUN echo "Build environment:" && \
     echo "VITE_API_URL=$VITE_API_URL" && \
-    echo "VITE_ENABLE_ADMIN_PANEL=$VITE_ENABLE_ADMIN_PANEL" && \
     echo "NODE_ENV=$NODE_ENV" && \
     ls -la src/ && \
     echo "Starting build..."

@@ -459,13 +459,6 @@ type Config struct {
 	SessionDuration    time.Duration
 	Environment        string
 	TrustProxyHeaders  bool
-	// Progressive rate limiting options
-	RateLimitMode         string   // "progressive", "lockout", or "disabled"
-	IPRateLimitEnabled    bool     // Enable/disable IP-based rate limiting
-	RateLimitDecayMinutes int      // Minutes between attempt count reductions
-	RateLimitUseSubnet    bool     // Group by subnet instead of individual IP
-	MaxDelaySeconds       int      // Maximum delay to apply in seconds
-	TrustedIPRanges       []string // IP ranges that bypass rate limiting
 	// Default admin settings
 	DefaultAdminEnabled  bool
 	DefaultAdminEmail    string
@@ -555,13 +548,6 @@ func LoadConfig() *Config {
 		SessionDuration:    24 * time.Hour,
 		Environment:        getEnvOrDefault("APP_ENV", "development"),
 		TrustProxyHeaders:  getEnvAsBool("TRUST_PROXY_HEADERS", false),
-		// Progressive rate limiting configuration
-		RateLimitMode:         getEnvOrDefault("RATE_LIMIT_MODE", "progressive"),
-		IPRateLimitEnabled:    getEnvAsBool("IP_RATE_LIMIT_ENABLED", true),
-		RateLimitDecayMinutes: getEnvAsInt("RATE_LIMIT_DECAY_MINUTES", 5),
-		RateLimitUseSubnet:    getEnvAsBool("RATE_LIMIT_USE_SUBNET", false),
-		MaxDelaySeconds:       getEnvAsInt("MAX_DELAY_SECONDS", 60),
-		TrustedIPRanges:       getEnvAsStringSlice("TRUSTED_IP_RANGES", []string{}),
 		// Default admin configuration
 		DefaultAdminEnabled:  getEnvAsBool("ENABLE_DEFAULT_ADMIN", true),
 		DefaultAdminEmail:    getEnvOrDefault("DEFAULT_ADMIN_EMAIL", "admin@leaflock.app"),
@@ -889,203 +875,6 @@ func isPublicIP(ip net.IP) bool {
 	return true
 }
 
-// normalizeIPForRateLimit normalizes IP addresses for rate limiting
-// If using subnet mode, converts to network address. Also handles trusted IPs.
-func (h *AuthHandler) normalizeIPForRateLimit(ipAddr string) (string, bool) {
-	// Check if IP is in trusted ranges first
-	if h.isIPTrusted(ipAddr) {
-		return "", true // Return empty string to bypass rate limiting
-	}
-
-	if !h.config.RateLimitUseSubnet {
-		return ipAddr, false
-	}
-
-	// Parse IP address
-	ip := net.ParseIP(ipAddr)
-	if ip == nil {
-		return ipAddr, false // Fallback to original IP if parsing fails
-	}
-
-	// For IPv4, use /24 subnet (class C network)
-	if ip4 := ip.To4(); ip4 != nil {
-		mask := net.CIDRMask(24, 32)
-		network := ip4.Mask(mask)
-		return network.String(), false
-	}
-
-	// For IPv6, use /48 subnet (typical provider allocation)
-	if ip.To16() != nil {
-		mask := net.CIDRMask(48, 128)
-		network := ip.Mask(mask)
-		return network.String(), false
-	}
-
-	return ipAddr, false
-}
-
-// isIPTrusted checks if an IP address is in the trusted ranges
-func (h *AuthHandler) isIPTrusted(ipAddr string) bool {
-	if len(h.config.TrustedIPRanges) == 0 {
-		return false
-	}
-
-	ip := net.ParseIP(ipAddr)
-	if ip == nil {
-		return false
-	}
-
-	for _, cidr := range h.config.TrustedIPRanges {
-		_, network, err := net.ParseCIDR(cidr)
-		if err != nil {
-			continue
-		}
-		if network.Contains(ip) {
-			return true
-		}
-	}
-	return false
-}
-
-// calculateProgressiveDelay calculates delay based on attempt count
-func (h *AuthHandler) calculateProgressiveDelay(attempts int) time.Duration {
-	if attempts <= 3 {
-		return 0 // No delay for first 3 attempts
-	}
-
-	var delaySeconds int
-	switch {
-	case attempts <= 5:
-		delaySeconds = 1
-	case attempts <= 7:
-		delaySeconds = 2
-	case attempts <= 9:
-		delaySeconds = 5
-	case attempts <= 12:
-		delaySeconds = 10
-	case attempts <= 15:
-		delaySeconds = 30
-	default:
-		delaySeconds = h.config.MaxDelaySeconds
-	}
-
-	// Cap at max delay
-	if delaySeconds > h.config.MaxDelaySeconds {
-		delaySeconds = h.config.MaxDelaySeconds
-	}
-
-	return time.Duration(delaySeconds) * time.Second
-}
-
-// getProgressiveDelay gets the current progressive delay for an IP
-func (h *AuthHandler) getProgressiveDelay(ctx context.Context, ipAddr string) (time.Duration, error) {
-	if h.config.RateLimitMode == "disabled" || !h.config.IPRateLimitEnabled {
-		return 0, nil
-	}
-
-	normalizedIP, isTrusted := h.normalizeIPForRateLimit(ipAddr)
-	if isTrusted {
-		return 0, nil // Trusted IPs bypass rate limiting
-	}
-
-	key := "rate_limit:attempts:" + normalizedIP
-	count, err := h.redis.Get(ctx, key).Int()
-	if err != nil && err.Error() != "redis: nil" {
-		return 0, err
-	}
-
-	return h.calculateProgressiveDelay(count), nil
-}
-
-// incrementProgressiveAttempts increments the attempt count for progressive rate limiting
-func (h *AuthHandler) incrementProgressiveAttempts(ctx context.Context, ipAddr string) error {
-	if h.config.RateLimitMode == "disabled" || !h.config.IPRateLimitEnabled {
-		return nil
-	}
-
-	normalizedIP, isTrusted := h.normalizeIPForRateLimit(ipAddr)
-	if isTrusted {
-		return nil // Trusted IPs bypass rate limiting
-	}
-
-	key := "rate_limit:attempts:" + normalizedIP
-	count, err := h.redis.Incr(ctx, key).Result()
-	if err != nil {
-		return err
-	}
-
-	// Set expiration on first attempt (will be extended by decay process)
-	if count == 1 {
-		decayTime := time.Duration(h.config.RateLimitDecayMinutes) * time.Minute
-		expireTime := decayTime * 20 // Give enough time for multiple decay cycles
-		h.redis.Expire(ctx, key, expireTime)
-	}
-
-	return nil
-}
-
-// resetProgressiveAttempts resets the attempt count for an IP
-func (h *AuthHandler) resetProgressiveAttempts(ctx context.Context, ipAddr string) error {
-	if h.config.RateLimitMode == "disabled" || !h.config.IPRateLimitEnabled {
-		return nil
-	}
-
-	normalizedIP, isTrusted := h.normalizeIPForRateLimit(ipAddr)
-	if isTrusted {
-		return nil
-	}
-
-	key := "rate_limit:attempts:" + normalizedIP
-	return h.redis.Del(ctx, key).Err()
-}
-
-// startRateLimitDecayProcess starts a background process to decay rate limit attempts
-func (h *AuthHandler) startRateLimitDecayProcess() {
-	if h.config.RateLimitMode == "disabled" || !h.config.IPRateLimitEnabled {
-		return
-	}
-
-	go func() {
-		ticker := time.NewTicker(time.Duration(h.config.RateLimitDecayMinutes) * time.Minute)
-		defer ticker.Stop()
-
-		for range ticker.C {
-			h.decayRateLimitAttempts()
-		}
-	}()
-}
-
-// decayRateLimitAttempts reduces attempt counts for all IPs by 1 (minimum 0)
-func (h *AuthHandler) decayRateLimitAttempts() {
-	ctx := context.Background()
-	pattern := "rate_limit:attempts:*"
-
-	// Use SCAN to iterate through all rate limit keys
-	iter := h.redis.Scan(ctx, 0, pattern, 100).Iterator()
-	for iter.Next(ctx) {
-		key := iter.Val()
-
-		// Get current count
-		count, err := h.redis.Get(ctx, key).Int()
-		if err != nil {
-			continue // Key might have expired or been deleted
-		}
-
-		// Decay the count by 1, minimum 0
-		newCount := count - 1
-		if newCount <= 0 {
-			// Remove key entirely if count reaches 0
-			h.redis.Del(ctx, key)
-		} else {
-			// Update with decayed count and refresh expiration
-			h.redis.Set(ctx, key, newCount, time.Duration(h.config.RateLimitDecayMinutes)*time.Minute*20)
-		}
-	}
-
-	if err := iter.Err(); err != nil {
-		log.Printf("Error during rate limit decay process: %v", err)
-	}
-}
 
 func csvEscape(s string) string {
 	// Escape quotes and wrap in quotes if needed
@@ -1321,8 +1110,6 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *Cr
 		config: config,
 	}
 
-	// Start background rate limit decay process
-	authHandler.startRateLimitDecayProcess()
 
 	// API routes
 	api := app.Group("/api/v1")
@@ -2147,17 +1934,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	}
 	log.Printf("   - MFA Code present: %t", req.MFACode != "")
 
-	clientIPAddr := clientIP(c)
 
-	// Apply progressive delay based on failed attempts
-	delay, err := h.getProgressiveDelay(c.Context(), clientIPAddr)
-	if err != nil {
-		log.Printf("Error getting progressive delay: %v", err)
-		// Continue with login attempt even if rate limiting check fails
-	} else if delay > 0 {
-		log.Printf("Applying progressive delay of %v for IP %s", delay, clientIPAddr)
-		time.Sleep(delay)
-	}
 
 	ctx := context.Background()
 
@@ -2182,10 +1959,6 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	).Scan(&userID, &passwordHash, &failedAttempts, &lockedUntil, &mfaEnabled, &mfaSecret)
 
 	if err != nil {
-		// Increment progressive IP attempts on invalid email
-		if ipErr := h.incrementProgressiveAttempts(ctx, clientIPAddr); ipErr != nil {
-			log.Printf("Error incrementing progressive attempts: %v", ipErr)
-		}
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
@@ -2218,10 +1991,6 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	// Verify password
 	if !VerifyPassword(req.Password, passwordHash) {
-		// Also increment progressive IP attempts
-		if err := h.incrementProgressiveAttempts(ctx, clientIPAddr); err != nil {
-			log.Printf("Error incrementing progressive attempts: %v", err)
-		}
 
 		// Increment failed attempts
 		failedAttempts++
@@ -2292,10 +2061,6 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		if !totp.Validate(code, secret) {
 			h.logAudit(ctx, userID, "login.mfa_failed", "user", userID, c)
 
-			// Also increment progressive IP attempts on failed MFA
-			if ipErr := h.incrementProgressiveAttempts(ctx, clientIPAddr); ipErr != nil {
-				log.Printf("Error incrementing progressive attempts: %v", ipErr)
-			}
 
 			return c.Status(401).JSON(fiber.Map{"error": "Invalid MFA code"})
 		}
@@ -2308,10 +2073,6 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		userID,
 	)
 
-	// Reset progressive IP attempts on successful login
-	if err := h.resetProgressiveAttempts(ctx, clientIPAddr); err != nil {
-		log.Printf("Error resetting progressive attempts: %v", err)
-	}
 
 	// Generate session
 	sessionToken := make([]byte, 32)
@@ -6784,10 +6545,8 @@ func main() {
 		regEnabled.Store(0)
 	}
 
-	// Parse startup optimization flags with defaults optimized for Coolify
+	// Parse startup optimization flags
 	skipMigrationCheck := os.Getenv("SKIP_MIGRATION_CHECK") == "true" // Default: false (always run migrations)
-	lazyInitAdmin := os.Getenv("LAZY_INIT_ADMIN") != "false" // Default: true (async admin creation)
-	asyncTemplateSeed := os.Getenv("ASYNC_TEMPLATE_SEED") != "false" // Default: true (async template seeding)
 
 	// Setup database with conditional migrations
 	dbStart := time.Now()
@@ -6870,45 +6629,21 @@ func main() {
 		}
 	}()
 
-	// Initialize admin user (conditional async)
-	if lazyInitAdmin {
-		log.Println("⚡ Starting admin user initialization asynchronously")
-		go func() {
-			if err := seedDefaultAdminUser(db, crypto, config); err != nil {
-				log.Printf("Warning: Failed to create default admin user: %v", err)
-			} else {
-				log.Printf("✅ Admin user initialization completed")
-			}
-			readyState.markAdminReady()
-		}()
-	} else {
-		adminStart := time.Now()
-		if err := seedDefaultAdminUser(db, crypto, config); err != nil {
-			log.Printf("Warning: Failed to create default admin user: %v", err)
-		}
-		log.Printf("⏱️  Admin user initialization completed in %v", time.Since(adminStart))
-		readyState.markAdminReady()
+	// Initialize admin user
+	adminStart := time.Now()
+	if err := seedDefaultAdminUser(db, crypto, config); err != nil {
+		log.Printf("Warning: Failed to create default admin user: %v", err)
 	}
+	log.Printf("⏱️  Admin user initialization completed in %v", time.Since(adminStart))
+	readyState.markAdminReady()
 
-	// Initialize templates (conditional async)
-	if asyncTemplateSeed {
-		log.Println("⚡ Starting template seeding asynchronously")
-		go func() {
-			if err := seedDefaultTemplates(db, crypto); err != nil {
-				log.Printf("Warning: Failed to seed default templates: %v", err)
-			} else {
-				log.Printf("✅ Template seeding completed")
-			}
-			readyState.markTemplatesReady()
-		}()
-	} else {
-		templateStart := time.Now()
-		if err := seedDefaultTemplates(db, crypto); err != nil {
-			log.Printf("Warning: Failed to seed default templates: %v", err)
-		}
-		log.Printf("⏱️  Template seeding completed in %v", time.Since(templateStart))
-		readyState.markTemplatesReady()
+	// Initialize templates
+	templateStart := time.Now()
+	if err := seedDefaultTemplates(db, crypto); err != nil {
+		log.Printf("Warning: Failed to seed default templates: %v", err)
 	}
+	log.Printf("⏱️  Template seeding completed in %v", time.Since(templateStart))
+	readyState.markTemplatesReady()
 
 	// Start admin allowlist refresher
 	go func() {
