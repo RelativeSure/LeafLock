@@ -609,20 +609,50 @@ func getEnvAsInt(key string, defaultValue int) int {
 
 // Build a postgres URL from common env vars (Coolify/Postgres add-on style)
 // Recognized: POSTGRESQL_HOST, POSTGRESQL_PORT, POSTGRESQL_USER, POSTGRESQL_PASSWORD, POSTGRESQL_DATABASE, POSTGRESQL_SSLMODE
+func firstNonEmptyEnv(keys ...string) string {
+	for _, key := range keys {
+		if val := strings.TrimSpace(os.Getenv(key)); val != "" {
+			return val
+		}
+	}
+	return ""
+}
+
+func firstEnv(keys ...string) string {
+	for _, key := range keys {
+		if val, ok := os.LookupEnv(key); ok && strings.TrimSpace(val) != "" {
+			return val
+		}
+	}
+	return ""
+}
+
 func buildDatabaseURLFromEnv() string {
-	host := strings.TrimSpace(os.Getenv("POSTGRESQL_HOST"))
-	user := strings.TrimSpace(os.Getenv("POSTGRESQL_USER"))
-	pass := os.Getenv("POSTGRESQL_PASSWORD") // may contain spaces/specials
-	db := strings.TrimSpace(os.Getenv("POSTGRESQL_DATABASE"))
+	host := firstNonEmptyEnv("POSTGRESQL_HOST", "POSTGRES_HOST", "PGHOST")
+	user := firstNonEmptyEnv("POSTGRESQL_USER", "POSTGRES_USER", "PGUSER")
+	pass := firstEnv("POSTGRESQL_PASSWORD", "POSTGRES_PASSWORD", "PGPASSWORD")
+	db := firstNonEmptyEnv("POSTGRESQL_DATABASE", "POSTGRES_DB", "PGDATABASE")
 	if host == "" || user == "" || db == "" {
 		return ""
 	}
-	port := getEnvOrDefault("POSTGRESQL_PORT", "5432")
-	sslmode := getEnvOrDefault("POSTGRESQL_SSLMODE", "require")
+	port := firstNonEmptyEnv("POSTGRESQL_PORT", "POSTGRES_PORT", "PGPORT")
+	if port == "" {
+		port = "5432"
+	}
+	sslmode := firstNonEmptyEnv("POSTGRESQL_SSLMODE", "POSTGRES_SSLMODE", "PGSSLMODE")
+	if sslmode == "" {
+		sslmode = "require"
+	}
+
+	hostPort := host
+	if !strings.Contains(host, ":") {
+		hostPort = net.JoinHostPort(host, port)
+	}
+
 	u := &neturl.URL{
 		Scheme: "postgres",
 		User:   neturl.UserPassword(user, pass),
-		Host:   net.JoinHostPort(host, port),
+		Host:   hostPort,
 		Path:   "/" + db,
 	}
 	q := neturl.Values{}
