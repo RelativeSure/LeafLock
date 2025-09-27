@@ -1,0 +1,13 @@
+# Exclude everything by default
+**
+
+# Re-include backend sources needed for the backend Docker build
+!backend/
+!backend/**
+
+# Still skip backend build artifacts if they appear
+backend/main
+backend/entrypoint
+backend/*.out
+backend/*.log
+backend/coverage.*
