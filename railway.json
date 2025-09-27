@@ -4,7 +4,11 @@
     "builder": "DOCKERFILE",
     "dockerfilePath": "backend/Dockerfile",
     "watchPatterns": [
-      "backend/**"
+      "backend/**",
+      "frontend/**",
+      "scripts/**",
+      "package.json",
+      "pnpm-lock.yaml"
     ]
   },
   "deploy": {
