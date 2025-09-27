@@ -26,9 +26,9 @@ import (
 	"crypto/subtle"
 	"database/sql"
 	"encoding/base64"
-	"errors"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -67,14 +67,14 @@ import (
 
 // ReadyState tracks initialization state for health checks
 type ReadyState struct {
-	db         *pgxpool.Pool
-	crypto     *CryptoService
-	config     *Config
-	rdb        *redis.Client
-	adminReady atomic.Bool
+	db             *pgxpool.Pool
+	crypto         *CryptoService
+	config         *Config
+	rdb            *redis.Client
+	adminReady     atomic.Bool
 	templatesReady atomic.Bool
 	allowlistReady atomic.Bool
-	redisReady atomic.Bool
+	redisReady     atomic.Bool
 }
 
 func (r *ReadyState) markAdminReady()     { r.adminReady.Store(true) }
@@ -83,10 +83,10 @@ func (r *ReadyState) markAllowlistReady() { r.allowlistReady.Store(true) }
 func (r *ReadyState) markRedisReady()     { r.redisReady.Store(true) }
 
 func (r *ReadyState) IsFullyReady() bool {
-	return r.adminReady.Load() && 
-		   r.templatesReady.Load() && 
-		   r.allowlistReady.Load() && 
-		   r.redisReady.Load()
+	return r.adminReady.Load() &&
+		r.templatesReady.Load() &&
+		r.allowlistReady.Load() &&
+		r.redisReady.Load()
 }
 
 // AUTOMATIC DATABASE SETUP - Runs migrations on startup
@@ -535,8 +535,8 @@ func LoadConfig() *Config {
 
 	return &Config{
 		DatabaseURL:        dbURL,
-		RedisURL:           getEnvOrDefault("REDIS_URL", "localhost:6379"),
-		RedisPassword:      os.Getenv("REDIS_PASSWORD"),
+		RedisURL:           normalizeRedisAddress(getEnvOrDefault("REDIS_URL", "localhost:6379")),
+		RedisPassword:      resolveRedisPassword(os.Getenv("REDIS_URL"), os.Getenv("REDIS_PASSWORD")),
 		JWTSecret:          []byte(jwtSecret),
 		EncryptionKey:      []byte(encKey),
 		Port:               getEnvOrDefault("PORT", "8080"),
@@ -596,6 +596,48 @@ func getEnvAsInt(key string, defaultValue int) int {
 		}
 	}
 	return defaultValue
+}
+
+// normalizeRedisAddress converts redis:// URLs into host[:port] that go-redis expects.
+func normalizeRedisAddress(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return trimmed
+	}
+	if !strings.Contains(trimmed, "://") {
+		return trimmed
+	}
+	u, err := neturl.Parse(trimmed)
+	if err != nil {
+		log.Printf("Warning: could not parse REDIS_URL '%s': %v", trimmed, err)
+		return trimmed
+	}
+	if u.Host != "" {
+		return u.Host
+	}
+	return trimmed
+}
+
+// resolveRedisPassword returns an explicit password if provided, otherwise pulls
+// the password component from a redis:// URL when available.
+func resolveRedisPassword(redisURL, explicit string) string {
+	if explicit != "" {
+		return explicit
+	}
+	trimmed := strings.TrimSpace(redisURL)
+	if trimmed == "" || !strings.Contains(trimmed, "://") {
+		return explicit
+	}
+	u, err := neturl.Parse(trimmed)
+	if err != nil {
+		return explicit
+	}
+	if u.User != nil {
+		if pw, ok := u.User.Password(); ok && pw != "" {
+			return pw
+		}
+	}
+	return explicit
 }
 
 // Build a postgres URL from common env vars (Coolify/Postgres add-on style)
@@ -875,7 +917,6 @@ func isPublicIP(ip net.IP) bool {
 	return true
 }
 
-
 func csvEscape(s string) string {
 	// Escape quotes and wrap in quotes if needed
 	if strings.ContainsAny(s, ",\n\r\"") {
@@ -900,13 +941,13 @@ func NewCryptoService(key []byte) *CryptoService {
 func prewarmRedisPool(rdb *redis.Client) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	
+
 	// Ping Redis to establish connections
 	if err := rdb.Ping(ctx).Err(); err != nil {
 		log.Printf("Warning: Redis pool pre-warm failed: %v", err)
 		return
 	}
-	
+
 	// Do a simple operation to warm up the connection
 	rdb.Set(ctx, "startup:prewarm", time.Now().Unix(), time.Second)
 	rdb.Del(ctx, "startup:prewarm")
@@ -978,7 +1019,7 @@ func createFiberApp(startTime time.Time, readyState *ReadyState) *fiber.App {
 
 	// Basic health endpoints available immediately
 	api := app.Group("/api/v1")
-	
+
 	// Live endpoint - just checks if server is running
 	api.Get("/health/live", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
@@ -1109,7 +1150,6 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *Cr
 		crypto: crypto,
 		config: config,
 	}
-
 
 	// API routes
 	api := app.Group("/api/v1")
@@ -1393,9 +1433,9 @@ func SetupDatabase(dbURL string) (*pgxpool.Pool, error) {
 	config.HealthCheckPeriod = 2 * time.Minute // Less frequent health checks for startup performance
 
 	// Optimize connection parameters for performance
-	config.ConnConfig.ConnectTimeout = 5 * time.Second  // Faster timeout for startup
-	config.ConnConfig.RuntimeParams["jit"] = "off" // Disable JIT for faster startup
-	
+	config.ConnConfig.ConnectTimeout = 5 * time.Second // Faster timeout for startup
+	config.ConnConfig.RuntimeParams["jit"] = "off"     // Disable JIT for faster startup
+
 	// Configure faster health check query
 	config.ConnConfig.RuntimeParams["application_name"] = "leaflock_backend"
 
@@ -1423,7 +1463,7 @@ func SetupDatabase(dbURL string) (*pgxpool.Pool, error) {
 // Used for faster startup when SKIP_MIGRATION_CHECK=true
 func SetupDatabaseFast(dbURL string) (*pgxpool.Pool, error) {
 	log.Println("Setting up database connection (fast mode - skipping migrations)")
-	
+
 	// Parse URL to detect DB name and construct an admin URL pointing to 'postgres'
 	adminURL, dbName := adminURLAndDBName(dbURL)
 
@@ -1454,11 +1494,11 @@ func SetupDatabaseFast(dbURL string) (*pgxpool.Pool, error) {
 	}
 
 	// Configure connection pool optimized for fastest possible startup
-	config.MaxConns = 5                        // Minimal connections for startup
-	config.MinConns = 1                        // Single connection to start
-	config.MaxConnLifetime = 1 * time.Hour     
-	config.MaxConnIdleTime = 30 * time.Minute  
-	config.HealthCheckPeriod = 5 * time.Minute 
+	config.MaxConns = 5 // Minimal connections for startup
+	config.MinConns = 1 // Single connection to start
+	config.MaxConnLifetime = 1 * time.Hour
+	config.MaxConnIdleTime = 30 * time.Minute
+	config.HealthCheckPeriod = 5 * time.Minute
 
 	// Optimize connection parameters for fastest startup
 	config.ConnConfig.ConnectTimeout = 3 * time.Second
@@ -1486,7 +1526,7 @@ const MigrationSchemaVersion = "2024.12.25.002" // Updated for performance optim
 func runOptimizedMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 	// Check if migration tracking table exists and get current version
 	currentVersion, needsMigration := checkMigrationStatus(ctx, pool)
-	
+
 	if !needsMigration {
 		log.Printf("Database schema is up to date (version: %s), skipping migrations", currentVersion)
 		return nil
@@ -1494,7 +1534,7 @@ func runOptimizedMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 
 	log.Printf("Running database migrations (current: %s, target: %s)...", currentVersion, MigrationSchemaVersion)
 	start := time.Now()
-	
+
 	// Run migrations in a transaction for atomicity
 	tx, err := pool.Begin(ctx)
 	if err != nil {
@@ -1590,12 +1630,12 @@ func fastHealthCheck(ctx context.Context, pool *pgxpool.Pool) error {
 func validateDatabaseConnectivity(pool *pgxpool.Pool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	
+
 	// Fast health check first
 	if err := fastHealthCheck(ctx, pool); err != nil {
 		return fmt.Errorf("database connectivity check failed: %w", err)
 	}
-	
+
 	log.Println("✅ Database connectivity verified")
 	return nil
 }
@@ -1934,8 +1974,6 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	}
 	log.Printf("   - MFA Code present: %t", req.MFACode != "")
 
-
-
 	ctx := context.Background()
 
 	// Create deterministic hash for secure email lookup
@@ -2061,7 +2099,6 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		if !totp.Validate(code, secret) {
 			h.logAudit(ctx, userID, "login.mfa_failed", "user", userID, c)
 
-
 			return c.Status(401).JSON(fiber.Map{"error": "Invalid MFA code"})
 		}
 	}
@@ -2072,7 +2109,6 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
         WHERE id = $1`,
 		userID,
 	)
-
 
 	// Generate session
 	sessionToken := make([]byte, 32)
@@ -6118,7 +6154,7 @@ func validateEncryptionKeyAndAdminAccess(db Database, crypto *CryptoService, con
 			(SELECT COUNT(*) FROM users) as user_count,
 			EXISTS(SELECT 1 FROM users WHERE email_search_hash = $1) as admin_exists
 	`, currentEmailSearchHash).Scan(&userCount, &adminExists)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to check user status: %w", err)
 	}
@@ -6216,7 +6252,7 @@ type adminServiceImpl struct {
 
 func (a *adminServiceImpl) ValidateAdminConfig() error {
 	config := getAdminConfigFromEnv()
-	
+
 	if !config.Enabled {
 		return nil
 	}
@@ -6238,7 +6274,7 @@ func (a *adminServiceImpl) ValidateAdminConfig() error {
 
 func (a *adminServiceImpl) CreateDefaultAdminUser() error {
 	config := getAdminConfigFromEnv()
-	
+
 	if !config.Enabled {
 		log.Println("⏭️ Default admin user creation is disabled")
 		return nil
@@ -6321,7 +6357,7 @@ func validateAdminPassword(password string) error {
 
 func (a *adminServiceImpl) adminUserExists(email string) (bool, error) {
 	ctx := context.Background()
-	
+
 	// Generate the email search hash using the crypto service (same as original)
 	emailSearchHash, err := a.crypto.EncryptDeterministic([]byte(strings.ToLower(email)), "email_search")
 	if err != nil {
