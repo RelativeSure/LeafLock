@@ -9,12 +9,15 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: leaflock
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C --lc-collate=C --lc-ctype=C"
+      LC_ALL: C
+      LANG: C
+    command: ["sh", "-c", "apk add --no-cache musl-locales && docker-entrypoint.sh postgres"]
 
   # Redis Cache for Sessions
   redis:
     image: redis:8-alpine
-    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
 
   # Go Backend API
   backend:
@@ -22,7 +25,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/leaflock?sslmode=disable&connect_timeout=10
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/leaflock?sslmode=disable&connect_timeout=30
       REDIS_URL: redis:6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
@@ -37,8 +40,10 @@ services:
       ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
       ENABLE_METRICS: ${ENABLE_METRICS:-true}
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
 
   # React Frontend
   frontend:
@@ -53,33 +58,30 @@ services:
     expose:
       - "80"
     depends_on:
-      - backend
+      backend:
+        condition: service_started
 
-# Coolify Fast Startup Optimization:
-# PERFORMANCE OPTIMIZATIONS IMPLEMENTED:
-# 1. Aggressive Health Checks:
-#    - PostgreSQL: 3s intervals, 10s start period, 2s timeout
-#    - Redis: 2s intervals, 5s start period, 1s timeout  
-#    - Backend: 5s intervals, 15s start period, 3s timeout
-#    - Frontend: 3s intervals, 10s start period, 2s timeout
+# Coolify Deployment Optimizations:
+# STABILITY AND PERFORMANCE IMPROVEMENTS:
+# 1. PostgreSQL Locale Fixes:
+#    - Added musl-locales package installation
+#    - Proper locale environment variables (LC_ALL=C, LANG=C)
+#    - Fixed POSTGRES_INITDB_ARGS with complete locale specification
 #
-# 2. Progressive Dependencies:
-#    - Redis starts first (fastest)
-#    - PostgreSQL starts in parallel
-#    - Backend waits for both DB services to be healthy
-#    - Frontend waits for backend to be healthy
+# 2. Service Coordination:
+#    - Progressive startup: postgres/redis → backend → frontend
+#    - Extended connection timeouts for Coolify environment
+#    - Proper depends_on configuration for service ordering
 #
-# 3. Resource Limits (prevents resource contention):
-#    - PostgreSQL: 512M/256M memory, 0.5/0.2 CPU
-#    - Redis: 256M/64M memory, 0.3/0.1 CPU
-#    - Backend: 1G/512M memory, 1.0/0.5 CPU
-#    - Frontend: 128M/32M memory, 0.2/0.05 CPU
+# 3. Container Stability:
+#    - PostgreSQL: Locale package installation prevents shutdowns
+#    - Redis: Memory management and persistence configuration
+#    - Extended database connection timeouts (30s)
 #
-# 4. Optimized Health Check Commands:
-#    - Backend: Uses /api/v1/health endpoint for comprehensive checks
-#    - Frontend: Uses wget with timeout for nginx health
-#    - Redis: Direct PING command with auth
-#    - PostgreSQL: pg_isready for fast connection test
+# 4. Coolify Compatibility:
+#    - No custom health checks (Coolify manages these)
+#    - Service discovery via standard container names
+#    - Minimal configuration letting Coolify handle infrastructure
 #
 # TARGET STARTUP TIME: Under 30 seconds
 # 
