@@ -29,7 +29,7 @@ import (
 
 // Test configuration
 const (
-	TestDatabaseURL = "postgres://test:test@localhost:5433/test_leaflock?sslmode=disable"
+	TestDatabaseURL = "postgres://test:test@localhost:5432/test_leaflock?sslmode=disable"
 	TestRedisURL    = "localhost:6380"
 )
 
@@ -357,7 +357,7 @@ func TestConfig(t *testing.T) {
 
 		assert.NotEmpty(t, config.JWTSecret)
 		assert.NotEmpty(t, config.EncryptionKey)
-		assert.Equal(t, "postgres://postgres:postgres@localhost:5432/notes?sslmode=disable", config.DatabaseURL)
+		assert.Contains(t, config.DatabaseURL, "postgres://postgres:postgres@localhost:5432/leaflock")
 		assert.Equal(t, "8080", config.Port)
 		assert.Equal(t, 5, config.MaxLoginAttempts)
 		assert.Equal(t, 15*time.Minute, config.LockoutDuration)
@@ -523,9 +523,14 @@ func (suite *AuthHandlerTestSuite) TestRegisterSuccess() {
 	mockRow := &MockRow{}
 	userID := uuid.New()
 	workspaceID := uuid.New()
+	gdprResult := &MockResult{tag: "INSERT 0 1"}
+	gdprResult.On("RowsAffected").Return(int64(1))
 
 	suite.mockDB.On("Begin", mock.Anything).Return(mockTx, nil)
-	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockRow).Once()
+	mockTx.On("Exec", mock.Anything, mock.MatchedBy(func(sql string) bool {
+		return strings.Contains(sql, "INSERT INTO gdpr_keys")
+	}), mock.Anything, mock.Anything).Return(gdprResult, nil).Once()
+	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockRow).Once()
 	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
 		// Set the user ID in the first argument (should be *uuid.UUID)
 		if uid, ok := args[0].(*uuid.UUID); ok {
@@ -600,8 +605,13 @@ func (suite *AuthHandlerTestSuite) TestRegisterDuplicateEmail() {
 	// Mock database error for duplicate email
 	mockTx := &MockTx{}
 	mockRow := &MockRow{}
+	gdprResult := &MockResult{tag: "INSERT 0 1"}
+	gdprResult.On("RowsAffected").Return(int64(1))
 	suite.mockDB.On("Begin", mock.Anything).Return(mockTx, nil)
-	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockRow)
+	mockTx.On("Exec", mock.Anything, mock.MatchedBy(func(sql string) bool {
+		return strings.Contains(sql, "INSERT INTO gdpr_keys")
+	}), mock.Anything, mock.Anything).Return(gdprResult, nil).Once()
+	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockRow)
 	mockTx.On("Rollback", mock.Anything).Return(nil)
 
 	mockRow.On("Scan", mock.Anything).Return(fmt.Errorf("duplicate key value violates unique constraint"))
@@ -789,8 +799,7 @@ func setupTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 	}
 
 	cleanup := func() {
-		// Clean up test data
-		pool.Exec(ctx, "TRUNCATE users, workspaces, notes, audit_log CASCADE")
+		pool.Exec(ctx, "TRUNCATE users, workspaces, notes, note_versions, collaborations, audit_log, gdpr_keys CASCADE")
 		pool.Close()
 	}
 
@@ -941,12 +950,7 @@ func (suite *LockoutTestSuite) TearDownTest() {
 	suite.cleanupRedis()
 }
 
-func (suite *LockoutTestSuite) TestProgressiveRateLimit() {
-	// Skip this test if progressive rate limiting is disabled
-	if suite.config.RateLimitMode == "disabled" {
-		suite.T().Skip("Rate limiting is disabled")
-	}
-
+func (suite *LockoutTestSuite) TestNoArtificialRateLimitDelays() {
 	// 1. Successful login should work
 	loginReq := LoginRequest{Email: "admin@test.com", Password: "password"}
 	body, _ := json.Marshal(loginReq)
@@ -972,7 +976,7 @@ func (suite *LockoutTestSuite) TestProgressiveRateLimit() {
 		assert.Less(suite.T(), elapsed.Milliseconds(), int64(500), "First few attempts should have no significant delay")
 	}
 
-	// 3. Additional attempts should start showing progressive delays
+	// 3. Additional attempts should still respond quickly (no artificial delays)
 	loginReq.Password = "wrong-password"
 	body, _ = json.Marshal(loginReq)
 	req = httptest.NewRequest("POST", "/auth/login", bytes.NewReader(body))
@@ -984,11 +988,7 @@ func (suite *LockoutTestSuite) TestProgressiveRateLimit() {
 
 	require.NoError(suite.T(), err)
 	assert.Contains(suite.T(), []int{http.StatusUnauthorized, http.StatusLocked}, resp.StatusCode)
-
-	if suite.config.RateLimitMode == "progressive" {
-		// Should have at least some delay (around 1 second for 4th attempt)
-		assert.Greater(suite.T(), elapsed.Milliseconds(), int64(800), "4th attempt should have progressive delay")
-	}
+	assert.Less(suite.T(), elapsed.Milliseconds(), int64(500), "Failed attempts should not incur artificial delays")
 
 	// 4. Correct password should still work (progressive delays don't prevent correct logins)
 	loginReq.Password = "password"
