@@ -26,8 +26,17 @@ services:
       dockerfile: Dockerfile
     environment:
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/leaflock?sslmode=disable&connect_timeout=30
+      # Fallback PostgreSQL environment variables for buildDatabaseURLFromEnv()
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: leaflock
+      POSTGRES_PORT: 5432
+      POSTGRES_SSLMODE: disable
+      # Redis configuration
       REDIS_URL: redis:6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+      # Application secrets
       JWT_SECRET: ${JWT_SECRET}
       SERVER_ENCRYPTION_KEY: ${SERVER_ENCRYPTION_KEY}
       CORS_ORIGINS: ${CORS_ORIGINS}
@@ -81,6 +90,7 @@ services:
 # 4. Coolify Compatibility:
 #    - No custom health checks (Coolify manages these)
 #    - Service discovery via standard container names
+#    - Fallback environment variables to prevent connection failures
 #    - Minimal configuration letting Coolify handle infrastructure
 #
 # TARGET STARTUP TIME: Under 30 seconds
