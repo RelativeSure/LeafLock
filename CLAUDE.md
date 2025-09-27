@@ -135,22 +135,11 @@ LeafLock is optimized for fast startup times on containerized deployments like C
 - **`/api/v1/health/live`**: Basic server health (responds in 3-5 seconds)
 - **`/api/v1/health/ready`**: Full initialization status (responds in 15-30 seconds)
 
-#### **Async Initialization (Default: Enabled)**
-By default, non-critical operations run in the background after the server starts accepting connections:
-- **Admin user creation**: Runs asynchronously to avoid blocking startup
-- **Template seeding**: Background operation for default note templates
-- **Connection pool warming**: Database and Redis connections pre-warm in background
-
 #### **Startup Optimization Environment Variables**
 ```bash
-# These are the defaults - no configuration needed
-LAZY_INIT_ADMIN=true          # Admin user creation runs in background (default: true)
-ASYNC_TEMPLATE_SEED=true      # Template seeding runs in background (default: true)
 SKIP_MIGRATION_CHECK=false    # Always run database migrations (default: false)
 
-# Only set these if you want to override the defaults:
-LAZY_INIT_ADMIN=false         # Force synchronous admin creation (slower startup)
-ASYNC_TEMPLATE_SEED=false     # Force synchronous template seeding (slower startup)
+# Only set this if you want to override the default:
 SKIP_MIGRATION_CHECK=true     # Skip migration checks (NOT recommended)
 ```
 
@@ -169,15 +158,11 @@ curl https://your-domain.com/api/v1/health/live
 # Full readiness check (for load balancers)
 curl https://your-domain.com/api/v1/health/ready
 
-# Example ready response during initialization
+# Example ready response
 {
-  "status": "initializing",
+  "status": "ready",
   "timestamp": "2024-12-25T10:30:00Z",
-  "uptime": "15s",
-  "admin_ready": false,
-  "templates_ready": true,
-  "allowlist_ready": true,
-  "redis_ready": true
+  "uptime": "15s"
 }
 ```
 

@@ -6,5 +6,54 @@
   rebaseWhen: 'conflicted',
   dependencyDashboard: true,
   dependencyDashboardApproval: true,
-  ignoreTests: true
+  ignoreTests: true,
+
+  // Enable Docker image updates
+  "docker": {
+    "enabled": true
+  },
+
+  // Enable Go module updates
+  "gomod": {
+    "enabled": true
+  },
+
+  // Package rules for specific version management
+  "packageRules": [
+    {
+      "description": "Docker base images in Dockerfiles",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": [
+        "postgres",
+        "redis",
+        "nginx",
+        "golang",
+        "node",
+        "alpine"
+      ],
+      "enabled": true,
+      "automerge": false,
+      "reviewers": ["team:maintainers"]
+    },
+    {
+      "description": "Go language version and modules",
+      "matchFiles": ["backend/go.mod", "backend/go.sum"],
+      "enabled": true,
+      "automerge": false
+    },
+    {
+      "description": "Node.js and pnpm versions",
+      "matchFiles": ["frontend/package.json", "frontend/pnpm-lock.yaml"],
+      "matchPackageNames": ["pnpm", "@pnpm/exe"],
+      "enabled": true,
+      "automerge": false
+    },
+    {
+      "description": "Security updates - auto-merge patch versions",
+      "matchUpdateTypes": ["patch"],
+      "matchPackagePatterns": [".*"],
+      "automerge": true,
+      "labels": ["security", "auto-merge"]
+    }
+  ]
 }

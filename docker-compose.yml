@@ -91,7 +91,6 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
-        VITE_ENABLE_ADMIN_PANEL: ${VITE_ENABLE_ADMIN_PANEL:-false}
     container_name: leaflock-frontend
     environment:
       BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8080}
