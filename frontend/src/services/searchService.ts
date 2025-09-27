@@ -1,6 +1,7 @@
 /**
  * Search service for finding notes
  */
+import { getApiBaseUrl } from '../utils/apiBase'
 
 export interface SearchResult {
   id: string
@@ -21,12 +22,11 @@ interface SearchRequest {
   query: string
   limit?: number
 }
-
 class SearchService {
   private baseUrl: string
 
   constructor() {
-    this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    this.baseUrl = getApiBaseUrl()
   }
 
   private getAuthHeaders(): Record<string, string> {

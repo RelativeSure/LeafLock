@@ -1,3 +1,8 @@
+---
+title: Repository Guidelines
+description: Development, testing, and contribution guidelines for LeafLock
+---
+
 # Repository Guidelines
 
 This repository contains LeafLock, a full‑stack app with a Go backend and a Vite/React frontend. Use this guide to develop, test, and contribute consistently.

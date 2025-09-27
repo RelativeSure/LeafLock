@@ -1,6 +1,7 @@
 /**
  * Templates service for managing note templates
  */
+import { getApiBaseUrl } from '../utils/apiBase'
 
 export interface Template {
   id: string
@@ -51,7 +52,7 @@ class TemplatesService {
   private baseUrl: string
 
   constructor() {
-    this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    this.baseUrl = getApiBaseUrl()
   }
 
   private getAuthHeaders(): Record<string, string> {

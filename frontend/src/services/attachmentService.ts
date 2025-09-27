@@ -1,6 +1,7 @@
 /**
  * Attachment service for handling file uploads and downloads
  */
+import { getApiBaseUrl } from '../utils/apiBase'
 
 export interface Attachment {
   id: string
@@ -21,12 +22,11 @@ interface UploadResponse {
   created_at: string
   download_url: string
 }
-
 class AttachmentService {
   private baseUrl: string
 
   constructor() {
-    this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    this.baseUrl = getApiBaseUrl()
   }
 
   private getAuthHeaders(): Record<string, string> {

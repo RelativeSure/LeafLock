@@ -1,6 +1,7 @@
 /**
  * Tags service for managing note tags
  */
+import { getApiBaseUrl } from '../utils/apiBase'
 
 export interface Tag {
   id: string
@@ -32,12 +33,11 @@ export interface NotesResponse {
     updated_at: string
   }>
 }
-
 class TagsService {
   private baseUrl: string
 
   constructor() {
-    this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    this.baseUrl = getApiBaseUrl()
   }
 
   private getAuthHeaders(): Record<string, string> {

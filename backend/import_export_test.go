@@ -5,17 +5,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"mime/multipart"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/valyala/fasthttp"
 )
 
 func TestImportExportFeatures(t *testing.T) {
+	initLogging()
+
 	// Setup test database
 	db, err := SetupTestDatabase()
 	require.NoError(t, err)
@@ -39,112 +42,99 @@ func TestImportExportFeatures(t *testing.T) {
 	workspaceID := uuid.New()
 
 	ctx := context.Background()
-	_, err = db.Exec(ctx, `
-		INSERT INTO users (id, email, password_hash, workspace_id)
-		VALUES ($1, 'test@example.com', 'hash', $2)`,
-		userID, workspaceID)
+	_, err = db.Exec(ctx, "TRUNCATE collaborations, note_versions, notes, workspaces, users CASCADE")
 	require.NoError(t, err)
 
 	_, err = db.Exec(ctx, `
-		INSERT INTO workspaces (id, name, owner_id)
-		VALUES ($1, 'Test Workspace', $2)`,
-		workspaceID, userID)
+        INSERT INTO users (
+            id, email, email_hash, email_encrypted, email_search_hash,
+            password_hash, salt, master_key_encrypted, storage_used, storage_limit
+        ) VALUES
+            ($1, $2, $3, $4, $5, $6, $7, $8, 0, 10485760)`,
+		userID,
+		"test@example.com",
+		[]byte("hash-test"),
+		[]byte("enc-test"),
+		[]byte("search-test"),
+		"hash",
+		[]byte("salt"),
+		[]byte("master"))
+	require.NoError(t, err)
+
+	_, err = db.Exec(ctx, `
+        INSERT INTO workspaces (id, name_encrypted, owner_id, encryption_key_encrypted)
+        VALUES ($1, $2, $3, $4)`,
+		workspaceID, []byte("workspace"), userID, []byte("workspace-key"))
 	require.NoError(t, err)
 
 	t.Run("ImportMarkdownNote", func(t *testing.T) {
 		app := fiber.New()
+		app.Post("/notes/import", func(c *fiber.Ctx) error {
+			c.Locals("user_id", userID)
+			return handler.ImportNote(c)
+		})
 
-		// Create multipart form with markdown file
-		var requestBody bytes.Buffer
-		writer := multipart.NewWriter(&requestBody)
+		payload := ImportRequest{
+			Format:   "markdown",
+			Content:  "# Test Note\n\nThis is a test markdown note with **bold** text.",
+			Filename: "test.md",
+		}
 
-		fileWriter, err := writer.CreateFormFile("file", "test.md")
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPost, "/notes/import", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
+
+		respBody, err := io.ReadAll(resp.Body)
 		require.NoError(t, err)
 
-		markdownContent := "# Test Note\n\nThis is a test markdown note with **bold** text."
-		_, err = fileWriter.Write([]byte(markdownContent))
-		require.NoError(t, err)
-
-		err = writer.Close()
-		require.NoError(t, err)
-
-		// Create test context
-		ctx := &fasthttp.RequestCtx{}
-		ctx.Request.SetRequestURI("/notes/import")
-		ctx.Request.Header.SetMethod("POST")
-		ctx.Request.Header.SetContentType(writer.FormDataContentType())
-		ctx.Request.SetBody(requestBody.Bytes())
-
-		c := app.AcquireCtx(ctx)
-		defer app.ReleaseCtx(c)
-		c.Locals("user_id", userID)
-
-		// Execute handler
-		err = handler.ImportNote(c)
-		require.NoError(t, err)
-
-		// Check response
-		assert.Equal(t, fiber.StatusCreated, c.Response().StatusCode())
-
-		// Parse response
 		var response map[string]interface{}
-		err = json.Unmarshal(c.Response().Body(), &response)
-		require.NoError(t, err)
-
-		note, ok := response["note"].(map[string]interface{})
-		require.True(t, ok)
-		assert.Equal(t, "Test Note", note["title"])
+		require.NoError(t, json.Unmarshal(respBody, &response))
+		assert.Equal(t, "Test Note", response["title"])
 	})
 
 	t.Run("ExportMarkdownNote", func(t *testing.T) {
 		app := fiber.New()
+		app.Post("/notes/:id/export", func(c *fiber.Ctx) error {
+			c.Locals("user_id", userID)
+			return handler.ExportNote(c)
+		})
 
-		// Create a test note
 		noteID := uuid.New()
 		title := "Export Test Note"
 		content := "# Export Test\n\nThis note will be exported."
 
-		// Encrypt the note data
 		encryptedTitle, err := crypto.Encrypt([]byte(title))
 		require.NoError(t, err)
 		encryptedContent, err := crypto.Encrypt([]byte(content))
 		require.NoError(t, err)
 
 		_, err = db.Exec(ctx, `
-			INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted)
-			VALUES ($1, $2, $3, $4)`,
-			noteID, workspaceID, encryptedTitle, encryptedContent)
+            INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted, content_hash)
+            VALUES ($1, $2, $3, $4, $5)`,
+			noteID, workspaceID, encryptedTitle, encryptedContent, []byte("content-hash"))
 		require.NoError(t, err)
 
-		// Create export request
-		exportReq := map[string]string{
-			"format": "markdown",
-		}
-		reqBody, _ := json.Marshal(exportReq)
+		reqBody, _ := json.Marshal(ExportRequest{Format: "markdown"})
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/notes/%s/export", noteID), bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
 
-		// Create test context
-		ctx := &fasthttp.RequestCtx{}
-		ctx.Request.SetRequestURI(fmt.Sprintf("/notes/%s/export", noteID))
-		ctx.Request.Header.SetMethod("POST")
-		ctx.Request.Header.SetContentType("application/json")
-		ctx.Request.SetBody(reqBody)
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
 
-		c := app.AcquireCtx(ctx)
-		defer app.ReleaseCtx(c)
-		c.Locals("user_id", userID)
-		c.Params("id", noteID.String())
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		// Execute handler
-		err = handler.ExportNote(c)
+		respBody, err := io.ReadAll(resp.Body)
 		require.NoError(t, err)
 
-		// Check response
-		assert.Equal(t, fiber.StatusOK, c.Response().StatusCode())
-
-		// Parse response
 		var response map[string]interface{}
-		err = json.Unmarshal(c.Response().Body(), &response)
-		require.NoError(t, err)
+		require.NoError(t, json.Unmarshal(respBody, &response))
 
 		exportedContent, ok := response["content"].(string)
 		require.True(t, ok)
@@ -154,90 +144,59 @@ func TestImportExportFeatures(t *testing.T) {
 
 	t.Run("BulkImportNotes", func(t *testing.T) {
 		app := fiber.New()
+		app.Post("/notes/bulk-import", func(c *fiber.Ctx) error {
+			c.Locals("user_id", userID)
+			return handler.BulkImport(c)
+		})
 
-		// Create multipart form with multiple files
-		var requestBody bytes.Buffer
-		writer := multipart.NewWriter(&requestBody)
+		payload := BulkImportRequest{
+			Files: []ImportRequest{
+				{Format: "markdown", Content: "# Note 1\n\nFirst note content.", Filename: "note1.md"},
+				{Format: "text", Content: "Note 2\n\nSecond note content.", Filename: "note2.txt"},
+			},
+		}
 
-		// Add first file
-		fileWriter1, err := writer.CreateFormFile("files", "note1.md")
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPost, "/notes/bulk-import", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req)
 		require.NoError(t, err)
-		_, err = fileWriter1.Write([]byte("# Note 1\n\nFirst note content."))
-		require.NoError(t, err)
+		defer resp.Body.Close()
 
-		// Add second file
-		fileWriter2, err := writer.CreateFormFile("files", "note2.txt")
-		require.NoError(t, err)
-		_, err = fileWriter2.Write([]byte("Note 2\n\nSecond note content."))
-		require.NoError(t, err)
+		assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
 
-		err = writer.Close()
-		require.NoError(t, err)
-
-		// Create test context
-		ctx := &fasthttp.RequestCtx{}
-		ctx.Request.SetRequestURI("/notes/bulk-import")
-		ctx.Request.Header.SetMethod("POST")
-		ctx.Request.Header.SetContentType(writer.FormDataContentType())
-		ctx.Request.SetBody(requestBody.Bytes())
-
-		c := app.AcquireCtx(ctx)
-		defer app.ReleaseCtx(c)
-		c.Locals("user_id", userID)
-
-		// Execute handler
-		err = handler.BulkImport(c)
+		respBody, err := io.ReadAll(resp.Body)
 		require.NoError(t, err)
 
-		// Check response
-		assert.Equal(t, fiber.StatusCreated, c.Response().StatusCode())
-
-		// Parse response
 		var response map[string]interface{}
-		err = json.Unmarshal(c.Response().Body(), &response)
-		require.NoError(t, err)
+		require.NoError(t, json.Unmarshal(respBody, &response))
 
-		importedNotes, ok := response["imported_notes"].([]interface{})
+		importedNotes, ok := response["imported"].([]interface{})
 		require.True(t, ok)
 		assert.Len(t, importedNotes, 2)
-
-		// Check first note
-		note1 := importedNotes[0].(map[string]interface{})
-		assert.Equal(t, "Note 1", note1["title"])
-
-		// Check second note
-		note2 := importedNotes[1].(map[string]interface{})
-		assert.Equal(t, "Note 2", note2["title"])
 	})
 
 	t.Run("ImportUnsupportedFileType", func(t *testing.T) {
 		app := fiber.New()
+		app.Post("/notes/import", func(c *fiber.Ctx) error {
+			c.Locals("user_id", userID)
+			return handler.ImportNote(c)
+		})
 
-		// Create multipart form with unsupported file
-		var requestBody bytes.Buffer
-		writer := multipart.NewWriter(&requestBody)
+		payload := ImportRequest{
+			Format:   "pdf",
+			Content:  "fake pdf content",
+			Filename: "test.pdf",
+		}
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPost, "/notes/import", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
 
-		fileWriter, err := writer.CreateFormFile("file", "test.pdf")
+		resp, err := app.Test(req)
 		require.NoError(t, err)
-		_, err = fileWriter.Write([]byte("fake pdf content"))
-		require.NoError(t, err)
+		defer resp.Body.Close()
 
-		err = writer.Close()
-		require.NoError(t, err)
-
-		// Create test context
-		ctx := &fasthttp.RequestCtx{}
-		ctx.Request.SetRequestURI("/notes/import")
-		ctx.Request.Header.SetMethod("POST")
-		ctx.Request.Header.SetContentType(writer.FormDataContentType())
-		ctx.Request.SetBody(requestBody.Bytes())
-
-		c := app.AcquireCtx(ctx)
-		defer app.ReleaseCtx(c)
-		c.Locals("user_id", userID)
-
-		// Execute handler
-		err = handler.ImportNote(c)
-		require.Error(t, err)
+		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
 }

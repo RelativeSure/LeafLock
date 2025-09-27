@@ -231,14 +231,16 @@ func TestCleanupOldDeletedNotes(t *testing.T) {
 	mockDB := &MockDB{}
 
 	// Mock both cleanup functions since runCleanupTasks calls both
-	mockResult1 := &MockResult{}
-	mockResult1.On("RowsAffected").Return(int64(0))
-	mockResult2 := &MockResult{}
-	mockResult2.On("RowsAffected").Return(int64(0))
+	mockResultReset := &MockResult{}
+	mockResultReset.On("RowsAffected").Return(int64(0))
+	mockResultCleanup := &MockResult{}
+	mockResultCleanup.On("RowsAffected").Return(int64(0))
 
 	ctx := context.Background()
-	// Session cleanup removed - now handled by Redis TTL
-	mockDB.On("Exec", ctx, "SELECT cleanup_old_deleted_notes()").Return(mockResult2, nil)
+	mockDB.On("Exec", ctx, mock.MatchedBy(func(sql string) bool {
+		return strings.Contains(sql, "UPDATE users")
+	})).Return(mockResultReset, nil)
+	mockDB.On("Exec", ctx, "SELECT cleanup_old_deleted_notes()").Return(mockResultCleanup, nil)
 
 	// Mock the count query for deleted notes
 	mockRow := &MockRow{}
@@ -259,14 +261,15 @@ func TestCleanupOldDeletedNotes(t *testing.T) {
 func TestBackgroundCleanupService(t *testing.T) {
 	mockDB := &MockDB{}
 
-	// Mock cleanup calls - setup multiple results since the function calls both cleanup functions
-	mockResult1 := &MockResult{}
-	mockResult1.On("RowsAffected").Return(int64(0))
-	mockResult2 := &MockResult{}
-	mockResult2.On("RowsAffected").Return(int64(0))
+	mockResultReset := &MockResult{}
+	mockResultReset.On("RowsAffected").Return(int64(0))
+	mockResultCleanup := &MockResult{}
+	mockResultCleanup.On("RowsAffected").Return(int64(0))
 
-	// Session cleanup removed - now handled by Redis TTL
-	mockDB.On("Exec", mock.Anything, "SELECT cleanup_old_deleted_notes()").Return(mockResult2, nil)
+	mockDB.On("Exec", mock.Anything, mock.MatchedBy(func(sql string) bool {
+		return strings.Contains(sql, "UPDATE users")
+	})).Return(mockResultReset, nil)
+	mockDB.On("Exec", mock.Anything, "SELECT cleanup_old_deleted_notes()").Return(mockResultCleanup, nil)
 
 	// Mock count query for deleted notes
 	mockRow := &MockRow{}

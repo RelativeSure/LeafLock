@@ -1,3 +1,8 @@
+---
+title: User Management Guide
+description: Instructions for managing users in LeafLock, including database operations and admin tasks
+---
+
 # User Management Guide
 
 This guide provides instructions for managing users in LeafLock, including database operations and admin tasks.

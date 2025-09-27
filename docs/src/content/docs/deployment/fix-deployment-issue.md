@@ -1,3 +1,8 @@
+---
+title: LeafLock Authentication Issue - RESOLVED
+description: Resolution of frontend authentication issues due to CORS configuration
+---
+
 # LeafLock Authentication Issue - RESOLVED
 
 ## Issue Summary

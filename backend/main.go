@@ -26,9 +26,9 @@ import (
 	"crypto/subtle"
 	"database/sql"
 	"encoding/base64"
-	"errors"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -67,14 +67,14 @@ import (
 
 // ReadyState tracks initialization state for health checks
 type ReadyState struct {
-	db         *pgxpool.Pool
-	crypto     *CryptoService
-	config     *Config
-	rdb        *redis.Client
-	adminReady atomic.Bool
+	db             *pgxpool.Pool
+	crypto         *CryptoService
+	config         *Config
+	rdb            *redis.Client
+	adminReady     atomic.Bool
 	templatesReady atomic.Bool
 	allowlistReady atomic.Bool
-	redisReady atomic.Bool
+	redisReady     atomic.Bool
 }
 
 func (r *ReadyState) markAdminReady()     { r.adminReady.Store(true) }
@@ -83,10 +83,10 @@ func (r *ReadyState) markAllowlistReady() { r.allowlistReady.Store(true) }
 func (r *ReadyState) markRedisReady()     { r.redisReady.Store(true) }
 
 func (r *ReadyState) IsFullyReady() bool {
-	return r.adminReady.Load() && 
-		   r.templatesReady.Load() && 
-		   r.allowlistReady.Load() && 
-		   r.redisReady.Load()
+	return r.adminReady.Load() &&
+		r.templatesReady.Load() &&
+		r.allowlistReady.Load() &&
+		r.redisReady.Load()
 }
 
 // AUTOMATIC DATABASE SETUP - Runs migrations on startup
@@ -99,6 +99,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 -- Users table with encrypted fields
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email TEXT,
     email_hash BYTEA UNIQUE NOT NULL, -- SHA-256 hash for unique constraint and GDPR lookups
     email_encrypted BYTEA NOT NULL, -- Encrypted email for privacy
     email_search_hash BYTEA UNIQUE, -- Deterministic encryption for login lookups
@@ -123,6 +124,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false;
 -- Add new encryption columns for enhanced security
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_hash BYTEA UNIQUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_search_hash BYTEA UNIQUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;
 
 -- Add storage tracking columns for file import limits
 ALTER TABLE users ADD COLUMN IF NOT EXISTS storage_used BIGINT DEFAULT 0;
@@ -403,7 +405,14 @@ CREATE INDEX IF NOT EXISTS idx_users_email_hash ON users(email_hash) WHERE email
 -- Search index optimization
 CREATE INDEX IF NOT EXISTS idx_search_keyword ON search_index(keyword_hash);
 
--- Migration tracking index for fast version checks
+-- Migration tracking table and index for fast version checks
+CREATE TABLE IF NOT EXISTS _migrations (
+    id SERIAL PRIMARY KEY,
+    version TEXT UNIQUE NOT NULL,
+    applied_at TIMESTAMPTZ DEFAULT NOW(),
+    checksum TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_migrations_version ON _migrations(version, applied_at DESC);
 
 
@@ -600,20 +609,50 @@ func getEnvAsInt(key string, defaultValue int) int {
 
 // Build a postgres URL from common env vars (Coolify/Postgres add-on style)
 // Recognized: POSTGRESQL_HOST, POSTGRESQL_PORT, POSTGRESQL_USER, POSTGRESQL_PASSWORD, POSTGRESQL_DATABASE, POSTGRESQL_SSLMODE
+func firstNonEmptyEnv(keys ...string) string {
+	for _, key := range keys {
+		if val := strings.TrimSpace(os.Getenv(key)); val != "" {
+			return val
+		}
+	}
+	return ""
+}
+
+func firstEnv(keys ...string) string {
+	for _, key := range keys {
+		if val, ok := os.LookupEnv(key); ok && strings.TrimSpace(val) != "" {
+			return val
+		}
+	}
+	return ""
+}
+
 func buildDatabaseURLFromEnv() string {
-	host := strings.TrimSpace(os.Getenv("POSTGRESQL_HOST"))
-	user := strings.TrimSpace(os.Getenv("POSTGRESQL_USER"))
-	pass := os.Getenv("POSTGRESQL_PASSWORD") // may contain spaces/specials
-	db := strings.TrimSpace(os.Getenv("POSTGRESQL_DATABASE"))
+	host := firstNonEmptyEnv("POSTGRESQL_HOST", "POSTGRES_HOST", "PGHOST")
+	user := firstNonEmptyEnv("POSTGRESQL_USER", "POSTGRES_USER", "PGUSER")
+	pass := firstEnv("POSTGRESQL_PASSWORD", "POSTGRES_PASSWORD", "PGPASSWORD")
+	db := firstNonEmptyEnv("POSTGRESQL_DATABASE", "POSTGRES_DB", "PGDATABASE")
 	if host == "" || user == "" || db == "" {
 		return ""
 	}
-	port := getEnvOrDefault("POSTGRESQL_PORT", "5432")
-	sslmode := getEnvOrDefault("POSTGRESQL_SSLMODE", "require")
+	port := firstNonEmptyEnv("POSTGRESQL_PORT", "POSTGRES_PORT", "PGPORT")
+	if port == "" {
+		port = "5432"
+	}
+	sslmode := firstNonEmptyEnv("POSTGRESQL_SSLMODE", "POSTGRES_SSLMODE", "PGSSLMODE")
+	if sslmode == "" {
+		sslmode = "require"
+	}
+
+	hostPort := host
+	if !strings.Contains(host, ":") {
+		hostPort = net.JoinHostPort(host, port)
+	}
+
 	u := &neturl.URL{
 		Scheme: "postgres",
 		User:   neturl.UserPassword(user, pass),
-		Host:   net.JoinHostPort(host, port),
+		Host:   hostPort,
 		Path:   "/" + db,
 	}
 	q := neturl.Values{}
@@ -875,7 +914,6 @@ func isPublicIP(ip net.IP) bool {
 	return true
 }
 
-
 func csvEscape(s string) string {
 	// Escape quotes and wrap in quotes if needed
 	if strings.ContainsAny(s, ",\n\r\"") {
@@ -900,13 +938,13 @@ func NewCryptoService(key []byte) *CryptoService {
 func prewarmRedisPool(rdb *redis.Client) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	
+
 	// Ping Redis to establish connections
 	if err := rdb.Ping(ctx).Err(); err != nil {
 		log.Printf("Warning: Redis pool pre-warm failed: %v", err)
 		return
 	}
-	
+
 	// Do a simple operation to warm up the connection
 	rdb.Set(ctx, "startup:prewarm", time.Now().Unix(), time.Second)
 	rdb.Del(ctx, "startup:prewarm")
@@ -978,7 +1016,7 @@ func createFiberApp(startTime time.Time, readyState *ReadyState) *fiber.App {
 
 	// Basic health endpoints available immediately
 	api := app.Group("/api/v1")
-	
+
 	// Live endpoint - just checks if server is running
 	api.Get("/health/live", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
@@ -1109,7 +1147,6 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *Cr
 		crypto: crypto,
 		config: config,
 	}
-
 
 	// API routes
 	api := app.Group("/api/v1")
@@ -1355,6 +1392,67 @@ func VerifyPassword(password, encodedHash string) bool {
 }
 
 // Database setup and migration runner with caching and optimization
+func setupDatabaseWithRetry(dbURL string, skipMigrationCheck bool) (*pgxpool.Pool, error) {
+	const attempts = 24
+	const delay = 5 * time.Second
+
+	waitForDatabaseDNS(dbURL, 24, 2*time.Second)
+
+	var lastErr error
+	for attempt := 1; attempt <= attempts; attempt++ {
+		var db *pgxpool.Pool
+		if skipMigrationCheck {
+			log.Println("⚡ Skipping migration check for faster startup")
+			db, lastErr = SetupDatabaseFast(dbURL)
+		} else {
+			db, lastErr = SetupDatabase(dbURL)
+		}
+
+		if lastErr == nil {
+			if attempt > 1 {
+				log.Printf("✅ Database connection succeeded after %d attempts", attempt)
+			}
+			return db, nil
+		}
+
+		log.Printf("⏳ Database not ready (attempt %d/%d): %v", attempt, attempts, lastErr)
+		if attempt < attempts {
+			time.Sleep(delay)
+		}
+	}
+
+	return nil, fmt.Errorf("database connection failed after %d attempts: %w", attempts, lastErr)
+}
+
+func waitForDatabaseDNS(dbURL string, attempts int, delay time.Duration) {
+	parsed, err := neturl.Parse(dbURL)
+	if err != nil {
+		return
+	}
+	host := parsed.Hostname()
+	if host == "" {
+		return
+	}
+	port := parsed.Port()
+	if port == "" {
+		port = "5432"
+	}
+	address := net.JoinHostPort(host, port)
+
+	for attempt := 1; attempt <= attempts; attempt++ {
+		conn, err := net.DialTimeout("tcp", address, 2*time.Second)
+		if err == nil {
+			conn.Close()
+			if attempt > 1 {
+				log.Printf("✅ Database host %s reachable after %d attempts", address, attempt)
+			}
+			return
+		}
+		log.Printf("⏳ Waiting for database host %s (attempt %d/%d): %v", address, attempt, attempts, err)
+		time.Sleep(delay)
+	}
+}
+
 func SetupDatabase(dbURL string) (*pgxpool.Pool, error) {
 	// Parse URL to detect DB name and construct an admin URL pointing to 'postgres'
 	adminURL, dbName := adminURLAndDBName(dbURL)
@@ -1393,9 +1491,9 @@ func SetupDatabase(dbURL string) (*pgxpool.Pool, error) {
 	config.HealthCheckPeriod = 2 * time.Minute // Less frequent health checks for startup performance
 
 	// Optimize connection parameters for performance
-	config.ConnConfig.ConnectTimeout = 5 * time.Second  // Faster timeout for startup
-	config.ConnConfig.RuntimeParams["jit"] = "off" // Disable JIT for faster startup
-	
+	config.ConnConfig.ConnectTimeout = 5 * time.Second // Faster timeout for startup
+	config.ConnConfig.RuntimeParams["jit"] = "off"     // Disable JIT for faster startup
+
 	// Configure faster health check query
 	config.ConnConfig.RuntimeParams["application_name"] = "leaflock_backend"
 
@@ -1423,7 +1521,7 @@ func SetupDatabase(dbURL string) (*pgxpool.Pool, error) {
 // Used for faster startup when SKIP_MIGRATION_CHECK=true
 func SetupDatabaseFast(dbURL string) (*pgxpool.Pool, error) {
 	log.Println("Setting up database connection (fast mode - skipping migrations)")
-	
+
 	// Parse URL to detect DB name and construct an admin URL pointing to 'postgres'
 	adminURL, dbName := adminURLAndDBName(dbURL)
 
@@ -1454,11 +1552,11 @@ func SetupDatabaseFast(dbURL string) (*pgxpool.Pool, error) {
 	}
 
 	// Configure connection pool optimized for fastest possible startup
-	config.MaxConns = 5                        // Minimal connections for startup
-	config.MinConns = 1                        // Single connection to start
-	config.MaxConnLifetime = 1 * time.Hour     
-	config.MaxConnIdleTime = 30 * time.Minute  
-	config.HealthCheckPeriod = 5 * time.Minute 
+	config.MaxConns = 5 // Minimal connections for startup
+	config.MinConns = 1 // Single connection to start
+	config.MaxConnLifetime = 1 * time.Hour
+	config.MaxConnIdleTime = 30 * time.Minute
+	config.HealthCheckPeriod = 5 * time.Minute
 
 	// Optimize connection parameters for fastest startup
 	config.ConnConfig.ConnectTimeout = 3 * time.Second
@@ -1486,7 +1584,7 @@ const MigrationSchemaVersion = "2024.12.25.002" // Updated for performance optim
 func runOptimizedMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 	// Check if migration tracking table exists and get current version
 	currentVersion, needsMigration := checkMigrationStatus(ctx, pool)
-	
+
 	if !needsMigration {
 		log.Printf("Database schema is up to date (version: %s), skipping migrations", currentVersion)
 		return nil
@@ -1494,7 +1592,7 @@ func runOptimizedMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 
 	log.Printf("Running database migrations (current: %s, target: %s)...", currentVersion, MigrationSchemaVersion)
 	start := time.Now()
-	
+
 	// Run migrations in a transaction for atomicity
 	tx, err := pool.Begin(ctx)
 	if err != nil {
@@ -1590,12 +1688,12 @@ func fastHealthCheck(ctx context.Context, pool *pgxpool.Pool) error {
 func validateDatabaseConnectivity(pool *pgxpool.Pool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	
+
 	// Fast health check first
 	if err := fastHealthCheck(ctx, pool); err != nil {
 		return fmt.Errorf("database connectivity check failed: %w", err)
 	}
-	
+
 	log.Println("✅ Database connectivity verified")
 	return nil
 }
@@ -1650,6 +1748,10 @@ type SessionData struct {
 
 // Store session in Redis with encrypted metadata
 func (h *AuthHandler) storeSessionInRedis(ctx context.Context, tokenHash []byte, userID uuid.UUID, ipAddr, userAgent string, expiresAt time.Time) error {
+	if h.redis == nil {
+		return nil
+	}
+
 	sessionData := SessionData{
 		UserID:    userID.String(),
 		IPAddress: ipAddr,
@@ -1679,6 +1781,10 @@ func (h *AuthHandler) storeSessionInRedis(ctx context.Context, tokenHash []byte,
 
 // Validate session from Redis
 func (h *AuthHandler) validateSessionInRedis(ctx context.Context, tokenHash []byte) (*SessionData, error) {
+	if h.redis == nil {
+		return nil, fmt.Errorf("session store unavailable")
+	}
+
 	sessionKey := fmt.Sprintf("session:%x", tokenHash)
 
 	// Get encrypted session data from Redis
@@ -1714,6 +1820,10 @@ func (h *AuthHandler) validateSessionInRedis(ctx context.Context, tokenHash []by
 
 // Delete session from Redis
 func (h *AuthHandler) deleteSessionFromRedis(ctx context.Context, tokenHash []byte) error {
+	if h.redis == nil {
+		return nil
+	}
+
 	sessionKey := fmt.Sprintf("session:%x", tokenHash)
 	return h.redis.Del(ctx, sessionKey).Err()
 }
@@ -1934,8 +2044,6 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	}
 	log.Printf("   - MFA Code present: %t", req.MFACode != "")
 
-
-
 	ctx := context.Background()
 
 	// Create deterministic hash for secure email lookup
@@ -2001,7 +2109,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		} else if failedAttempts >= 6 {
 			lockDuration = 5 * time.Minute
 		} else if failedAttempts >= h.config.MaxLoginAttempts {
-			lockDuration = 1 * time.Minute
+			lockDuration = h.config.LockoutDuration
 		}
 
 		if lockDuration > 0 {
@@ -2061,7 +2169,6 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		if !totp.Validate(code, secret) {
 			h.logAudit(ctx, userID, "login.mfa_failed", "user", userID, c)
 
-
 			return c.Status(401).JSON(fiber.Map{"error": "Invalid MFA code"})
 		}
 	}
@@ -2072,7 +2179,6 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
         WHERE id = $1`,
 		userID,
 	)
-
 
 	// Generate session
 	sessionToken := make([]byte, 32)
@@ -2114,13 +2220,13 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) AdminRecovery(c *fiber.Ctx) error {
-	log.Println("🚨 Admin Recovery Request - Starting emergency admin recovery process")
-
 	var req AdminRecoveryRequest
 	if err := c.BodyParser(&req); err != nil {
-		log.Printf("❌ Admin recovery body parsing failed: %v", err)
+		log.Printf("⚠️ Admin recovery rejected: invalid JSON payload (%v)", err)
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
 	}
+
+	log.Println("🚨 Admin Recovery Request - Starting emergency admin recovery process")
 
 	// Validate request
 	if req.Email == "" {
@@ -4914,12 +5020,15 @@ func (h *ImportExportHandler) ImportNote(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt content"})
 	}
 
+	contentHashArr := sha256.Sum256([]byte(content))
+	contentHash := contentHashArr[:]
+
 	// Insert note
 	noteID := uuid.New()
 	_, err = h.db.Exec(ctx, `
-		INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted)
-		VALUES ($1, $2, $3, $4)`,
-		noteID, workspaceID, titleEncrypted, contentEncrypted)
+		INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted, content_hash)
+		VALUES ($1, $2, $3, $4, $5)`,
+		noteID, workspaceID, titleEncrypted, contentEncrypted, contentHash)
 
 	if err != nil {
 		logRequestError(c, "ImportNote: failed to create note in database", err, "note_id", noteID)
@@ -5113,11 +5222,14 @@ func (h *ImportExportHandler) BulkImport(c *fiber.Ctx) error {
 			continue
 		}
 
+		contentHashArr := sha256.Sum256([]byte(content))
+		contentHash := contentHashArr[:]
+
 		noteID := uuid.New()
 		_, err = h.db.Exec(ctx, `
-			INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted)
-			VALUES ($1, $2, $3, $4)`,
-			noteID, workspaceID, titleEncrypted, contentEncrypted)
+			INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted, content_hash)
+			VALUES ($1, $2, $3, $4, $5)`,
+			noteID, workspaceID, titleEncrypted, contentEncrypted, contentHash)
 
 		if err != nil {
 			failed = append(failed, map[string]interface{}{
@@ -6118,7 +6230,7 @@ func validateEncryptionKeyAndAdminAccess(db Database, crypto *CryptoService, con
 			(SELECT COUNT(*) FROM users) as user_count,
 			EXISTS(SELECT 1 FROM users WHERE email_search_hash = $1) as admin_exists
 	`, currentEmailSearchHash).Scan(&userCount, &adminExists)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to check user status: %w", err)
 	}
@@ -6172,7 +6284,7 @@ func seedDefaultAdminUser(db Database, crypto *CryptoService, config *Config) er
 	// services "./services" - This will be done via proper import at the top
 
 	// Create admin service instance
-	adminService := createAdminService(db, crypto)
+	adminService := createAdminService(db, crypto, config)
 
 	// Validate admin configuration first
 	if err := adminService.ValidateAdminConfig(); err != nil {
@@ -6195,10 +6307,22 @@ func seedDefaultAdminUser(db Database, crypto *CryptoService, config *Config) er
 }
 
 // createAdminService creates an AdminService instance (adapter function)
-func createAdminService(db Database, crypto *CryptoService) AdminServiceInterface {
+func createAdminService(db Database, crypto *CryptoService, cfg *Config) AdminServiceInterface {
+	resolved := getAdminConfigFromEnv()
+	if cfg != nil {
+		resolved.Enabled = cfg.DefaultAdminEnabled
+		if cfg.DefaultAdminEmail != "" {
+			resolved.Email = cfg.DefaultAdminEmail
+		}
+		if cfg.DefaultAdminPassword != "" {
+			resolved.Password = cfg.DefaultAdminPassword
+		}
+	}
+
 	return &adminServiceImpl{
 		db:     db,
 		crypto: crypto,
+		config: resolved,
 	}
 }
 
@@ -6212,11 +6336,12 @@ type AdminServiceInterface interface {
 type adminServiceImpl struct {
 	db     Database
 	crypto *CryptoService
+	config adminConfigStruct
 }
 
 func (a *adminServiceImpl) ValidateAdminConfig() error {
-	config := getAdminConfigFromEnv()
-	
+	config := a.config
+
 	if !config.Enabled {
 		return nil
 	}
@@ -6237,8 +6362,8 @@ func (a *adminServiceImpl) ValidateAdminConfig() error {
 }
 
 func (a *adminServiceImpl) CreateDefaultAdminUser() error {
-	config := getAdminConfigFromEnv()
-	
+	config := a.config
+
 	if !config.Enabled {
 		log.Println("⏭️ Default admin user creation is disabled")
 		return nil
@@ -6321,7 +6446,7 @@ func validateAdminPassword(password string) error {
 
 func (a *adminServiceImpl) adminUserExists(email string) (bool, error) {
 	ctx := context.Background()
-	
+
 	// Generate the email search hash using the crypto service (same as original)
 	emailSearchHash, err := a.crypto.EncryptDeterministic([]byte(strings.ToLower(email)), "email_search")
 	if err != nil {
@@ -6428,9 +6553,11 @@ func (a *adminServiceImpl) createAdminUserInDatabase(config adminConfigStruct) e
 	// Store GDPR deletion key (same as main.go)
 	_, err = tx.Exec(ctx, `
 		INSERT INTO gdpr_keys (email_hash, deletion_key)
-		VALUES ($1, $2)`,
-		emailHash, deletionKey,
-	)
+		VALUES ($1, $2)
+		ON CONFLICT (email_hash) DO UPDATE
+		SET deletion_key = EXCLUDED.deletion_key,
+		    created_at = NOW()
+	`, emailHash, deletionKey)
 	if err != nil {
 		return fmt.Errorf("failed to store GDPR deletion key: %w", err)
 	}
@@ -6550,16 +6677,9 @@ func main() {
 
 	// Setup database with conditional migrations
 	dbStart := time.Now()
-	var db *pgxpool.Pool
-	var err error
-	if skipMigrationCheck {
-		log.Println("⚡ Skipping migration check for faster startup")
-		db, err = SetupDatabaseFast(config.DatabaseURL)
-	} else {
-		db, err = SetupDatabase(config.DatabaseURL)
-	}
+	db, err := setupDatabaseWithRetry(config.DatabaseURL, skipMigrationCheck)
 	if err != nil {
-		log.Fatal("Database setup failed:", err)
+		log.Fatal("Database setup failed after retries:", err)
 	}
 	defer db.Close()
 	log.Printf("⏱️  Database setup completed in %v", time.Since(dbStart))
