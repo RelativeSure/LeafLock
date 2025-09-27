@@ -71,7 +71,6 @@ http {
 
         # Allow dynamic resolution of the backend service inside Docker
         set $backend_upstream ${BACKEND_INTERNAL_URL};
-        resolver 127.0.0.11 ipv6=off valid=30s;
 
         # Security Headers
         add_header X-Frame-Options "DENY" always;
