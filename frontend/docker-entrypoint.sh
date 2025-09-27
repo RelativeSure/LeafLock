@@ -12,14 +12,19 @@ echo "==================================="
 
 # Attempt to auto-populate BACKEND_INTERNAL_URL if it's missing.
 if [ -z "${BACKEND_INTERNAL_URL:-}" ]; then
+  # Try Railway specific service discovery patterns
   if [ -n "${RAILWAY_SERVICE_LEAFLOCK_BACKEND_TCP_URL:-}" ]; then
     BACKEND_INTERNAL_URL="${RAILWAY_SERVICE_LEAFLOCK_BACKEND_TCP_URL}"
   elif [ -n "${RAILWAY_SERVICE_LEAFLOCK_BACKEND_URL:-}" ]; then
     BACKEND_INTERNAL_URL="https://${RAILWAY_SERVICE_LEAFLOCK_BACKEND_URL}"
+  # Check for motivated-energy backend service (Railway private name)
+  elif [ -n "${RAILWAY_TCP_PROXY_PORT:-}" ] && [ -n "${RAILWAY_SERVICE_NAME:-}" ]; then
+    # Use Railway's internal hostname pattern
+    BACKEND_INTERNAL_URL="http://motivated-energy.railway.internal:8080"
   else
-    # Try to discover any Railway backend URL envs dynamically
-    detected_tcp=$(env | awk -F= '/^RAILWAY_SERVICE_.*_BACKEND_TCP_URL=/{print $2; exit}')
-    detected_url=$(env | awk -F= '/^RAILWAY_SERVICE_.*_BACKEND_URL=/{print $2; exit}')
+    # Generic Railway service discovery
+    detected_tcp=$(env | awk -F= '/^RAILWAY_SERVICE_.*_TCP_URL=/{print $2; exit}')
+    detected_url=$(env | awk -F= '/^RAILWAY_SERVICE_.*_URL=/{print $2; exit}')
     if [ -n "$detected_tcp" ]; then
       BACKEND_INTERNAL_URL="$detected_tcp"
     elif [ -n "$detected_url" ]; then
@@ -36,22 +41,41 @@ fi
 if [ -n "${BACKEND_INTERNAL_URL:-}" ]; then
   case "$BACKEND_INTERNAL_URL" in
     tcp://*)
-      # Convert Railway TCP URL (tcp://host:port) into HTTP form
       rest="${BACKEND_INTERNAL_URL#tcp://}"
-      host="${rest%%/*}"
-      if printf '%s' "$host" | grep -q ':' && ! printf '%s' "$host" | grep -q '\['; then
-        host="[${host}]"
+      hostport="${rest%%/*}"
+      host="${hostport%:*}"
+      port="${hostport##*:}"
+      if [ "$host" = "$port" ]; then
+        port=""
+        host="$hostport"
       fi
-      BACKEND_INTERNAL_URL="http://${host}"
+      if printf '%s' "$host" | grep -q ':'; then
+        host="[$host]"
+      fi
+      if [ -n "$port" ]; then
+        BACKEND_INTERNAL_URL="http://${host}:$port"
+      else
+        BACKEND_INTERNAL_URL="http://${host}"
+      fi
       ;;
     http://*|https://*)
       scheme="${BACKEND_INTERNAL_URL%%://*}"
       rest="${BACKEND_INTERNAL_URL#*://}"
-      host="${rest%%/*}"
-      if printf '%s' "$host" | grep -q ':' && ! printf '%s' "$host" | grep -q '\['; then
-        host="[${host}]"
+      hostport="${rest%%/*}"
+      host="${hostport%:*}"
+      port="${hostport##*:}"
+      if [ "$host" = "$port" ]; then
+        port=""
+        host="$hostport"
       fi
-      BACKEND_INTERNAL_URL="${scheme}://${host}"
+      if printf '%s' "$host" | grep -q ':' && ! printf '%s' "$host" | grep -q '\['; then
+        host="[$host]"
+      fi
+      if [ -n "$port" ]; then
+        BACKEND_INTERNAL_URL="${scheme}://${host}:$port"
+      else
+        BACKEND_INTERNAL_URL="${scheme}://${host}"
+      fi
       ;;
     *)
       BACKEND_INTERNAL_URL="http://${BACKEND_INTERNAL_URL}"
