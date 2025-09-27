@@ -14,7 +14,7 @@ services:
       POSTGRES_DB: leaflock
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
     networks:
       - leaflock-network
     # Aggressive health checks for fast startup
@@ -41,7 +41,7 @@ services:
     container_name: leaflock-redis
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Please set REDIS_PASSWORD in Coolify environment variables}"]
     volumes:
-      - redis_data:/data
+      - redis-data:/data
     networks:
       - leaflock-network
     # Fast Redis health checks
@@ -173,9 +173,9 @@ services:
       - "coolify.name=leaflock-frontend"
 
 volumes:
-  postgres_data:
+  postgres-data:
     driver: local
-  redis_data:
+  redis-data:
     driver: local
 
 networks:
