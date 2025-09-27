@@ -28,11 +28,18 @@ if [ -z "${BACKEND_INTERNAL_URL:-}" ]; then
 fi
 
 # Normalize BACKEND_INTERNAL_URL to scheme://host[:port]
-if [ -n "${BACKEND_INTERNAL_URL:-}" ] && printf '%s' "$BACKEND_INTERNAL_URL" | grep -q '://'; then
-  scheme="${BACKEND_INTERNAL_URL%%://*}"
-  rest="${BACKEND_INTERNAL_URL#*://}"
-  host="${rest%%/*}"
-  BACKEND_INTERNAL_URL="${scheme}://${host}"
+if [ -n "${BACKEND_INTERNAL_URL:-}" ]; then
+  case "$BACKEND_INTERNAL_URL" in
+    http://*|https://*)
+      scheme="${BACKEND_INTERNAL_URL%%://*}"
+      rest="${BACKEND_INTERNAL_URL#*://}"
+      host="${rest%%/*}"
+      BACKEND_INTERNAL_URL="${scheme}://${host}"
+      ;;
+    *)
+      BACKEND_INTERNAL_URL="http://${BACKEND_INTERNAL_URL}"
+      ;;
+  esac
   export BACKEND_INTERNAL_URL
 fi
 
