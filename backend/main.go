@@ -1072,6 +1072,19 @@ func createFiberApp(startTime time.Time, readyState *ReadyState) *fiber.App {
 	return app
 }
 
+// listenWithIPv6Fallback attempts to bind the server on IPv6 first, falling back to IPv4 if needed.
+func listenWithIPv6Fallback(app *fiber.App, port string, startupStart time.Time) error {
+	addrIPv6 := "[::]:" + port
+	log.Printf("🌐 HTTP server starting on %s (startup time: %v)", addrIPv6, time.Since(startupStart))
+	if err := app.Listen(addrIPv6); err != nil {
+		log.Printf("⚠️  Failed to bind on %s (%v) - falling back to 0.0.0.0:%s", addrIPv6, err, port)
+		addrIPv4 := ":" + port
+		log.Printf("🌐 HTTP server starting on %s (startup time: %v)", addrIPv4, time.Since(startupStart))
+		return app.Listen(addrIPv4)
+	}
+	return nil
+}
+
 // setupRoutes configures all middleware and routes for the Fiber app
 func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *CryptoService, config *Config, startTime time.Time, readyState *ReadyState) {
 	// Security headers
@@ -6641,8 +6654,7 @@ func main() {
 	// Start server in background to handle health checks immediately
 	port := config.Port
 	go func() {
-		log.Printf("🌐 HTTP server starting on port %s (startup time: %v)", port, time.Since(startupStart))
-		if err := app.Listen(":" + port); err != nil {
+		if err := listenWithIPv6Fallback(app, port, startupStart); err != nil {
 			log.Fatal("Server failed to start:", err)
 		}
 	}()

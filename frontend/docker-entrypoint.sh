@@ -12,12 +12,17 @@ echo "==================================="
 
 # Attempt to auto-populate BACKEND_INTERNAL_URL if it's missing.
 if [ -z "${BACKEND_INTERNAL_URL:-}" ]; then
-  if [ -n "${RAILWAY_SERVICE_LEAFLOCK_BACKEND_URL:-}" ]; then
+  if [ -n "${RAILWAY_SERVICE_LEAFLOCK_BACKEND_TCP_URL:-}" ]; then
+    BACKEND_INTERNAL_URL="${RAILWAY_SERVICE_LEAFLOCK_BACKEND_TCP_URL}"
+  elif [ -n "${RAILWAY_SERVICE_LEAFLOCK_BACKEND_URL:-}" ]; then
     BACKEND_INTERNAL_URL="https://${RAILWAY_SERVICE_LEAFLOCK_BACKEND_URL}"
   else
     # Try to discover any Railway backend URL envs dynamically
+    detected_tcp=$(env | awk -F= '/^RAILWAY_SERVICE_.*_BACKEND_TCP_URL=/{print $2; exit}')
     detected_url=$(env | awk -F= '/^RAILWAY_SERVICE_.*_BACKEND_URL=/{print $2; exit}')
-    if [ -n "$detected_url" ]; then
+    if [ -n "$detected_tcp" ]; then
+      BACKEND_INTERNAL_URL="$detected_tcp"
+    elif [ -n "$detected_url" ]; then
       BACKEND_INTERNAL_URL="https://${detected_url}"
     elif [ -n "${VITE_API_URL:-}" ]; then
       BACKEND_INTERNAL_URL="${VITE_API_URL}"
@@ -30,10 +35,22 @@ fi
 # Normalize BACKEND_INTERNAL_URL to scheme://host[:port]
 if [ -n "${BACKEND_INTERNAL_URL:-}" ]; then
   case "$BACKEND_INTERNAL_URL" in
+    tcp://*)
+      # Convert Railway TCP URL (tcp://host:port) into HTTP form
+      rest="${BACKEND_INTERNAL_URL#tcp://}"
+      host="${rest%%/*}"
+      if printf '%s' "$host" | grep -q ':' && ! printf '%s' "$host" | grep -q '\['; then
+        host="[${host}]"
+      fi
+      BACKEND_INTERNAL_URL="http://${host}"
+      ;;
     http://*|https://*)
       scheme="${BACKEND_INTERNAL_URL%%://*}"
       rest="${BACKEND_INTERNAL_URL#*://}"
       host="${rest%%/*}"
+      if printf '%s' "$host" | grep -q ':' && ! printf '%s' "$host" | grep -q '\['; then
+        host="[${host}]"
+      fi
       BACKEND_INTERNAL_URL="${scheme}://${host}"
       ;;
     *)
