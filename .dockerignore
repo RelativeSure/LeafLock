@@ -1,31 +1,20 @@
-# Default: exclude everything so each service must opt-in
-**
+# Git metadata
+.git
+.gitignore
 
-# Backend service build context
-!backend/
-!backend/**
-backend/main
-backend/entrypoint
-backend/*.out
-backend/*.log
-backend/coverage.*
-backend/node_modules
+# Package manager caches
+node_modules
+**/node_modules
+.pnpm-store
 
-# Frontend service build context (allow builds rooted in frontend/ to work)
-!frontend/
-!frontend/**
-frontend/node_modules
+# Build artifacts
 frontend/dist
-frontend/.cache
+frontend/test-results
+backend/coverage.*
+docs/dist
+docs/.astro
 
-# Docs (not used in Docker builds but keep the option open)
-!docs/
-!docs/**
- docs/node_modules
- docs/dist
- docs/.astro
-
-# Generic junk
+# Logs & temp files
 **/*.log
 **/*.tmp
 **/*.swp
