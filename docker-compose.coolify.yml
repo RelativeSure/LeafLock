@@ -7,7 +7,6 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:18-alpine
-    container_name: leaflock-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Please set POSTGRES_PASSWORD in Coolify environment variables}
@@ -38,7 +37,6 @@ services:
   # Redis Cache for Sessions
   redis:
     image: redis:8-alpine
-    container_name: leaflock-redis
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Please set REDIS_PASSWORD in Coolify environment variables}"]
     volumes:
       - redis-data:/data
@@ -67,7 +65,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: leaflock-backend
     environment:
       # Database Configuration
       # IMPORTANT: sslmode=disable required for containerized PostgreSQL without TLS setup
@@ -138,7 +135,6 @@ services:
         # Build-time environment variables for frontend API connection
         # Use your actual domain instead of localhost for Coolify deployment
         VITE_API_URL: ${VITE_API_URL:-https://leaflock.app/api/v1}
-    container_name: leaflock-frontend
     environment:
       # Runtime environment variables for frontend
       BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8080}
