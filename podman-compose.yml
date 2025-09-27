@@ -7,8 +7,7 @@ services:
     image: docker.io/library/postgres:17-alpine@sha256:d5f196a551b5cef1c70853c6dd588f456d16ca4ea733e3f31c75bc1ae2f65f3f
     container_name: leaflock-postgres
     hostname: postgres
-    env_file:
-      - .env
+# Note: No env_file needed - using environment variables directly
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}
@@ -46,8 +45,7 @@ services:
     image: docker.io/library/redis:8-alpine@sha256:987c376c727652f99625c7d205a1cba3cb2c53b92b0b62aade2bd48ee1593232
     container_name: leaflock-redis
     hostname: redis
-    env_file:
-      - .env
+# Note: No env_file needed - using environment variables directly
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-ChangeThisRedisPassword123!}
     volumes:
       - redis_data:/data:Z
@@ -75,8 +73,7 @@ services:
     image: localhost/leaflock-backend:latest
     container_name: leaflock-backend
     hostname: backend
-    env_file:
-      - .env
+# Note: No env_file needed - using environment variables directly
     environment:
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}@postgres:5432/leaflock?sslmode=require
       REDIS_URL: redis:6379

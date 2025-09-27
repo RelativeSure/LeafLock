@@ -5,8 +5,7 @@ services:
   postgres:
     image: postgres:18-alpine
     container_name: leaflock-postgres
-    env_file:
-      - .env
+# Note: No env_file needed - using environment variables directly
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}
@@ -29,16 +28,13 @@ services:
   redis:
     image: redis:8-alpine
     container_name: leaflock-redis
-    env_file:
-      - .env
+# Note: No env_file needed - using environment variables directly
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-ChangeThisRedisPassword123!}
     volumes:
       - redis_data:/data
     networks:
       - leaflock-network
-    sysctls:
-      - net.core.somaxconn=1024
-      - vm.overcommit_memory=1
+# Note: sysctls removed to avoid kernel namespace issues in some environments
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-ChangeThisRedisPassword123!}", "--no-auth-warning", "PING"]
       interval: 10s
@@ -52,8 +48,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: leaflock-backend
-    env_file:
-      - .env
+# Note: No env_file needed - using environment variables directly
     environment:
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}@postgres:5432/leaflock?sslmode=prefer
       REDIS_URL: redis:6379
