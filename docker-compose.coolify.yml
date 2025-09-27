@@ -13,11 +13,19 @@ services:
       LC_ALL: C
       LANG: C
     command: ["sh", "-c", "apk add --no-cache musl-locales && docker-entrypoint.sh postgres"]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - leaflock
 
   # Redis Cache for Sessions
   redis:
     image: redis:8-alpine
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - leaflock
 
   # Go Backend API
   backend:
@@ -53,6 +61,8 @@ services:
         condition: service_started
       redis:
         condition: service_started
+    networks:
+      - leaflock
 
   # React Frontend
   frontend:
@@ -69,6 +79,8 @@ services:
     depends_on:
       backend:
         condition: service_started
+    networks:
+      - leaflock
 
 # Coolify Deployment Optimizations:
 # STABILITY AND PERFORMANCE IMPROVEMENTS:
@@ -87,11 +99,17 @@ services:
 #    - Redis: Memory management and persistence configuration
 #    - Extended database connection timeouts (30s)
 #
-# 4. Coolify Compatibility:
+# 4. Network Configuration:
+#    - Custom bridge network for reliable service discovery
+#    - All services connected to isolated leaflock network
+#    - Volume persistence for PostgreSQL and Redis data
+#    - Prevents DNS resolution failures (127.0.0.11:53 errors)
+#
+# 5. Coolify Compatibility:
 #    - No custom health checks (Coolify manages these)
-#    - Service discovery via standard container names
+#    - Service discovery via standard container names in custom network
 #    - Fallback environment variables to prevent connection failures
-#    - Minimal configuration letting Coolify handle infrastructure
+#    - Explicit networking configuration for deployment isolation
 #
 # TARGET STARTUP TIME: Under 30 seconds
 # 
@@ -109,3 +127,13 @@ services:
 # - For progressive delays (default): Set RATE_LIMIT_MODE=progressive
 # - For shared IP environments: Set RATE_LIMIT_USE_SUBNET=true
 # - To disable IP rate limiting: Set IP_RATE_LIMIT_ENABLED=false
+
+# Network Configuration for Reliable Service Discovery
+networks:
+  leaflock:
+    driver: bridge
+
+# Volume Configuration for Data Persistence
+volumes:
+  postgres_data:
+  redis_data:
