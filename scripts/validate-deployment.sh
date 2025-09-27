@@ -316,8 +316,27 @@ generate_security_recommendations() {
         fi
 
         # Check CORS origins
-        if grep -q "CORS_ORIGINS=.*\*" "$env_file" 2>/dev/null; then
-            recommendations+=("Restrict CORS_ORIGINS to specific domains (avoid wildcard *)")
+        if grep -q "^CORS_ORIGINS=" "$env_file" 2>/dev/null; then
+            cors_value=$(grep "^CORS_ORIGINS=" "$env_file" 2>/dev/null | tail -n1 | cut -d'=' -f2-)
+            if [[ "$cors_value" == *"*"* ]]; then
+                allow_wildcards=true
+                IFS=',' read -ra origins <<< "$cors_value"
+                for origin in "${origins[@]}"; do
+                    trimmed_origin="${origin#${origin%%[![:space:]]*}}"
+                    trimmed_origin="${trimmed_origin%${trimmed_origin##*[![:space:]]]}}"
+                    if [[ "$trimmed_origin" == http*://* ]]; then
+                        if [[ "$trimmed_origin" == *"://*."* ]]; then
+                            # Allowed wildcard subdomain pattern (e.g., https://*.example.com)
+                            continue
+                        fi
+                    fi
+                    allow_wildcards=false
+                    break
+                done
+                if [ "$allow_wildcards" = false ]; then
+                    recommendations+=("Restrict CORS_ORIGINS to specific domains (avoid wildcard *)")
+                fi
+            fi
         fi
 
         # Check for HTTP in production URLs

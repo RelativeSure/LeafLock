@@ -80,19 +80,23 @@ SERVER_ENCRYPTION_KEY=your_32_character_encryption_key_here
 
 #### CORS and Frontend Configuration
 ```bash
-# Replace with your actual domain
-CORS_ORIGINS=https://leaflock.yourdomain.com
+# Allow LeafLock apex + preview subdomains
+CORS_ORIGINS=https://leaflock.app,https://*.leaflock.app
 
-# Frontend API URL (replace with your domain)
-VITE_API_URL=https://leaflock.yourdomain.com/api/v1
+# Frontend API URL (use __ORIGIN__ so previews follow their domain)
+VITE_API_URL=__ORIGIN__
 
 # Enable admin panel in frontend
 VITE_ENABLE_ADMIN_PANEL=false
 ```
 
+> `__ORIGIN__` keeps preview builds zero-touch: the frontend automatically reuses the domain it was loaded from when talking to the backend.
+> Wildcards don’t cover the apex; include both `https://leaflock.app` and `https://*.leaflock.app` for full coverage.
+
 #### Application Settings
 ```bash
 # Application environment
+# Use 'preview' or 'development' to enable extra logging on PR previews
 APP_ENV=production
 
 # Server port (don't change for Coolify)
@@ -150,6 +154,8 @@ openssl rand -base64 32
 2. Add all required variables from the configuration section above
 3. **Important**: Ensure no quotes around values with special characters
 4. **Double-check**: JWT_SECRET and SERVER_ENCRYPTION_KEY are properly set
+5. **Preview tip**: Keep `CORS_ORIGINS` on `https://leaflock.app,https://*.leaflock.app` so both the apex site and every preview subdomain are allowed
+6. **Preview tip**: Leave `VITE_API_URL` as `__ORIGIN__` so PR deploys talk to their own domain automatically
 
 ### Step 3: Domain and SSL
 
@@ -158,13 +164,21 @@ openssl rand -base64 32
 3. Enable **Force HTTPS**
 4. Enable **Automatic SSL** (Let's Encrypt)
 
-### Step 4: Deploy
+### Step 4: Enable Preview Deployments (Optional)
+
+1. Open your Coolify resource → **Git** tab
+2. Toggle **Preview Deployments** and authorize the Git provider webhook
+3. Set the branch filter to match your pull requests (e.g. `pr/*` or `*`)
+4. Coolify will spin up an isolated stack per pull request with a domain like `https://leaflock-pr-123.leaflock.app`
+5. Find the exact preview URL in the resource’s **Deployments** tab or in the PR comment Coolify posts after each build
+
+### Step 5: Deploy
 
 1. Click **Deploy** button
 2. Monitor deployment logs in real-time
 3. Wait for all services to be healthy (typically 2-3 minutes)
 
-### Step 5: Verify Deployment
+### Step 6: Verify Deployment
 
 Check these endpoints to verify successful deployment:
 

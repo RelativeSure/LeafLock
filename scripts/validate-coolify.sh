@@ -341,8 +341,8 @@ JWT_SECRET=CoolifyTestJWTSecretThatIs64CharactersLongForTestingOnly123!
 SERVER_ENCRYPTION_KEY=CoolifyTest32CharEncryptionKey
 DEFAULT_ADMIN_PASSWORD=CoolifyAdmin#P@ss&123!
 DEFAULT_ADMIN_EMAIL=admin@coolify.test
-VITE_API_URL=https://leaflock.example.com/api/v1
-CORS_ORIGINS=https://leaflock.example.com
+VITE_API_URL=__ORIGIN__
+CORS_ORIGINS=https://leaflock.app,https://*.leaflock.app
 APP_ENV=production
 EOF
 
@@ -406,10 +406,10 @@ BEFORE DEPLOYMENT:
   □ SERVER_ENCRYPTION_KEY (32 characters, random string)
   □ DEFAULT_ADMIN_PASSWORD (strong password with special chars)
   □ DEFAULT_ADMIN_EMAIL (valid email address)
-  □ VITE_API_URL (your actual domain: https://yourdomain.com/api/v1)
+  □ VITE_API_URL (`__ORIGIN__` or your actual domain: https://yourdomain.com)
 
 □ Set optional environment variables:
-  □ CORS_ORIGINS (your actual domain: https://yourdomain.com)
+  □ CORS_ORIGINS (e.g., https://leaflock.app,https://*.leaflock.app)
   □ APP_ENV=production
   □ ENABLE_DEFAULT_ADMIN=true (for first deployment)
   □ ENABLE_REGISTRATION=true/false (as needed)
@@ -443,7 +443,7 @@ SECURITY CHECKLIST:
 □ JWT_SECRET is properly randomized
 □ SERVER_ENCRYPTION_KEY is properly randomized
 □ Default admin password is changed after first login
-□ CORS_ORIGINS is restricted to your domain only
+□ CORS_ORIGINS is restricted to approved domains (include apex + wildcard, e.g., https://leaflock.app,https://*.leaflock.app)
 □ SSL is properly configured and working
 □ Database connections use SSL (sslmode=prefer)
 
@@ -474,8 +474,10 @@ validate_domain_config() {
     # Check for proper API URL configuration
     if grep -q "VITE_API_URL.*https://" "$compose_path"; then
         log_success "HTTPS API URL configured"
+    elif grep -q "VITE_API_URL.*\\${VITE_API_URL}" "$compose_path"; then
+        log_info "VITE_API_URL is provided via environment variables; ensure it resolves to https://… or __ORIGIN__ in Coolify"
     else
-        log_warning "VITE_API_URL should use HTTPS for production deployment"
+        log_warning "VITE_API_URL should use HTTPS or the __ORIGIN__ sentinel for production deployment"
     fi
 
     # Check for SSL configuration

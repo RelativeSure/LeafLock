@@ -31,7 +31,7 @@ JWT_SECRET=<64-character-random-string>
 SERVER_ENCRYPTION_KEY=<32-character-random-string>
 
 # CORS Configuration
-CORS_ORIGINS=https://leaflock.app,https://www.leaflock.app
+CORS_ORIGINS=https://leaflock.app,https://*.leaflock.app
 ```
 
 ### Frontend Environment Variables (Required)
@@ -42,14 +42,19 @@ BACKEND_INTERNAL_URL=http://backend:8080
 PORT=80
 
 # Build-time Configuration
-VITE_API_URL=https://leaflock.app/api/v1
+VITE_API_URL=__ORIGIN__
 VITE_ENABLE_ADMIN_PANEL=false
 ```
+
+> Using `__ORIGIN__` tells the frontend to call whichever domain served it, so every preview deployment automatically talks to its own backend without extra configuration.
+
+> Wildcard certificates don’t cover the bare domain, so keep both `https://leaflock.app` and `https://*.leaflock.app` in `CORS_ORIGINS` to satisfy production and previews.
 
 ### Optional Environment Variables
 
 ```bash
 # Application Settings
+# Use production for live, preview/development for PR stacks
 APP_ENV=production
 ENABLE_REGISTRATION=true
 ADMIN_USER_IDS=<comma-separated-user-ids>
@@ -95,6 +100,7 @@ openssl rand -hex 16
    - Add your domain (e.g., leaflock.app)
    - Enable SSL/TLS certificate
    - Configure redirect from www to non-www if desired
+   - Coolify preview deployments will add extra subdomains automatically; no additional CORS changes are required when `https://*.leaflock.app` is set
 
 5. **Deploy Configuration**
    - Docker Compose file: `docker-compose.coolify.yml`
