@@ -17,10 +17,10 @@
           "ENABLE_DEFAULT_ADMIN": "true",
           "ENABLE_REGISTRATION": "false",
           "ENABLE_METRICS": "true",
-          "DEFAULT_ADMIN_EMAIL": "admin@leaflock.app",
-          "DEFAULT_ADMIN_PASSWORD": "LeafLockAdmin!2025",
-          "JWT_SECRET": "WZcZ25F3vUQdFaY4i8N3x0TFeTbPbxCMvR8S8i9AqBkeCwwnZC3sQ3qO7O9vF6v7SYz7l1cZ8eVzHV0b7Psjwg==",
-          "SERVER_ENCRYPTION_KEY": "8EoD7wqj5XTfuQF1gH0vLQbnX80Koe1g",
+          "DEFAULT_ADMIN_EMAIL": "admin@leaflock.local",
+          "DEFAULT_ADMIN_PASSWORD": "ChangeThisAdminPassword123!",
+          "JWT_SECRET": "dev-super-secret-jwt-key-change-me-please-64-characters-long!!!!",
+          "SERVER_ENCRYPTION_KEY": "c9f7IloUZlY6qSdB5KTNLJHdKEJaDbOt",
           "CORS_ORIGINS": "https://leaflock-frontend-production.up.railway.app",
           "RAILWAY_BACKEND_KEYWORDS": "LEAFLOCK_BACKEND|BACKEND|API|SERVER|APP|SERVICE",
           "RAILWAY_BACKEND_PORT": "8080"
@@ -32,7 +32,7 @@
         "dockerfilePath": "frontend/Dockerfile",
         "variables": {
           "PORT": "80",
-          "BACKEND_INTERNAL_URL": "http://leaflock-backend.railway.internal:8080",
+          "BACKEND_INTERNAL_URL": "http://backend:8080",
           "VITE_API_URL": "https://leaflock-backend-production.up.railway.app",
           "VITE_ENABLE_ADMIN_PANEL": "false"
         }
