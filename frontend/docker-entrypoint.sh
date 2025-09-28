@@ -10,6 +10,104 @@ find_backend_service_line() {
   '
 }
 
+# Detect whether a provided BACKEND_INTERNAL_URL is a known placeholder value
+is_placeholder_backend_url() {
+  value=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+  if [ -z "$value" ]; then
+    return 0
+  fi
+
+  case "$value" in
+    http://backend|http://backend/|http://backend:80|http://backend:8080|\
+    https://backend|https://backend/|https://backend:80|https://backend:8080|\
+    tcp://backend|tcp://backend:80|tcp://backend:8080|\
+    http://backend-service|http://backend-service:8080|\
+    https://backend-service|https://backend-service:8080|\
+    http://leaflock-backend|http://leaflock-backend:80|http://leaflock-backend:8080|\
+    https://leaflock-backend|https://leaflock-backend:80|https://leaflock-backend:8080|\
+    http://api|http://api:8080|https://api|https://api:8080|\
+    http://localhost|http://localhost:80|http://localhost:8080|\
+    https://localhost|https://localhost:80|https://localhost:8080|\
+    http://127.0.0.1|http://127.0.0.1:80|http://127.0.0.1:8080|\
+    https://127.0.0.1|https://127.0.0.1:80|https://127.0.0.1:8080)
+      return 0
+      ;;
+  esac
+
+  case "$value" in
+    *your-backend-domain-placeholder*|*your-backend*|*placeholder*|*changeme*|*example.com*)
+      return 0
+      ;;
+  esac
+
+  host_part="$value"
+  case "$host_part" in
+    *://*) host_part=${host_part#*://} ;;
+  esac
+  host_part=${host_part%%/*}
+  if [ -z "$host_part" ]; then
+    return 0
+  fi
+
+  # Strip port if present (and remove IPv6 brackets)
+  if printf '%s' "$host_part" | grep -q '^\[.*\]'; then
+    host_part=${host_part#\[}
+    host_part=${host_part%\]}
+  fi
+
+  host_no_port="$host_part"
+  if printf '%s' "$host_part" | grep -q ':'; then
+    if ! printf '%s' "$host_part" | grep -Eq '^[0-9a-f:.]+$'; then
+      host_no_port=${host_part%%:*}
+    fi
+  fi
+
+  if [ -z "$host_no_port" ]; then
+    return 0
+  fi
+
+  lower_host=$(printf '%s' "$host_no_port" | tr '[:upper:]' '[:lower:]')
+
+  if printf '%s' "$lower_host" | grep -Eq '^(localhost|127\.0\.0\.1|0\.0\.0\.0)$'; then
+    return 0
+  fi
+
+  if [ -n "${RAILWAY_PUBLIC_DOMAIN:-}" ]; then
+    lower_public=$(printf '%s' "${RAILWAY_PUBLIC_DOMAIN}" | tr '[:upper:]' '[:lower:]')
+    if [ "$lower_host" = "$lower_public" ]; then
+      return 0
+    fi
+  fi
+
+  if [ -n "${RAILWAY_PRIVATE_DOMAIN:-}" ]; then
+    lower_private=$(printf '%s' "${RAILWAY_PRIVATE_DOMAIN}" | tr '[:upper:]' '[:lower:]')
+    if [ "$lower_host" = "$lower_private" ]; then
+      return 0
+    fi
+  fi
+
+  # Numeric IPv4/IPv6 literals are considered valid endpoints.
+  if printf '%s' "$host_no_port" | grep -Eq '^[0-9.]+$'; then
+    return 1
+  fi
+  if printf '%s' "$host_no_port" | grep -Eq '^[0-9a-f:]+$'; then
+    return 1
+  fi
+
+  # If DNS lookup tools are available, require successful resolution.
+  if command -v nslookup >/dev/null 2>&1; then
+    if ! nslookup "$host_no_port" >/dev/null 2>&1; then
+      return 0
+    fi
+  elif command -v getent >/dev/null 2>&1; then
+    if ! getent ahosts "$host_no_port" >/dev/null 2>&1; then
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
 # Default to port 80 for Coolify compatibility (with CAP_NET_BIND_SERVICE)
 : "${PORT:=80}"
 
@@ -65,7 +163,18 @@ echo "  - Kubernetes: ${KUBERNETES_SERVICE_HOST:+DETECTED}${KUBERNETES_SERVICE_H
 echo "  - Docker Compose: ${COMPOSE_PROJECT_NAME:+DETECTED}${COMPOSE_PROJECT_NAME:-NOT_DETECTED}"
 echo "==================================="
 
-# Attempt to auto-populate BACKEND_INTERNAL_URL if it's missing.
+# Handle placeholder Railway defaults so we can auto-detect the real backend service.
+ORIGINAL_BACKEND_INTERNAL_URL="${BACKEND_INTERNAL_URL:-}"
+RESET_PLACEHOLDER=0
+if [ -n "${BACKEND_INTERNAL_URL:-}" ] && [ "$IS_RAILWAY_ENV" -eq 1 ]; then
+  if is_placeholder_backend_url "${BACKEND_INTERNAL_URL}"; then
+    echo "🟡 [SERVICE_DISCOVERY] Provided BACKEND_INTERNAL_URL appears to be a placeholder (${BACKEND_INTERNAL_URL}); auto-detecting real Railway backend..."
+    BACKEND_INTERNAL_URL=""
+    RESET_PLACEHOLDER=1
+  fi
+fi
+
+# Attempt to auto-populate BACKEND_INTERNAL_URL if it's missing (or placeholder reset).
 if [ -z "${BACKEND_INTERNAL_URL:-}" ]; then
   echo "🔍 [SERVICE_DISCOVERY] Attempting auto-detection of backend service..."
 
@@ -197,6 +306,13 @@ if [ -z "${BACKEND_INTERNAL_URL:-}" ]; then
   else
     echo "🎯 [SERVICE_DISCOVERY] Final BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-NOT_SET}"
   fi
+fi
+
+if [ -z "${BACKEND_INTERNAL_URL:-}" ] && [ "$RESET_PLACEHOLDER" -eq 1 ]; then
+  BACKEND_INTERNAL_URL="$ORIGINAL_BACKEND_INTERNAL_URL"
+  BACKEND_AUTODETECTED=0
+  BACKEND_SOURCE_VAR="BACKEND_INTERNAL_URL(placeholder-fallback)"
+  echo "⚠️ [SERVICE_DISCOVERY] Auto-detection failed; falling back to provided BACKEND_INTERNAL_URL value"
 fi
 
 # Normalize BACKEND_INTERNAL_URL to scheme://host[:port]
