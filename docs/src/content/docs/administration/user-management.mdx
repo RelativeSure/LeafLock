@@ -1,0 +1,411 @@
+---
+title: User Management
+description: Complete guide for managing users, permissions, and admin accounts in LeafLock with practical examples and troubleshooting.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Badge } from '@astrojs/starlight/components';
+
+This guide covers everything you need to know about managing users in LeafLock, from setting up admin accounts to troubleshooting user issues.
+
+## Default Admin Account
+
+### Quick Setup
+
+LeafLock automatically creates an admin account when starting up with an empty database. This makes initial setup simple and secure.
+
+<Card title="🔧 Auto-Admin Creation" icon="setting">
+**When it happens:**
+- ✅ Application starts up
+- ✅ Database is empty (no existing users)
+- ✅ `ENABLE_DEFAULT_ADMIN=true` (default setting)
+
+**What you get:**
+- Fully configured admin account
+- Secure default permissions
+- Ready to use immediately
+</Card>
+
+### Environment Configuration
+
+<Tabs>
+  <TabItem label="Basic Setup">
+    ```bash
+    # Enable automatic admin creation
+    ENABLE_DEFAULT_ADMIN=true
+
+    # Admin login credentials
+    DEFAULT_ADMIN_EMAIL=admin@leaflock.app
+    DEFAULT_ADMIN_PASSWORD=YourSecurePassword123!
+    ```
+  </TabItem>
+  <TabItem label="Production Security">
+    ```bash
+    # Use strong passwords with special characters
+    DEFAULT_ADMIN_PASSWORD=#wmR8xWxZ&#JHZPd8HTYmafctWSe0N*jgPG%bYS@
+
+    # Consider your actual domain
+    DEFAULT_ADMIN_EMAIL=admin@yourdomain.com
+
+    # Optional: Disable after first setup
+    ENABLE_DEFAULT_ADMIN=false
+    ```
+  </TabItem>
+</Tabs>
+
+:::caution[Security First Steps]
+**🚨 CRITICAL**: Change the default password immediately after first login!
+
+1. Login with default credentials
+2. Go to **Settings** → **Change Password**
+3. Use a strong, unique password
+4. Consider enabling MFA for extra security
+:::
+
+## User Operations
+
+### Viewing Users
+
+<Tabs>
+  <TabItem label="Database Query">
+    ```sql
+    -- Quick user overview
+    SELECT
+        id,
+        email_search_hash,
+        is_admin,
+        mfa_enabled,
+        failed_attempts,
+        locked_until,
+        created_at,
+        last_login
+    FROM users
+    ORDER BY created_at DESC;
+    ```
+  </TabItem>
+  <TabItem label="API Endpoint">
+    ```bash
+    # List all users (admin required)
+    curl -X GET http://localhost:8080/api/v1/admin/users \
+      -H "Authorization: Bearer your-admin-jwt-token"
+    ```
+  </TabItem>
+  <TabItem label="Database Access">
+    ```bash
+    # Connect to database
+    docker compose exec postgres psql -U postgres -d notes
+
+    # Or with Podman
+    podman exec -it leaflock-postgres psql -U postgres -d notes
+    ```
+  </TabItem>
+</Tabs>
+
+### User Statistics
+
+<CardGrid>
+  <Card title="📊 User Counts" icon="document">
+    ```sql
+    -- Total users
+    SELECT COUNT(*) as total_users FROM users;
+
+    -- Admin users
+    SELECT COUNT(*) as admin_users
+    FROM users WHERE is_admin = true;
+
+    -- Locked accounts
+    SELECT COUNT(*) as locked_accounts
+    FROM users WHERE locked_until > NOW();
+    ```
+  </Card>
+  <Card title="💾 Storage Usage" icon="laptop">
+    ```sql
+    -- Storage by user
+    SELECT
+        id,
+        storage_used,
+        storage_limit,
+        ROUND((storage_used::float / storage_limit * 100), 2) as usage_percent
+    FROM users
+    WHERE storage_used > 0
+    ORDER BY usage_percent DESC;
+    ```
+  </Card>
+</CardGrid>
+
+## User Administration
+
+### Managing Permissions
+
+<Tabs>
+  <TabItem label="Promote to Admin">
+    ```sql
+    -- Make user an admin
+    UPDATE users
+    SET is_admin = true
+    WHERE id = 'user-uuid-here';
+    ```
+
+    ```bash
+    # Via API
+    curl -X PATCH http://localhost:8080/api/v1/admin/users/user-id \
+      -H "Authorization: Bearer admin-token" \
+      -H "Content-Type: application/json" \
+      -d '{"is_admin": true}'
+    ```
+  </TabItem>
+  <TabItem label="Remove Admin">
+    ```sql
+    -- Remove admin privileges
+    UPDATE users
+    SET is_admin = false
+    WHERE id = 'user-uuid-here';
+    ```
+  </TabItem>
+  <TabItem label="MFA Management">
+    ```sql
+    -- Enable MFA
+    UPDATE users
+    SET mfa_enabled = true
+    WHERE id = 'user-uuid-here';
+
+    -- Disable MFA (emergency)
+    UPDATE users
+    SET mfa_enabled = false,
+        mfa_secret_encrypted = NULL
+    WHERE id = 'user-uuid-here';
+    ```
+  </TabItem>
+</Tabs>
+
+### Account Recovery
+
+<Card title="🔓 Unlock Locked Accounts" icon="approve-check">
+**Single user:**
+```sql
+UPDATE users
+SET failed_attempts = 0,
+    locked_until = NULL
+WHERE id = 'user-uuid-here';
+```
+
+**All locked users:**
+```sql
+UPDATE users
+SET failed_attempts = 0,
+    locked_until = NULL
+WHERE locked_until IS NOT NULL;
+```
+</Card>
+
+### Storage Management
+
+```sql
+-- Update storage limit (10MB example)
+UPDATE users
+SET storage_limit = 10485760
+WHERE id = 'user-uuid-here';
+
+-- Check users near storage limit
+SELECT id, email_search_hash,
+       storage_used, storage_limit,
+       ROUND((storage_used::float / storage_limit * 100), 1) as usage_percent
+FROM users
+WHERE (storage_used::float / storage_limit) > 0.8
+ORDER BY usage_percent DESC;
+```
+
+## User Registration
+
+### API Registration
+
+<Card title="📝 New User Registration" icon="add-user">
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "newuser@example.com",
+    "password": "SecurePassword123!"
+  }'
+```
+
+**Requirements:**
+- Valid email format
+- Password: 8+ chars, mixed case, numbers, special chars
+- Unique email address
+- Registration enabled (`ENABLE_REGISTRATION=true`)
+</Card>
+
+:::note[Database-Only User Creation]
+**Not Recommended**: Creating users directly in the database bypasses encryption setup and they won't be able to login. Always use the registration API or admin panel.
+:::
+
+## Troubleshooting
+
+### Common Issues
+
+<CardGrid>
+  <Card title="🚫 Cannot Login" icon="error">
+    **Check account status:**
+    ```sql
+    SELECT id, failed_attempts, locked_until, is_admin
+    FROM users
+    WHERE email_search_hash = encode(
+        sha256(lower('user@example.com')::bytea),
+        'hex'
+    )::bytea;
+    ```
+
+    **Fix locked account:**
+    ```sql
+    UPDATE users
+    SET failed_attempts = 0, locked_until = NULL
+    WHERE id = 'user-id';
+    ```
+  </Card>
+  <Card title="🔑 Lost Admin Access" icon="warning">
+    **Promote existing user:**
+    ```sql
+    UPDATE users
+    SET is_admin = true
+    WHERE id = 'trusted-user-id';
+    ```
+
+    **Or create emergency admin:**
+    ```bash
+    # In .env file
+    ENABLE_DEFAULT_ADMIN=true
+    DEFAULT_ADMIN_EMAIL=recovery@yourdomain.com
+    DEFAULT_ADMIN_PASSWORD=TempRecovery123!
+
+    # Restart application
+    docker compose restart
+    ```
+  </Card>
+</CardGrid>
+
+### Finding Users by Email
+
+Since emails are encrypted, you need to use the search hash:
+
+```sql
+-- Find user by email (requires the actual email)
+SELECT id, is_admin, created_at, last_login
+FROM users
+WHERE email_search_hash = encode(
+    sha256(lower('user@example.com')::bytea),
+    'hex'
+)::bytea;
+```
+
+### Emergency Data Reset
+
+:::danger[Destructive Operation]
+**⚠️ DANGER**: This permanently deletes ALL user data!
+
+```sql
+-- Clear all user data (IRREVERSIBLE!)
+TRUNCATE users CASCADE;
+```
+
+This will delete:
+- All user accounts
+- All notes and workspaces
+- All sessions and login history
+- All audit logs
+- All file attachments
+:::
+
+## Admin Panel Features
+
+### Available Functions
+
+<CardGrid>
+  <Card title="👥 User Management" icon="group">
+    - View all registered users
+    - Modify user permissions (admin/regular)
+    - Lock/unlock user accounts
+    - Reset password tokens
+    - Monitor user activity
+  </Card>
+  <Card title="⚙️ System Settings" icon="setting">
+    - Global application configuration
+    - User registration settings
+    - Security policy management
+    - System announcements
+  </Card>
+  <Card title="📋 Audit Logs" icon="list-format">
+    - User login attempts
+    - Permission changes
+    - Security events
+    - Data access patterns
+  </Card>
+</CardGrid>
+
+### Access Requirements
+
+- **Authentication**: Must be logged in
+- **Authorization**: `is_admin = true` in database
+- **Endpoints**: All admin functions at `/api/v1/admin/*`
+
+## Security Architecture
+
+### Encryption & Privacy
+
+<Card title="🔒 Zero-Knowledge Architecture" icon="lock">
+**User data protection:**
+- All emails encrypted at rest
+- Password hashing with Argon2id (64MB memory, 3 iterations)
+- User master keys encrypted with user passwords
+- Server never sees plaintext notes or sensitive data
+
+**Session security:**
+- JWT tokens with Redis-backed refresh rotation
+- Secure cookie settings (HttpOnly, Secure, SameSite)
+- Automatic session expiry and cleanup
+</Card>
+
+### Backup Considerations
+
+When backing up user data, ensure you preserve:
+
+- ✅ Database encryption keys
+- ✅ JWT signing secrets
+- ✅ User master keys (encrypted)
+- ✅ Server encryption keys
+- ✅ Redis session data (for active sessions)
+
+:::warning[Critical Backup Note]
+Without the proper encryption keys, backed up user data cannot be decrypted or restored. Keep encryption keys secure and separate from data backups.
+:::
+
+## Best Practices
+
+### Admin Account Security
+
+1. **Strong Authentication**
+   - Use complex passwords with special characters
+   - Enable MFA on all admin accounts
+   - Regularly rotate admin passwords
+
+2. **Access Control**
+   - Limit number of admin users
+   - Use principle of least privilege
+   - Monitor admin activity through audit logs
+
+3. **Operational Security**
+   - Keep admin credentials secure
+   - Use dedicated admin accounts (don't use for regular notes)
+   - Regularly review admin permissions
+
+### User Privacy
+
+- Never log or store plaintext passwords
+- Minimize data collection to essential fields only
+- Respect user deletion requests completely
+- Audit access to user data regularly
+
+---
+
+*This guide covers the essential user management operations for LeafLock. For additional security features or enterprise deployment considerations, consult the deployment guides.*
