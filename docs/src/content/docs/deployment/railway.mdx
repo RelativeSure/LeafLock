@@ -114,6 +114,10 @@ backend:  motivated-energy.railway.internal  # Railway-generated name
 POSTGRES_PASSWORD=<64-char-secure-password>
 # Pull the connection string directly from the Railway Postgres plugin
 DATABASE_URL=<RAILWAY_POSTGRES_URL>
+PGHOST=<RAILWAY_POSTGRES_HOST>
+PGUSER=<RAILWAY_POSTGRES_USER>
+PGPASSWORD=<RAILWAY_POSTGRES_PASSWORD>
+PGDATABASE=<RAILWAY_POSTGRES_DATABASE>
 
 # Redis Configuration
 REDIS_PASSWORD=<32-char-secure-password>
@@ -140,6 +144,53 @@ ENABLE_METRICS=true
 ```
 
 > **Important:** Railway treats service variables as both build-time and runtime values. Set these before the first deploy so that migrations, admin bootstrap, and Vite builds use the correct configuration.
+> Also, **never leave placeholder hosts** like `postgres.railway.internal`—copy the exact values shown in Railway's "Variables" panel (for example `pg-pleasant-haze-12345.up.railway.app`). LeafLock now reads both `DATABASE_URL` and the plugin's `PG*` variables, so attaching the Postgres add-on and using its defaults is enough.
+
+<CardGrid>
+  <Card title="📦 IaC Template" icon="layers">
+You can codify the entire stack using Railway's configuration file (`railway.json`). Define both services, attach the Postgres/Redis plugins, and seed mandatory secrets up-front.
+
+```jsonc
+// railway.json (excerpt)
+{
+  "$schema": "https://railway.app/config.v2024.05.31.schema.json",
+  "project": {
+    "name": "leaflock",
+    "services": [
+      {
+        "name": "leaflock-backend",
+        "path": "./backend",
+        "dockerfilePath": "backend/Dockerfile",
+        "plugins": [
+          { "name": "postgres" },
+          { "name": "redis" }
+        ],
+        "variables": {
+          "APP_ENV": "production",
+          "ENABLE_DEFAULT_ADMIN": "true",
+          "ENABLE_METRICS": "true",
+          "DEFAULT_ADMIN_EMAIL": "ops@your-domain.com",
+          "DEFAULT_ADMIN_PASSWORD": "<change-me>"
+        }
+      },
+      {
+        "name": "leaflock-frontend",
+        "path": "./frontend",
+        "dockerfilePath": "frontend/Dockerfile",
+        "variables": {
+          "VITE_API_URL": "https://leaflock-backend-production.up.railway.app",
+          "BACKEND_INTERNAL_URL": "http://leaflock-backend.railway.internal:8080",
+          "PORT": "80"
+        }
+      }
+    ]
+  }
+}
+```
+
+Railway resolves plugin connection variables (e.g. `PGHOST`, `PGPASSWORD`, `REDIS_URL`) automatically at deploy time, so once the template is applied those secrets are injected without any imperative steps. Populate real admin credentials and rotate them through version control or your secrets store.
+  </Card>
+</CardGrid>
 
 ### 3. Frontend Service Configuration
 

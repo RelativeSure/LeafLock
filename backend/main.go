@@ -687,18 +687,45 @@ func resolveRedisPassword(redisURL, explicit string) string {
 	return explicit
 }
 
-// Build a postgres URL from common env vars (Coolify/Postgres add-on style)
-// Recognized: POSTGRESQL_HOST, POSTGRESQL_PORT, POSTGRESQL_USER, POSTGRESQL_PASSWORD, POSTGRESQL_DATABASE, POSTGRESQL_SSLMODE
+// Build a postgres URL from common env vars (Railway/Coolify/Postgres add-on style)
+// Recognized: POSTGRESQL_* vars, Railway PG* vars, and POSTGRES_PASSWORD
 func buildDatabaseURLFromEnv() string {
 	host := strings.TrimSpace(os.Getenv("POSTGRESQL_HOST"))
+	if host == "" {
+		host = strings.TrimSpace(os.Getenv("PGHOST"))
+	}
 	user := strings.TrimSpace(os.Getenv("POSTGRESQL_USER"))
+	if user == "" {
+		user = strings.TrimSpace(os.Getenv("PGUSER"))
+	}
 	pass := os.Getenv("POSTGRESQL_PASSWORD") // may contain spaces/specials
+	if pass == "" {
+		pass = os.Getenv("PGPASSWORD")
+	}
+	if pass == "" {
+		pass = os.Getenv("POSTGRES_PASSWORD")
+	}
 	db := strings.TrimSpace(os.Getenv("POSTGRESQL_DATABASE"))
+	if db == "" {
+		db = strings.TrimSpace(os.Getenv("PGDATABASE"))
+	}
 	if host == "" || user == "" || db == "" {
 		return ""
 	}
-	port := getEnvOrDefault("POSTGRESQL_PORT", "5432")
-	sslmode := getEnvOrDefault("POSTGRESQL_SSLMODE", "require")
+	port := strings.TrimSpace(os.Getenv("POSTGRESQL_PORT"))
+	if port == "" {
+		port = strings.TrimSpace(os.Getenv("PGPORT"))
+	}
+	if port == "" {
+		port = "5432"
+	}
+	sslmode := strings.TrimSpace(os.Getenv("POSTGRESQL_SSLMODE"))
+	if sslmode == "" {
+		sslmode = strings.TrimSpace(os.Getenv("PGSSLMODE"))
+	}
+	if sslmode == "" {
+		sslmode = "require"
+	}
 	u := &neturl.URL{
 		Scheme: "postgres",
 		User:   neturl.UserPassword(user, pass),

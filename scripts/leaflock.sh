@@ -35,7 +35,7 @@ case "$cmd" in
   icons)
     node scripts/generate-icons.mjs ;;
   railway)
-    bash scripts/railway-setup.sh "$@" ;;
+    echo "Railway deployments are now fully managed via Git IaC. See docs/deployment/railway for details." ;;
   docker:up)
     docker compose up -d --build ;;
   docker:down)
