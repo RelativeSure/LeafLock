@@ -345,23 +345,23 @@ END;
 $$ language 'plpgsql';
 
 -- Apply updated_at triggers
-DO $$ 
+DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_users_updated_at') THEN
-        CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users 
+        CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
     END IF;
-    
+
     IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_workspaces_updated_at') THEN
-        CREATE TRIGGER update_workspaces_updated_at BEFORE UPDATE ON workspaces 
+        CREATE TRIGGER update_workspaces_updated_at BEFORE UPDATE ON workspaces
             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
     END IF;
-    
+
     IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_notes_updated_at') THEN
-        CREATE TRIGGER update_notes_updated_at BEFORE UPDATE ON notes 
+        CREATE TRIGGER update_notes_updated_at BEFORE UPDATE ON notes
             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
     END IF;
-    
+
     IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_tags_updated_at') THEN
         CREATE TRIGGER update_tags_updated_at BEFORE UPDATE ON tags
             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -545,7 +545,7 @@ func LoadConfig() *Config {
 	}
 
 	// Validate admin password security
-	adminPassword := getEnvOrDefault("DEFAULT_ADMIN_PASSWORD", "AdminPass123!")
+	adminPassword := getEnvOrDefault("DEFAULT_ADMIN_PASSWORD", "ChangeThisAdminPassword123!")
 	if getEnvAsBool("ENABLE_DEFAULT_ADMIN", true) {
 		// Check for weak admin passwords
 		if len(adminPassword) < 12 {
@@ -1700,8 +1700,8 @@ func checkMigrationStatus(ctx context.Context, pool *pgxpool.Pool) (string, bool
 	// Additional quick check: verify key tables exist to avoid unnecessary migrations
 	var tableCount int
 	err = pool.QueryRow(ctx, `
-		SELECT COUNT(*) FROM information_schema.tables 
-		WHERE table_schema = 'public' 
+		SELECT COUNT(*) FROM information_schema.tables
+		WHERE table_schema = 'public'
 		AND table_name IN ('users', 'notes', 'workspaces', 'audit_log')
 	`).Scan(&tableCount)
 	if err == nil && tableCount >= 4 && currentVersion != "" {
@@ -2148,7 +2148,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		if lockDuration > 0 {
 			lockUntil := time.Now().Add(lockDuration)
 			h.db.Exec(ctx, `
-                UPDATE users SET failed_attempts = $1, locked_until = $2 
+                UPDATE users SET failed_attempts = $1, locked_until = $2
                 WHERE id = $3`,
 				failedAttempts, lockUntil, userID,
 			)
@@ -2777,7 +2777,7 @@ func (h *NotesHandler) GetNotes(c *fiber.Ctx) error {
 	// Get notes from workspace
 	rows, err := h.db.Query(ctx, `
 		SELECT id, title_encrypted, content_encrypted, created_at, updated_at
-		FROM notes 
+		FROM notes
 		WHERE workspace_id = $1 AND deleted_at IS NULL
 		ORDER BY updated_at DESC`,
 		workspaceID)
@@ -2992,7 +2992,7 @@ func (h *NotesHandler) DeleteNote(c *fiber.Ctx) error {
 
 	// Soft delete the note
 	result, err := h.db.Exec(ctx, `
-		UPDATE notes 
+		UPDATE notes
 		SET deleted_at = NOW()
 		FROM workspaces w
 		WHERE notes.id = $1 AND notes.workspace_id = w.id AND w.owner_id = $2 AND notes.deleted_at IS NULL`,
@@ -3027,7 +3027,7 @@ func (h *NotesHandler) GetTrash(c *fiber.Ctx) error {
 	// Get deleted notes from workspace
 	rows, err := h.db.Query(ctx, `
 		SELECT id, title_encrypted, content_encrypted, deleted_at, updated_at
-		FROM notes 
+		FROM notes
 		WHERE workspace_id = $1 AND deleted_at IS NOT NULL
 		ORDER BY deleted_at DESC`,
 		workspaceID)
@@ -3070,7 +3070,7 @@ func (h *NotesHandler) RestoreNote(c *fiber.Ctx) error {
 
 	// Restore the note (set deleted_at to NULL)
 	result, err := h.db.Exec(ctx, `
-		UPDATE notes 
+		UPDATE notes
 		SET deleted_at = NULL, updated_at = NOW()
 		FROM workspaces w
 		WHERE notes.id = $1 AND notes.workspace_id = w.id AND w.owner_id = $2 AND notes.deleted_at IS NOT NULL`,
@@ -3232,7 +3232,7 @@ func (h *NotesHandler) PermanentlyDeleteNote(c *fiber.Ctx) error {
 
 	// Permanently delete the note
 	result, err := h.db.Exec(ctx, `
-		DELETE FROM notes 
+		DELETE FROM notes
 		USING workspaces w
 		WHERE notes.id = $1 AND notes.workspace_id = w.id AND w.owner_id = $2 AND notes.deleted_at IS NOT NULL`,
 		noteID, userID)
@@ -3270,7 +3270,7 @@ func (h *TagsHandler) GetTags(c *fiber.Ctx) error {
 	// Get user's tags
 	rows, err := h.db.Query(ctx, `
 		SELECT id, name_encrypted, color, created_at, updated_at
-		FROM tags 
+		FROM tags
 		WHERE user_id = $1
 		ORDER BY name_encrypted ASC`,
 		userID)
@@ -3366,7 +3366,7 @@ func (h *TagsHandler) DeleteTag(c *fiber.Ctx) error {
 
 	// Delete tag (this will cascade delete note_tags relationships)
 	result, err := h.db.Exec(ctx, `
-		DELETE FROM tags 
+		DELETE FROM tags
 		WHERE id = $1 AND user_id = $2`,
 		tagID, userID)
 
@@ -3452,14 +3452,14 @@ func (h *TagsHandler) RemoveTagFromNote(c *fiber.Ctx) error {
 
 	// Remove tag assignment (with user verification)
 	result, err := h.db.Exec(ctx, `
-		DELETE FROM note_tags 
+		DELETE FROM note_tags
 		USING notes n, workspaces w, tags t
-		WHERE note_tags.note_id = n.id 
+		WHERE note_tags.note_id = n.id
 		AND note_tags.tag_id = t.id
 		AND n.workspace_id = w.id
-		AND note_tags.note_id = $1 
+		AND note_tags.note_id = $1
 		AND note_tags.tag_id = $2
-		AND w.owner_id = $3 
+		AND w.owner_id = $3
 		AND t.user_id = $3`,
 		noteID, tagID, userID)
 
@@ -6253,7 +6253,7 @@ func validateEncryptionKeyAndAdminAccess(db Database, crypto *CryptoService, con
 	var userCount int
 	var adminExists bool
 	err = db.QueryRow(ctx, `
-		SELECT 
+		SELECT
 			(SELECT COUNT(*) FROM users) as user_count,
 			EXISTS(SELECT 1 FROM users WHERE email_search_hash = $1) as admin_exists
 	`, currentEmailSearchHash).Scan(&userCount, &adminExists)
@@ -6418,7 +6418,7 @@ func getAdminConfigFromEnv() adminConfigStruct {
 	return adminConfigStruct{
 		Enabled:  getEnvAsBool("ENABLE_DEFAULT_ADMIN", true),
 		Email:    getEnvOrDefault("DEFAULT_ADMIN_EMAIL", "admin@leaflock.app"),
-		Password: getEnvOrDefault("DEFAULT_ADMIN_PASSWORD", "AdminPass123!"),
+		Password: getEnvOrDefault("DEFAULT_ADMIN_PASSWORD", "ChangeThisAdminPassword123!"),
 	}
 }
 

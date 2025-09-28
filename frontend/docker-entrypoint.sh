@@ -116,18 +116,27 @@ if [ -z "$BACKEND_INTERNAL_URL" ] && [ -n "${RAILWAY_BACKEND_TCP_URL:-}" ]; then
 fi
 
 if [ -z "$BACKEND_INTERNAL_URL" ]; then
-  for suffix in "_TCP_URL=" "_TCP_PROXY_URL=" "_HTTP_URL=" "_URL="; do
-    line=$(find_backend_env_line "$suffix")
-    if [ -n "$line" ]; then
-      candidate=${line#*=}
-      if is_placeholder "$candidate"; then
+for suffix in "_HTTP_URL=" "_URL=" "_TCP_PROXY_URL=" "_TCP_URL="; do
+  line=$(find_backend_env_line "$suffix")
+  if [ -n "$line" ]; then
+    candidate=${line#*=}
+    if is_placeholder "$candidate"; then
+      continue
+    fi
+    if [ "$suffix" = "_URL=" ] && ! printf '%s' "$candidate" | grep -q '://'; then
+      candidate="https://$candidate"
+    fi
+    if [ "$suffix" = "_TCP_URL=" ] || [ "$suffix" = "_TCP_PROXY_URL=" ]; then
+      # Prefer HTTP/HTTPS endpoints when available. Skip raw TCP unless nothing else found.
+      if [ -n "$BACKEND_INTERNAL_URL" ]; then
         continue
       fi
-      BACKEND_INTERNAL_URL="$candidate"
-      BACKEND_SOURCE=${line%%=*}
-      break
     fi
-  done
+    BACKEND_INTERNAL_URL="$candidate"
+    BACKEND_SOURCE=${line%%=*}
+    break
+  fi
+done
 fi
 
 if [ -z "$BACKEND_INTERNAL_URL" ]; then
