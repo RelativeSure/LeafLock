@@ -102,7 +102,8 @@ if [ -n "${BACKEND_INTERNAL_URL:-}" ]; then
       if [ -n "$port" ]; then
         BACKEND_INTERNAL_URL="http://${host}:$port"
       else
-        BACKEND_INTERNAL_URL="http://${host}"
+        # Default to port 8080 for backend service when no port specified
+        BACKEND_INTERNAL_URL="http://${host}:8080"
       fi
       echo "🔧 [URL_NORMALIZATION] TCP URL converted to: ${BACKEND_INTERNAL_URL}"
       ;;
