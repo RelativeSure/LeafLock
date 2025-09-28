@@ -1,5 +1,6 @@
 name = "leaflock"
 compatibility_date = "2025-08-07"
+preview_urls = true
 
 [assets]
 directory = "./dist"

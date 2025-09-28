@@ -1,0 +1,398 @@
+---
+title: Development Guide
+description: Complete development setup and guidelines for contributing to LeafLock with modern tools and best practices.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Badge } from '@astrojs/starlight/components';
+
+This guide helps you set up a development environment and contribute effectively to LeafLock.
+
+## Quick Start
+
+### 1. Clone and Setup
+
+```bash
+git clone <repository-url>
+cd LeafLock
+cp .env.example .env
+# Edit .env with your settings
+```
+
+### 2. Start Development Environment
+
+<Tabs>
+  <TabItem label="Podman (Recommended)">
+    ```bash
+    make up          # Start all services
+    make logs        # View logs
+    make down        # Stop services
+    ```
+  </TabItem>
+  <TabItem label="Docker Compose">
+    ```bash
+    docker compose up -d      # Start services
+    docker compose logs -f    # View logs
+    docker compose down       # Stop services
+    ```
+  </TabItem>
+</Tabs>
+
+### 3. Access Your Development Environment
+
+<CardGrid>
+  <Card title="🌐 Frontend" icon="laptop">
+    **URL:** http://localhost:3000
+    **Tech:** React 18 + TypeScript + Vite
+  </Card>
+  <Card title="⚡ Backend API" icon="rocket">
+    **URL:** http://localhost:8080
+    **Health:** http://localhost:8080/api/v1/health
+  </Card>
+</CardGrid>
+
+## Technology Stack
+
+### Backend Architecture
+
+<Card title="🔧 Go Backend" icon="seti:go">
+**Framework:** Fiber v2 (Fast HTTP framework)
+**Database:** PostgreSQL 15 with pgx driver
+**Cache:** Redis 7 for sessions
+**Security:** JWT + Argon2id + XChaCha20-Poly1305
+**Key Files:** `backend/main.go` (entry point)
+</Card>
+
+**Core Dependencies:**
+```go
+github.com/gofiber/fiber/v2    // Web framework
+github.com/jackc/pgx/v5        // PostgreSQL driver
+github.com/redis/go-redis/v9   // Redis client
+```
+
+### Frontend Architecture
+
+<Card title="⚛️ React Frontend" icon="seti:react">
+**Framework:** React 18 + TypeScript
+**Build Tool:** Vite 5
+**State:** Zustand (lightweight state management)
+**Editor:** TipTap (rich text editing)
+**Encryption:** libsodium-wrappers (client-side)
+</Card>
+
+**Core Dependencies:**
+```json
+"@tanstack/react-query"    // Server state management
+"zustand"                  // Client state management
+"libsodium-wrappers"       // Encryption library
+```
+
+## Development Commands
+
+### Backend Development
+
+<Tabs>
+  <TabItem label="Basic Commands">
+    ```bash
+    cd backend
+    go mod download          # Install dependencies
+    go run main.go           # Start development server
+    go build -o app .        # Build binary
+    go test -v ./...         # Run all tests
+    ```
+  </TabItem>
+  <TabItem label="Testing">
+    ```bash
+    # Run tests with coverage
+    make -C backend test-coverage
+
+    # Coverage requirement: 72%
+    make -C backend test-coverage-check
+
+    # Local test environment
+    make -C backend test-local
+    ```
+  </TabItem>
+  <TabItem label="Code Quality">
+    ```bash
+    # Format code
+    make -C backend fmt
+
+    # Lint code
+    make -C backend vet
+
+    # Run all quality checks
+    make -C backend lint
+    ```
+  </TabItem>
+</Tabs>
+
+### Frontend Development
+
+<Tabs>
+  <TabItem label="Basic Commands">
+    ```bash
+    cd frontend
+    pnpm install             # Install dependencies
+    pnpm run dev             # Start dev server (Vite)
+    pnpm run build           # Build for production
+    pnpm test                # Run tests (Vitest)
+    ```
+  </TabItem>
+  <TabItem label="Testing">
+    ```bash
+    # Watch mode for development
+    pnpm test:watch
+
+    # Coverage report
+    pnpm test:coverage
+
+    # Run specific test
+    pnpm test -- --run specific-test
+    ```
+  </TabItem>
+  <TabItem label="Code Quality">
+    ```bash
+    # Lint code
+    pnpm run lint
+
+    # Auto-fix linting issues
+    pnpm run lint:fix
+
+    # Type checking
+    pnpm run type-check
+    ```
+  </TabItem>
+</Tabs>
+
+## Code Style & Standards
+
+### Go Backend
+
+<Card title="🎯 Go Conventions" icon="seti:go">
+**Formatting:**
+- Use `gofmt -s` (automatic via Makefile)
+- Tabs for indentation
+- Package names: lowercase, single word
+
+**Naming:**
+- Exported functions/types: PascalCase
+- Private functions/variables: camelCase
+- Constants: ALL_CAPS or camelCase
+</Card>
+
+```go
+// Good examples
+func CreateUser(email string) *User { }
+type UserService struct { }
+var defaultTimeout = 30 * time.Second
+
+// File naming
+user_service.go      // Implementation
+user_service_test.go // Tests
+```
+
+### React Frontend
+
+<Card title="⚛️ Frontend Conventions" icon="seti:react">
+**Formatting:**
+- 2-space indentation
+- Prettier config: no semicolons, single quotes
+- ESLint for code quality
+
+**Components:**
+- PascalCase for component names
+- camelCase for props and variables
+- TypeScript for all new code
+</Card>
+
+```tsx
+// Good examples
+export function UserProfile({ userId }: { userId: string }) { }
+const UserList = () => { }
+
+// File naming
+UserProfile.tsx       // Component
+UserProfile.test.tsx  // Tests
+types.ts             // Type definitions
+```
+
+## Testing Guidelines
+
+### Backend Testing
+
+<Card title="🧪 Go Testing Strategy" icon="approve-check">
+**Test Types:**
+- Unit tests for business logic
+- Integration tests for database operations
+- HTTP handler tests for API endpoints
+
+**Coverage Target:** 72% minimum (enforced by CI)
+</Card>
+
+```go
+// Test file example
+func TestUserService_CreateUser(t *testing.T) {
+    // Arrange
+    service := NewUserService(mockDB)
+
+    // Act
+    user, err := service.CreateUser("test@example.com")
+
+    // Assert
+    assert.NoError(t, err)
+    assert.NotNil(t, user)
+}
+```
+
+### Frontend Testing
+
+<Card title="🎭 React Testing Strategy" icon="approve-check">
+**Tools:**
+- Vitest for test runner
+- React Testing Library for component testing
+- MSW for API mocking
+
+**Focus Areas:**
+- Component behavior
+- User interactions
+- Error states
+- Accessibility
+</Card>
+
+```tsx
+// Test example
+import { render, screen } from '@testing-library/react'
+import { UserProfile } from './UserProfile'
+
+test('displays user name', () => {
+  render(<UserProfile name="John Doe" />)
+  expect(screen.getByText('John Doe')).toBeInTheDocument()
+})
+```
+
+## Git Workflow
+
+### Commit Standards
+
+<Card title="📝 Conventional Commits" icon="github">
+**Format:** `type(scope): description`
+
+**Types:**
+- `feat:` New features
+- `fix:` Bug fixes
+- `docs:` Documentation
+- `refactor:` Code improvements
+- `test:` Test additions
+- `chore:` Maintenance tasks
+</Card>
+
+```bash
+# Good commit examples
+feat(auth): add OAuth Google integration
+fix(editor): resolve formatting issue with lists
+docs(api): update authentication endpoints
+refactor(backend): optimize database queries
+```
+
+### Pre-commit Hooks
+
+<Card title="🔍 Quality Gates" icon="approve-check">
+**Setup:**
+```bash
+bash scripts/setup-git-hooks.sh
+```
+
+**What runs:**
+- Code formatting (gofmt, prettier)
+- Linting (go vet, eslint)
+- Tests (go test, vitest)
+- Secret scanning
+- Commit message validation
+</Card>
+
+### Pull Request Guidelines
+
+<CardGrid>
+  <Card title="📋 PR Checklist" icon="list-format">
+    - [ ] Clear, descriptive title
+    - [ ] Comprehensive description
+    - [ ] Linked issues (`Closes #123`)
+    - [ ] Screenshots for UI changes
+    - [ ] Test coverage maintained
+    - [ ] No secrets in code
+  </Card>
+  <Card title="🔍 Code Review" icon="approve-check">
+    - [ ] Follows style guidelines
+    - [ ] Tests pass locally
+    - [ ] Security best practices
+    - [ ] Performance considerations
+    - [ ] Documentation updated
+  </Card>
+</CardGrid>
+
+## Local Development Tips
+
+### Environment Setup
+
+```bash
+# Required environment variables for development
+POSTGRES_PASSWORD=your_local_postgres_password
+REDIS_PASSWORD=your_local_redis_password
+JWT_SECRET=your_64_character_jwt_secret_for_development
+SERVER_ENCRYPTION_KEY=your_32_character_encryption_key
+CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+```
+
+### Debugging
+
+<CardGrid>
+  <Card title="🐛 Backend Debugging" icon="bug">
+    **Logs:** `make logs` or `docker compose logs backend`
+    **Health:** `curl http://localhost:8080/api/v1/health`
+    **Debug:** Set `LOG_LEVEL=debug` in `.env`
+  </Card>
+  <Card title="🌐 Frontend Debugging" icon="laptop">
+    **Dev Tools:** Browser developer console
+    **Network:** Check API requests in Network tab
+    **State:** React DevTools for component state
+  </Card>
+</CardGrid>
+
+### Container Management
+
+```bash
+# Build and test locally
+make build               # Build all container images
+make status             # Check container status
+make clean              # Clean up containers and volumes
+
+# Database access
+make -C backend test-db-up    # Start test database
+make -C backend test-db-down  # Stop test database
+```
+
+## Contributing Guidelines
+
+### Before Submitting
+
+1. **Test your changes locally**
+2. **Run the full test suite**
+3. **Check code formatting**
+4. **Update documentation if needed**
+5. **Ensure security best practices**
+
+### Code Review Process
+
+<Card title="🔄 Review Workflow" icon="github">
+1. **Submit PR** with clear description
+2. **Automated checks** run (CI/CD)
+3. **Code review** by maintainers
+4. **Address feedback** and iterate
+5. **Merge** when approved and tests pass
+</Card>
+
+---
+
+*This development guide provides the foundation for contributing to LeafLock. For deployment-specific information, see the deployment guides.*

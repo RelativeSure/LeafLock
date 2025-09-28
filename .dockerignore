@@ -1,0 +1,20 @@
+# Git metadata
+.git
+.gitignore
+
+# Package manager caches
+node_modules
+**/node_modules
+.pnpm-store
+
+# Build artifacts
+frontend/dist
+frontend/test-results
+backend/coverage.*
+docs/dist
+docs/.astro
+
+# Logs & temp files
+**/*.log
+**/*.tmp
+**/*.swp

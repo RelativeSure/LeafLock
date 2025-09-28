@@ -1,0 +1,18 @@
+[__config__]
+schema = "https://railway.app/railway.schema.json"
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "backend/Dockerfile"
+watchPatterns = ["backend/**"]
+
+[deploy]
+numReplicas = 1
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[deploy.env]
+# Explicitly declare the port the backend listens on so other services can reference it
+PORT = "8080"
+# Advertise the backend's service keywords for cross-service discovery
+RAILWAY_BACKEND_KEYWORDS = "LEAFLOCK_BACKEND|BACKEND|API|SERVER|APP|SERVICE"

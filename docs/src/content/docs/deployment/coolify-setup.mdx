@@ -1,54 +1,68 @@
-# Coolify Deployment Guide for LeafLock
+---
+title: Coolify Setup Guide
+description: Quick setup guide for deploying LeafLock on Coolify with essential configuration steps.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Card, CardGrid } from '@astrojs/starlight/components';
 
 This guide provides step-by-step instructions for deploying LeafLock on Coolify.
 
 ## Prerequisites
 
-- Coolify instance with Docker support
-- Domain name configured in Coolify (e.g., leaflock.app)
-- SSL certificate configured in Coolify
+<CardGrid>
+  <Card title="Coolify Instance" icon="server">
+    Coolify instance with Docker support
+  </Card>
+  <Card title="Domain" icon="globe">
+    Domain name configured in Coolify (e.g., leaflock.app)
+  </Card>
+  <Card title="SSL Certificate" icon="lock">
+    SSL certificate configured in Coolify
+  </Card>
+</CardGrid>
 
 ## Required Environment Variables
 
 Set these environment variables in your Coolify project configuration:
 
-### Backend Environment Variables (Required)
+<Tabs>
+  <TabItem label="Backend (Required)">
+    ```bash
+    # Database Configuration
+    POSTGRES_PASSWORD=<strong-password-64-chars>
 
-```bash
-# Database Configuration
-POSTGRES_PASSWORD=<strong-password-64-chars>
+    # Redis Configuration
+    REDIS_PASSWORD=<strong-password-32-chars>
 
-# Redis Configuration  
-REDIS_PASSWORD=<strong-password-32-chars>
+    # Security Keys (Critical)
+    JWT_SECRET=<64-character-random-string>
+    SERVER_ENCRYPTION_KEY=<32-character-random-string>
 
-# Security Keys (Critical)
-JWT_SECRET=<64-character-random-string>
-SERVER_ENCRYPTION_KEY=<32-character-random-string>
+    # CORS Configuration
+    CORS_ORIGINS=https://leaflock.app,https://www.leaflock.app
+    ```
+  </TabItem>
+  <TabItem label="Frontend (Required)">
+    ```bash
+    # Runtime Configuration
+    BACKEND_INTERNAL_URL=http://backend:8080
+    PORT=80
 
-# CORS Configuration
-CORS_ORIGINS=https://leaflock.app,https://www.leaflock.app
-```
-
-### Frontend Environment Variables (Required)
-
-```bash
-# Runtime Configuration
-BACKEND_INTERNAL_URL=http://backend:8080
-PORT=80
-
-# Build-time Configuration
-VITE_API_URL=https://leaflock.app/api/v1
-VITE_ENABLE_ADMIN_PANEL=false
-```
-
-### Optional Environment Variables
-
-```bash
-# Application Settings
-APP_ENV=production
-ENABLE_REGISTRATION=true
-ADMIN_USER_IDS=<comma-separated-user-ids>
-```
+    # Build-time Configuration
+    VITE_API_URL=https://leaflock.app/api/v1
+    VITE_ENABLE_ADMIN_PANEL=false
+    ```
+  </TabItem>
+  <TabItem label="Optional">
+    ```bash
+    # Application Settings
+    APP_ENV=production
+    ENABLE_REGISTRATION=true
+    ADMIN_USER_IDS=<comma-separated-user-ids>
+    ```
+  </TabItem>
+</Tabs>
 
 ## Generating Secure Keys
 
@@ -58,7 +72,7 @@ Use OpenSSL to generate secure passwords and keys:
 # Generate POSTGRES_PASSWORD (64 chars)
 openssl rand -hex 32
 
-# Generate REDIS_PASSWORD (32 chars) 
+# Generate REDIS_PASSWORD (32 chars)
 openssl rand -hex 16
 
 # Generate JWT_SECRET (64 chars)
@@ -70,47 +84,47 @@ openssl rand -hex 16
 
 ## Coolify Project Setup
 
-1. **Create New Project**
-   - Go to Coolify dashboard
-   - Click "New Project"
-   - Select "Docker Compose" deployment type
+### 1. Create New Project
+- Go to Coolify dashboard
+- Click "New Project"
+- Select "Docker Compose" deployment type
 
-2. **Repository Configuration**
-   - Connect your Git repository
-   - Select branch: `master` (or your main branch)
-   - Set build path: `/`
+### 2. Repository Configuration
+- Connect your Git repository
+- Select branch: `master` (or your main branch)
+- Set build path: `/`
 
-3. **Environment Variables**
-   - Go to "Environment" tab
-   - Add all required environment variables listed above
-   - Ensure no trailing spaces or quotes around values
+### 3. Environment Variables
+- Go to "Environment" tab
+- Add all required environment variables listed above
+- Ensure no trailing spaces or quotes around values
 
-4. **Domain Configuration**
-   - Go to "Domains" tab
-   - Add your domain (e.g., leaflock.app)
-   - Enable SSL/TLS certificate
-   - Configure redirect from www to non-www if desired
+### 4. Domain Configuration
+- Go to "Domains" tab
+- Add your domain (e.g., leaflock.app)
+- Enable SSL/TLS certificate
+- Configure redirect from www to non-www if desired
 
-5. **Deploy Configuration**
-   - Docker Compose file: `docker-compose.coolify.yml`
-   - Build command: (leave empty - handled by Dockerfile)
-   - Start command: (leave empty - handled by Docker Compose)
+### 5. Deploy Configuration
+- Docker Compose file: `docker-compose.coolify.yml`
+- Build command: (leave empty - handled by Dockerfile)
+- Start command: (leave empty - handled by Docker Compose)
 
 ## Deployment Process
 
-1. **Initial Deployment**
-   ```bash
-   # Coolify will automatically:
-   # 1. Pull latest code from repository
-   # 2. Build frontend and backend containers
-   # 3. Start services in correct order (postgres → redis → backend → frontend)
-   # 4. Run health checks on all services
-   ```
+### Initial Deployment
+```bash
+# Coolify will automatically:
+# 1. Pull latest code from repository
+# 2. Build frontend and backend containers
+# 3. Start services in correct order (postgres → redis → backend → frontend)
+# 4. Run health checks on all services
+```
 
-2. **Monitor Deployment**
-   - Check "Logs" tab for build progress
-   - Verify all services are healthy in "Services" tab
-   - Test endpoints after deployment
+### Monitor Deployment
+- Check "Logs" tab for build progress
+- Verify all services are healthy in "Services" tab
+- Test endpoints after deployment
 
 ## Health Check Endpoints
 
@@ -176,22 +190,24 @@ openssl rand -hex 16
 
 ## Security Considerations
 
+:::caution[Security Best Practices]
 - **Never commit secrets to repository**
 - **Rotate JWT_SECRET and SERVER_ENCRYPTION_KEY periodically**
 - **Use strong, unique passwords for database and Redis**
 - **Enable automatic security updates in Coolify**
 - **Monitor access logs for suspicious activity**
 - **Backup encryption keys securely**
+:::
 
 ## Support
 
-For deployment issues:
+### For deployment issues:
 - Check Coolify documentation
 - Review container logs in Coolify dashboard
 - Verify all environment variables are set correctly
 - Test health endpoints manually
 
-For application issues:
+### For application issues:
 - Check backend logs for API errors
 - Verify database connections
 - Test frontend-backend connectivity

@@ -1,4 +1,10 @@
-# LeafLock Deployment Readiness Report
+---
+title: Deployment Readiness Report
+description: Comprehensive validation report confirming LeafLock is ready for production deployment with excellent security posture and performance characteristics.
+---
+
+import { Badge } from '@astrojs/starlight/components';
+import { Card, CardGrid } from '@astrojs/starlight/components';
 
 **Generated:** September 21, 2025
 **Application:** LeafLock Secure Notes
@@ -9,7 +15,7 @@
 
 ## Executive Summary
 
-✅ **READY FOR PRODUCTION DEPLOYMENT**
+<Badge text="READY FOR PRODUCTION DEPLOYMENT" variant="success" size="large" />
 
 LeafLock has successfully passed comprehensive validation testing and is ready for production deployment on Coolify. The application demonstrates excellent security posture, robust authentication systems, and production-grade performance characteristics.
 
@@ -19,40 +25,36 @@ LeafLock has successfully passed comprehensive validation testing and is ready f
 
 ## Test Results Summary
 
-### 🌐 Infrastructure & Connectivity
-- **Status:** ✅ PASS
-- **Docker Compose:** All 5 containers running successfully
-- **Health Endpoints:** Responding in <1ms average
-- **Frontend:** Accessible and serving properly
-- **Backend API:** Responding with proper security headers
-
-### 🛡️ Security Validation
-- **Status:** ✅ EXCELLENT
-- **Security Headers:** 4/4 implemented
-  - ✅ X-Content-Type-Options: nosniff
-  - ✅ X-Frame-Options: DENY
-  - ✅ X-XSS-Protection: 1; mode=block
-  - ✅ Content-Security-Policy: Comprehensive policy configured
-- **CORS:** Properly configured for localhost development
-- **Rate Limiting:** ✅ ACTIVE - Confirmed working (requests blocked after threshold)
-- **SSL Readiness:** Configured for production deployment
-
-### 🔐 Authentication & Authorization
-- **Status:** ✅ ROBUST
-- **JWT Implementation:** Secure token-based authentication
-- **Password Security:** Argon2id hashing with secure parameters
-- **Session Management:** Redis-based session storage
-- **Admin User System:** Pre-configured with secure defaults
-- **Rate Limiting:** Authentication endpoints protected
-- **Encryption:** XChaCha20-Poly1305 client-side encryption active
-
-### ⚡ Performance Characteristics
-- **Status:** ✅ EXCELLENT
-- **Health Endpoint:** 0.98ms average response time
-- **API Performance:** Sub-millisecond response times for core endpoints
-- **Concurrent Load:** Successfully handled 50 concurrent users
-- **Memory Usage:** Efficient Go runtime with minimal footprint
-- **Database Performance:** Optimized PostgreSQL queries with proper indexing
+<CardGrid>
+  <Card title="🌐 Infrastructure & Connectivity" icon="rocket">
+    **Status:** ✅ PASS
+    - Docker Compose: All 5 containers running successfully
+    - Health Endpoints: Responding in &lt;1ms average
+    - Frontend: Accessible and serving properly
+    - Backend API: Responding with proper security headers
+  </Card>
+  <Card title="🛡️ Security Validation" icon="lock">
+    **Status:** ✅ EXCELLENT
+    - Security Headers: 4/4 implemented
+    - CORS: Properly configured for localhost development
+    - Rate Limiting: ✅ ACTIVE - Confirmed working
+    - SSL Readiness: Configured for production deployment
+  </Card>
+  <Card title="🔐 Authentication & Authorization" icon="user">
+    **Status:** ✅ ROBUST
+    - JWT Implementation: Secure token-based authentication
+    - Password Security: Argon2id hashing with secure parameters
+    - Session Management: Redis-based session storage
+    - Admin User System: Pre-configured with secure defaults
+  </Card>
+  <Card title="⚡ Performance Characteristics" icon="lightning">
+    **Status:** ✅ EXCELLENT
+    - Health Endpoint: 0.98ms average response time
+    - API Performance: Sub-millisecond response times
+    - Concurrent Load: Successfully handled 50 concurrent users
+    - Memory Usage: Efficient Go runtime with minimal footprint
+  </Card>
+</CardGrid>
 
 ### 🌍 Environment Configuration
 - **Status:** ✅ COMPLETE
@@ -85,6 +87,10 @@ LeafLock has successfully passed comprehensive validation testing and is ready f
 ### Network Security
 - **HTTPS Ready:** SSL/TLS configuration prepared
 - **Security Headers:** Comprehensive set implemented
+  - ✅ X-Content-Type-Options: nosniff
+  - ✅ X-Frame-Options: DENY
+  - ✅ X-XSS-Protection: 1; mode=block
+  - ✅ Content-Security-Policy: Comprehensive policy configured
 - **CORS Policy:** Restrictive, configurable for production domains
 - **Rate Limiting:** Multi-tier protection (login, API, debug endpoints)
 - **Content Security Policy:** Strict policy preventing XSS attacks
@@ -104,13 +110,13 @@ LeafLock has successfully passed comprehensive validation testing and is ready f
 | Endpoint | Average | 95th Percentile | Status |
 |----------|---------|-----------------|---------|
 | Health Check | 0.98ms | 14ms | ✅ Excellent |
-| Authentication | <1ms | <5ms | ✅ Excellent |
-| API Endpoints | <1ms | <10ms | ✅ Excellent |
+| Authentication | &lt;1ms | &lt;5ms | ✅ Excellent |
+| API Endpoints | &lt;1ms | &lt;10ms | ✅ Excellent |
 
 ### Load Testing Results
 - **Concurrent Users:** 50 ✅
 - **Requests per User:** 10 ✅
-- **Success Rate:** >98% ✅
+- **Success Rate:** &gt;98% ✅
 - **Rate Limiting:** Active and effective ✅
 - **Memory Usage:** Stable under load ✅
 
@@ -261,16 +267,17 @@ BACKUP_S3_BUCKET=your-backup-bucket
 
 ### Recommendations for Monitoring
 1. Set up alerting for:
-   - Response time > 1000ms
-   - Error rate > 1%
+   - Response time &gt; 1000ms
+   - Error rate &gt; 1%
    - Database connection failures
    - Redis connectivity issues
-   - Disk space usage > 80%
+   - Disk space usage &gt; 80%
 
 ---
 
 ## Conclusion
 
+:::tip[Production Ready]
 **LeafLock is production-ready for Coolify deployment.**
 
 The application demonstrates:
@@ -279,6 +286,7 @@ The application demonstrates:
 - ✅ **Robust Architecture** (Zero-knowledge encryption, containerized deployment)
 - ✅ **Production-Grade Configuration** (Health checks, monitoring, proper error handling)
 - ✅ **Scalability Readiness** (Stateless backend, Redis session sharing)
+:::
 
 ### Next Steps
 1. Deploy to Coolify staging environment for final validation
@@ -296,6 +304,6 @@ The application demonstrates:
 
 ---
 
-**Deployment Approval:** ✅ **APPROVED FOR PRODUCTION**
+<Badge text="DEPLOYMENT APPROVAL: ✅ APPROVED FOR PRODUCTION" variant="success" size="large" />
 
 *This report validates that LeafLock meets all production deployment requirements and security standards for a secure notes application with end-to-end encryption.*

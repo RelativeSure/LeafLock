@@ -208,3 +208,37 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 - **Error Handling**: Graceful handling of encryption key mismatches and database issues
 - When modifying the docker compose file remember the coolify docker compose
 - Remember to build the setup when docker-compose and coolify docker compose files and the frontendDockerfile/entrypoint when testing/verifying
+
+## Railway IPv6 Private Network Support
+
+### Current Railway Configuration
+LeafLock is **fully compatible** with Railway's IPv6-only private network architecture:
+
+**Service Names:**
+- Backend Public: `leaflock-backend-production.up.railway.app`
+- Backend Private: `motivated-energy.railway.internal`
+- Frontend Public: `leaflock-frontend-production.up.railway.app`
+- Frontend Private: `leaflock-frontend.railway.internal`
+
+### IPv6 Compatibility Status
+✅ **Backend**: Implements `listenWithIPv6Fallback()` that binds to `[::]:{port}` (IPv6) first
+✅ **Frontend**: Auto-detects Railway service discovery with IPv6 address normalization
+✅ **Network**: Supports Railway's IPv6-only private mesh network via WireGuard
+
+### Required Railway Environment Variables
+**Backend Service:**
+```bash
+CORS_ORIGINS=https://leaflock-frontend-production.up.railway.app,https://leaflock-frontend.railway.internal,http://leaflock-frontend.railway.internal
+```
+
+**Frontend Service:**
+```bash
+BACKEND_INTERNAL_URL=http://motivated-energy.railway.internal:8080
+VITE_API_URL=https://leaflock-backend-production.up.railway.app
+```
+
+### Verification
+- Use `./test-railway-ipv6.sh` to test IPv6 private network communication
+- Check logs for `🌐 HTTP server starting on [::]:8080` (IPv6 binding success)
+- See `RAILWAY_IPV6_VERIFICATION.md` for complete verification guide
+- Frontend service discovery automatically handles Railway's internal hostnames

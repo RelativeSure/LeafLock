@@ -1,0 +1,1264 @@
+---
+title: Kubernetes Deployment Guide
+description: Complete guide for deploying LeafLock on Kubernetes with Helm charts, ingress controllers, and production-ready configurations.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Badge } from '@astrojs/starlight/components';
+
+This guide covers deploying LeafLock on Kubernetes clusters with production-ready configurations, monitoring, and scaling capabilities.
+
+## Kubernetes Architecture
+
+<Card title="☸️ Cloud-Native Architecture" icon="setting">
+**LeafLock Kubernetes Components:**
+- **Frontend:** React app deployment with Nginx
+- **Backend:** Go application with horizontal scaling
+- **Database:** PostgreSQL with persistent storage
+- **Cache:** Redis cluster for high availability
+- **Ingress:** HTTPS termination and routing
+- **Secrets:** Encrypted environment variables
+
+**Benefits:**
+- Auto-scaling based on load
+- High availability and fault tolerance
+- Rolling updates with zero downtime
+- Resource management and monitoring
+- Multi-environment support
+</Card>
+
+## Prerequisites
+
+<CardGrid>
+  <Card title="☸️ Kubernetes Cluster" icon="rocket">
+    - Kubernetes 1.24+ cluster
+    - kubectl configured
+    - Cluster admin permissions
+    - LoadBalancer support (cloud provider)
+  </Card>
+  <Card title="📦 Additional Tools" icon="laptop">
+    - Helm 3.0+ package manager
+    - Container registry access
+    - SSL certificate management
+    - Persistent volume support
+  </Card>
+</CardGrid>
+
+## Helm Chart Structure
+
+### Chart Overview
+
+```
+helm/
+├── Chart.yaml                 # Helm chart metadata
+├── values.yaml               # Default configuration values
+├── values-prod.yaml          # Production overrides
+├── templates/
+│   ├── frontend/
+│   │   ├── deployment.yaml   # Frontend deployment
+│   │   ├── service.yaml      # Frontend service
+│   │   └── configmap.yaml    # Frontend config
+│   ├── backend/
+│   │   ├── deployment.yaml   # Backend deployment
+│   │   ├── service.yaml      # Backend service
+│   │   └── hpa.yaml          # Horizontal Pod Autoscaler
+│   ├── database/
+│   │   ├── statefulset.yaml  # PostgreSQL StatefulSet
+│   │   ├── service.yaml      # Database service
+│   │   └── pvc.yaml          # Persistent volume claim
+│   ├── redis/
+│   │   ├── deployment.yaml   # Redis deployment
+│   │   └── service.yaml      # Redis service
+│   ├── ingress.yaml          # Ingress controller
+│   ├── secrets.yaml          # Encrypted secrets
+│   └── _helpers.tpl          # Template helpers
+└── charts/                   # Dependency charts
+```
+
+## Deployment Manifests
+
+### Namespace and Secrets
+
+<Tabs>
+  <TabItem label="Namespace">
+    ```yaml
+    # namespace.yaml
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: leaflock
+      labels:
+        name: leaflock
+        app.kubernetes.io/name: leaflock
+    ```
+  </TabItem>
+  <TabItem label="Secrets">
+    ```yaml
+    # secrets.yaml
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: leaflock-secrets
+      namespace: leaflock
+    type: Opaque
+    data:
+      postgres-password: {{ .Values.database.password | b64enc }}
+      redis-password: {{ .Values.redis.password | b64enc }}
+      jwt-secret: {{ .Values.backend.jwtSecret | b64enc }}
+      encryption-key: {{ .Values.backend.encryptionKey | b64enc }}
+      admin-password: {{ .Values.admin.password | b64enc }}
+    ```
+  </TabItem>
+</Tabs>
+
+### PostgreSQL Database
+
+<Card title="🗄️ PostgreSQL StatefulSet" icon="document">
+**StatefulSet for Persistent Storage:**
+- Ordered deployment and scaling
+- Persistent volume claims
+- Stable network identities
+- Automated backup integration
+</Card>
+
+```yaml
+# database/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: leaflock
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "notes"
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: leaflock-secrets
+              key: postgres-password
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi
+      storageClassName: fast-ssd  # Use appropriate storage class
+```
+
+### Redis Cache
+
+```yaml
+# redis/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: leaflock
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        command:
+        - redis-server
+        - --requirepass
+        - $(REDIS_PASSWORD)
+        ports:
+        - containerPort: 6379
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: leaflock-secrets
+              key: redis-password
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+      volumes:
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: redis-pvc
+```
+
+### Backend Application
+
+<Card title="⚡ Go Backend Deployment" icon="rocket">
+**Deployment Features:**
+- Horizontal Pod Autoscaler
+- Rolling update strategy
+- Health check probes
+- Resource limits and requests
+- Environment-based configuration
+</Card>
+
+```yaml
+# backend/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: leaflock
+  labels:
+    app: backend
+spec:
+  replicas: {{ .Values.backend.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+        imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        env:
+        - name: DATABASE_URL
+          value: "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/notes?sslmode=require"
+        - name: REDIS_URL
+          value: "redis:6379"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: leaflock-secrets
+              key: postgres-password
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: leaflock-secrets
+              key: redis-password
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: leaflock-secrets
+              key: jwt-secret
+        - name: SERVER_ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: leaflock-secrets
+              key: encryption-key
+        - name: CORS_ORIGINS
+          value: {{ .Values.frontend.corsOrigins | quote }}
+        - name: APP_ENV
+          value: "production"
+        - name: PORT
+          value: "8080"
+        - name: ENABLE_METRICS
+          value: "true"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/v1/ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+        resources:
+          requests:
+            memory: {{ .Values.backend.resources.requests.memory }}
+            cpu: {{ .Values.backend.resources.requests.cpu }}
+          limits:
+            memory: {{ .Values.backend.resources.limits.memory }}
+            cpu: {{ .Values.backend.resources.limits.cpu }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1001
+          capabilities:
+            drop:
+            - ALL
+```
+
+### Frontend Application
+
+```yaml
+# frontend/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: leaflock
+  labels:
+    app: frontend
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
+        imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        env:
+        - name: BACKEND_INTERNAL_URL
+          value: "http://backend:8080"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: {{ .Values.frontend.resources.requests.memory }}
+            cpu: {{ .Values.frontend.resources.requests.cpu }}
+          limits:
+            memory: {{ .Values.frontend.resources.limits.memory }}
+            cpu: {{ .Values.frontend.resources.limits.cpu }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 101
+          capabilities:
+            drop:
+            - ALL
+```
+
+## Ingress and Load Balancing
+
+### Ingress Configuration
+
+<Card title="🌐 Ingress Controller Setup" icon="setting">
+**HTTPS Termination and Routing:**
+- Automatic SSL certificate management
+- Path-based routing for frontend/backend
+- Load balancing across pod replicas
+- Rate limiting and security headers
+</Card>
+
+<Tabs>
+  <TabItem label="Nginx Ingress">
+    ```yaml
+    # ingress.yaml
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: leaflock-ingress
+      namespace: leaflock
+      annotations:
+        kubernetes.io/ingress.class: nginx
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+        nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+        nginx.ingress.kubernetes.io/use-regex: "true"
+        nginx.ingress.kubernetes.io/rate-limit: "100"
+        nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+        nginx.ingress.kubernetes.io/configuration-snippet: |
+          add_header X-Frame-Options DENY;
+          add_header X-Content-Type-Options nosniff;
+          add_header X-XSS-Protection "1; mode=block";
+          add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    spec:
+      tls:
+      - hosts:
+        - {{ .Values.ingress.host }}
+        secretName: leaflock-tls
+      rules:
+      - host: {{ .Values.ingress.host }}
+        http:
+          paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
+    ```
+  </TabItem>
+  <TabItem label="Traefik Ingress">
+    ```yaml
+    # traefik-ingress.yaml
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: leaflock-traefik
+      namespace: leaflock
+      annotations:
+        traefik.ingress.kubernetes.io/router.entrypoints: websecure
+        traefik.ingress.kubernetes.io/router.tls: "true"
+        traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+        traefik.ingress.kubernetes.io/router.middlewares: leaflock-security@kubernetescrd
+    spec:
+      rules:
+      - host: {{ .Values.ingress.host }}
+        http:
+          paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
+    ```
+  </TabItem>
+</Tabs>
+
+### Services
+
+```yaml
+# services.yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: leaflock
+spec:
+  selector:
+    app: frontend
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: leaflock
+spec:
+  selector:
+    app: backend
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: leaflock
+spec:
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: leaflock
+spec:
+  selector:
+    app: redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP
+  type: ClusterIP
+```
+
+## Auto-Scaling Configuration
+
+### Horizontal Pod Autoscaler
+
+<Card title="📈 Auto-Scaling Setup" icon="rocket">
+**HPA Configuration:**
+- CPU-based scaling for backend
+- Memory-based scaling for frontend
+- Custom metrics scaling (optional)
+- Min/max replica constraints
+</Card>
+
+```yaml
+# backend/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend-hpa
+  namespace: leaflock
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  minReplicas: {{ .Values.backend.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.backend.autoscaling.maxReplicas }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.backend.autoscaling.targetCPUUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.backend.autoscaling.targetMemoryUtilizationPercentage }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 4
+        periodSeconds: 15
+      selectPolicy: Max
+```
+
+### Vertical Pod Autoscaler
+
+```yaml
+# vpa.yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: backend-vpa
+  namespace: leaflock
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: backend
+      maxAllowed:
+        cpu: 1
+        memory: 2Gi
+      minAllowed:
+        cpu: 100m
+        memory: 128Mi
+```
+
+## Helm Values Configuration
+
+### Default Values
+
+<Tabs>
+  <TabItem label="values.yaml">
+    ```yaml
+    # Default configuration values
+    global:
+      imageRegistry: ""
+      storageClass: ""
+
+    image:
+      registry: docker.io
+      pullPolicy: IfNotPresent
+
+    frontend:
+      image:
+        repository: leaflock/frontend
+        tag: latest
+      replicas: 2
+      corsOrigins: "https://leaflock.yourdomain.com"
+      resources:
+        requests:
+          memory: "128Mi"
+          cpu: "100m"
+        limits:
+          memory: "256Mi"
+          cpu: "200m"
+      autoscaling:
+        enabled: true
+        minReplicas: 2
+        maxReplicas: 10
+        targetCPUUtilizationPercentage: 70
+
+    backend:
+      image:
+        repository: leaflock/backend
+        tag: latest
+      replicas: 3
+      jwtSecret: ""  # Required: base64 encoded 64-char secret
+      encryptionKey: ""  # Required: base64 encoded 32-char key
+      resources:
+        requests:
+          memory: "256Mi"
+          cpu: "250m"
+        limits:
+          memory: "512Mi"
+          cpu: "500m"
+      autoscaling:
+        enabled: true
+        minReplicas: 3
+        maxReplicas: 20
+        targetCPUUtilizationPercentage: 70
+        targetMemoryUtilizationPercentage: 80
+
+    database:
+      enabled: true
+      image:
+        repository: postgres
+        tag: "15-alpine"
+      password: ""  # Required: secure password
+      persistence:
+        enabled: true
+        size: 20Gi
+        storageClass: "fast-ssd"
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "250m"
+        limits:
+          memory: "2Gi"
+          cpu: "1000m"
+
+    redis:
+      enabled: true
+      image:
+        repository: redis
+        tag: "7-alpine"
+      password: ""  # Required: secure password
+      persistence:
+        enabled: true
+        size: 5Gi
+      resources:
+        requests:
+          memory: "256Mi"
+          cpu: "100m"
+        limits:
+          memory: "512Mi"
+          cpu: "200m"
+
+    ingress:
+      enabled: true
+      className: nginx
+      host: leaflock.yourdomain.com
+      tls:
+        enabled: true
+        secretName: leaflock-tls
+
+    admin:
+      email: admin@leaflock.app
+      password: ""  # Required: secure admin password
+
+    monitoring:
+      enabled: true
+      prometheus:
+        enabled: true
+      grafana:
+        enabled: true
+
+    backup:
+      enabled: true
+      schedule: "0 2 * * *"  # Daily at 2 AM
+      retention: "7d"
+    ```
+  </TabItem>
+  <TabItem label="values-prod.yaml">
+    ```yaml
+    # Production overrides
+    frontend:
+      replicas: 5
+      corsOrigins: "https://leaflock.yourdomain.com,https://www.leaflock.yourdomain.com"
+      resources:
+        requests:
+          memory: "256Mi"
+          cpu: "200m"
+        limits:
+          memory: "512Mi"
+          cpu: "500m"
+      autoscaling:
+        minReplicas: 5
+        maxReplicas: 30
+
+    backend:
+      replicas: 10
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "500m"
+        limits:
+          memory: "1Gi"
+          cpu: "1000m"
+      autoscaling:
+        minReplicas: 10
+        maxReplicas: 50
+
+    database:
+      persistence:
+        size: 100Gi
+        storageClass: "premium-ssd"
+      resources:
+        requests:
+          memory: "2Gi"
+          cpu: "1000m"
+        limits:
+          memory: "4Gi"
+          cpu: "2000m"
+
+    redis:
+      persistence:
+        size: 20Gi
+        storageClass: "premium-ssd"
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "250m"
+        limits:
+          memory: "1Gi"
+          cpu: "500m"
+
+    monitoring:
+      prometheus:
+        retention: "30d"
+        storageSize: "50Gi"
+      grafana:
+        persistence:
+          enabled: true
+          size: "10Gi"
+
+    backup:
+      retention: "30d"
+      s3:
+        enabled: true
+        bucket: "leaflock-backups-prod"
+        region: "us-east-1"
+    ```
+  </TabItem>
+</Tabs>
+
+## Deployment Commands
+
+### Helm Installation
+
+<Card title="📦 Helm Deployment Process" icon="rocket">
+**Step-by-step deployment:**
+1. Generate secure secrets
+2. Configure values file
+3. Install Helm chart
+4. Verify deployment
+5. Test application
+</Card>
+
+```bash
+# 1. Add namespace
+kubectl create namespace leaflock
+
+# 2. Generate secrets
+kubectl create secret generic leaflock-secrets \
+  --from-literal=postgres-password=$(openssl rand -base64 32) \
+  --from-literal=redis-password=$(openssl rand -base64 32) \
+  --from-literal=jwt-secret=$(openssl rand -base64 64) \
+  --from-literal=encryption-key=$(openssl rand -base64 32) \
+  --from-literal=admin-password=$(openssl rand -base64 32) \
+  --namespace=leaflock
+
+# 3. Install with Helm
+helm install leaflock ./helm \
+  --namespace leaflock \
+  --values helm/values-prod.yaml \
+  --set ingress.host=leaflock.yourdomain.com \
+  --set frontend.corsOrigins="https://leaflock.yourdomain.com"
+
+# 4. Upgrade deployment
+helm upgrade leaflock ./helm \
+  --namespace leaflock \
+  --values helm/values-prod.yaml
+
+# 5. Check deployment status
+kubectl get pods -n leaflock
+kubectl get services -n leaflock
+kubectl get ingress -n leaflock
+```
+
+### Manual Deployment
+
+```bash
+# Deploy individual components
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/secrets.yaml
+kubectl apply -f k8s/database/
+kubectl apply -f k8s/redis/
+kubectl apply -f k8s/backend/
+kubectl apply -f k8s/frontend/
+kubectl apply -f k8s/ingress.yaml
+
+# Check deployment
+kubectl get all -n leaflock
+```
+
+## Monitoring and Observability
+
+### Prometheus and Grafana
+
+<Card title="📊 Monitoring Stack" icon="list-format">
+**Observability Components:**
+- Prometheus for metrics collection
+- Grafana for visualization
+- AlertManager for notifications
+- Jaeger for distributed tracing
+- FluentD for log aggregation
+</Card>
+
+<Tabs>
+  <TabItem label="Prometheus">
+    ```yaml
+    # monitoring/prometheus.yaml
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: prometheus
+      namespace: leaflock
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: prometheus
+      template:
+        metadata:
+          labels:
+            app: prometheus
+        spec:
+          containers:
+          - name: prometheus
+            image: prom/prometheus:latest
+            ports:
+            - containerPort: 9090
+            volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+            - name: storage
+              mountPath: /prometheus
+            args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --web.console.libraries=/etc/prometheus/console_libraries
+            - --web.console.templates=/etc/prometheus/consoles
+          volumes:
+          - name: config
+            configMap:
+              name: prometheus-config
+          - name: storage
+            persistentVolumeClaim:
+              claimName: prometheus-pvc
+    ```
+  </TabItem>
+  <TabItem label="Grafana">
+    ```yaml
+    # monitoring/grafana.yaml
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: grafana
+      namespace: leaflock
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: grafana
+      template:
+        metadata:
+          labels:
+            app: grafana
+        spec:
+          containers:
+          - name: grafana
+            image: grafana/grafana:latest
+            ports:
+            - containerPort: 3000
+            env:
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-secrets
+                  key: admin-password
+            volumeMounts:
+            - name: storage
+              mountPath: /var/lib/grafana
+          volumes:
+          - name: storage
+            persistentVolumeClaim:
+              claimName: grafana-pvc
+    ```
+  </TabItem>
+</Tabs>
+
+### Custom Metrics
+
+```yaml
+# ServiceMonitor for Prometheus
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: leaflock-backend
+  namespace: leaflock
+spec:
+  selector:
+    matchLabels:
+      app: backend
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+```
+
+## Backup and Disaster Recovery
+
+### Automated Backups
+
+<Card title="💾 Backup Strategy" icon="document">
+**Backup Components:**
+- Database backups with pg_dump
+- Persistent volume snapshots
+- Configuration backups
+- S3/Object storage integration
+- Automated restoration testing
+</Card>
+
+```yaml
+# backup/cronjob.yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: leaflock
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: postgres:15-alpine
+            command:
+            - /bin/bash
+            - -c
+            - |
+              export PGPASSWORD=$POSTGRES_PASSWORD
+              pg_dump -h postgres -U postgres notes > /backup/backup-$(date +%Y%m%d_%H%M%S).sql
+              # Upload to S3
+              aws s3 cp /backup/backup-$(date +%Y%m%d_%H%M%S).sql s3://your-backup-bucket/
+              # Cleanup old backups
+              find /backup -name "backup-*.sql" -mtime +7 -delete
+            env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: leaflock-secrets
+                  key: postgres-password
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: backup-secrets
+                  key: aws-access-key
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: backup-secrets
+                  key: aws-secret-key
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backup
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: backup-pvc
+          restartPolicy: OnFailure
+```
+
+### Disaster Recovery
+
+```bash
+# Disaster recovery procedure
+# 1. Restore database from backup
+kubectl exec -it postgres-0 -n leaflock -- psql -U postgres -c "DROP DATABASE IF EXISTS notes;"
+kubectl exec -it postgres-0 -n leaflock -- psql -U postgres -c "CREATE DATABASE notes;"
+kubectl exec -i postgres-0 -n leaflock -- psql -U postgres notes < backup.sql
+
+# 2. Restart backend services
+kubectl rollout restart deployment/backend -n leaflock
+
+# 3. Verify application health
+kubectl get pods -n leaflock
+curl https://leaflock.yourdomain.com/api/v1/health
+```
+
+## Security Hardening
+
+### Network Policies
+
+<Card title="🔒 Network Security" icon="lock">
+**Security Measures:**
+- Network policies for traffic isolation
+- Pod security policies
+- Secret encryption at rest
+- RBAC for service accounts
+- Security scanning and compliance
+</Card>
+
+```yaml
+# security/network-policy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: leaflock-network-policy
+  namespace: leaflock
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    - podSelector:
+        matchLabels:
+          app: backend
+    - podSelector:
+        matchLabels:
+          app: frontend
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+```
+
+### Pod Security
+
+```yaml
+# security/pod-security-policy.yaml
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: leaflock-psp
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  seLinux:
+    rule: 'RunAsAny'
+  fsGroup:
+    rule: 'RunAsAny'
+```
+
+## Troubleshooting
+
+### Common Issues
+
+<CardGrid>
+  <Card title="🔌 Pod Connectivity" icon="warning">
+    **Issue:** Pods can't communicate
+
+    **Debug Commands:**
+    ```bash
+    # Check pod status
+    kubectl get pods -n leaflock -o wide
+
+    # Test connectivity
+    kubectl exec -it backend-xxx -n leaflock -- wget -qO- http://postgres:5432
+
+    # Check services
+    kubectl get svc -n leaflock
+    ```
+  </Card>
+  <Card title="📊 Resource Issues" icon="error">
+    **Issue:** OOM kills or CPU throttling
+
+    **Debug Commands:**
+    ```bash
+    # Check resource usage
+    kubectl top pods -n leaflock
+
+    # Describe problematic pod
+    kubectl describe pod backend-xxx -n leaflock
+
+    # Check HPA status
+    kubectl get hpa -n leaflock
+    ```
+  </Card>
+</CardGrid>
+
+### Logs and Debugging
+
+```bash
+# View application logs
+kubectl logs -f deployment/backend -n leaflock
+kubectl logs -f deployment/frontend -n leaflock
+
+# Debug networking
+kubectl exec -it backend-xxx -n leaflock -- nslookup postgres
+kubectl exec -it backend-xxx -n leaflock -- ping redis
+
+# Check ingress
+kubectl describe ingress leaflock-ingress -n leaflock
+```
+
+---
+
+<Badge text="Kubernetes Production Ready" variant="success" size="large" />
+
+*This Kubernetes deployment guide provides enterprise-grade configuration with high availability, auto-scaling, monitoring, and security best practices.*

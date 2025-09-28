@@ -9,7 +9,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 
-# Copy source code
+# Copy backend source code
 COPY . .
 
 # Build with optimizations and security flags

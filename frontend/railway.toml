@@ -1,0 +1,18 @@
+[__config__]
+schema = "https://railway.app/railway.schema.json"
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "frontend/Dockerfile"
+watchPatterns = ["frontend/**"]
+
+[deploy]
+numReplicas = 1
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[deploy.env]
+# Ensure the frontend entrypoint knows how to identify the backend service on Railway
+RAILWAY_BACKEND_KEYWORDS = "LEAFLOCK_BACKEND|BACKEND|API|SERVER|APP|SERVICE"
+# Expose the canonical backend port so the entrypoint can override placeholder :80 addresses
+RAILWAY_BACKEND_PORT = "8080"
