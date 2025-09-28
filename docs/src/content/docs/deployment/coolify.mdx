@@ -1,4 +1,10 @@
-# LeafLock Coolify Deployment Guide
+---
+title: Coolify Deployment Guide
+description: Step-by-step instructions for deploying LeafLock on Coolify v4+ with IPv6 support and security best practices.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Card, CardGrid } from '@astrojs/starlight/components';
 
 This guide provides step-by-step instructions for deploying LeafLock on Coolify v4+.
 
@@ -14,10 +20,20 @@ This guide provides step-by-step instructions for deploying LeafLock on Coolify 
 
 ## Prerequisites
 
-1. **Coolify Instance**: Running Coolify v4.0+ with Docker support
-2. **Domain**: A domain name pointed to your Coolify server
-3. **SSL Certificate**: Coolify can auto-generate SSL certificates via Let's Encrypt
-4. **Git Repository**: Access to this LeafLock repository
+<CardGrid>
+  <Card title="Coolify Instance" icon="server">
+    Running Coolify v4.0+ with Docker support
+  </Card>
+  <Card title="Domain" icon="globe">
+    A domain name pointed to your Coolify server
+  </Card>
+  <Card title="SSL Certificate" icon="lock">
+    Coolify can auto-generate SSL certificates via Let's Encrypt
+  </Card>
+  <Card title="Git Repository" icon="github">
+    Access to this LeafLock repository
+  </Card>
+</CardGrid>
 
 ## Quick Start
 
@@ -44,71 +60,74 @@ This guide provides step-by-step instructions for deploying LeafLock on Coolify 
 
 Configure these in Coolify's **Environment Variables** section:
 
-#### Database Configuration
-```bash
-# PostgreSQL password (32+ characters recommended)
-POSTGRES_PASSWORD=your_secure_postgres_password_here
+<Tabs>
+  <TabItem label="Database">
+    ```bash
+    # PostgreSQL password (32+ characters recommended)
+    POSTGRES_PASSWORD=your_secure_postgres_password_here
 
-# Database URL (auto-generated, but can be customized)
-DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/notes?sslmode=prefer
-```
+    # Database URL (auto-generated, but can be customized)
+    DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/notes?sslmode=prefer
+    ```
+  </TabItem>
+  <TabItem label="Redis">
+    ```bash
+    # Redis password (32+ characters recommended)
+    REDIS_PASSWORD=your_secure_redis_password_here
 
-#### Redis Configuration
-```bash
-# Redis password (32+ characters recommended)
-REDIS_PASSWORD=your_secure_redis_password_here
+    # Redis connection URL
+    REDIS_URL=redis:6379
+    ```
+  </TabItem>
+  <TabItem label="Security">
+    ```bash
+    # JWT Secret Key (64+ characters)
+    # Generate with: openssl rand -base64 64
+    JWT_SECRET=your_64_character_jwt_secret_key_here
 
-# Redis connection URL
-REDIS_URL=redis:6379
-```
+    # Server Encryption Key (32 characters exactly)
+    # Generate with: openssl rand -base64 32
+    SERVER_ENCRYPTION_KEY=your_32_character_encryption_key_here
+    ```
+  </TabItem>
+  <TabItem label="CORS & Frontend">
+    ```bash
+    # Replace with your actual domain
+    CORS_ORIGINS=https://leaflock.yourdomain.com
 
-#### Security Keys (CRITICAL)
-```bash
-# JWT Secret Key (64+ characters)
-# Generate with: openssl rand -base64 64
-JWT_SECRET=your_64_character_jwt_secret_key_here
+    # Frontend API URL (replace with your domain)
+    VITE_API_URL=https://leaflock.yourdomain.com/api/v1
 
-# Server Encryption Key (32 characters exactly)
-# Generate with: openssl rand -base64 32
-SERVER_ENCRYPTION_KEY=your_32_character_encryption_key_here
-```
+    # Enable admin panel in frontend
+    VITE_ENABLE_ADMIN_PANEL=false
+    ```
+  </TabItem>
+  <TabItem label="Application">
+    ```bash
+    # Application environment
+    APP_ENV=production
 
-#### CORS and Frontend Configuration
-```bash
-# Replace with your actual domain
-CORS_ORIGINS=https://leaflock.yourdomain.com
+    # Server port (don't change for Coolify)
+    PORT=8080
 
-# Frontend API URL (replace with your domain)
-VITE_API_URL=https://leaflock.yourdomain.com/api/v1
+    # Enable user registration
+    ENABLE_REGISTRATION=true
 
-# Enable admin panel in frontend
-VITE_ENABLE_ADMIN_PANEL=false
-```
+    # Metrics endpoint
+    ENABLE_METRICS=true
+    ```
+  </TabItem>
+  <TabItem label="Admin User">
+    ```bash
+    # Enable automatic admin user creation
+    ENABLE_DEFAULT_ADMIN=true
 
-#### Application Settings
-```bash
-# Application environment
-APP_ENV=production
-
-# Server port (don't change for Coolify)
-PORT=8080
-
-# Enable user registration
-ENABLE_REGISTRATION=true
-
-# Metrics endpoint
-ENABLE_METRICS=true
-```
-
-#### Default Admin User Configuration
-```bash
-# Enable automatic admin user creation
-ENABLE_DEFAULT_ADMIN=true
-
-# Admin credentials
-DEFAULT_ADMIN_EMAIL=admin@leaflock.app
-DEFAULT_ADMIN_PASSWORD=your_secure_admin_password_here
-```
+    # Admin credentials
+    DEFAULT_ADMIN_EMAIL=admin@leaflock.app
+    DEFAULT_ADMIN_PASSWORD=your_secure_admin_password_here
+    ```
+  </TabItem>
+</Tabs>
 
 ### Generating Secure Values
 
@@ -334,4 +353,6 @@ Access these endpoints with admin authentication for detailed diagnostics.
 
 ---
 
-**Security Note**: Always use strong, randomly generated passwords and keys for production deployments. Never commit sensitive environment variables to version control.
+:::note[Security Note]
+Always use strong, randomly generated passwords and keys for production deployments. Never commit sensitive environment variables to version control.
+:::

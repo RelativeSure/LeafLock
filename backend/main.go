@@ -504,22 +504,33 @@ func LoadConfig() *Config {
 	// Generate secure random keys if not provided
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
-		key := make([]byte, 64)
-		if _, err := rand.Read(key); err != nil {
-			log.Fatalf("failed to generate JWT secret: %v", err)
+		log.Fatalf("💥 [FATAL] JWT_SECRET environment variable is required and cannot be empty")
+	}
+	if len(jwtSecret) < 32 {
+		log.Fatalf("💥 [FATAL] JWT_SECRET must be at least 32 characters long for security")
+	}
+	// Check for common weak/default values and patterns
+	weakSecrets := []string{"default", "secret", "jwt_secret", "change_me", "insecure", "test", "development", "password", "admin", "your_"}
+	jwtLower := strings.ToLower(jwtSecret)
+	for _, weak := range weakSecrets {
+		if strings.HasPrefix(jwtLower, weak) || strings.EqualFold(jwtSecret, weak) {
+			log.Fatalf("💥 [FATAL] JWT_SECRET cannot start with or be a weak value: '%s'", weak)
 		}
-		jwtSecret = base64.StdEncoding.EncodeToString(key)
-		log.Println("Generated new JWT secret")
 	}
 
 	encKey := os.Getenv("SERVER_ENCRYPTION_KEY")
 	if encKey == "" {
-		key := make([]byte, 32)
-		if _, err := rand.Read(key); err != nil {
-			log.Fatalf("failed to generate server encryption key: %v", err)
+		log.Fatalf("💥 [FATAL] SERVER_ENCRYPTION_KEY environment variable is required and cannot be empty")
+	}
+	if len(encKey) < 32 {
+		log.Fatalf("💥 [FATAL] SERVER_ENCRYPTION_KEY must be at least 32 characters long for security")
+	}
+	// Check for common weak/default values and patterns
+	encLower := strings.ToLower(encKey)
+	for _, weak := range weakSecrets {
+		if strings.HasPrefix(encLower, weak) || strings.EqualFold(encKey, weak) {
+			log.Fatalf("💥 [FATAL] SERVER_ENCRYPTION_KEY cannot start with or be a weak value: '%s'", weak)
 		}
-		encKey = base64.StdEncoding.EncodeToString(key)
-		log.Println("Generated new server encryption key")
 	}
 
 	dbURL := os.Getenv("DATABASE_URL")
@@ -531,6 +542,42 @@ func LoadConfig() *Config {
 			// Safe local default for dev
 			dbURL = "postgres://postgres:postgres@localhost:5432/leaflock?sslmode=prefer"
 		}
+	}
+
+	// Validate admin password security
+	adminPassword := getEnvOrDefault("DEFAULT_ADMIN_PASSWORD", "AdminPass123!")
+	if getEnvAsBool("ENABLE_DEFAULT_ADMIN", true) {
+		// Check for weak admin passwords
+		if len(adminPassword) < 12 {
+			log.Fatalf("💥 [FATAL] DEFAULT_ADMIN_PASSWORD must be at least 12 characters long for security")
+		}
+		adminLower := strings.ToLower(adminPassword)
+		weakAdminPasswords := []string{"adminpass123!", "admin123", "password", "123456", "admin", "your_", "change_me", "default"}
+		for _, weak := range weakAdminPasswords {
+			if strings.HasPrefix(adminLower, strings.ToLower(weak)) || strings.EqualFold(adminPassword, weak) {
+				log.Fatalf("💥 [FATAL] DEFAULT_ADMIN_PASSWORD cannot be a weak/default value: '%s'", weak)
+			}
+		}
+	}
+
+	// Validate Redis password security
+	redisPassword := resolveRedisPassword(os.Getenv("REDIS_URL"), os.Getenv("REDIS_PASSWORD"))
+	if redisPassword != "" {
+		if len(redisPassword) < 8 {
+			log.Fatalf("💥 [FATAL] REDIS_PASSWORD must be at least 8 characters long for security")
+		}
+		redisLower := strings.ToLower(redisPassword)
+		weakRedisPasswords := []string{"redis", "password", "123456", "your_", "change_me", "default", "insecure"}
+		for _, weak := range weakRedisPasswords {
+			if strings.HasPrefix(redisLower, strings.ToLower(weak)) || strings.EqualFold(redisPassword, weak) {
+				log.Fatalf("💥 [FATAL] REDIS_PASSWORD cannot be a weak/default value: '%s'", weak)
+			}
+		}
+	}
+
+	// Validate database URL doesn't use weak passwords
+	if strings.Contains(dbURL, ":postgres@") || strings.Contains(dbURL, ":password@") || strings.Contains(dbURL, ":123456@") {
+		log.Printf("⚠️  [WARNING] Database URL appears to use a weak password - consider using a strong password")
 	}
 
 	return &Config{
@@ -551,7 +598,7 @@ func LoadConfig() *Config {
 		// Default admin configuration
 		DefaultAdminEnabled:  getEnvAsBool("ENABLE_DEFAULT_ADMIN", true),
 		DefaultAdminEmail:    getEnvOrDefault("DEFAULT_ADMIN_EMAIL", "admin@leaflock.app"),
-		DefaultAdminPassword: getEnvOrDefault("DEFAULT_ADMIN_PASSWORD", "AdminPass123!"),
+		DefaultAdminPassword: adminPassword,
 	}
 }
 
@@ -1075,13 +1122,29 @@ func createFiberApp(startTime time.Time, readyState *ReadyState) *fiber.App {
 // listenWithIPv6Fallback attempts to bind the server on IPv6 first, falling back to IPv4 if needed.
 func listenWithIPv6Fallback(app *fiber.App, port string, startupStart time.Time) error {
 	addrIPv6 := "[::]:" + port
-	log.Printf("🌐 HTTP server starting on %s (startup time: %v)", addrIPv6, time.Since(startupStart))
+	log.Printf("🔵 [IPv6] Attempting to bind HTTP server on %s", addrIPv6)
+	log.Printf("🔍 [NETWORK] Checking IPv6 stack availability...")
+
 	if err := app.Listen(addrIPv6); err != nil {
-		log.Printf("⚠️  Failed to bind on %s (%v) - falling back to 0.0.0.0:%s", addrIPv6, err, port)
-		addrIPv4 := ":" + port
-		log.Printf("🌐 HTTP server starting on %s (startup time: %v)", addrIPv4, time.Since(startupStart))
-		return app.Listen(addrIPv4)
+		log.Printf("❌ [IPv6] Failed to bind on %s: %v", addrIPv6, err)
+		log.Printf("🔄 [FALLBACK] IPv6 binding failed, attempting IPv4 fallback...")
+
+		addrIPv4 := "0.0.0.0:" + port
+		log.Printf("🟡 [IPv4] Attempting to bind HTTP server on %s", addrIPv4)
+		log.Printf("🌐 [STARTUP] HTTP server starting on %s (IPv4 fallback) - startup time: %v", addrIPv4, time.Since(startupStart))
+
+		if err := app.Listen(addrIPv4); err != nil {
+			log.Printf("❌ [IPv4] Failed to bind on %s: %v", addrIPv4, err)
+			log.Printf("💥 [FATAL] Both IPv6 and IPv4 binding failed - server cannot start")
+			return err
+		}
+
+		log.Printf("✅ [IPv4] Successfully bound to %s (IPv6 not available)", addrIPv4)
+		return nil
 	}
+
+	log.Printf("✅ [IPv6] Successfully bound to %s - IPv6 stack available", addrIPv6)
+	log.Printf("🌐 [STARTUP] HTTP server starting on %s (IPv6 dual-stack) - startup time: %v", addrIPv6, time.Since(startupStart))
 	return nil
 }
 
