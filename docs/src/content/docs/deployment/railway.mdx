@@ -108,27 +108,38 @@ backend:  motivated-energy.railway.internal  # Railway-generated name
 - **Start Command:** (handled by Dockerfile)
 </Card>
 
-**Environment Variables:**
+**Environment Variables (Backend):**
 ```bash
 # Database Configuration
 POSTGRES_PASSWORD=<64-char-secure-password>
-DATABASE_URL=postgresql://postgres:$POSTGRES_PASSWORD@postgres.railway.internal:5432/notes?sslmode=require
+# Pull the connection string directly from the Railway Postgres plugin
+DATABASE_URL=<RAILWAY_POSTGRES_URL>
 
 # Redis Configuration
 REDIS_PASSWORD=<32-char-secure-password>
-REDIS_URL=redis.railway.internal:6379
+# Use the value injected by the Redis plugin
+REDIS_URL=<RAILWAY_REDIS_URL>
 
 # Security Keys (Critical)
 JWT_SECRET=<64-character-base64-secret>
 SERVER_ENCRYPTION_KEY=<32-character-base64-key>
 
-# CORS for Railway
-CORS_ORIGINS=https://leaflock-frontend-production.up.railway.app,https://leaflock-frontend.railway.internal,http://leaflock-frontend.railway.internal
+# Default Admin (set to your own values!)
+ENABLE_DEFAULT_ADMIN=true
+DEFAULT_ADMIN_EMAIL=ops@your-domain.com
+DEFAULT_ADMIN_PASSWORD=<VeryStrongPassword>
 
-# Railway-specific
-PORT=8080
+# CORS for Railway (include public + preview domains)
+CORS_ORIGINS=https://leaflock-frontend-production.up.railway.app,https://leaflock-frontend-main.up.railway.app
+
+# Runtime flags
 APP_ENV=production
+PORT=8080
+ENABLE_REGISTRATION=false
+ENABLE_METRICS=true
 ```
+
+> **Important:** Railway treats service variables as both build-time and runtime values. Set these before the first deploy so that migrations, admin bootstrap, and Vite builds use the correct configuration.
 
 ### 3. Frontend Service Configuration
 
@@ -137,22 +148,28 @@ APP_ENV=production
 - **Name:** `leaflock-frontend`
 - **Root Directory:** `/frontend`
 - **Build Command:** (auto-detected)
-- **Port:** 3000 (auto-detected)
+- **Port:** 80 (auto-detected)
 </Card>
 
-**Environment Variables:**
+**Environment Variables (Frontend):**
 ```bash
-# Backend Communication
-BACKEND_INTERNAL_URL=http://motivated-energy.railway.internal:8080
+# Internal proxy target (private mesh)
+BACKEND_INTERNAL_URL=http://leaflock-backend.railway.internal:8080
+
+# URL embedded in the SPA (public endpoint)
 VITE_API_URL=https://leaflock-backend-production.up.railway.app
 
-# Frontend Configuration
+# Optional tuning
 VITE_ENABLE_ADMIN_PANEL=false
-PORT=3000
-
-# Runtime Environment
+PORT=80
 NODE_ENV=production
 ```
+
+The frontend entrypoint now auto-detects Railway's service discovery. Supplying both `BACKEND_INTERNAL_URL` (private HTTP) and `VITE_API_URL` (public HTTPS) ensures:
+
+- nginx proxies `/api` traffic across Railway's private mesh, avoiding CORS issues
+- the built SPA calls the public backend URL when the browser makes direct requests
+- horizontal scaling works automatically—every replica resolves the latest backend hostname injected by Railway
 
 ### 4. Database Service
 
@@ -233,18 +250,62 @@ func listenWithIPv6Fallback(app *fiber.App, port string) error {
 
 ### Frontend Service Discovery
 
-The frontend automatically detects Railway's service discovery:
+The frontend container now derives the correct backend target automatically. At startup the entrypoint:
 
-```javascript
-// frontend/docker-entrypoint.sh - Universal service discovery
-function detectRailwayBackend() {
-  // Check Railway internal hostname first
-  if curl -f "http://motivated-energy.railway.internal:8080/api/v1/health" &>/dev/null; then
-    export VITE_API_BASE_URL="http://motivated-energy.railway.internal:8080"
-    echo "✅ Railway internal backend detected"
+- respects any explicit `BACKEND_INTERNAL_URL` or `VITE_API_URL` that you set
+- scans Railway's injected `RAILWAY_SERVICE_*` variables to locate the backend service (TCP/HTTP/private domain forms are all handled)
+- falls back to `RAILWAY_PRIVATE_DOMAIN`, then `RAILWAY_PUBLIC_DOMAIN`, before using Compose-friendly defaults
+
+```sh
+# frontend/docker-entrypoint.sh (excerpt)
+: "${PORT:=80}"
+: "${RAILWAY_BACKEND_KEYWORDS:=BACKEND|API|SERVER|APP|SERVICE}"
+DEFAULT_BACKEND_PORT="${RAILWAY_BACKEND_PORT:-${BACKEND_PORT:-8080}}"
+
+if [ -z "${BACKEND_INTERNAL_URL:-}" ] && [ -n "${VITE_API_URL:-}" ]; then
+  BACKEND_INTERNAL_URL="$VITE_API_URL"
+fi
+
+if [ -z "${BACKEND_INTERNAL_URL:-}" ]; then
+  line=$(find_backend_env_line "_TCP_URL=")
+  if [ -n "$line" ]; then
+    BACKEND_INTERNAL_URL=${line#*=}
   fi
-}
+fi
+
+BACKEND_INTERNAL_URL=$(normalize_backend_url "$BACKEND_INTERNAL_URL")
+log "Proxying API to ${BACKEND_INTERNAL_URL}"
 ```
+
+Because the proxy honours Railway's service discovery, scaling either service just works—every replica resolves the latest backend endpoint.
+
+> **Custom Admin Credentials:** keeping the defaults will fail on Railway after the first boot (the bootstrap refuses reused credentials). Always set `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD` to fresh values before deploying.
+
+### 6. Deploy & Verify
+
+1. **Deploy backend first**
+   ```bash
+   railway up --service backend --root backend
+   ```
+   Wait for migrations to finish and confirm the logs show `HTTP server starting...`.
+
+2. **Deploy frontend**
+   ```bash
+   railway up --service frontend --root frontend
+   ```
+   The entrypoint log prints the backend URL it detected—verify it matches your private domain.
+
+3. **Smoke-test the stack**
+   ```bash
+   railway logs backend
+   railway logs frontend
+   curl https://leaflock-backend-production.up.railway.app/api/v1/health
+   ```
+
+4. **Scale if needed**
+   - Backend: enable horizontal auto-scaling in Railway settings or increase `numReplicas`
+   - Frontend: stateless nginx can scale immediately; every replica auto-discovers the backend
+   - Postgres/Redis: consider managed tiers for production workloads
 
 ## Environment Variables Reference
 
@@ -498,6 +559,8 @@ openssl rand -base64 32 | tr -d '\n'  # SERVER_ENCRYPTION_KEY
 openssl rand -base64 32 | tr -d '\n'  # POSTGRES_PASSWORD
 openssl rand -base64 32 | tr -d '\n'  # REDIS_PASSWORD
 ```
+
+> Store every generated value in your team password manager (or another encrypted vault) so you can restore services after rotation or disaster recovery.
 
 ## Monitoring and Maintenance
 

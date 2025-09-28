@@ -1,90 +1,60 @@
-# docker-compose.yml - Complete LeafLock app with automatic setup
-
 services:
-  # PostgreSQL with automatic SSL setup
   postgres:
     image: postgres:18-alpine
     container_name: leaflock-postgres
-    env_file:
-      - .env
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}
-      POSTGRES_DB: leaflock
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
-    command: ["postgres"]
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-leaflock}
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - leaflock-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1 -p 5432"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 5s
       timeout: 5s
-      start_period: 30s
       retries: 20
-    restart: unless-stopped
 
-  # Redis for session management
   redis:
-    image: redis:8-alpine
+    image: redis:7.4-alpine
     container_name: leaflock-redis
-    env_file:
-      - .env
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-ChangeThisRedisPassword123!}
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    ports:
+      - "6379:6379"
     volumes:
       - redis_data:/data
-    networks:
-      - leaflock-network
-    sysctls:
-      - net.core.somaxconn=1024
-      - vm.overcommit_memory=1
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-ChangeThisRedisPassword123!}", "--no-auth-warning", "PING"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
-  # Backend API
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: leaflock-backend
-    env_file:
-      - .env
     environment:
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-ChangeThisSecurePassword123!}@postgres:5432/leaflock?sslmode=prefer
-      REDIS_URL: redis:6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-ChangeThisRedisPassword123!}
-      JWT_SECRET: ${JWT_SECRET:-ChangeThisToRandom64CharStringForProductionUsePlease!}
-      SERVER_ENCRYPTION_KEY: ${SERVER_ENCRYPTION_KEY:-ChangeThisToRandom32CharString!}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost,https://localhost}
-      ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
-      ADMIN_USER_IDS_FILE: /run/config/leaflock.env
-      APP_ENV: ${APP_ENV:-development}
+      APP_ENV: development
       PORT: 8080
-      # Default admin user configuration
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-leaflock}?sslmode=disable
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me-please-64-characters-long-1234567890abc}
+      SERVER_ENCRYPTION_KEY: ${SERVER_ENCRYPTION_KEY:-dev-server-side-encryption-key!!}
       ENABLE_DEFAULT_ADMIN: ${ENABLE_DEFAULT_ADMIN:-true}
-      DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@leaflock.app}
-      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-AdminPass123!}
+      DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@leaflock.local}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-ChangeMe123!}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      ENABLE_METRICS: ${ENABLE_METRICS:-true}
     ports:
       - "8080:8080"
-    volumes:
-      - ./.env:/run/config/leaflock.env:ro
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
-      - leaflock-network
-    healthcheck:
-      disable: true
-    restart: unless-stopped
 
-  # Frontend
   frontend:
     build:
       context: ./frontend
@@ -94,57 +64,13 @@ services:
     container_name: leaflock-frontend
     environment:
       BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8080}
-      PORT: ${FRONTEND_CONTAINER_PORT:-80}
+      PORT: ${FRONTEND_PORT:-80}
     ports:
-      - "3000:${FRONTEND_CONTAINER_PORT:-80}"
+      - "3000:${FRONTEND_PORT:-80}"
     depends_on:
-      - backend
-    networks:
-      - leaflock-network
-    healthcheck:
-      test: ["CMD-SHELL", "pidof nginx > /dev/null || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
-
-  # Nginx reverse proxy (optional - for production-like setup)
-  nginx:
-    image: nginx:alpine
-    container_name: leaflock-nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./frontend/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - backend
-      - frontend
-    networks:
-      - leaflock-network
-    restart: unless-stopped
-
-
+      backend:
+        condition: service_started
 
 volumes:
   postgres_data:
-    driver: local
   redis_data:
-    driver: local
-
-networks:
-  leaflock-network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.25.0.0/16
-
-# === .env.example - Environment variables template ===
-# Copy this to .env and update with secure values
-#
-# POSTGRES_PASSWORD=GenerateSecurePasswordHere123!
-# REDIS_PASSWORD=GenerateSecureRedisPasswordHere123!
-# JWT_SECRET=GenerateRandom64CharacterStringHereForJWTSigning!
-# SERVER_ENCRYPTION_KEY=GenerateRandom32CharStringHere!
-# CORS_ORIGINS=http://localhost:3000,http://localhost
-# VITE_API_URL=http://localhost:8080
