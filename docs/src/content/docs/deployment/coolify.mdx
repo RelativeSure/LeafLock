@@ -1,358 +1,94 @@
 ---
 title: Coolify Deployment Guide
-description: Step-by-step instructions for deploying LeafLock on Coolify v4+ with IPv6 support and security best practices.
+description: Deploy LeafLock on a self-hosted Coolify 4.x instance using the provided Docker Compose setup.
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
-import { Card, CardGrid } from '@astrojs/starlight/components';
+LeafLock ships with a `docker-compose.coolify.yml` that Coolify understands out of the box. Use this guide to get the app online without duplicating information that already lives in other docs.
 
-This guide provides step-by-step instructions for deploying LeafLock on Coolify v4+.
+## Before You Begin
 
-## Table of Contents
+- Coolify 4.x installed with Docker access
+- Git repository containing this project (or a fork)
+- Domain pointed at your Coolify host if you want HTTPS
+- Shell access to generate secrets with `openssl`
 
-- [Prerequisites](#prerequisites)
-- [Quick Start](#quick-start)
-- [Environment Configuration](#environment-configuration)
-- [Deployment Process](#deployment-process)
-- [Troubleshooting](#troubleshooting)
-- [Post-Deployment](#post-deployment)
-- [Monitoring and Maintenance](#monitoring-and-maintenance)
+## Step 1 – Create the Resource
 
-## Prerequisites
+1. In Coolify, choose **New Resource → Docker Compose → From Git Repository**.
+2. Point it at your LeafLock repo and branch.
+3. Set **Compose file** to `docker-compose.coolify.yml` (no build command needed).
+4. Give the project a name (for example `leaflock`) and assign your domain if you have one.
 
-<CardGrid>
-  <Card title="Coolify Instance" icon="server">
-    Running Coolify v4.0+ with Docker support
-  </Card>
-  <Card title="Domain" icon="globe">
-    A domain name pointed to your Coolify server
-  </Card>
-  <Card title="SSL Certificate" icon="lock">
-    Coolify can auto-generate SSL certificates via Let's Encrypt
-  </Card>
-  <Card title="Git Repository" icon="github">
-    Access to this LeafLock repository
-  </Card>
-</CardGrid>
+Coolify will now watch the repository and rebuild whenever you redeploy.
 
-## Quick Start
+## Step 2 – Configure Environment Variables
 
-### 1. Import Project
+Add the following variables in the **Environment** tab before the first deploy. Values shown here are examples—replace them with secrets you generate yourself.
 
-1. Navigate to your Coolify dashboard
-2. Click **"New Resource"** → **"Docker Compose"**
-3. Choose **"From Git Repository"**
-4. Enter the repository URL: `https://github.com/[your-repo]/LeafLock`
-5. Select the appropriate branch (usually `main` or `master`)
-6. Set **Docker Compose Location** to: `docker-compose.coolify.yml`
-
-### 2. Basic Configuration
-
-1. **Service Name**: `leaflock`
-2. **Domain**: Set your domain (e.g., `leaflock.yourdomain.com`)
-3. **SSL**: Enable automatic SSL certificate generation
-4. **Build Pack**: Docker Compose
-5. **Compose File**: `docker-compose.coolify.yml`
-
-## Environment Configuration
-
-### Required Environment Variables
-
-Configure these in Coolify's **Environment Variables** section:
-
-<Tabs>
-  <TabItem label="Database">
-    ```bash
-    # PostgreSQL password (32+ characters recommended)
-    POSTGRES_PASSWORD=your_secure_postgres_password_here
-
-    # Database URL (auto-generated, but can be customized)
-    DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/notes?sslmode=prefer
-    ```
-  </TabItem>
-  <TabItem label="Redis">
-    ```bash
-    # Redis password (32+ characters recommended)
-    REDIS_PASSWORD=your_secure_redis_password_here
-
-    # Redis connection URL
-    REDIS_URL=redis:6379
-    ```
-  </TabItem>
-  <TabItem label="Security">
-    ```bash
-    # JWT Secret Key (64+ characters)
-    # Generate with: openssl rand -base64 64
-    JWT_SECRET=your_64_character_jwt_secret_key_here
-
-    # Server Encryption Key (32 characters exactly)
-    # Generate with: openssl rand -base64 32
-    SERVER_ENCRYPTION_KEY=your_32_character_encryption_key_here
-    ```
-  </TabItem>
-  <TabItem label="CORS & Frontend">
-    ```bash
-    # Replace with your actual domain
-    CORS_ORIGINS=https://leaflock.yourdomain.com
-
-    # Frontend API URL (replace with your domain)
-    VITE_API_URL=https://leaflock.yourdomain.com/api/v1
-
-    # Enable admin panel in frontend
-    VITE_ENABLE_ADMIN_PANEL=false
-    ```
-  </TabItem>
-  <TabItem label="Application">
-    ```bash
-    # Application environment
-    APP_ENV=production
-
-    # Server port (don't change for Coolify)
-    PORT=8080
-
-    # User registration (secure default: false)
-    ENABLE_REGISTRATION=false  # Set to true to enable public registration
-
-    # Metrics endpoint
-    ENABLE_METRICS=true
-    ```
-  </TabItem>
-  <TabItem label="Admin User">
-    ```bash
-    # Enable automatic admin user creation
-    ENABLE_DEFAULT_ADMIN=true
-
-    # Admin credentials
-    DEFAULT_ADMIN_EMAIL=admin@leaflock.app
-    DEFAULT_ADMIN_PASSWORD=your_secure_admin_password_here
-    ```
-  </TabItem>
-</Tabs>
-
-### Generating Secure Values
-
-Use these commands to generate secure random values:
+### Core Services
 
 ```bash
-# PostgreSQL password
-openssl rand -base64 32
+# PostgreSQL
+POSTGRES_PASSWORD=$(openssl rand -base64 32)
+DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/notes?sslmode=prefer
 
-# Redis password
-openssl rand -base64 32
-
-# JWT secret (64 characters)
-openssl rand -base64 64
-
-# Server encryption key (32 characters)
-openssl rand -base64 32
-
-# Admin password
-openssl rand -base64 32
+# Redis
+REDIS_PASSWORD=$(openssl rand -base64 32)
+REDIS_URL=redis:6379
 ```
 
-## Deployment Process
-
-### Step 1: Repository Setup
-
-1. In Coolify, create a new **Docker Compose** resource
-2. Connect your Git repository
-3. Select branch and set compose file path: `docker-compose.coolify.yml`
-
-### Step 2: Environment Variables
-
-1. Go to **Environment Variables** tab
-2. Add all required variables from the configuration section above
-3. **Important**: Ensure no quotes around values with special characters
-4. **Double-check**: JWT_SECRET and SERVER_ENCRYPTION_KEY are properly set
-
-### Step 3: Domain and SSL
-
-1. Go to **Domains** tab
-2. Add your domain (e.g., `leaflock.yourdomain.com`)
-3. Enable **Force HTTPS**
-4. Enable **Automatic SSL** (Let's Encrypt)
-
-### Step 4: Deploy
-
-1. Click **Deploy** button
-2. Monitor deployment logs in real-time
-3. Wait for all services to be healthy (typically 2-3 minutes)
-
-### Step 5: Verify Deployment
-
-Check these endpoints to verify successful deployment:
-
-- **Frontend**: `https://leaflock.yourdomain.com`
-- **API Health**: `https://leaflock.yourdomain.com/api/v1/health`
-- **API Ready**: `https://leaflock.yourdomain.com/api/v1/ready`
-
-## Troubleshooting
-
-### Common Issues
-
-#### 1. Build Failures
-
-**Symptom**: Docker build fails during deployment
-
-**Solutions**:
-- Check Coolify build logs for specific error messages
-- Ensure repository branch is correct
-- Verify `docker-compose.coolify.yml` exists in repository root
-
-#### 2. Database Connection Issues
-
-**Symptom**: Backend shows database connection errors
-
-**Solutions**:
-- Verify `POSTGRES_PASSWORD` is set correctly
-- Check if PostgreSQL container is healthy in Coolify dashboard
-- Ensure `DATABASE_URL` matches your configuration
-
-#### 3. Redis Connection Issues
-
-**Symptom**: Backend logs show Redis connection failures
-
-**Solutions**:
-- Verify `REDIS_PASSWORD` is set correctly
-- Check Redis container health
-- Ensure `REDIS_URL` is set to `redis:6379`
-
-#### 4. Container Runtime Issues
-
-**Symptom**: Error "sysctl is not in a separate kernel namespace" during Redis startup
-
-**Root Cause**: Coolify's container runtime doesn't allow setting kernel sysctls within containers
-
-**Solutions**:
-- The `docker-compose.coolify.yml` has been optimized to work without sysctls
-- Performance optimizations (`vm.overcommit_memory`, `net.core.somaxconn`) must be set on the host
-- Ask your Coolify administrator to configure these on the host system:
-  ```bash
-  sudo sysctl -w vm.overcommit_memory=1
-  sudo sysctl -w net.core.somaxconn=1024
-  ```
-- The application will work without these optimizations, just with slightly reduced Redis performance
-
-#### 5. SSL/HTTPS Issues
-
-**Symptom**: SSL certificate not generated or HTTPS redirects fail
-
-**Solutions**:
-- Ensure domain points to your Coolify server
-- Check DNS propagation (use `dig yourdomain.com`)
-- Wait 5-10 minutes for Let's Encrypt certificate generation
-- Check Coolify logs for SSL certificate errors
-
-#### 6. Admin Login Issues
-
-**Symptom**: Cannot login with default admin credentials
-
-**Solutions**:
-- Verify `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD` are set
-- Check that `ENABLE_DEFAULT_ADMIN=true`
-- Review backend logs for admin user creation messages
-- Try clearing browser cache and cookies
-
-### Debugging Commands
-
-Access container logs via Coolify dashboard or SSH:
+### Application Secrets and Runtime Options
 
 ```bash
-# View backend logs
-docker logs leaflock-backend
+# Security
+JWT_SECRET=$(openssl rand -base64 64)
+SERVER_ENCRYPTION_KEY=$(openssl rand -base64 32)
 
-# View database logs
-docker logs leaflock-postgres
+# HTTP + CORS
+PORT=8080
+CORS_ORIGINS=https://leaflock.example.com
+VITE_API_URL=https://leaflock.example.com/api/v1
 
-# View Redis logs
-docker logs leaflock-redis
-
-# Check container health
-docker ps
-
-# Access backend container
-docker exec -it leaflock-backend sh
+# App behaviour
+APP_ENV=production
+ENABLE_REGISTRATION=false
+ENABLE_DEFAULT_ADMIN=true
+DEFAULT_ADMIN_EMAIL=admin@leaflock.example.com
+DEFAULT_ADMIN_PASSWORD=$(openssl rand -base64 24)LeafLock!
 ```
 
-### Environment Variable Issues
+Add any optional flags (metrics, additional admins, etc.) exactly as you would for other deployments. Keeping everything in Coolify’s environment editor makes redeploys painless.
 
-**Special Characters in Passwords**:
-- Do NOT wrap environment variables in quotes
-- Special characters like `#`, `&`, `$`, `!`, `@` are supported directly
-- Example: `DEFAULT_ADMIN_PASSWORD=#wmR8xWxZ&#JHZPd8HTYmafctWSe0N*jgPG%bYS@`
+## Step 3 – Deploy
 
-## Post-Deployment
+Hit **Deploy**. Coolify will:
 
-### 1. Initial Admin Access
+1. Pull the repository
+2. Build the images defined in `docker-compose.coolify.yml`
+3. Start PostgreSQL → Redis → backend → frontend
+4. Run the configured health checks
 
-1. Navigate to `https://leaflock.yourdomain.com`
-2. Login with your `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD`
-3. **Immediately change the default admin password**
-4. Configure additional admin users if needed
+You should see all services turn green once the containers finish booting.
 
-### 2. Security Checklist
+## Step 4 – Verify the Installation
 
-- [ ] Change default admin password
-- [ ] Verify SSL certificate is active
-- [ ] Test all major functionality (create note, encrypt/decrypt)
-- [ ] Review and adjust `CORS_ORIGINS` for your domain
-- [ ] Set `ENABLE_REGISTRATION=false` if you want invite-only access
+Run these checks from your workstation:
 
-### 3. Performance Optimization
+```bash
+# Frontend should serve the app
+curl -I https://leaflock.example.com/
 
-- [ ] Monitor resource usage in Coolify dashboard
-- [ ] Scale containers if needed (increase CPU/memory limits)
-- [ ] Set up regular database backups
-- [ ] Configure monitoring alerts
+# Backend health endpoint should respond with JSON
+curl https://leaflock.example.com/api/v1/health
+```
 
-## Monitoring and Maintenance
+If you use a custom domain, confirm that Coolify issued a certificate and that `CORS_ORIGINS` matches the URL you expect your users to visit.
 
-### Health Monitoring
+## Ongoing Maintenance
 
-LeafLock provides several monitoring endpoints:
+- Pull upstream changes, then trigger redeploys from Coolify.
+- Rotate the secrets above on a schedule—Coolify keeps previous values so you can roll them back if needed.
+- Watch container logs inside the Coolify UI when debugging issues.
+- For platform-specific problems, check the dedicated [Troubleshooting section](/troubleshooting/).
 
-- **Health Check**: `/api/v1/health` - Comprehensive system status
-- **Ready Check**: `/api/v1/ready` - Quick readiness probe
-- **Metrics**: `/metrics` - Prometheus metrics (if enabled)
-
-### Regular Maintenance
-
-1. **Database Backups**: Configure regular PostgreSQL backups
-2. **Security Updates**: Keep base images updated
-3. **Certificate Renewal**: Coolify handles SSL renewal automatically
-4. **Log Rotation**: Monitor and manage container logs
-5. **Performance Monitoring**: Watch CPU, memory, and disk usage
-
-### Scaling
-
-For high-traffic deployments:
-
-1. **Database**: Consider external PostgreSQL service
-2. **Redis**: Use Redis cluster or external Redis service
-3. **Load Balancing**: Deploy multiple backend instances
-4. **CDN**: Use CDN for static frontend assets
-
-## Support
-
-### Debug Endpoints (Admin Only)
-
-LeafLock includes admin-only debug endpoints for troubleshooting:
-
-- `GET /api/v1/admin/debug/check-admin` - Check admin user status
-- `GET /api/v1/admin/debug/users` - List all users with status
-- `GET /api/v1/admin/debug/system-health` - Detailed system health
-- `POST /api/v1/admin/debug/test-login` - Test login credentials
-
-Access these endpoints with admin authentication for detailed diagnostics.
-
-### Additional Resources
-
-- **LeafLock Documentation**: `README.md` in repository
-- **Coolify Documentation**: [https://coolify.io/docs](https://coolify.io/docs)
-- **Docker Compose Reference**: `docker-compose.yml` for local development
-
----
-
-:::note[Security Note]
-Always use strong, randomly generated passwords and keys for production deployments. Never commit sensitive environment variables to version control.
-:::
+That's it—no secondary "setup" document required.

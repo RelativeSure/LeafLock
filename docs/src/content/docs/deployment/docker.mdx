@@ -350,7 +350,7 @@ echo "DEFAULT_ADMIN_PASSWORD=$(openssl rand -base64 32)"
 
 Caddy can automatically obtain and renew SSL certificates:
 
-```caddyfile
+```text
 yourdomain.com {
     reverse_proxy /api/* backend:8080
     root * /usr/share/caddy
@@ -384,7 +384,7 @@ volumes:
 ```
 
 Then update Caddyfile:
-```caddyfile
+```text
 yourdomain.com {
     tls /etc/letsencrypt/live/yourdomain.com/fullchain.pem /etc/letsencrypt/live/yourdomain.com/privkey.pem
     # ... rest of configuration
@@ -490,7 +490,7 @@ yourdomain.com {
     ```
   </TabItem>
   <TabItem label="Caddyfile">
-    ```caddyfile
+    ```text
     # frontend/Caddyfile
     {
         admin off

@@ -321,7 +321,7 @@ func listenWithIPv6Fallback(app *fiber.App, port string) error {
 
 **Caddy Configuration:**
 
-```caddyfile
+```text
 :{$PORT} {
     # Health check endpoint
     handle /health {
@@ -364,7 +364,7 @@ func listenWithIPv6Fallback(app *fiber.App, port string) error {
 
 > **Note:** If upgrading from an older LeafLock version with NGINX, just pull the latest code and redeploy. Railway will automatically use Caddy. No configuration changes needed!
 
-For troubleshooting 502 errors, see: [Railway Troubleshooting Guide](/deployment/railway-troubleshooting)
+For troubleshooting 502 errors, see: [Railway Troubleshooting Guide](/troubleshooting/railway/)
 
 ### Frontend Service Discovery
 

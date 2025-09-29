@@ -4,6 +4,7 @@ import starlight from '@astrojs/starlight';
 
 // https://astro.build/config
 export default defineConfig({
+	site: 'https://leaflock.app',
 	integrations: [
 		starlight({
 			title: 'LeafLock',
@@ -16,6 +17,10 @@ export default defineConfig({
 				{
 					label: 'Deployment',
 					autogenerate: { directory: 'deployment' },
+				},
+				{
+					label: 'Troubleshooting',
+					autogenerate: { directory: 'troubleshooting' },
 				},
 				{
 					label: 'Administration',
