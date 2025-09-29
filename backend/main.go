@@ -1032,6 +1032,18 @@ func createFiberApp(startTime time.Time, readyState *ReadyState) *fiber.App {
 	app := fiber.New(fiber.Config{
 		DisableStartupMessage: false,
 		BodyLimit:             512 * 1024, // 512KB body size limit
+		// Enable proxy header trust for Railway/Cloudflare/nginx reverse proxies
+		EnableTrustedProxyCheck: trustProxyHeaders.Load(),
+		ProxyHeader:             fiber.HeaderXForwardedFor,
+		// Trust Railway's IPv6 private network ranges and common proxy IPs
+		TrustedProxies: []string{
+			"10.0.0.0/8",      // Private IPv4
+			"172.16.0.0/12",   // Private IPv4
+			"192.168.0.0/16",  // Private IPv4
+			"fd00::/8",        // Private IPv6 (Railway uses this)
+			"::1",             // IPv6 localhost
+			"127.0.0.1",       // IPv4 localhost
+		},
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			message := "Internal Server Error"
@@ -1170,8 +1182,8 @@ func listenWithIPv6Fallback(app *fiber.App, port string, startupStart time.Time)
 		return nil
 	}
 
-	log.Printf("✅ [IPv6] Successfully bound to %s - IPv6 stack available", addrIPv6)
-	log.Printf("🌐 [STARTUP] HTTP server starting on %s (IPv6 dual-stack) - startup time: %v", addrIPv6, time.Since(startupStart))
+	log.Printf("✅ [IPv6] Successfully bound to %s - IPv6 dual-stack available", addrIPv6)
+	log.Printf("🌐 [STARTUP] HTTP server listening on %s (Railway IPv6 compatible) - startup time: %v", addrIPv6, time.Since(startupStart))
 	return nil
 }
 
@@ -6672,11 +6684,11 @@ func main() {
 	// Track application start time for uptime calculation
 	startTime := time.Now()
 
-	// Initialize runtime toggle from env (default true)
+	// Initialize runtime toggle from env (default false for security)
 	envRegRaw, envRegExplicit := os.LookupEnv("ENABLE_REGISTRATION")
 	envRegValue := strings.ToLower(strings.TrimSpace(envRegRaw))
 	if !envRegExplicit || envRegValue == "" {
-		envRegValue = "true"
+		envRegValue = "false"
 	}
 	if envRegValue == "true" {
 		regEnabled.Store(1)

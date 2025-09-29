@@ -1,0 +1,66 @@
+{
+    admin off
+    auto_https off
+    servers {
+        trusted_proxies static private_ranges
+    }
+}
+
+:{$PORT} {
+    # Health check endpoint
+    handle /health {
+        respond "OK" 200
+    }
+
+    # Proxy API requests to backend
+    handle /api/* {
+        reverse_proxy {$BACKEND_INTERNAL_URL} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+
+            # Dynamic DNS resolution for Railway's changing IPs
+            transport http {
+                resolver 8.8.8.8 8.8.4.4
+            }
+        }
+    }
+
+    # Serve static files
+    handle {
+        root * /usr/share/caddy
+        try_files {path} {path}/ /index.html
+        file_server
+    }
+
+    # Security headers
+    header {
+        # Remove server identification
+        -Server
+
+        # Security headers
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+
+        # Content Security Policy
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    }
+
+    # Logging
+    log {
+        output stdout
+        format console
+        level INFO
+    }
+
+    # Compression
+    encode gzip zstd
+
+    # Handle errors
+    handle_errors {
+        respond "{err.status_code} {err.status_text}"
+    }
+}

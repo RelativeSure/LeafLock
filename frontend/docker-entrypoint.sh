@@ -202,9 +202,9 @@ fi
 BACKEND_INTERNAL_URL=$(normalize_backend_url "$BACKEND_INTERNAL_URL")
 export BACKEND_INTERNAL_URL
 
-log "Frontend listening on port ${PORT}"
-log "Proxying API to ${BACKEND_INTERNAL_URL} (source: ${BACKEND_SOURCE})"
+log "🚀 Frontend Caddy server starting on port ${PORT}"
+log "🔗 Proxying API requests to ${BACKEND_INTERNAL_URL} (source: ${BACKEND_SOURCE})"
+log "✅ Caddy will dynamically resolve backend DNS (Railway IPv6 compatible)"
 
-envsubst '$PORT $BACKEND_INTERNAL_URL' < /etc/nginx/nginx.conf.template > /tmp/nginx.conf
-
-exec nginx -g 'daemon off;' -c /tmp/nginx.conf
+# Caddy natively handles environment variable substitution
+exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile

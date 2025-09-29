@@ -16,23 +16,20 @@ COPY . .
 
 RUN pnpm run build
 
-FROM nginx:1.27-alpine
+FROM caddy:2.8-alpine
 
-RUN apk --no-cache add ca-certificates curl gettext libcap-utils bind-tools \
-    && rm -rf /usr/share/nginx/html/*
+RUN apk --no-cache add ca-certificates curl gettext bind-tools
 
-COPY nginx.conf.template /etc/nginx/nginx.conf.template
+COPY Caddyfile /etc/caddy/Caddyfile
 COPY --chmod=0755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dist /usr/share/caddy
 
-RUN addgroup -g 1001 -S nginx-user \
-    && adduser -S -D -H -u 1001 -h /var/cache/nginx -s /sbin/nologin -G nginx-user -g nginx-user nginx-user \
-    && chown -R nginx-user:nginx-user /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx/conf.d \
-    && touch /var/run/nginx.pid \
-    && chown nginx-user:nginx-user /var/run/nginx.pid \
-    && setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx
+RUN addgroup -g 1001 -S caddy-user \
+    && adduser -S -D -H -u 1001 -s /sbin/nologin -G caddy-user -g caddy-user caddy-user \
+    && chown -R caddy-user:caddy-user /usr/share/caddy /etc/caddy \
+    && chown caddy-user:caddy-user /usr/bin/caddy
 
-USER nginx-user
+USER caddy-user
 
 ENV PORT=80
 
