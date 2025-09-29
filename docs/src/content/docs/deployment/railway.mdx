@@ -139,7 +139,7 @@ CORS_ORIGINS=https://leaflock-frontend-production.up.railway.app,https://leafloc
 # Runtime flags
 APP_ENV=production
 PORT=8080
-ENABLE_REGISTRATION=false
+ENABLE_REGISTRATION=false  # Secure default - must explicitly enable
 ENABLE_METRICS=true
 ```
 
@@ -218,9 +218,9 @@ NODE_ENV=production
 
 The frontend entrypoint now auto-detects Railway's service discovery. Supplying both `BACKEND_INTERNAL_URL` (private HTTP) and `VITE_API_URL` (public HTTPS) ensures:
 
-- nginx proxies `/api` traffic across Railway's private mesh, avoiding CORS issues
-- the built SPA calls the public backend URL when the browser makes direct requests
-- horizontal scaling works automatically—every replica resolves the latest backend hostname injected by Railway
+- Caddy proxies `/api` traffic across Railway's private mesh, avoiding CORS issues
+- The built SPA calls the public backend URL when the browser makes direct requests
+- Horizontal scaling works automatically—every replica resolves the latest backend hostname via Caddy's dynamic DNS
 
 ### 4. Database Service
 
@@ -299,36 +299,91 @@ func listenWithIPv6Fallback(app *fiber.App, port string) error {
 🔗 Service accessible via Railway private network
 ```
 
-### Frontend Service Discovery
+### Caddy Reverse Proxy (Critical for Railway)
 
-The frontend container now derives the correct backend target automatically. At startup the entrypoint:
+<Badge text="FIXED" variant="success" />
 
-- respects any explicit `BACKEND_INTERNAL_URL` or `VITE_API_URL` that you set
-- scans Railway's injected `RAILWAY_SERVICE_*` variables to locate the backend service (TCP/HTTP/private domain forms are all handled)
-- falls back to `RAILWAY_PRIVATE_DOMAIN`, then `RAILWAY_PUBLIC_DOMAIN`, before using Compose-friendly defaults
+**LeafLock now uses Caddy instead of NGINX** to avoid 502 Bad Gateway errors on Railway.
 
-```sh
-# frontend/docker-entrypoint.sh (excerpt)
-: "${PORT:=80}"
-: "${RAILWAY_BACKEND_KEYWORDS:=BACKEND|API|SERVER|APP|SERVICE}"
-DEFAULT_BACKEND_PORT="${RAILWAY_BACKEND_PORT:-${BACKEND_PORT:-8080}}"
+<Card title="🔴 Why Not NGINX?" icon="error">
+**The Problem with NGINX on Railway:**
+- NGINX caches DNS lookups at startup
+- Railway's IPv6 private network assigns **dynamic IPs on each deployment**
+- After deploy, NGINX uses stale IP addresses → **502 Bad Gateway errors**
 
-if [ -z "${BACKEND_INTERNAL_URL:-}" ] && [ -n "${VITE_API_URL:-}" ]; then
-  BACKEND_INTERNAL_URL="$VITE_API_URL"
-fi
+**Caddy Solution:**
+- ✅ Re-resolves DNS on **every request** (no caching)
+- ✅ IPv6 native support
+- ✅ Railway's official recommendation for reverse proxies
+- ✅ Simpler configuration
+- ✅ Automatic X-Forwarded headers
+</Card>
 
-if [ -z "${BACKEND_INTERNAL_URL:-}" ]; then
-  line=$(find_backend_env_line "_TCP_URL=")
-  if [ -n "$line" ]; then
-    BACKEND_INTERNAL_URL=${line#*=}
-  fi
-fi
+**Caddy Configuration:**
 
-BACKEND_INTERNAL_URL=$(normalize_backend_url "$BACKEND_INTERNAL_URL")
-log "Proxying API to ${BACKEND_INTERNAL_URL}"
+```caddyfile
+:{$PORT} {
+    # Health check endpoint
+    handle /health {
+        respond "OK" 200
+    }
+
+    # Proxy API requests to backend
+    # Caddy automatically does dynamic DNS resolution
+    handle /api/* {
+        reverse_proxy {$BACKEND_INTERNAL_URL} {
+            header_up Host {upstream_hostport}
+        }
+    }
+
+    # Serve static files
+    handle {
+        root * /usr/share/caddy
+        try_files {path} {path}/ /index.html
+        file_server
+    }
+
+    # Security headers (automatic)
+    header {
+        -Server
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+    }
+
+    # Compression and logging
+    encode gzip zstd
+    log { output stdout }
+}
 ```
 
-Because the proxy honours Railway's service discovery, scaling either service just works—every replica resolves the latest backend endpoint.
+**Key Benefits:**
+- No `resolver` directive needed (Caddy does this automatically)
+- No manual `X-Forwarded-*` headers (Caddy sets these by default)
+- Dynamic DNS resolution on **every request** (fixes 502 issue)
+- Faster than NGINX for proxy workloads
+
+> **Note:** If upgrading from an older LeafLock version with NGINX, just pull the latest code and redeploy. Railway will automatically use Caddy. No configuration changes needed!
+
+For troubleshooting 502 errors, see: [Railway Troubleshooting Guide](/deployment/railway-troubleshooting)
+
+### Frontend Service Discovery
+
+The frontend container automatically discovers the backend service. At startup, Caddy:
+
+- Uses explicit `BACKEND_INTERNAL_URL` or `VITE_API_URL` if provided
+- Scans Railway's injected `RAILWAY_SERVICE_*` variables to locate the backend
+- Falls back to `RAILWAY_PRIVATE_DOMAIN`, then `RAILWAY_PUBLIC_DOMAIN`
+- Normalizes IPv6 addresses for Railway's private mesh
+
+```sh
+# Frontend startup logs
+✅ Railway internal backend detected
+🔗 Using backend: http://motivated-energy.railway.internal:8080
+🚀 Caddy server starting on port 80
+✅ Dynamic DNS resolution enabled
+```
+
+Because Caddy re-resolves DNS on every request, scaling either service just works—no stale IP issues.
 
 > **Custom Admin Credentials:** keeping the defaults will fail on Railway after the first boot (the bootstrap refuses reused credentials). Always set `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD` to fresh values before deploying.
 
@@ -355,7 +410,7 @@ Because the proxy honours Railway's service discovery, scaling either service ju
 
 4. **Scale if needed**
    - Backend: enable horizontal auto-scaling in Railway settings or increase `numReplicas`
-   - Frontend: stateless nginx can scale immediately; every replica auto-discovers the backend
+   - Frontend: stateless Caddy can scale immediately; every replica auto-discovers the backend via dynamic DNS
    - Postgres/Redis: consider managed tiers for production workloads
 
 ## Environment Variables Reference
@@ -386,7 +441,7 @@ Because the proxy honours Railway's service discovery, scaling either service ju
     # Application
     APP_ENV=production
     PORT=8080
-    ENABLE_REGISTRATION=true
+    ENABLE_REGISTRATION=false  # Now defaults to false for security
     ENABLE_METRICS=true
 
     # Admin User

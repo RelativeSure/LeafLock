@@ -148,8 +148,7 @@ LeafLock has successfully passed comprehensive validation testing and is ready f
 ✅ postgres: running (healthy)
 ✅ redis: running (healthy)
 ✅ backend: running (secure user)
-✅ frontend: running (nginx)
-✅ nginx: running (reverse proxy)
+✅ frontend: running (Caddy reverse proxy)
 ```
 
 ---
@@ -187,7 +186,7 @@ LeafLock has successfully passed comprehensive validation testing and is ready f
 CORS_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 VITE_API_URL=https://yourdomain.com/api/v1
 APP_ENV=production
-ENABLE_REGISTRATION=false  # Optional: disable public registration
+ENABLE_REGISTRATION=false  # Secure default - set to true to enable public registration
 ```
 
 ### 2. SSL/TLS Configuration

@@ -582,12 +582,19 @@ func LoadConfig() *Config {
 
 	return &Config{
 		DatabaseURL:        dbURL,
-		RedisURL:           normalizeRedisAddress(getEnvOrDefault("REDIS_URL", "localhost:6379")),
-		RedisPassword:      resolveRedisPassword(os.Getenv("REDIS_URL"), os.Getenv("REDIS_PASSWORD")),
-		JWTSecret:          []byte(jwtSecret),
-		EncryptionKey:      []byte(encKey),
-		Port:               getEnvOrDefault("PORT", "8080"),
-		AllowedOrigins:     strings.Split(getEnvOrDefault("CORS_ORIGINS", "https://localhost:3000"), ","),
+		RedisURL:      normalizeRedisAddress(getEnvOrDefault("REDIS_URL", "localhost:6379")),
+		RedisPassword: resolveRedisPassword(os.Getenv("REDIS_URL"), os.Getenv("REDIS_PASSWORD")),
+		JWTSecret:     []byte(jwtSecret),
+		EncryptionKey: []byte(encKey),
+		Port:          getEnvOrDefault("PORT", "8080"),
+		AllowedOrigins: func() []string {
+			origins := strings.Split(getEnvOrDefault("CORS_ORIGINS", "https://localhost:3000"), ",")
+			// Trim whitespace from each origin to prevent CORS issues
+			for i := range origins {
+				origins[i] = strings.TrimSpace(origins[i])
+			}
+			return origins
+		}(),
 		MaxLoginAttempts:   getEnvAsInt("MAX_LOGIN_ATTEMPTS", 5),
 		LockoutDuration:    time.Duration(getEnvAsInt("LOCKOUT_MINUTES", 15)) * time.Minute,
 		MaxIPLoginAttempts: getEnvAsInt("MAX_IP_LOGIN_ATTEMPTS", 15),
@@ -1194,8 +1201,14 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *Cr
 		XSSProtection:      "1; mode=block",
 		ContentTypeNosniff: "nosniff",
 		XFrameOptions:      "DENY",
-		HSTSMaxAge:         31536000,
-		HSTSPreloadEnabled: true,
+		// Only enable HSTS in production with HTTPS
+		HSTSMaxAge: func() int {
+			if getEnvOrDefault("APP_ENV", "development") == "production" {
+				return 31536000 // 1 year
+			}
+			return 0 // Disabled for development
+		}(),
+		HSTSPreloadEnabled: getEnvOrDefault("APP_ENV", "development") == "production",
 		ContentSecurityPolicy: "default-src 'self'; " +
 			"script-src 'self' 'strict-dynamic' 'nonce-{random}'; " +
 			"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
@@ -1245,7 +1258,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *Cr
 	}))
 
 	// Prometheus metrics (if enabled)
-	if os.Getenv("ENABLE_METRICS") != "false" {
+	if getEnvAsBool("ENABLE_METRICS", false) {
 		app.Use(PrometheusMiddleware())
 	}
 
@@ -1540,12 +1553,12 @@ func SetupDatabase(dbURL string) (*pgxpool.Pool, error) {
 		return nil, fmt.Errorf("failed to parse database URL: %w", err)
 	}
 
-	// Configure connection pool optimized for fast startup and production workloads
-	config.MaxConns = 15                       // Reduced max connections for faster startup
-	config.MinConns = 2                        // Reduced min connections for faster startup
-	config.MaxConnLifetime = 2 * time.Hour     // Longer lifetime to reduce churn
-	config.MaxConnIdleTime = 45 * time.Minute  // Longer idle time to reduce connection recycling
-	config.HealthCheckPeriod = 2 * time.Minute // Less frequent health checks for startup performance
+	// Configure connection pool optimized for Railway managed PostgreSQL
+	config.MaxConns = 25                       // Railway can handle higher concurrency
+	config.MinConns = 5                        // Better connection pool warmup
+	config.MaxConnLifetime = 1 * time.Hour     // Railway connections should refresh hourly
+	config.MaxConnIdleTime = 15 * time.Minute  // Railway's idle timeout consideration
+	config.HealthCheckPeriod = 1 * time.Minute // Regular health checks for Railway
 
 	// Optimize connection parameters for performance
 	config.ConnConfig.ConnectTimeout = 5 * time.Second // Faster timeout for startup
@@ -1609,11 +1622,11 @@ func SetupDatabaseFast(dbURL string) (*pgxpool.Pool, error) {
 	}
 
 	// Configure connection pool optimized for fastest possible startup
-	config.MaxConns = 5 // Minimal connections for startup
-	config.MinConns = 1 // Single connection to start
+	config.MaxConns = 10 // Balanced for fast startup and safety
+	config.MinConns = 2  // Minimum viable pool
 	config.MaxConnLifetime = 1 * time.Hour
-	config.MaxConnIdleTime = 30 * time.Minute
-	config.HealthCheckPeriod = 5 * time.Minute
+	config.MaxConnIdleTime = 15 * time.Minute
+	config.HealthCheckPeriod = 2 * time.Minute
 
 	// Optimize connection parameters for fastest startup
 	config.ConnConfig.ConnectTimeout = 3 * time.Second

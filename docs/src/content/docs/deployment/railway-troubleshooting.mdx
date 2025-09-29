@@ -1,0 +1,470 @@
+---
+title: Railway Troubleshooting Guide
+description: Solutions for common Railway deployment issues including 502 Bad Gateway, DNS resolution, and connectivity problems
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Badge } from '@astrojs/starlight/components';
+
+This guide covers common issues when deploying LeafLock on Railway and their solutions.
+
+## Critical Fix: 502 Bad Gateway Error
+
+### Problem Description
+
+<Card title="🔴 502 Bad Gateway Symptoms" icon="error">
+**Common Signs:**
+- Frontend loads but API calls fail with 502
+- Works immediately after deploy, fails later
+- Intermittent 502 errors
+- Backend logs show no incoming requests
+
+**Root Cause:**
+NGINX caches DNS lookups at startup. Railway's IPv6 private network assigns dynamic IPs on each deployment, causing NGINX to use stale IPs → 502 errors.
+</Card>
+
+### Solution: Caddy Reverse Proxy
+
+<Badge text="FIXED" variant="success" size="large" />
+
+**LeafLock now uses Caddy instead of NGINX** (as of latest version).
+
+<CardGrid>
+  <Card title="✅ Why Caddy?" icon="approve-check">
+    - **Dynamic DNS Resolution**: Re-resolves backend on every request
+    - **IPv6 Native**: Better Railway compatibility
+    - **Railway Recommended**: Official recommendation
+    - **Simpler Config**: Less complexity
+  </Card>
+  <Card title="📊 Performance" icon="rocket">
+    - Faster than NGINX for proxy workloads
+    - Automatic HTTP/2
+    - Built-in health checks
+    - No DNS caching issues
+  </Card>
+</CardGrid>
+
+### Migration from NGINX
+
+If you're upgrading from an older version with NGINX:
+
+<Tabs>
+  <TabItem label="Automatic">
+    **If using Docker/Railway:**
+    1. Pull latest code
+    2. Railway will rebuild automatically
+    3. Frontend now uses Caddy
+
+    No configuration changes needed! ✅
+  </TabItem>
+
+  <TabItem label="Manual Check">
+    **Verify you're using Caddy:**
+
+    ```bash
+    # Check frontend Dockerfile
+    cat frontend/Dockerfile | grep -i caddy
+    # Should show: FROM caddy:2.8-alpine
+
+    # Check for Caddyfile
+    ls frontend/Caddyfile
+    # Should exist
+
+    # Old NGINX files (should NOT exist)
+    ls frontend/nginx.conf.template
+    # Should give "No such file"
+    ```
+  </TabItem>
+</Tabs>
+
+### Caddy Configuration Details
+
+The Caddyfile configuration automatically handles:
+
+```caddyfile
+:{$PORT} {
+    # Health check endpoint
+    handle /health {
+        respond "OK" 200
+    }
+
+    # Proxy API requests to backend
+    # Caddy automatically does dynamic DNS resolution
+    handle /api/* {
+        reverse_proxy {$BACKEND_INTERNAL_URL} {
+            header_up Host {upstream_hostport}
+        }
+    }
+
+    # Serve static files
+    handle {
+        root * /usr/share/caddy
+        try_files {path} {path}/ /index.html
+        file_server
+    }
+}
+```
+
+**Key Points:**
+- No `resolver` directive needed (Caddy does this automatically)
+- No manual `X-Forwarded-*` headers (Caddy sets these by default)
+- Dynamic DNS on every request (fixes 502 issue)
+
+## DNS Resolution Issues
+
+### Backend Not Found
+
+<Card title="🔍 Symptoms" icon="warning">
+- Frontend shows "Network Error" or "Failed to fetch"
+- Railway logs show: "dial tcp: lookup backend: no such host"
+- `BACKEND_INTERNAL_URL` seems correct
+</Card>
+
+**Solution:** Verify Railway service discovery
+
+```bash
+# Check environment variables in Railway dashboard
+echo $BACKEND_INTERNAL_URL
+# Should be: http://motivated-energy.railway.internal:8080
+# (or your backend's Railway internal hostname)
+
+# NOT this:
+# http://backend:8080  ❌
+# http://localhost:8080  ❌
+```
+
+**How to find your internal hostname:**
+
+1. Go to Railway Dashboard → Backend Service
+2. Click "Settings" → "Networking"
+3. Copy the "Private Network" hostname
+4. Format: `http://[hostname]:8080`
+
+### IPv6 Connectivity
+
+<Card title="🌐 Railway IPv6 Architecture" icon="information">
+Railway's private network is **IPv6-only**. LeafLock handles this automatically:
+
+**Backend:**
+- Binds to `[::]:{PORT}` (IPv6 dual-stack)
+- Falls back to `0.0.0.0:{PORT}` if IPv6 unavailable
+- Logs show successful bind: `✅ [IPv6] Successfully bound to [::]:8080`
+
+**Frontend (Caddy):**
+- Automatically resolves IPv6 addresses
+- No configuration needed
+- Handles Railway's dynamic IPs
+</Card>
+
+**Check Backend IPv6 Binding:**
+
+```bash
+# In Railway backend logs, look for:
+🔵 [IPv6] Attempting to bind HTTP server on [::]:8080
+✅ [IPv6] Successfully bound to [::]:8080 - IPv6 dual-stack available
+🌐 [STARTUP] HTTP server listening on [::]:8080 (Railway IPv6 compatible)
+
+# If you see IPv4 fallback:
+🔄 [FALLBACK] IPv6 binding failed, attempting IPv4 fallback...
+# This is OK but not optimal for Railway
+```
+
+## Database Connection Issues
+
+### Connection Pool Exhaustion
+
+<Card title="⚠️ Symptoms" icon="warning">
+- Slow API responses
+- Timeout errors
+- Logs show: "connection pool exhausted"
+</Card>
+
+**Solution:** LeafLock now uses optimized connection pools for Railway:
+
+```go
+// Automatically configured
+MaxConns: 25                       // Railway managed PostgreSQL can handle this
+MinConns: 5                        // Better connection pool warmup
+MaxConnLifetime: 1 * time.Hour     // Railway connections refresh hourly
+MaxConnIdleTime: 15 * time.Minute  // Railway's idle timeout
+HealthCheckPeriod: 1 * time.Minute // Regular health checks
+```
+
+**If still experiencing issues:**
+
+1. Check Railway PostgreSQL plan limits
+2. Monitor connection count:
+```sql
+SELECT count(*) FROM pg_stat_activity WHERE datname = 'railway';
+```
+3. Consider upgrading Railway plan if needed
+
+### Connection String Issues
+
+**Common mistakes:**
+
+```bash
+# ❌ Wrong - Using placeholder
+DATABASE_URL=postgresql://postgres:password@localhost:5432/railway
+
+# ❌ Wrong - Missing SSL mode
+DATABASE_URL=postgresql://user:pass@host:5432/db
+
+# ✅ Correct - Railway provides this automatically
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+# Example: postgresql://postgres:***@postgres.railway.internal:5432/railway?sslmode=disable
+```
+
+## CORS Errors
+
+### Access-Control-Allow-Origin Errors
+
+<Card title="🔴 CORS Error" icon="error">
+```
+Access to fetch at 'https://backend.railway.app/api/v1/...' from origin
+'https://frontend.railway.app' has been blocked by CORS policy
+```
+</Card>
+
+**Solution:** Update CORS_ORIGINS
+
+```bash
+# Backend environment variable
+CORS_ORIGINS=https://leaflock-frontend-production.up.railway.app,https://app.leaflock.app
+
+# Common mistakes:
+# ❌ Trailing slash: https://frontend.railway.app/
+# ❌ Extra spaces: "https://frontend.railway.app, https://other.com"
+# ❌ Missing https://
+# ❌ Using http:// in production
+
+# ✅ LeafLock automatically trims whitespace now
+```
+
+**Test CORS:**
+
+```bash
+curl -H "Origin: https://leaflock-frontend-production.up.railway.app" \
+     -H "Access-Control-Request-Method: POST" \
+     -H "Access-Control-Request-Headers: Content-Type" \
+     -X OPTIONS \
+     https://leaflock-backend-production.up.railway.app/api/v1/auth/login -v
+```
+
+Look for:
+```
+< access-control-allow-origin: https://leaflock-frontend-production.up.railway.app
+< access-control-allow-credentials: true
+```
+
+## Environment Variable Issues
+
+### ENABLE_REGISTRATION Not Working
+
+<Badge text="CHANGED" variant="caution" />
+
+**Breaking Change:** `ENABLE_REGISTRATION` now defaults to `false` (was `true`).
+
+```bash
+# Old behavior (pre-fix)
+# No ENABLE_REGISTRATION set → Registration ENABLED ❌
+
+# New behavior (current)
+# No ENABLE_REGISTRATION set → Registration DISABLED ✅
+ENABLE_REGISTRATION=false  # This is now the default
+
+# To enable registration:
+ENABLE_REGISTRATION=true
+```
+
+**Why the change?**
+- Security-first approach
+- Invite-only by default
+- Prevents unauthorized signups
+
+### Missing Environment Variables
+
+**Check all required variables are set:**
+
+<Tabs>
+  <TabItem label="Backend Required">
+    ```bash
+    # Critical - Must be set
+    DATABASE_URL
+    REDIS_URL
+    JWT_SECRET              # Min 32 chars
+    SERVER_ENCRYPTION_KEY   # Exactly 32 chars
+
+    # Important
+    CORS_ORIGINS
+    DEFAULT_ADMIN_EMAIL
+    DEFAULT_ADMIN_PASSWORD
+
+    # Optional (have good defaults)
+    PORT=8080
+    APP_ENV=production
+    ENABLE_REGISTRATION=false
+    ENABLE_METRICS=false
+    ```
+  </TabItem>
+  <TabItem label="Frontend Required">
+    ```bash
+    # Critical
+    BACKEND_INTERNAL_URL    # Railway internal hostname
+    VITE_API_URL            # Public backend URL
+
+    # Optional
+    PORT=80
+    APP_ENV=production
+    ```
+  </TabItem>
+</Tabs>
+
+## Performance Issues
+
+### Slow Startup Times
+
+**Expected startup times:**
+- Frontend: 5-10 seconds
+- Backend: 15-30 seconds (includes migrations)
+
+**If slower:**
+
+1. **Check build logs** for errors
+2. **Database migrations** taking too long?
+   ```bash
+   # Enable fast mode (skips some checks)
+   SKIP_MIGRATION_CHECK=true
+   # Not recommended for production!
+   ```
+3. **Connection pool startup** - Now optimized automatically
+
+### High Memory Usage
+
+**Normal memory usage:**
+- Frontend: 50-100MB
+- Backend: 150-300MB (depending on load)
+
+**If excessive:**
+
+```bash
+# Check connection pool settings
+MaxConns: 25  # Don't set too high
+MinConns: 5   # Don't pre-create too many
+
+# Check Redis pool
+PoolSize: 10  # Current default
+```
+
+## Health Check Failures
+
+### Railway Health Checks Timing Out
+
+**LeafLock provides two health endpoints:**
+
+```bash
+# Fast liveness check (3-5 seconds)
+/api/v1/health/live
+# Returns: {"status":"live","timestamp":"...","uptime":"15s"}
+
+# Full readiness check (15-30 seconds)
+/api/v1/health/ready
+# Returns: {"status":"ready"} or {"status":"initializing"}
+```
+
+**Railway Configuration:**
+
+Use `/api/v1/health/live` for Railway health checks (faster response).
+
+```json
+// railway.json
+{
+  "healthcheck": {
+    "path": "/api/v1/health/live",
+    "timeout": 10,
+    "interval": 30
+  }
+}
+```
+
+## Debugging Tips
+
+### Enable Debug Logging
+
+```bash
+# Backend - More verbose logs
+LOG_LEVEL=debug
+
+# Frontend - Caddy logs
+# Check Railway logs for Caddy output
+```
+
+### Check Service Communication
+
+```bash
+# Test backend from Railway shell
+railway run --service backend curl http://localhost:8080/api/v1/health/live
+
+# Test internal connectivity
+railway run --service frontend curl http://motivated-energy.railway.internal:8080/api/v1/health/live
+```
+
+### Common Log Messages
+
+**Normal:**
+```
+✅ [IPv6] Successfully bound to [::]:8080
+✅ Database connectivity verified
+🌐 HTTP server listening on [::]:8080 (Railway IPv6 compatible)
+🚀 Frontend Caddy server starting on port 80
+✅ Caddy will dynamically resolve backend DNS
+```
+
+**Warning (but OK):**
+```
+{"level":"warn","msg":"admin endpoint disabled"}  # Expected with Caddy
+```
+
+**Errors to fix:**
+```
+❌ [IPv6] Failed to bind  # Check PORT variable
+💥 [FATAL] Both IPv6 and IPv4 binding failed
+Failed to connect to database  # Check DATABASE_URL
+Redis connection failed  # Check REDIS_URL
+```
+
+## Getting Help
+
+If issues persist:
+
+1. **Check Railway Status**: [status.railway.app](https://status.railway.app)
+2. **Railway Logs**: `railway logs --service backend` or via dashboard
+3. **GitHub Issues**: [LeafLock Issues](https://github.com/RelativeSure/LeafLock/issues)
+4. **Railway Discord**: [Railway Community](https://discord.gg/railway)
+
+## Quick Reference
+
+### Working Configuration
+
+```bash
+# Backend
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+REDIS_URL=${{Redis.REDIS_URL}}
+JWT_SECRET=<64-char-secret>
+SERVER_ENCRYPTION_KEY=<32-char-key>
+CORS_ORIGINS=https://leaflock-frontend-production.up.railway.app
+DEFAULT_ADMIN_EMAIL=admin@example.com
+DEFAULT_ADMIN_PASSWORD=<secure-password>
+ENABLE_REGISTRATION=false
+TRUST_PROXY_HEADERS=true
+APP_ENV=production
+PORT=8080
+
+# Frontend
+BACKEND_INTERNAL_URL=http://motivated-energy.railway.internal:8080
+VITE_API_URL=https://leaflock-frontend-production.up.railway.app/api/v1
+PORT=80
+```
+
+All configuration issues should be resolved with the latest code! 🎉
