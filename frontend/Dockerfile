@@ -24,9 +24,13 @@ COPY Caddyfile /etc/caddy/Caddyfile
 COPY --chmod=0755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY --from=builder /app/dist /usr/share/caddy
 
+ENV XDG_CONFIG_HOME=/config \
+    XDG_DATA_HOME=/data
+
 RUN addgroup -g 1001 -S caddy-user \
     && adduser -S -D -H -u 1001 -s /sbin/nologin -G caddy-user -g caddy-user caddy-user \
-    && chown -R caddy-user:caddy-user /usr/share/caddy /etc/caddy \
+    && mkdir -p /config /data \
+    && chown -R caddy-user:caddy-user /usr/share/caddy /etc/caddy /config /data \
     && chown caddy-user:caddy-user /usr/bin/caddy
 
 USER caddy-user
