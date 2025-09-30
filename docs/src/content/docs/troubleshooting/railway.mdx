@@ -170,6 +170,11 @@ Railway's private network is **IPv6-only**. LeafLock handles this automatically:
 # This is OK but not optimal for Railway
 ```
 
+**Local IPv6 Testing Tips:**
+- Run `go test ./server -run ListenWithIPv6Fallback` to verify the backend accepts both IPv6 (`[::1]`) and IPv4 (`127.0.0.1`) loopback clients.
+- The frontend now derives API/WebSocket hosts dynamically. Override behavior with `VITE_API_URL`, `VITE_WS_URL`, or the dev-only knobs `VITE_DEV_BACKEND_HOST`, `VITE_DEV_BACKEND_PORT`, and `VITE_DEV_HOST` when you need to target a specific address.
+- For literal IPv6 addresses, wrap them in brackets (example: `http://[fd00::1234]:8080`). The helper utilities automatically handle the formatting.
+
 ## Database Connection Issues
 
 ### Connection Pool Exhaustion

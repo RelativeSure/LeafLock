@@ -1,3 +1,5 @@
+import { resolveApiBaseUrl } from '@/utils/network'
+
 /**
  * Tags service for managing note tags
  */
@@ -37,7 +39,7 @@ class TagsService {
   private baseUrl: string
 
   constructor() {
-    this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    this.baseUrl = resolveApiBaseUrl()
   }
 
   private getAuthHeaders(): Record<string, string> {
