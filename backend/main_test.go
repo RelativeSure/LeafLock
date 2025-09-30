@@ -25,6 +25,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	appconfig "leaflock/config"
+	appcrypto "leaflock/crypto"
+	appdb "leaflock/database"
 )
 
 // Test configuration
@@ -241,7 +244,7 @@ func TestCryptoService(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	crypto := NewCryptoService(key)
+	crypto := appcrypto.NewCryptoService(key)
 
 	t.Run("EncryptDecrypt", func(t *testing.T) {
 		plaintext := []byte("test message for encryption")
@@ -295,36 +298,36 @@ func TestPasswordHashing(t *testing.T) {
 	salt := make([]byte, 32)
 	rand.Read(salt)
 
-	t.Run("HashPassword", func(t *testing.T) {
-		hash := HashPassword(password, salt)
+	t.Run("appcrypto.HashPassword", func(t *testing.T) {
+		hash := appcrypto.HashPassword(password, salt)
 		assert.NotEmpty(t, hash)
 		assert.Contains(t, hash, "$argon2id$")
 	})
 
-	t.Run("VerifyPassword", func(t *testing.T) {
-		hash := HashPassword(password, salt)
+	t.Run("appcrypto.VerifyPassword", func(t *testing.T) {
+		hash := appcrypto.HashPassword(password, salt)
 
 		// Correct password should verify
-		assert.True(t, VerifyPassword(password, hash))
+		assert.True(t, appcrypto.VerifyPassword(password, hash))
 
 		// Wrong password should not verify
-		assert.False(t, VerifyPassword("WrongPassword", hash))
+		assert.False(t, appcrypto.VerifyPassword("WrongPassword", hash))
 	})
 
 	t.Run("VerifyInvalidHash", func(t *testing.T) {
-		assert.False(t, VerifyPassword(password, "invalid$hash$format"))
+		assert.False(t, appcrypto.VerifyPassword(password, "invalid$hash$format"))
 	})
 
 	t.Run("ConstantTimeComparison", func(t *testing.T) {
-		hash := HashPassword(password, salt)
+		hash := appcrypto.HashPassword(password, salt)
 
 		// Multiple verifications should take similar time (constant time)
 		start1 := time.Now()
-		VerifyPassword(password, hash)
+		appcrypto.VerifyPassword(password, hash)
 		duration1 := time.Since(start1)
 
 		start2 := time.Now()
-		VerifyPassword("WrongPassword", hash)
+		appcrypto.VerifyPassword("WrongPassword", hash)
 		duration2 := time.Since(start2)
 
 		// Times should be within reasonable range (not exact due to system variations)
@@ -357,15 +360,15 @@ func TestConfig(t *testing.T) {
 
 		assert.NotEmpty(t, config.JWTSecret)
 		assert.NotEmpty(t, config.EncryptionKey)
-		assert.Equal(t, "postgres://postgres:postgres@localhost:5432/notes?sslmode=disable", config.DatabaseURL)
+		assert.Equal(t, "postgres://postgres:postgres@localhost:5432/leaflock?sslmode=prefer", config.DatabaseURL)
 		assert.Equal(t, "8080", config.Port)
 		assert.Equal(t, 5, config.MaxLoginAttempts)
 		assert.Equal(t, 15*time.Minute, config.LockoutDuration)
 	})
 
 	t.Run("LoadConfigWithEnvironment", func(t *testing.T) {
-		testJWT := "test-jwt-secret-key-with-sufficient-length-for-hs512-algorithm"
-		testEncKey := base64.StdEncoding.EncodeToString(make([]byte, 32))
+		testJWT := "unit-test-jwt-secret-key-with-sufficient-length-1234567890"
+		testEncKey := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{0x42}, 32))
 		testDBURL := "postgres://test:test@localhost:5432/testdb"
 
 		os.Setenv("JWT_SECRET", testJWT)
@@ -391,7 +394,7 @@ func TestJWTMiddleware(t *testing.T) {
 	// Generate test encryption key
 	key := make([]byte, 32)
 	rand.Read(key)
-	crypto := NewCryptoService(key)
+	crypto := appcrypto.NewCryptoService(key)
 
 	middleware := JWTMiddleware(secret, rdb, crypto)
 
@@ -480,10 +483,12 @@ func TestJWTMiddleware(t *testing.T) {
 // AuthHandler Test Suite
 type AuthHandlerTestSuite struct {
 	suite.Suite
-	handler *AuthHandler
-	mockDB  *MockDB
-	crypto  *CryptoService
-	config  *Config
+	handler      *AuthHandler
+	mockDB       *MockDB
+	crypto       *CryptoService
+	config       *appconfig.Config
+	rdb          *redis.Client
+	cleanupRedis func()
 }
 
 func (suite *AuthHandlerTestSuite) SetupTest() {
@@ -498,9 +503,9 @@ func (suite *AuthHandlerTestSuite) SetupTest() {
 	// Generate test encryption key
 	key := make([]byte, 32)
 	rand.Read(key)
-	suite.crypto = NewCryptoService(key)
+	suite.crypto = appcrypto.NewCryptoService(key)
 
-	suite.config = &Config{
+	suite.config = &appconfig.Config{
 		JWTSecret:        []byte("test-jwt-secret-key-for-testing-purposes-with-sufficient-length"),
 		EncryptionKey:    key,
 		MaxLoginAttempts: 5,
@@ -512,6 +517,15 @@ func (suite *AuthHandlerTestSuite) SetupTest() {
 		db:     suite.mockDB,
 		crypto: suite.crypto,
 		config: suite.config,
+	}
+
+	suite.rdb, suite.cleanupRedis = setupTestRedis(suite.T())
+	suite.handler.redis = suite.rdb
+}
+
+func (suite *AuthHandlerTestSuite) TearDownTest() {
+	if suite.cleanupRedis != nil {
+		suite.cleanupRedis()
 	}
 }
 
@@ -626,7 +640,7 @@ func (suite *AuthHandlerTestSuite) TestLoginSuccess() {
 	app := fiber.New()
 
 	userID := uuid.New()
-	passwordHash := HashPassword("TestPassword123!", make([]byte, 32))
+	passwordHash := appcrypto.HashPassword("TestPassword123!", make([]byte, 32))
 
 	// Mock user lookup
 	mockRow := &MockRow{}
@@ -782,7 +796,7 @@ func setupTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 	}
 
 	// Run schema setup
-	_, err = pool.Exec(ctx, DatabaseSchema)
+	_, err = pool.Exec(ctx, appdb.DatabaseSchema)
 	if err != nil {
 		pool.Close()
 		t.Skipf("Failed to setup test schema: %v", err)
@@ -826,16 +840,16 @@ func BenchmarkPasswordHashing(b *testing.B) {
 	salt := make([]byte, 32)
 	rand.Read(salt)
 
-	b.Run("HashPassword", func(b *testing.B) {
+	b.Run("appcrypto.HashPassword", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			HashPassword(password, salt)
+			appcrypto.HashPassword(password, salt)
 		}
 	})
 
-	hash := HashPassword(password, salt)
-	b.Run("VerifyPassword", func(b *testing.B) {
+	hash := appcrypto.HashPassword(password, salt)
+	b.Run("appcrypto.VerifyPassword", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			VerifyPassword(password, hash)
+			appcrypto.VerifyPassword(password, hash)
 		}
 	})
 }
@@ -843,7 +857,7 @@ func BenchmarkPasswordHashing(b *testing.B) {
 func BenchmarkCryptoService(b *testing.B) {
 	key := make([]byte, 32)
 	rand.Read(key)
-	crypto := NewCryptoService(key)
+	crypto := appcrypto.NewCryptoService(key)
 
 	plaintext := make([]byte, 1024) // 1KB test data
 	rand.Read(plaintext)
@@ -866,7 +880,7 @@ func BenchmarkCryptoService(b *testing.B) {
 func TestSetupDatabase_InvalidConnection(t *testing.T) {
 	// Use an unreachable port to fail fast without external dependencies
 	badURL := "postgres://postgres:postgres@127.0.0.1:1/notes?sslmode=disable"
-	pool, err := SetupDatabase(badURL)
+	pool, err := appdb.SetupDatabase(badURL)
 	if pool != nil {
 		pool.Close()
 	}
@@ -892,7 +906,7 @@ func TestRegister_Disabled(t *testing.T) {
 type LockoutTestSuite struct {
 	suite.Suite
 	app          *fiber.App
-	config       *Config
+	config       *appconfig.Config
 	rdb          *redis.Client
 	crypto       *CryptoService
 	db           Database
@@ -903,7 +917,7 @@ type LockoutTestSuite struct {
 
 func (suite *LockoutTestSuite) SetupTest() {
 	// Test config
-	suite.config = &Config{
+	suite.config = &appconfig.Config{
 		JWTSecret:            []byte("test-secret"),
 		EncryptionKey:        []byte("12345678901234567890123456789012"),
 		MaxLoginAttempts:     3,
@@ -919,7 +933,7 @@ func (suite *LockoutTestSuite) SetupTest() {
 	// Test DB and Redis
 	suite.db, suite.cleanupDB = setupTestDB(suite.T())
 	suite.rdb, suite.cleanupRedis = setupTestRedis(suite.T())
-	suite.crypto = NewCryptoService(suite.config.EncryptionKey)
+	suite.crypto = appcrypto.NewCryptoService(suite.config.EncryptionKey)
 
 	// Create app
 	suite.app = fiber.New()

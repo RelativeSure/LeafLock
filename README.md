@@ -36,33 +36,33 @@ LeafLock is a privacy-first notes application with end-to-end encryption, real-t
    cd LeafLock
    ```
 
-2. Configure environment variables:
+2. (Optional) Override defaults:
 
    ```bash
    cp .env.example .env
-   # Fill in the required values to match your environment
+   # tweak anything you want and docker compose will pick it up automatically
    ```
 
-3. Start the full stack with Docker or Podman Compose:
+3. Start the full stack:
 
    ```bash
-   make up
+   docker compose up --build
    ```
 
-   - Frontend: http://localhost:3000
+   - Frontend UI: http://localhost:3000
    - Backend API: http://localhost:8080
    - API health check: http://localhost:8080/api/v1/health
-   - API documentation: http://localhost:8080/api/v1/docs (admin users only)
+   - Built assets are rebuilt automatically each time you rerun with `--build`
 
-4. **First-time login**: Use the default admin credentials (⚠️ **Change immediately after first login!**):
-   - Email: `admin@leaflock.app` (configurable via `DEFAULT_ADMIN_EMAIL`)
-   - Password: `AdminPass123!` (configurable via `DEFAULT_ADMIN_PASSWORD`)
-
-5. Stop the stack when you are done:
+4. Stop everything when finished:
 
    ```bash
-   make down
+   docker compose down
    ```
+
+5. **First-time login**: Use the default admin credentials (⚠️ **Change immediately after first login!**):
+   - Email: `admin@leaflock.app` (configurable via `DEFAULT_ADMIN_EMAIL`)
+   - Password: `AdminPass123!` (configurable via `DEFAULT_ADMIN_PASSWORD`)
 
 ## Default Admin Account
 
@@ -138,7 +138,7 @@ Return to the repository root before using make targets again: `cd ..`.
 
 ## Deployment
 
-- Use `make up` in combination with your Compose implementation for local deployments
+- Run `docker compose up --build` (or `make up`) for local deployments
 - Helm charts under `helm/` support Kubernetes clusters
 
 ## Documentation

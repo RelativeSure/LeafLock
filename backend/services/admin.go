@@ -14,26 +14,26 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"golang.org/x/crypto/chacha20poly1305"
 	"golang.org/x/crypto/argon2"
+	"golang.org/x/crypto/chacha20poly1305"
 )
 
 // AdminUserStatus represents the state of an admin user
 type AdminUserStatus int
 
 const (
-	AdminUserNotExists AdminUserStatus = iota // Admin user doesn't exist
-	AdminUserIncomplete                       // Admin user exists but missing workspace/role
-	AdminUserComplete                         // Admin user exists with all requirements
+	AdminUserNotExists  AdminUserStatus = iota // Admin user doesn't exist
+	AdminUserIncomplete                        // Admin user exists but missing workspace/role
+	AdminUserComplete                          // Admin user exists with all requirements
 )
 
 // AdminUserInfo holds information about an existing admin user
 type AdminUserInfo struct {
-	Status      AdminUserStatus
-	UserID      uuid.UUID
-	MasterKey   []byte
+	Status       AdminUserStatus
+	UserID       uuid.UUID
+	MasterKey    []byte
 	HasWorkspace bool
-	HasRole     bool
+	HasRole      bool
 }
 
 // AdminConfig holds configuration for default admin user creation
@@ -45,9 +45,10 @@ type AdminConfig struct {
 
 // CryptoService interface for encryption operations
 type CryptoService interface {
-	EncryptDeterministic(data []byte, context string) (string, error)
-	HashEmail(email string) string
-	EncryptWithGDPRKey(data []byte, gdprKey []byte) (string, error)
+	Encrypt(data []byte) ([]byte, error)
+	EncryptDeterministic(data []byte, context string) ([]byte, error)
+	HashEmail(email string) []byte
+	EncryptWithGDPRKey(data []byte, gdprKey []byte) ([]byte, error)
 }
 
 // Database interface for database operations
@@ -190,7 +191,7 @@ func (a *AdminService) CreateDefaultAdminUser() error {
 // checkAdminUserStatus checks the status of the admin user (exists, incomplete, complete)
 func (a *AdminService) checkAdminUserStatus() (*AdminUserInfo, error) {
 	ctx := context.Background()
-	
+
 	// Generate the email search hash using the crypto service
 	emailSearchHash, err := a.crypto.EncryptDeterministic([]byte(strings.ToLower(a.config.Email)), "email_search")
 	if err != nil {
@@ -202,7 +203,7 @@ func (a *AdminService) checkAdminUserStatus() (*AdminUserInfo, error) {
 	var masterKeyEncrypted []byte
 	var salt []byte
 	err = a.db.QueryRow(ctx, `SELECT id, master_key_encrypted, salt FROM users WHERE email_search_hash = $1`, emailSearchHash).Scan(&userID, &masterKeyEncrypted, &salt)
-	
+
 	if err != nil {
 		if err.Error() == "no rows in result set" {
 			log.Printf("🔍 Admin user not found with email: %s", a.config.Email)
@@ -491,11 +492,11 @@ func generateSecureID() (string, error) {
 func (a *AdminService) hashPassword(password string, salt []byte) string {
 	// Use same parameters as main.go: 3 iterations, 64MB memory, 4 parallelism, 32 byte key
 	hash := argon2.IDKey([]byte(password), salt, 3, 64*1024, 4, 32)
-	
+
 	// Format same as main.go
 	return fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
-		argon2.Version, 64*1024, 3, 4, 
-		encodeB64(salt), 
+		argon2.Version, 64*1024, 3, 4,
+		encodeB64(salt),
 		encodeB64(hash))
 }
 
@@ -507,7 +508,7 @@ func encodeB64(data []byte) string {
 // createAdminWorkspace creates a default workspace for the admin user
 func (a *AdminService) createAdminWorkspace(ctx context.Context, tx pgx.Tx, userID uuid.UUID, masterKey []byte) error {
 	workspaceName := "Admin Workspace"
-	
+
 	// Generate workspace encryption key
 	workspaceKey := make([]byte, 32)
 	if _, err := rand.Read(workspaceKey); err != nil {
