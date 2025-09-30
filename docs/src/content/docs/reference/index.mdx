@@ -1,0 +1,57 @@
+---
+title: Reference
+description: One-page reference for LeafLock environment variables, services, and default ports.
+---
+
+Keep this page handy while you configure deployments or automate infrastructure. It consolidates the values that previously lived in scattered guides.
+
+## Environment Variables
+
+### Required
+
+| Variable | Purpose | Notes |
+| --- | --- | --- |
+| `POSTGRES_PASSWORD` | Database password | 32+ random characters |
+| `DATABASE_URL` | Connection string | `postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/notes?sslmode=prefer` |
+| `REDIS_PASSWORD` | Redis authentication | 16+ random characters |
+| `JWT_SECRET` | JWT signing key | Base64 string ≥ 64 chars |
+| `SERVER_ENCRYPTION_KEY` | Server-side encryption | Exactly 32 characters |
+| `CORS_ORIGINS` | Allowed origins | Comma-separated URLs |
+| `VITE_API_URL` | Frontend API target | `https://your-domain/api/v1` |
+
+### Optional but Useful
+
+| Variable | Purpose |
+| --- | --- |
+| `ENABLE_REGISTRATION` | Allow self-serve sign-up (`false` by default) |
+| `ENABLE_DEFAULT_ADMIN` | Creates the bootstrap admin account |
+| `DEFAULT_ADMIN_EMAIL` | Admin username when bootstrap is enabled |
+| `DEFAULT_ADMIN_PASSWORD` | Admin password when bootstrap is enabled |
+| `ENABLE_METRICS` | Enables Prometheus metrics endpoint |
+
+## Container Ports
+
+| Service | Port | Notes |
+| --- | --- | --- |
+| Backend | `8080` | Exposes REST API and health endpoints |
+| Frontend | `3000` build / `80` runtime | Served by Caddy in production images |
+| PostgreSQL | `5432` | Internal only; protect externally |
+| Redis | `6379` | Internal only; requires password |
+
+## Health Endpoints
+
+| Endpoint | Description |
+| --- | --- |
+| `/api/v1/health` | Basic liveness probe |
+| `/api/v1/ready` | Readiness probe (Kubernetes) |
+| `/metrics` | Prometheus endpoint when `ENABLE_METRICS=true` |
+
+## Default Volumes
+
+| Path | Contents |
+| --- | --- |
+| `postgres-data` | PostgreSQL data files |
+| `redis-data` | Redis persistence (if enabled) |
+| `leaflock-uploads` | Encrypted file attachments |
+
+If you add another platform or configuration, update this page so the fast facts stay accurate.
