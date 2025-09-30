@@ -6,7 +6,7 @@
   "packageManager": "pnpm@10.17.1",
   "license": "PolyForm-Noncommercial-1.0.0",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
@@ -24,7 +24,7 @@
     "test:e2e": "vitest run src/e2e.test.js",
     "clean": "rm -rf dist node_modules/.vite coverage",
     "analyze": "vite build --mode analyze",
-    "serve": "vite preview --host 0.0.0.0",
+    "serve": "vite preview",
     "check-all": "pnpm run type-check && pnpm run lint && pnpm run format:check && pnpm run test"
   },
   "dependencies": {

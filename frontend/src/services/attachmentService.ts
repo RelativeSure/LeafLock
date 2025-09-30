@@ -1,3 +1,5 @@
+import { resolveApiBaseUrl } from '@/utils/network'
+
 /**
  * Attachment service for handling file uploads and downloads
  */
@@ -26,7 +28,7 @@ class AttachmentService {
   private baseUrl: string
 
   constructor() {
-    this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    this.baseUrl = resolveApiBaseUrl()
   }
 
   private getAuthHeaders(): Record<string, string> {

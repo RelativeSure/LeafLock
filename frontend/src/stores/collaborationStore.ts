@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { resolveApiBaseUrl, resolveWsBaseUrl } from '@/utils/network'
 
 export interface Collaborator {
   id: string
@@ -65,8 +66,8 @@ interface CollaborationState {
   handlePresenceUpdate: (presence: PresenceUser) => void
 }
 
-const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:8080'
-const WS_BASE_URL = (import.meta as any).env.VITE_WS_URL || 'ws://localhost:8080'
+const API_BASE_URL = resolveApiBaseUrl()
+const WS_BASE_URL = resolveWsBaseUrl()
 
 export const useCollaborationStore = create<CollaborationState>((set, get) => ({
   // Initial state

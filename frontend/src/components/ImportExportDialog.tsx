@@ -8,6 +8,7 @@ import {
 } from './ui/dialog'
 import { Button } from './ui/button'
 import { Upload, Download, FileText, File, X } from 'lucide-react'
+import { resolveApiBaseUrl } from '@/utils/network'
 interface Note {
   id: string
   title: string
@@ -48,7 +49,7 @@ export function ImportExportDialog({
   const [storageError, setStorageError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:8080'
+  const API_BASE_URL = resolveApiBaseUrl()
 
   // Fetch storage information
   const fetchStorageInfo = useCallback(async () => {

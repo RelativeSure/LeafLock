@@ -1,3 +1,5 @@
+import { resolveApiBaseUrl } from '@/utils/network'
+
 /**
  * Templates service for managing note templates
  */
@@ -51,7 +53,7 @@ class TemplatesService {
   private baseUrl: string
 
   constructor() {
-    this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+    this.baseUrl = resolveApiBaseUrl()
   }
 
   private getAuthHeaders(): Record<string, string> {
