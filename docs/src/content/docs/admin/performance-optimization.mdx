@@ -30,7 +30,7 @@ Only disable the async flags when you need deterministic ordering for benchmarks
 
 ## Crypto and Storage Hot Paths
 - Encryption and decryption happen client-side. Server-side hot paths are Argon2id password verification and HMAC keyword search. Pin the backend CPU limit to at least one full core; Argon2id uses 64 MB memory and 3 iterations per authentication.
-- Database queries for encrypted blobs are index-backed. Ensure `pg_stat_statements` stays <10% on `notes` reads; missing indexes indicate schema drift.
+- Database queries for encrypted blobs are index-backed. Ensure `pg_stat_statements` stays less than 10% on `notes` reads; missing indexes indicate schema drift.
 - If you observe high `leaflock_notes_total` write volume, scale PostgreSQL IOPS before tuning Go—crypto overhead is negligible compared to disk latency.
 
 ## WebSocket Performance
