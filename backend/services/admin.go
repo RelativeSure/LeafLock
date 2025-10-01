@@ -217,7 +217,7 @@ func (a *AdminService) checkAdminUserStatus() (*AdminUserInfo, error) {
 
 	// User exists, now check if they have workspace and role
 	var workspaceCount int
-	err = a.db.QueryRow(ctx, `SELECT COUNT(*) FROM workspaces WHERE user_id = $1`, userID).Scan(&workspaceCount)
+	err = a.db.QueryRow(ctx, `SELECT COUNT(*) FROM workspaces WHERE owner_id = $1`, userID).Scan(&workspaceCount)
 	if err != nil {
 		log.Printf("❌ Failed to check workspace for admin user: %v", err)
 		return nil, fmt.Errorf("failed to check workspace: %w", err)
@@ -507,7 +507,11 @@ func encodeB64(data []byte) string {
 
 // createAdminWorkspace creates a default workspace for the admin user
 func (a *AdminService) createAdminWorkspace(ctx context.Context, tx pgx.Tx, userID uuid.UUID, masterKey []byte) error {
-	workspaceName := "Admin Workspace"
+	// Encrypt workspace name with server-side encryption (same as auth handler)
+	workspaceName, err := a.crypto.Encrypt([]byte("Admin Workspace"))
+	if err != nil {
+		return fmt.Errorf("failed to encrypt workspace name: %w", err)
+	}
 
 	// Generate workspace encryption key
 	workspaceKey := make([]byte, 32)
@@ -515,27 +519,17 @@ func (a *AdminService) createAdminWorkspace(ctx context.Context, tx pgx.Tx, user
 		return fmt.Errorf("failed to generate workspace key: %w", err)
 	}
 
-	// Encrypt workspace name with master key
-	aead, err := chacha20poly1305.NewX(masterKey)
+	// Encrypt workspace key with server-side encryption (same as auth handler)
+	encryptedWorkspaceKey, err := a.crypto.Encrypt(workspaceKey)
 	if err != nil {
-		return fmt.Errorf("failed to initialize encryption: %w", err)
+		return fmt.Errorf("failed to encrypt workspace key: %w", err)
 	}
 
-	nonce := make([]byte, aead.NonceSize())
-	if _, err := rand.Read(nonce); err != nil {
-		return fmt.Errorf("failed to generate nonce: %w", err)
-	}
-
-	nameEncrypted := aead.Seal(nonce, nonce, []byte(workspaceName), nil)
-
-	// Hash workspace name for search
-	nameHash := a.crypto.HashEmail(workspaceName) // Reuse email hashing function
-
-	// Create workspace in database
+	// Create workspace in database (same structure as auth handler)
 	_, err = tx.Exec(ctx, `
-		INSERT INTO workspaces (user_id, name_encrypted, name_hash, workspace_key_encrypted, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, NOW(), NOW())
-	`, userID, nameEncrypted, nameHash, workspaceKey)
+		INSERT INTO workspaces (name_encrypted, owner_id, encryption_key_encrypted)
+		VALUES ($1, $2, $3)
+	`, workspaceName, userID, encryptedWorkspaceKey)
 
 	if err != nil {
 		return fmt.Errorf("failed to create workspace: %w", err)
@@ -558,8 +552,8 @@ func (a *AdminService) assignAdminRole(ctx context.Context, tx pgx.Tx, userID uu
 
 	// Assign role to user
 	_, err = tx.Exec(ctx, `
-		INSERT INTO user_roles (user_id, role_id, assigned_at)
-		VALUES ($1, $2, NOW())
+		INSERT INTO user_roles (user_id, role_id)
+		VALUES ($1, $2)
 	`, userID, roleID)
 
 	if err != nil {
