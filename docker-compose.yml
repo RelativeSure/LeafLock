@@ -74,3 +74,16 @@ services:
 volumes:
   postgres_data:
   redis_data:
+
+# Optional: Enable IPv6 dual-stack networking
+# Uncomment to enable IPv6 support in Docker containers
+# networks:
+#   default:
+#     enable_ipv6: true
+#     driver: bridge
+#     ipam:
+#       config:
+#         - subnet: 172.20.0.0/16
+#           gateway: 172.20.0.1
+#         - subnet: fd00:dead:beef::/48
+#           gateway: fd00:dead:beef::1

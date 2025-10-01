@@ -209,6 +209,158 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 - When modifying the docker compose file remember the coolify docker compose
 - Remember to build the setup when docker-compose and coolify docker compose files and the frontendDockerfile/entrypoint when testing/verifying
 
+## IPv4/IPv6 Dual-Stack Support
+
+LeafLock fully supports both IPv4 and IPv6 networking with automatic dual-stack configuration.
+
+### Local Development IPv6 Support
+
+#### Backend IPv6 Configuration
+The backend automatically binds to IPv6 dual-stack `[::]:{PORT}`:
+- **Accepts both IPv4 and IPv6 connections** (e.g., `127.0.0.1` and `::1`)
+- **Automatic fallback** to IPv4-only `0.0.0.0:{PORT}` if IPv6 unavailable
+- **Zero configuration** - works out of the box on any system
+
+**Implementation**: `backend/server/listener.go`
+```go
+// Tries IPv6 dual-stack first with IPV6_V6ONLY=0
+ListenWithIPv6Fallback(app, port, startupStart)
+// Falls back to IPv4 if IPv6 not available
+```
+
+#### Frontend IPv6 Configuration
+The frontend supports both IPv4 and IPv6 with smart auto-detection:
+
+**Development (Vite dev server)**:
+- Binds to `::` by default (dual-stack IPv4+IPv6)
+- Proxy auto-detects backend from `VITE_DEV_BACKEND_HOST`
+- Supports `localhost`, `127.0.0.1`, `::1`, or custom hosts
+
+**Production Build**:
+- Auto-detects from browser's `window.location`
+- Falls back to environment variables (`VITE_API_URL`, `VITE_WS_URL`)
+- Supports both IPv4 and IPv6 URLs with automatic bracket wrapping
+
+**Implementation**: `frontend/src/utils/network.ts`
+```typescript
+// Auto-detects and normalizes IPv6 addresses
+resolveApiBaseUrl()  // Returns http://localhost:8080 or http://[::1]:8080
+resolveWsBaseUrl()   // Returns ws://localhost:8080 or ws://[::1]:8080
+```
+
+### Testing IPv6 Connectivity
+
+#### Quick Verification
+```bash
+# Run the IPv6 integration test suite
+bash scripts/test-ipv6.sh
+
+# Check network configuration
+bash scripts/verify-network.sh
+```
+
+#### Manual Testing
+
+**Backend IPv6 binding**:
+```bash
+cd backend && go run main.go
+# Should see: "✅ [IPv6] Successfully bound to [::]:8080"
+# or: "✅ [IPv4] Successfully bound to 0.0.0.0:8080" (fallback)
+
+# Test IPv4 connection
+curl http://127.0.0.1:8080/api/v1/health
+
+# Test IPv6 connection
+curl http://[::1]:8080/api/v1/health
+```
+
+**Frontend development server**:
+```bash
+cd frontend && pnpm run dev
+# Vite binds to :: (dual-stack) by default
+
+# Access via IPv4
+# Browser: http://localhost:3000
+
+# Access via IPv6
+# Browser: http://[::1]:3000
+```
+
+**WebSocket testing**:
+```bash
+# IPv4 WebSocket
+wscat -c ws://localhost:8080/ws
+
+# IPv6 WebSocket
+wscat -c ws://[::1]:8080/ws
+```
+
+### Environment Configuration
+
+See `.env.example` for comprehensive IPv4/IPv6 configuration examples:
+
+```bash
+# Auto-detect (recommended for most cases)
+# VITE_API_URL=
+# VITE_WS_URL=
+
+# IPv4 explicit
+VITE_API_URL=http://localhost:8080
+VITE_WS_URL=ws://localhost:8080
+
+# IPv6 explicit (for IPv6-only networks)
+# VITE_API_URL=http://[::1]:8080
+# VITE_WS_URL=ws://[::1]:8080
+
+# Dev server dual-stack binding
+VITE_DEV_HOST=::  # Recommended: accepts both IPv4 and IPv6
+```
+
+### Common IPv6 Issues & Solutions
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| "Connection refused" on IPv6 | System doesn't have IPv6 enabled | Backend automatically falls back to IPv4 |
+| WebSocket fails on IPv6 | Browser doesn't support IPv6 | Set `VITE_API_URL` and `VITE_WS_URL` to IPv4 addresses |
+| Docker containers can't communicate | Docker's default bridge is IPv4-only | Use service names (`postgres`, `redis`, `backend`) not IP addresses |
+| Frontend can't reach backend | Mixed IPv4/IPv6 environment | Set explicit `VITE_API_URL` in `.env` |
+| CORS errors with IPv6 | Missing IPv6 origins in CORS | Add `http://[::1]:3000` to `CORS_ORIGINS` |
+
+### Docker Compose IPv6 Support
+
+Docker Compose can be configured for dual-stack networking:
+
+```yaml
+networks:
+  default:
+    enable_ipv6: true
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+        - subnet: fd00:dead:beef::/48
+```
+
+**Note**: IPv6 in Docker is optional for local development. Service name resolution works on both IPv4 and IPv6.
+
+### Trusted Proxies Configuration
+
+The backend trusts the following proxy IP ranges (configured in `backend/server/app.go`):
+
+**IPv4 Private Ranges**:
+- `10.0.0.0/8` - Class A private
+- `172.16.0.0/12` - Class B private
+- `192.168.0.0/16` - Class C private
+- `127.0.0.1` - Localhost
+
+**IPv6 Ranges**:
+- `fd00::/8` - Unique Local Addresses (Railway private network)
+- `::1` - IPv6 localhost
+
+This ensures proper client IP detection when behind proxies like Cloudflare, NGINX, or Railway's internal routing.
+
+---
+
 ## Railway IPv6 Private Network Support
 
 ### Current Railway Configuration
@@ -221,7 +373,7 @@ LeafLock is **fully compatible** with Railway's IPv6-only private network archit
 - Frontend Private: `leaflock-frontend.railway.internal`
 
 ### IPv6 Compatibility Status
-✅ **Backend**: Implements `listenWithIPv6Fallback()` that binds to `[::]:{port}` (IPv6) first
+✅ **Backend**: Implements `ListenWithIPv6Fallback()` that binds to `[::]:{port}` (IPv6) first
 ✅ **Frontend**: Auto-detects Railway service discovery with IPv6 address normalization
 ✅ **Network**: Supports Railway's IPv6-only private mesh network via WireGuard
 
@@ -238,7 +390,6 @@ VITE_API_URL=https://leaflock-backend-production.up.railway.app
 ```
 
 ### Verification
-- Use `./test-railway-ipv6.sh` to test IPv6 private network communication
+- Use `bash scripts/test-ipv6.sh` to test IPv6 connectivity
 - Check logs for `🌐 HTTP server starting on [::]:8080` (IPv6 binding success)
-- See `RAILWAY_IPV6_VERIFICATION.md` for complete verification guide
 - Frontend service discovery automatically handles Railway's internal hostnames
