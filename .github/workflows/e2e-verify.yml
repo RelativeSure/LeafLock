@@ -178,6 +178,27 @@ jobs:
             sleep 2
           done
 
+      - name: Test IPv6 Support
+        run: |
+          echo "Testing IPv6 dual-stack support..."
+
+          # Test backend IPv4
+          echo "Testing backend on IPv4 (127.0.0.1)..."
+          if curl -fsS http://127.0.0.1:8080/api/v1/health/live 2>&1 | grep -q "live"; then
+            echo "✅ Backend IPv4 works"
+          else
+            echo "❌ Backend IPv4 failed"
+            exit 1
+          fi
+
+          # Test backend IPv6 (optional - may not be available in CI)
+          echo "Testing backend on IPv6 ([::1])..."
+          if curl -fsS "http://[::1]:8080/api/v1/health/live" 2>/dev/null | grep -q "live"; then
+            echo "✅ Backend IPv6 works"
+          else
+            echo "⚠️  Backend IPv6 not available in CI (expected on IPv4-only systems)"
+          fi
+
           echo "🔍 Final connectivity check..."
           echo "Backend health: $(curl -s http://localhost:8080/api/v1/health || echo 'FAILED')"
           echo "Frontend status: $(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/ || echo 'FAILED')"
