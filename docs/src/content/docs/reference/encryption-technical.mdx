@@ -1,0 +1,280 @@
+---
+title: Encryption Architecture
+description: Technical specification of LeafLock's end-to-end encryption and zero-knowledge architecture
+---
+
+## Encryption Overview
+
+LeafLock implements **zero-knowledge end-to-end encryption** where all note content is encrypted client-side before transmission. The server never has access to plaintext data or encryption keys.
+
+### Algorithms Used
+
+| Component | Algorithm | Parameters |
+|-----------|-----------|------------|
+| Client-side encryption | XChaCha20-Poly1305 | Via libsodium `crypto_secretbox_easy` |
+| Password hashing | Argon2id | Memory: 64MB, Iterations: 3, Parallelism: 4, Salt: 16 bytes, Output: 32 bytes |
+| Server-side encryption | ChaCha20-Poly1305 | Via Go `golang.org/x/crypto/chacha20poly1305` |
+| Email hashing | SHA-256 | For unique constraints and lookups |
+| Nonce generation | Web Crypto API | `crypto.getRandomValues()` for 24-byte nonces |
+
+## Client-Side Encryption (XChaCha20-Poly1305)
+
+### Implementation Location
+
+`frontend/src/App.tsx` - `CryptoService` class
+
+### Encryption Workflow
+
+```typescript
+// 1. Generate nonce (24 bytes for XChaCha20)
+const nonce = new Uint8Array(sodium.crypto_secretbox_NONCEBYTES) // 24 bytes
+crypto.getRandomValues(nonce)
+
+// 2. Convert plaintext to bytes
+const messageBytes = sodium.from_string(plaintext)
+
+// 3. Encrypt with XChaCha20-Poly1305
+const ciphertext = sodium.crypto_secretbox_easy(messageBytes, nonce, masterKey)
+
+// 4. Combine nonce + ciphertext
+const combined = new Uint8Array(nonce.length + ciphertext.length)
+combined.set(nonce)
+combined.set(ciphertext, nonce.length)
+
+// 5. Base64 encode for transmission
+const encryptedData = sodium.to_base64(combined, sodium.base64_variants.ORIGINAL)
+```
+
+### Decryption Workflow
+
+```typescript
+// 1. Decode base64
+const combined = sodium.from_base64(encryptedData, sodium.base64_variants.ORIGINAL)
+
+// 2. Extract nonce (first 24 bytes) and ciphertext (remaining bytes)
+const nonce = combined.slice(0, sodium.crypto_secretbox_NONCEBYTES)
+const ciphertext = combined.slice(sodium.crypto_secretbox_NONCEBYTES)
+
+// 3. Decrypt with XChaCha20-Poly1305
+const decrypted = sodium.crypto_secretbox_open_easy(ciphertext, nonce, masterKey)
+
+// 4. Convert bytes back to string
+return sodium.to_string(decrypted)
+```
+
+### Key Properties
+
+- **Nonce**: 24 bytes (192 bits), unique per encryption operation
+- **Key**: 32 bytes (256 bits), derived from user password
+- **Authentication**: Built-in AEAD with Poly1305 MAC
+- **Format**: `[24-byte nonce][variable-length ciphertext]` → Base64 encoded
+
+## Password-Based Key Derivation
+
+### Backend: Argon2id Password Hashing
+
+**Location**: `backend/crypto/password.go`
+
+```go
+// Password hash parameters
+hash := argon2.IDKey(
+    []byte(password),
+    salt,              // 16 bytes
+    3,                 // iterations (time cost)
+    64*1024,           // memory cost (64MB = 65536 KB)
+    4,                 // parallelism (4 threads)
+    32,                // hash length (32 bytes)
+)
+```
+
+**Encoded Format**: `$argon2id$v=19$m=65536,t=3,p=4$<base64-salt>$<base64-hash>`
+
+**Verification**: Uses `crypto/subtle.ConstantTimeCompare` to prevent timing attacks.
+
+### Frontend: Master Key Derivation
+
+The client derives the master encryption key from the user's password using the same Argon2id parameters. This derived key is used for all note encryption/decryption operations.
+
+**Critical**: The master key never leaves the client. It exists only in browser memory during the session.
+
+## Zero-Knowledge Architecture
+
+### Data Flow
+
+```
+User Password → Argon2id → Master Key (32 bytes) → XChaCha20-Poly1305 Encryption
+                                                             ↓
+                                    Base64 Encrypted Data → Server Storage
+```
+
+**Server stores**:
+- Encrypted note content (base64 encoded)
+- Password hash (Argon2id)
+- Encrypted metadata (titles, filenames)
+- Email hash (SHA-256 for uniqueness)
+
+**Server never sees**:
+- Plaintext passwords (only receives hashes)
+- Encryption keys
+- Decrypted note content
+- Plaintext email addresses (stored encrypted)
+
+### Encryption Boundaries
+
+| Data Type | Encrypted Where | Key Used | Algorithm |
+|-----------|----------------|----------|-----------|
+| Note title | Client | Master key | XChaCha20-Poly1305 |
+| Note content | Client | Master key | XChaCha20-Poly1305 |
+| Folder names | Client | Master key | XChaCha20-Poly1305 |
+| Tag names | Client | Master key | XChaCha20-Poly1305 |
+| Attachments | Client | Master key | XChaCha20-Poly1305 |
+| Email address | Server | Server key | ChaCha20-Poly1305 |
+| Session data | Server | Server key | ChaCha20-Poly1305 |
+| Audit log IPs | Server | Server key | ChaCha20-Poly1305 |
+
+## Server-Side Encryption
+
+**Location**: Backend uses `SERVER_ENCRYPTION_KEY` environment variable (32 characters = 256 bits)
+
+**Purpose**: Encrypts metadata that must be stored but shouldn't be plaintext:
+- Email addresses (for GDPR compliance)
+- Session metadata (IP addresses, user agents)
+- Audit log details
+
+**Implementation**: `golang.org/x/crypto/chacha20poly1305`
+
+**Key Difference**: Server-side encryption is **not** zero-knowledge. The server has the key. This is only for at-rest encryption.
+
+## Database Storage
+
+### Users Table Encryption
+
+```sql
+CREATE TABLE users (
+    id UUID PRIMARY KEY,
+    email_hash BYTEA UNIQUE NOT NULL,              -- SHA-256 hash
+    email_encrypted BYTEA NOT NULL,                -- ChaCha20-Poly1305 encrypted
+    email_search_hash BYTEA UNIQUE,                -- For login lookups
+    password_hash TEXT NOT NULL,                   -- Argon2id hash
+    salt BYTEA NOT NULL,                           -- 16 bytes for Argon2id
+    master_key_encrypted BYTEA NOT NULL,           -- User's master key (future feature)
+    private_key_encrypted BYTEA,                   -- For sharing (future feature)
+    mfa_secret_encrypted BYTEA,                    -- TOTP secret
+    ...
+);
+```
+
+### Notes Table Encryption
+
+```sql
+CREATE TABLE notes (
+    id UUID PRIMARY KEY,
+    workspace_id UUID,
+    title_encrypted BYTEA NOT NULL,                -- XChaCha20-Poly1305 via client
+    content_encrypted BYTEA NOT NULL,              -- XChaCha20-Poly1305 via client
+    content_hash BYTEA NOT NULL,                   -- Integrity verification
+    ...
+);
+```
+
+### Workspace Key Encryption
+
+```sql
+CREATE TABLE workspaces (
+    id UUID PRIMARY KEY,
+    name_encrypted BYTEA NOT NULL,
+    encryption_key_encrypted BYTEA NOT NULL,       -- Workspace key encrypted with owner's key
+    ...
+);
+```
+
+Each workspace has its own encryption key, encrypted with the owner's master key.
+
+## JWT Token Security
+
+### Token Storage
+
+**Access Token**: Stored in memory only (React state)
+**Refresh Token**: Not yet implemented (future enhancement)
+
+### Token Validation
+
+1. Client sends JWT in `Authorization: Bearer <token>` header
+2. Backend validates JWT signature with `JWT_SECRET`
+3. Backend checks Redis session exists and is not expired
+4. Session data includes: user_id, IP address (encrypted), user agent (encrypted)
+
+**Session Key Format**: `session:<sha256-token-hash>`
+
+**Token Expiration**: Configurable via environment (default: 24 hours)
+
+## Nonce Generation Strategy
+
+### Why Web Crypto API?
+
+libsodium's `randombytes_buf()` can have timing issues during concurrent operations. LeafLock uses browser's native `crypto.getRandomValues()` for nonce generation.
+
+```typescript
+const nonce = new Uint8Array(sodium.crypto_secretbox_NONCEBYTES)
+crypto.getRandomValues(nonce)
+```
+
+**Properties**:
+- Cryptographically secure random number generator
+- Non-blocking
+- No timing issues
+- 24 bytes for XChaCha20-Poly1305
+
+## Security Considerations
+
+### What This Architecture Prevents
+
+- **Server compromise**: Attacker cannot read notes without user passwords
+- **Database dump**: All note content is encrypted, useless without keys
+- **Man-in-the-middle**: Encryption happens before TLS, adds defense in depth
+- **Timing attacks**: Password verification uses constant-time comparison
+
+### What This Architecture Does NOT Prevent
+
+- **Client-side attacks**: XSS, malicious browser extensions can steal keys from memory
+- **Weak passwords**: Argon2id is strong but cannot protect against simple passwords
+- **Phishing**: Users entering passwords on fake sites
+- **Compromised endpoints**: If server serves malicious JavaScript, encryption is compromised
+
+### Recommendations
+
+1. **Use HTTPS**: Required to protect encrypted data in transit
+2. **Strong passwords**: Minimum 12 characters enforced, recommend 20+
+3. **Enable MFA**: Additional layer even if password is compromised
+4. **Regular key rotation**: Planned feature for key_rotations table
+5. **Content Security Policy**: Prevent XSS attacks
+
+## Implementation Files Reference
+
+| Component | File Path | Key Functions |
+|-----------|-----------|---------------|
+| Client encryption | `frontend/src/App.tsx` | `CryptoService.encryptData()`, `CryptoService.decryptData()` |
+| Password hashing | `backend/crypto/password.go` | `HashPassword()`, `VerifyPassword()` |
+| Server encryption | `backend/crypto/crypto.go` | `Encrypt()`, `Decrypt()` (ChaCha20-Poly1305) |
+| Database schema | `backend/database/schema.go` | Complete schema with encrypted columns |
+| Auth handlers | `backend/handlers/auth.go` | JWT generation, session management |
+
+## Performance Characteristics
+
+### Encryption Speed
+
+- **XChaCha20-Poly1305**: ~1-2ms for typical note (1-10KB)
+- **Argon2id hashing**: ~100-200ms (intentionally slow for security)
+- **Nonce generation**: <1ms
+
+### Memory Usage
+
+- **Argon2id**: 64MB per hash operation
+- **Master key**: 32 bytes in memory
+- **Nonce**: 24 bytes per encryption
+
+### Scalability
+
+- Client-side encryption offloads work from server
+- Server only stores opaque encrypted blobs
+- No server-side decryption overhead

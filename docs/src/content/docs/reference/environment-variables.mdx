@@ -1,0 +1,462 @@
+---
+title: Environment Variables
+description: Complete reference for all LeafLock environment variables
+---
+
+## Backend Environment Variables
+
+### Database Configuration
+
+#### DATABASE_URL
+**Required**: Yes
+**Format**: PostgreSQL connection string
+**Example**: `postgres://user:password@host:5432/database?sslmode=require`
+**Description**: Full PostgreSQL connection URL with credentials.
+
+---
+
+#### POSTGRES_PASSWORD
+**Required**: Yes (for Docker Compose)
+**Type**: String
+**Example**: `SecurePostgresPassword123!`
+**Description**: PostgreSQL superuser password. Used by Docker Compose to initialize database.
+
+---
+
+### Redis Configuration
+
+#### REDIS_URL
+**Required**: Yes
+**Format**: Redis connection string
+**Example**: `redis://localhost:6379` or `redis://user:password@host:6379/0`
+**Description**: Redis connection URL for session storage and caching.
+
+---
+
+#### REDIS_PASSWORD
+**Required**: No (Yes for production)
+**Type**: String
+**Example**: `SecureRedisPassword123!`
+**Description**: Redis authentication password. Required if Redis is password-protected.
+
+---
+
+### Security & Authentication
+
+#### JWT_SECRET
+**Required**: Yes
+**Type**: String (minimum 64 characters recommended)
+**Example**: `dev-super-secret-jwt-key-change-me-please-64-characters-long!!!!`
+**Description**: Secret key for signing JWT tokens. Must be cryptographically random in production.
+**Generation**: `openssl rand -base64 64`
+
+---
+
+#### SERVER_ENCRYPTION_KEY
+**Required**: Yes
+**Type**: String (exactly 32 characters)
+**Example**: `c9f7IloUZlY6qSdB5KTNLJHdKEJaDbOt`
+**Description**: Server-side encryption key for email addresses, session data, and audit logs. Uses ChaCha20-Poly1305.
+**Generation**: `openssl rand -base64 24`
+
+---
+
+#### CORS_ORIGINS
+**Required**: Yes
+**Type**: Comma-separated list of URLs
+**Example**: `http://localhost:3000,https://app.example.com`
+**Description**: Allowed frontend origins for CORS. Include both development and production URLs.
+**IPv6 Support**: Include IPv6 origins if needed: `http://localhost:3000,http://[::1]:3000`
+
+---
+
+### Admin User Configuration
+
+#### ENABLE_DEFAULT_ADMIN
+**Required**: No
+**Type**: Boolean (`true` or `false`)
+**Default**: `false`
+**Example**: `true`
+**Description**: Enable automatic creation of default admin user on first startup.
+
+---
+
+#### DEFAULT_ADMIN_EMAIL
+**Required**: Only if `ENABLE_DEFAULT_ADMIN=true`
+**Type**: Email address
+**Default**: `admin@leaflock.app`
+**Example**: `admin@mycompany.com`
+**Description**: Email address for the default admin account.
+
+---
+
+#### DEFAULT_ADMIN_PASSWORD
+**Required**: Only if `ENABLE_DEFAULT_ADMIN=true`
+**Type**: String (minimum 12 characters)
+**Example**: `#wmR8xWxZ&#JHZPd8HTYmafctWSe0N*jgPG%bYS@`
+**Description**: Password for default admin account. Supports all special characters.
+**Validation**: Must contain uppercase, lowercase, digit, and special character.
+
+---
+
+### Registration & Rate Limiting
+
+#### ENABLE_REGISTRATION
+**Required**: No
+**Type**: Boolean (`true` or `false`)
+**Default**: `false`
+**Example**: `true`
+**Description**: Enable public user registration. Set to `false` for invite-only deployments.
+**Security Note**: Can be toggled at runtime via database `app_settings` table.
+
+---
+
+#### ENABLE_REGISTRATION_RATE_LIMIT
+**Required**: No
+**Type**: Boolean (`true` or `false`)
+**Default**: `false`
+**Example**: `true`
+**Description**: Enable rate limiting on registration endpoint to prevent abuse.
+
+---
+
+### Performance & Optimization
+
+#### SKIP_MIGRATION_CHECK
+**Required**: No
+**Type**: Boolean (`true` or `false`)
+**Default**: `false`
+**Example**: `false`
+**Description**: Skip database migration checks on startup (NOT recommended).
+**Use Case**: Only for debugging. Always run migrations in production.
+
+---
+
+#### ENABLE_METRICS
+**Required**: No
+**Type**: Boolean (`true` or `false`)
+**Default**: `false`
+**Example**: `true`
+**Description**: Enable Prometheus metrics endpoint at `/metrics`.
+
+---
+
+#### TRUST_PROXY_HEADERS
+**Required**: No
+**Type**: Boolean (`true` or `false`)
+**Default**: `true`
+**Example**: `true`
+**Description**: Trust `X-Forwarded-For` headers from reverse proxies (Cloudflare, NGINX, Railway).
+
+---
+
+### Application Configuration
+
+#### APP_ENV
+**Required**: No
+**Type**: String (`development` or `production`)
+**Default**: `development`
+**Example**: `production`
+**Description**: Application environment. Affects HSTS headers, CSP policy, and logging verbosity.
+
+---
+
+#### PORT
+**Required**: No
+**Type**: Integer
+**Default**: `8080`
+**Example**: `8080`
+**Description**: Backend HTTP server port.
+
+---
+
+## Frontend Environment Variables
+
+All frontend variables must be prefixed with `VITE_` to be exposed to the browser.
+
+### API Configuration
+
+#### VITE_API_URL
+**Required**: No (auto-detects)
+**Type**: URL
+**Example**: `http://localhost:8080` or `https://api.example.com`
+**Description**: Backend API base URL. Leave unset for auto-detection from browser location.
+**IPv6 Support**: `http://[::1]:8080` for IPv6 localhost.
+
+---
+
+#### VITE_WS_URL
+**Required**: No (auto-detects)
+**Type**: WebSocket URL
+**Example**: `ws://localhost:8080` or `wss://api.example.com`
+**Description**: WebSocket endpoint for real-time collaboration. Leave unset for auto-detection.
+**IPv6 Support**: `ws://[::1]:8080` for IPv6 localhost.
+
+---
+
+### Development Server Configuration
+
+#### VITE_DEV_HOST
+**Required**: No
+**Type**: IP address or hostname
+**Default**: `::`  (dual-stack IPv4+IPv6)
+**Example**: `::`  (recommended), `0.0.0.0` (IPv4 only), `::1` (IPv6 only)
+**Description**: Vite dev server binding address.
+
+---
+
+#### VITE_DEV_PORT
+**Required**: No
+**Type**: Integer
+**Default**: `3000`
+**Example**: `3000`
+**Description**: Vite dev server port.
+
+---
+
+#### VITE_DEV_BACKEND_HOST
+**Required**: No
+**Type**: Hostname or IP
+**Default**: `localhost`
+**Example**: `localhost`, `::1`, `127.0.0.1`
+**Description**: Backend hostname for Vite dev server proxy.
+
+---
+
+#### VITE_DEV_BACKEND_PORT
+**Required**: No
+**Type**: Integer
+**Default**: `8080`
+**Example**: `8080`
+**Description**: Backend port for Vite dev server proxy.
+
+---
+
+#### VITE_DEV_BACKEND_PROTOCOL
+**Required**: No
+**Type**: String (`http` or `https`)
+**Default**: `http`
+**Example**: `http`
+**Description**: Backend protocol for Vite dev server proxy.
+
+---
+
+## Docker Compose Variables
+
+### Container Configuration
+
+#### COMPOSE_PROJECT_NAME
+**Required**: No
+**Type**: String
+**Default**: `leaflock`
+**Example**: `leaflock-prod`
+**Description**: Docker Compose project name prefix for containers and networks.
+
+---
+
+## Deployment-Specific Variables
+
+### Railway
+
+#### RAILWAY_STATIC_URL
+**Required**: No (set by Railway)
+**Type**: URL
+**Example**: `https://leaflock-production.up.railway.app`
+**Description**: Public URL assigned by Railway. Automatically set.
+
+---
+
+#### BACKEND_INTERNAL_URL
+**Required**: Yes (Railway private network)
+**Type**: URL
+**Example**: `http://backend.railway.internal:8080`
+**Description**: Internal service URL for Railway's IPv6 private mesh network.
+
+---
+
+### Kubernetes
+
+#### K8S_NAMESPACE
+**Required**: No
+**Type**: String
+**Default**: `default`
+**Example**: `leaflock-production`
+**Description**: Kubernetes namespace for deployment.
+
+---
+
+## Complete .env.example for Local Development
+
+```bash
+# Database
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/leaflock?sslmode=disable
+POSTGRES_PASSWORD=postgres
+
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# Security (CHANGE IN PRODUCTION!)
+JWT_SECRET=dev-super-secret-jwt-key-change-me-please-64-characters-long!!!!
+SERVER_ENCRYPTION_KEY=c9f7IloUZlY6qSdB5KTNLJHdKEJaDbOt
+
+# CORS
+CORS_ORIGINS=http://localhost:3000
+
+# Admin user (optional)
+ENABLE_DEFAULT_ADMIN=true
+DEFAULT_ADMIN_EMAIL=admin@leaflock.local
+DEFAULT_ADMIN_PASSWORD=ChangeThisAdminPassword123!
+
+# Registration
+ENABLE_REGISTRATION=true
+
+# Development
+APP_ENV=development
+ENABLE_METRICS=true
+
+# Frontend
+VITE_API_URL=http://localhost:8080
+VITE_WS_URL=ws://localhost:8080
+VITE_DEV_HOST=::
+VITE_DEV_PORT=3000
+VITE_DEV_BACKEND_HOST=localhost
+VITE_DEV_BACKEND_PORT=8080
+```
+
+---
+
+## Production .env Template
+
+```bash
+# Database (use strong password!)
+DATABASE_URL=postgres://leaflock:CHANGE_ME@db:5432/leaflock?sslmode=require
+POSTGRES_PASSWORD=CHANGE_ME_STRONG_PASSWORD
+
+# Redis (use strong password!)
+REDIS_URL=redis://:CHANGE_ME_REDIS_PASSWORD@redis:6379/0
+REDIS_PASSWORD=CHANGE_ME_REDIS_PASSWORD
+
+# Security (GENERATE NEW RANDOM VALUES!)
+JWT_SECRET=$(openssl rand -base64 64)
+SERVER_ENCRYPTION_KEY=$(openssl rand -base64 24)
+
+# CORS (your production domain)
+CORS_ORIGINS=https://leaflock.yourdomain.com,https://www.leaflock.yourdomain.com
+
+# Admin user
+ENABLE_DEFAULT_ADMIN=true
+DEFAULT_ADMIN_EMAIL=admin@yourdomain.com
+DEFAULT_ADMIN_PASSWORD=CHANGE_ME_SECURE_PASSWORD
+
+# Registration (disable for invite-only)
+ENABLE_REGISTRATION=false
+
+# Production settings
+APP_ENV=production
+TRUST_PROXY_HEADERS=true
+
+# Metrics (optional)
+ENABLE_METRICS=true
+
+# Frontend (auto-detect recommended, leave blank)
+# VITE_API_URL=
+# VITE_WS_URL=
+```
+
+---
+
+## Generating Secure Values
+
+### JWT Secret (64+ characters)
+```bash
+openssl rand -base64 64
+```
+
+### Server Encryption Key (32 characters)
+```bash
+openssl rand -base64 24
+```
+
+### PostgreSQL Password
+```bash
+openssl rand -base64 32
+```
+
+### Redis Password
+```bash
+openssl rand -base64 32
+```
+
+---
+
+## Environment Variable Priority
+
+1. **System environment variables** (highest priority)
+2. **`.env` file** in application root
+3. **Docker Compose `environment` section**
+4. **Kubernetes `ConfigMap` / `Secret`**
+5. **Application defaults** (lowest priority)
+
+---
+
+## Security Best Practices
+
+1. **Never commit `.env` files** to version control
+2. **Use different values** for dev/staging/production
+3. **Rotate secrets regularly** (quarterly recommended)
+4. **Use secret management** services (HashiCorp Vault, AWS Secrets Manager)
+5. **Limit access** to environment variables (RBAC, IAM policies)
+6. **Encrypt secrets** in CI/CD pipelines
+7. **Validate on startup** - LeafLock validates required variables on boot
+
+---
+
+## Troubleshooting
+
+### "Missing required environment variable"
+
+**Cause**: Required variable not set or empty.
+
+**Solution**: Check `.env` file exists and contains the variable. Verify Docker Compose `env_file` directive.
+
+---
+
+### "Invalid JWT Secret length"
+
+**Cause**: `JWT_SECRET` is too short.
+
+**Solution**: Generate a new 64+ character secret:
+```bash
+openssl rand -base64 64
+```
+
+---
+
+### "Server encryption key must be exactly 32 characters"
+
+**Cause**: `SERVER_ENCRYPTION_KEY` is not 32 bytes.
+
+**Solution**: Generate a new 32-character key:
+```bash
+openssl rand -base64 24
+```
+
+---
+
+### "CORS error: Origin not allowed"
+
+**Cause**: Frontend origin not in `CORS_ORIGINS`.
+
+**Solution**: Add frontend URL to comma-separated list:
+```bash
+CORS_ORIGINS=http://localhost:3000,https://app.example.com
+```
+
+---
+
+## Reference
+
+- **.env.example**: `/home/rasmus/repos/LeafLock/.env.example`
+- **Config loader**: `backend/config/config.go`
+- **Vite config**: `frontend/vite.config.ts`
+- **Docker Compose**: `docker-compose.yml`

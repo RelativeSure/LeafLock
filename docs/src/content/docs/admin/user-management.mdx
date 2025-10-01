@@ -1,411 +1,203 @@
 ---
 title: User Management
-description: Complete guide for managing users, permissions, and admin accounts in LeafLock with practical examples and troubleshooting.
+description: Technical procedures for provisioning admins and operating accounts in LeafLock.
+sidebar:
+  order: 1
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
-import { Card, CardGrid } from '@astrojs/starlight/components';
-import { Badge } from '@astrojs/starlight/components';
+import { Aside, Card, CardGrid, Code } from '@astrojs/starlight/components';
 
-This guide covers everything you need to know about managing users in LeafLock, from setting up admin accounts to troubleshooting user issues.
+## Overview
+LeafLock operates under a zero-knowledge model: administrators only see metadata such as emails, timestamps, and security signals. This guide documents the sanctioned flows for elevating operators, enforcing access policy, and running maintenance without violating encryption guarantees.
 
-## Default Admin Account
+## Bootstrap an Admin Account
 
-### Quick Setup
+<CardGrid columns={3}>
+  <Card title="Identify User" icon="search">
+    Retrieve the UUID after the user signs in. Decode the JWT stored in `secure_token`:
 
-LeafLock automatically creates an admin account when starting up with an empty database. This makes initial setup simple and secure.
+    <Code
+      code={`const token = localStorage.getItem('secure_token');
+const payload = JSON.parse(atob(token.split('.')[1]));
+console.log(payload.user_id);`}
+      language="javascript"
+    />
 
-<Card title="🔧 Auto-Admin Creation" icon="setting">
-**When it happens:**
-- ✅ Application starts up
-- ✅ Database is empty (no existing users)
-- ✅ `ENABLE_DEFAULT_ADMIN=true` (default setting)
-
-**What you get:**
-- Fully configured admin account
-- Secure default permissions
-- Ready to use immediately
-</Card>
-
-### Environment Configuration
-
-<Tabs>
-  <TabItem label="Basic Setup">
-    ```bash
-    # Enable automatic admin creation
-    ENABLE_DEFAULT_ADMIN=true
-
-    # Admin login credentials
-    DEFAULT_ADMIN_EMAIL=admin@leaflock.app
-    DEFAULT_ADMIN_PASSWORD=YourSecurePassword123!
-    ```
-  </TabItem>
-  <TabItem label="Production Security">
-    ```bash
-    # Use strong passwords with special characters
-    DEFAULT_ADMIN_PASSWORD=#wmR8xWxZ&#JHZPd8HTYmafctWSe0N*jgPG%bYS@
-
-    # Consider your actual domain
-    DEFAULT_ADMIN_EMAIL=admin@yourdomain.com
-
-    # Optional: Disable after first setup
-    ENABLE_DEFAULT_ADMIN=false
-    ```
-  </TabItem>
-</Tabs>
-
-:::caution[Security First Steps]
-**🚨 CRITICAL**: Change the default password immediately after first login!
-
-1. Login with default credentials
-2. Go to **Settings** → **Change Password**
-3. Use a strong, unique password
-4. Consider enabling MFA for extra security
-:::
-
-## User Operations
-
-### Viewing Users
-
-<Tabs>
-  <TabItem label="Database Query">
-    ```sql
-    -- Quick user overview
-    SELECT
-        id,
-        email_search_hash,
-        is_admin,
-        mfa_enabled,
-        failed_attempts,
-        locked_until,
-        created_at,
-        last_login
-    FROM users
-    ORDER BY created_at DESC;
-    ```
-  </TabItem>
-  <TabItem label="API Endpoint">
-    ```bash
-    # List all users (admin required)
-    curl -X GET http://localhost:8080/api/v1/admin/users \
-      -H "Authorization: Bearer your-admin-jwt-token"
-    ```
-  </TabItem>
-  <TabItem label="Database Access">
-    ```bash
-    # Connect to database
-    docker compose exec postgres psql -U postgres -d notes
-
-    # Or with Podman
-    podman exec -it leaflock-postgres psql -U postgres -d notes
-    ```
-  </TabItem>
-</Tabs>
-
-### User Statistics
-
-<CardGrid>
-  <Card title="📊 User Counts" icon="document">
-    ```sql
-    -- Total users
-    SELECT COUNT(*) as total_users FROM users;
-
-    -- Admin users
-    SELECT COUNT(*) as admin_users
-    FROM users WHERE is_admin = true;
-
-    -- Locked accounts
-    SELECT COUNT(*) as locked_accounts
-    FROM users WHERE locked_until > NOW();
-    ```
+    Alternative: read `current_user_id` from Local Storage.
   </Card>
-  <Card title="💾 Storage Usage" icon="laptop">
-    ```sql
-    -- Storage by user
-    SELECT
-        id,
-        storage_used,
-        storage_limit,
-        ROUND((storage_used::float / storage_limit * 100), 2) as usage_percent
-    FROM users
-    WHERE storage_used > 0
-    ORDER BY usage_percent DESC;
-    ```
+  <Card title="Allowlist UUID" icon="shield">
+    Supply the UUID via environment variable and restart the backend stack.
+
+    <Code code={`ADMIN_USER_IDS=1c0fe4f0-9d41-41cc-8806-b5e8f6a2ad71`} language="env" />
+
+    Comma-separate multiple bootstrap admins.
+  </Card>
+  <Card title="Persist Role" icon="approve-check">
+    Promote the user permanently with the API (`PATCH /api/v1/admin/users/:id`) or SQL:
+
+    <Code
+      code={`UPDATE users
+SET is_admin = true
+WHERE id = '1c0fe4f0-9d41-41cc-8806-b5e8f6a2ad71';`}
+      language="sql"
+    />
+
+    `idx_users_is_admin` keeps this update O(log n). Remove access by setting `is_admin = false`.
   </Card>
 </CardGrid>
 
-## User Administration
+<Aside type="note" title="Zero-Knowledge Constraint">
+Admins never gain decryption keys; they can only manage metadata, quotas, and policy toggles.
+</Aside>
 
-### Managing Permissions
+## Admin Panel Configuration
 
-<Tabs>
-  <TabItem label="Promote to Admin">
-    ```sql
-    -- Make user an admin
-    UPDATE users
-    SET is_admin = true
-    WHERE id = 'user-uuid-here';
-    ```
+- Enable the UI by exporting `VITE_ENABLE_ADMIN_PANEL=true` before building the frontend (for local use: `export VITE_ENABLE_ADMIN_PANEL=true && make up`).
+- Sign in with an admin account and select the shield icon to open the panel.
+- Panel functions map 1:1 to backend APIs:
+  - Toggle `is_admin` and assign RBAC roles (`moderator`, `auditor`).
+  - Unlock accounts and clear password-reset locks.
+  - Flip public registration (`app_settings.registration_enabled`).
+  - Review authentication telemetry (failed attempts, last login).
 
-    ```bash
-    # Via API
-    curl -X PATCH http://localhost:8080/api/v1/admin/users/user-id \
-      -H "Authorization: Bearer admin-token" \
-      -H "Content-Type: application/json" \
-      -d '{"is_admin": true}'
-    ```
-  </TabItem>
-  <TabItem label="Remove Admin">
-    ```sql
-    -- Remove admin privileges
-    UPDATE users
-    SET is_admin = false
-    WHERE id = 'user-uuid-here';
-    ```
-  </TabItem>
-  <TabItem label="MFA Management">
-    ```sql
-    -- Enable MFA
-    UPDATE users
-    SET mfa_enabled = true
-    WHERE id = 'user-uuid-here';
+JWT validation plus the `is_admin` column gate every request; the UI toggle is a convenience layer only.
 
-    -- Disable MFA (emergency)
-    UPDATE users
-    SET mfa_enabled = false,
-        mfa_secret_encrypted = NULL
-    WHERE id = 'user-uuid-here';
-    ```
-  </TabItem>
-</Tabs>
+## Database Operations Reference
+
+<CardGrid>
+  <Card title="Account Inventory" icon="list-format">
+    <Code
+      code={`SELECT
+    id,
+    email,
+    COALESCE(is_admin, false) AS is_admin,
+    mfa_enabled,
+    failed_attempts,
+    locked_until,
+    created_at,
+    last_login
+FROM users
+ORDER BY created_at DESC;`}
+      language="sql"
+    />
+  </Card>
+  <Card title="Admin Audit" icon="user">
+    <Code
+      code={`SELECT id, email, created_at, last_login
+FROM users
+WHERE is_admin = true;`}
+      language="sql"
+    />
+  </Card>
+  <Card title="Lockout Detection" icon="alert-triangle">
+    <Code
+      code={`SELECT id, email, failed_attempts, locked_until
+FROM users
+WHERE failed_attempts > 5;`}
+      language="sql"
+    />
+  </Card>
+</CardGrid>
 
 ### Account Recovery
 
-<Card title="🔓 Unlock Locked Accounts" icon="approve-check">
-**Single user:**
-```sql
-UPDATE users
+<Code
+  code={`UPDATE users
 SET failed_attempts = 0,
     locked_until = NULL
-WHERE id = 'user-uuid-here';
-```
+WHERE id = 'user-uuid';`}
+  language="sql"
+/>
 
-**All locked users:**
-```sql
+Demote an admin when access is no longer required:
+
+<Code
+  code={`UPDATE users
+SET is_admin = false
+WHERE id = 'user-uuid';`}
+  language="sql"
+/>
+
+### MFA Flags
+
+<Code
+  code={`UPDATE users
+SET mfa_enabled = true
+WHERE id = 'user-uuid';
+
 UPDATE users
-SET failed_attempts = 0,
-    locked_until = NULL
-WHERE locked_until IS NOT NULL;
-```
-</Card>
+SET mfa_enabled = false,
+    mfa_secret_encrypted = NULL
+WHERE id = 'user-uuid';`}
+  language="sql"
+/>
 
-### Storage Management
+### Storage and Usage Telemetry
 
-```sql
--- Update storage limit (10MB example)
-UPDATE users
-SET storage_limit = 10485760
-WHERE id = 'user-uuid-here';
-
--- Check users near storage limit
-SELECT id, email_search_hash,
-       storage_used, storage_limit,
-       ROUND((storage_used::float / storage_limit * 100), 1) as usage_percent
+<Code
+  code={`SELECT
+    id,
+    storage_used,
+    storage_limit,
+    ROUND(storage_used::numeric / storage_limit * 100, 1) AS usage_percent
 FROM users
-WHERE (storage_used::float / storage_limit) > 0.8
-ORDER BY usage_percent DESC;
-```
+WHERE storage_limit > 0
+ORDER BY usage_percent DESC;`}
+  language="sql"
+/>
 
-## User Registration
+<Code
+  code={`SELECT
+    u.email,
+    COUNT(n.id) AS note_count
+FROM users u
+LEFT JOIN workspaces w ON u.id = w.owner_id
+LEFT JOIN notes n ON w.id = n.workspace_id AND n.deleted_at IS NULL
+GROUP BY u.id, u.email
+ORDER BY note_count DESC;`}
+  language="sql"
+/>
 
-### API Registration
+Aggregate statistics for dashboards:
 
-<Card title="📝 New User Registration" icon="add-user">
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "newuser@example.com",
-    "password": "SecurePassword123!"
-  }'
-```
+<Code
+  code={`SELECT COUNT(*) AS total_users FROM users;
+SELECT COUNT(*) AS active_users FROM users WHERE last_login > NOW() - INTERVAL '30 days';
+SELECT COUNT(*) AS locked_accounts FROM users WHERE locked_until > NOW();`}
+  language="sql"
+/>
 
-**Requirements:**
-- Valid email format
-- Password: 8+ chars, mixed case, numbers, special chars
-- Unique email address
-- Registration enabled (`ENABLE_REGISTRATION=true` - defaults to `false` for security)
-</Card>
+## Registration Controls
 
-:::note[Database-Only User Creation]
-**Not Recommended**: Creating users directly in the database bypasses encryption setup and they won't be able to login. Always use the registration API or admin panel.
-:::
+Public registration is disabled by default. Enable it when you intend to accept new users via the API or admin panel:
 
-## Troubleshooting
+<Code code={`ENABLE_REGISTRATION=true`} language="env" />
 
-### Common Issues
+The panel writes the same value into `app_settings.registration_enabled`. During boot the backend seeds the column from the environment only when no record exists.
 
-<CardGrid>
-  <Card title="🚫 Cannot Login" icon="error">
-    **Check account status:**
-    ```sql
-    SELECT id, failed_attempts, locked_until, is_admin
-    FROM users
-    WHERE email_search_hash = encode(
-        sha256(lower('user@example.com')::bytea),
-        'hex'
-    )::bytea;
-    ```
+## Operational Boundaries
 
-    **Fix locked account:**
-    ```sql
-    UPDATE users
-    SET failed_attempts = 0, locked_until = NULL
-    WHERE id = 'user-id';
-    ```
+<CardGrid columns={3}>
+  <Card title="Encrypted Payloads" icon="lock">
+    Note contents remain unreadable to admins. Only metadata and audit signals are exposed.
   </Card>
-  <Card title="🔑 Lost Admin Access" icon="warning">
-    **Promote existing user:**
-    ```sql
-    UPDATE users
-    SET is_admin = true
-    WHERE id = 'trusted-user-id';
-    ```
+  <Card title="Reset Workflow" icon="workflow">
+    Run password resets through the standard flow to preserve encryption keys; never edit hashed columns manually.
+  </Card>
+  <Card title="Backups" icon="database">
+    Snapshot before destructive updates:
 
-    **Or create emergency admin:**
-    ```bash
-    # In .env file
-    ENABLE_DEFAULT_ADMIN=true
-    DEFAULT_ADMIN_EMAIL=recovery@yourdomain.com
-    DEFAULT_ADMIN_PASSWORD=TempRecovery123!
-
-    # Restart application
-    docker compose restart
-    ```
+    <Code
+      code={`pg_dump -h localhost -U postgres -d notes -t users > users_backup.sql`}
+      language="bash"
+    />
   </Card>
 </CardGrid>
 
-### Finding Users by Email
+## Maintenance Jobs
 
-Since emails are encrypted, you need to use the search hash:
+- Emergency unlock admins: `UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE is_admin = true;`
+- Purge soft-deleted notes after retention: `DELETE FROM notes WHERE deleted_at IS NOT NULL AND deleted_at < NOW() - INTERVAL '30 days';`
+- Stream auth logs (`component=auth`) into your SIEM to detect brute-force attempts.
 
-```sql
--- Find user by email (requires the actual email)
-SELECT id, is_admin, created_at, last_login
-FROM users
-WHERE email_search_hash = encode(
-    sha256(lower('user@example.com')::bytea),
-    'hex'
-)::bytea;
-```
-
-### Emergency Data Reset
-
-:::danger[Destructive Operation]
-**⚠️ DANGER**: This permanently deletes ALL user data!
-
-```sql
--- Clear all user data (IRREVERSIBLE!)
-TRUNCATE users CASCADE;
-```
-
-This will delete:
-- All user accounts
-- All notes and workspaces
-- All sessions and login history
-- All audit logs
-- All file attachments
-:::
-
-## Admin Panel Features
-
-### Available Functions
-
-<CardGrid>
-  <Card title="👥 User Management" icon="group">
-    - View all registered users
-    - Modify user permissions (admin/regular)
-    - Lock/unlock user accounts
-    - Reset password tokens
-    - Monitor user activity
-  </Card>
-  <Card title="⚙️ System Settings" icon="setting">
-    - Global application configuration
-    - User registration settings
-    - Security policy management
-    - System announcements
-  </Card>
-  <Card title="📋 Audit Logs" icon="list-format">
-    - User login attempts
-    - Permission changes
-    - Security events
-    - Data access patterns
-  </Card>
-</CardGrid>
-
-### Access Requirements
-
-- **Authentication**: Must be logged in
-- **Authorization**: `is_admin = true` in database
-- **Endpoints**: All admin functions at `/api/v1/admin/*`
-
-## Security Architecture
-
-### Encryption & Privacy
-
-<Card title="🔒 Zero-Knowledge Architecture" icon="lock">
-**User data protection:**
-- All emails encrypted at rest
-- Password hashing with Argon2id (64MB memory, 3 iterations)
-- User master keys encrypted with user passwords
-- Server never sees plaintext notes or sensitive data
-
-**Session security:**
-- JWT tokens with Redis-backed refresh rotation
-- Secure cookie settings (HttpOnly, Secure, SameSite)
-- Automatic session expiry and cleanup
-</Card>
-
-### Backup Considerations
-
-When backing up user data, ensure you preserve:
-
-- ✅ Database encryption keys
-- ✅ JWT signing secrets
-- ✅ User master keys (encrypted)
-- ✅ Server encryption keys
-- ✅ Redis session data (for active sessions)
-
-:::warning[Critical Backup Note]
-Without the proper encryption keys, backed up user data cannot be decrypted or restored. Keep encryption keys secure and separate from data backups.
-:::
-
-## Best Practices
-
-### Admin Account Security
-
-1. **Strong Authentication**
-   - Use complex passwords with special characters
-   - Enable MFA on all admin accounts
-   - Regularly rotate admin passwords
-
-2. **Access Control**
-   - Limit number of admin users
-   - Use principle of least privilege
-   - Monitor admin activity through audit logs
-
-3. **Operational Security**
-   - Keep admin credentials secure
-   - Use dedicated admin accounts (don't use for regular notes)
-   - Regularly review admin permissions
-
-### User Privacy
-
-- Never log or store plaintext passwords
-- Minimize data collection to essential fields only
-- Respect user deletion requests completely
-- Audit access to user data regularly
-
----
-
-*This guide covers the essential user management operations for LeafLock. For additional security features or enterprise deployment considerations, consult the deployment guides.*
+Refer to `/docs/reference/environment-variables` for the authoritative list of configuration toggles that impact administration.
