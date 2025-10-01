@@ -88,6 +88,246 @@ github.com/redis/go-redis/v9   // Redis client
 "libsodium-wrappers"       // Encryption library
 ```
 
+### UI Components & Icons
+
+<Card title="🎨 shadcn/ui + Radix UI" icon="seti:react">
+**Component Library:** shadcn/ui built on Radix UI primitives
+**Icon Library:** lucide-react v0.544.0 (official shadcn icons)
+**Location:** `frontend/src/components/ui/`
+**Styling:** Tailwind CSS with custom design tokens
+</Card>
+
+**Available Components:**
+```tsx
+// Import shadcn components from ui directory
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Dialog } from '@/components/ui/dialog'
+// ... and more: Input, Select, Switch, Table, Tooltip, Badge, Alert
+```
+
+**Icon Usage:**
+```tsx
+// Always use lucide-react for icons (already installed)
+import { Shield, Lock, Github, ExternalLink } from 'lucide-react'
+
+<Shield className="h-4 w-4" />  // Standard size
+<Lock className="h-5 w-5" />    // Larger
+```
+
+**Guidelines:**
+- Use existing shadcn components from `components/ui/`
+- All icons must be from `lucide-react` package
+- Follow Tailwind utility-first CSS patterns
+- Maintain accessibility with proper ARIA labels
+
+## Database Architecture
+
+### Automatic Schema Management
+
+<Card title="🗄️ Database Initialization" icon="seti:postgres">
+**Zero-Configuration Setup:**
+- Schema automatically created on first startup
+- Migrations run automatically on every startup
+- No manual database setup required
+- Full encryption and security built-in
+</Card>
+
+LeafLock uses PostgreSQL with **automatic schema initialization**. When the backend starts:
+
+1. **Connects to PostgreSQL** (via environment variables)
+2. **Creates all tables** if they don't exist (idempotent DDL)
+3. **Runs migrations** if schema changes detected
+4. **Seeds default data** (roles, admin user if enabled)
+5. **Ready to serve** - typically takes 2-5 seconds
+
+### Schema Location and Structure
+
+<Card title="📋 Schema Definition" icon="document">
+**File:** `backend/database/schema.go`
+**Contains:**
+- Complete table definitions (CREATE TABLE IF NOT EXISTS)
+- Indexes for performance optimization
+- Triggers for automatic timestamps
+- Functions for data cleanup
+- RBAC role seeding
+</Card>
+
+**Key Tables:**
+```sql
+users              -- User accounts with encrypted emails
+workspaces         -- User workspaces with encrypted names
+notes              -- Encrypted notes with version tracking
+note_versions      -- Historical versions of notes
+folders            -- Encrypted folder structure
+tags               -- Encrypted tags for organization
+collaborations     -- Note sharing and permissions
+attachments        -- Encrypted file attachments
+audit_log          -- Security and compliance logging
+roles              -- RBAC role definitions
+user_roles         -- User role assignments
+```
+
+### Migration System
+
+**How It Works:**
+- Uses `_migrations` table to track applied migrations
+- Runs idempotent SQL (CREATE IF NOT EXISTS, ALTER ADD COLUMN IF NOT EXISTS)
+- No down migrations - schema is additive
+- Automatic on every startup (configurable)
+
+**Migration Behavior:**
+<Tabs>
+  <TabItem label="Default (Recommended)">
+    ```bash
+    SKIP_MIGRATION_CHECK=false  # Runs migrations every startup
+    ```
+    - ✅ Always up-to-date schema
+    - ✅ Safe for development and production
+    - ✅ Adds ~1-2 seconds to startup
+  </TabItem>
+  <TabItem label="Skip (Advanced)">
+    ```bash
+    SKIP_MIGRATION_CHECK=true   # Skips migration check
+    ```
+    - ⚠️ Only for development when schema is known current
+    - ⚠️ Risk of data inconsistencies
+    - ⚠️ Not recommended for production
+  </TabItem>
+</Tabs>
+
+### Database Operations
+
+**Connection Management:**
+- Uses `pgx/v5` driver (high performance)
+- Connection pool automatically configured
+- Prepared statements for query optimization
+- Context-based timeouts
+
+**Startup Logs:**
+```
+🔧 Connecting to database...
+✅ Database connected successfully
+🔧 Running database migrations...
+⏱️  Database setup completed in 2.3s
+✅ Database migrations complete
+```
+
+### Environment Configuration
+
+**Required Variables:**
+```bash
+# Database connection (Docker service name or hostname)
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_DB=leaflock
+POSTGRES_USER=leaflock
+POSTGRES_PASSWORD=your_secure_password
+
+# Migration control (optional)
+SKIP_MIGRATION_CHECK=false  # false = run migrations (default)
+```
+
+**Docker Compose Behavior:**
+- PostgreSQL starts first (via `depends_on`)
+- Backend waits for PostgreSQL to be ready
+- Automatically creates database if it doesn't exist
+- Schema created on first connection
+
+### Encrypted Fields
+
+<Card title="🔐 Database Encryption" icon="seti:lock">
+**Zero-Knowledge Architecture:**
+- All sensitive data encrypted before storage
+- Server never sees plaintext content
+- Email addresses encrypted with deterministic encryption (for login)
+- Note content uses client-side XChaCha20-Poly1305
+- Workspace keys encrypted with user's master key
+</Card>
+
+**Encrypted Columns:**
+```go
+email_encrypted         // User emails (server-side)
+email_search_hash       // For login lookups (deterministic)
+master_key_encrypted    // User's master encryption key
+name_encrypted          // Workspace/folder/tag names
+content_encrypted       // Note content (client-side encrypted)
+title_encrypted         // Note titles
+```
+
+### Admin User Initialization
+
+On first startup with empty database:
+
+1. **Checks for existing users**
+2. **If none exist** and `ENABLE_DEFAULT_ADMIN=true`:
+   - Creates admin user with configured credentials
+   - Creates default workspace for admin
+   - Assigns admin role
+   - Logs credentials for first login
+3. **Takes ~3-5 seconds** during first boot
+
+See [Admin User Management](/admin/user-management) for details.
+
+### Database Maintenance
+
+**Automatic Operations:**
+- Old deleted notes cleaned up after 30 days
+- Audit log retention managed automatically
+- No manual vacuum or cleanup needed
+
+**Manual Operations:**
+```bash
+# Access database directly (Docker)
+docker compose exec postgres psql -U leaflock -d leaflock
+
+# Run manual query
+docker compose exec postgres psql -U leaflock -d leaflock -c "SELECT COUNT(*) FROM users;"
+
+# Backup database
+docker compose exec postgres pg_dump -U leaflock leaflock > backup.sql
+
+# Restore database
+cat backup.sql | docker compose exec -T postgres psql -U leaflock leaflock
+```
+
+See [Monitoring and Backups](/admin/monitoring-and-backups) for production operations.
+
+### Development Tips
+
+**Reset Database:**
+```bash
+# Stop containers
+docker compose down
+
+# Remove volumes (⚠️ DELETES ALL DATA)
+docker volume rm leaflock_postgres_data
+
+# Start fresh
+docker compose up -d
+```
+
+**View Schema:**
+```bash
+# Connect to PostgreSQL
+docker compose exec postgres psql -U leaflock -d leaflock
+
+# List all tables
+\dt
+
+# Describe table
+\d users
+
+# Exit
+\q
+```
+
+**Check Migration Status:**
+```bash
+# View applied migrations
+docker compose exec postgres psql -U leaflock -d leaflock -c "SELECT * FROM _migrations ORDER BY applied_at DESC;"
+```
+
 ## Development Commands
 
 ### Backend Development
