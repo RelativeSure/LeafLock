@@ -16,7 +16,7 @@ COPY . .
 
 RUN pnpm run build
 
-FROM caddy:2.8-alpine
+FROM caddy:2.10-alpine@sha256:a4180db0805b3725ddf936d2e6290553745c7339c003565da717ee612fd8a888
 
 RUN apk --no-cache add ca-certificates curl gettext bind-tools
 
