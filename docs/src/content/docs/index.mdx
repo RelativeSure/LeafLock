@@ -1,12 +1,12 @@
 ---
 title: LeafLock Documentation
-description: Comprehensive documentation for secure, end-to-end encrypted notes with zero-knowledge architecture
+description: Technical documentation for secure, end-to-end encrypted notes with zero-knowledge architecture
 template: splash
 hero:
-  tagline: Secure, encrypted notes with zero-knowledge architecture. Built for developers, by developers.
+  tagline: End-to-end encrypted notes with zero-knowledge architecture. Technical documentation for developers and operators.
   actions:
-    - text: Get Started
-      link: /guides/developer-guide/
+    - text: Technical Reference
+      link: /reference/encryption-technical/
       icon: right-arrow
       variant: primary
     - text: View on GitHub
@@ -16,41 +16,110 @@ hero:
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-## Quick Start
+## System Overview
 
-LeafLock is a secure notes application with end-to-end encryption, featuring a Go backend with Fiber framework and a React TypeScript frontend. The application uses PostgreSQL for data storage, Redis for session management, and implements zero-knowledge architecture where the server never sees plaintext data.
+**Stack**: Go 1.23 backend (Fiber), React 18 frontend (TypeScript, Vite), PostgreSQL 15, Redis 7
 
-### Key Features
+**Encryption**: XChaCha20-Poly1305 (client-side E2EE), Argon2id (64MB, 3 iterations, 4 parallelism)
 
-- **End-to-End Encryption**: All note content is encrypted client-side using XChaCha20-Poly1305
-- **Zero-Knowledge Architecture**: Server never sees plaintext data  
-- **Modern Tech Stack**: Go backend, React frontend, PostgreSQL database
-- **Production Ready**: Docker support, monitoring, and backup capabilities
+**Zero-Knowledge**: Server stores encrypted blobs only, no plaintext access to user data
 
-### Documentation Sections
+## Technical Reference
 
 <CardGrid stagger>
-  <Card title="Getting Started" icon="rocket">
-    Developer guides and setup instructions for getting LeafLock running locally or in production.
+  <Card title="Encryption Architecture" icon="approve-check">
+    XChaCha20-Poly1305 implementation, key derivation, zero-knowledge architecture details
+    [Read more →](/reference/encryption-technical/)
   </Card>
-  <Card title="Administration" icon="setting">
-    Complete guides for system administrators managing LeafLock instances and users.
+  <Card title="API Reference" icon="open-book">
+    REST API endpoints, WebSocket protocol, request/response schemas, authentication flow
+    [Read more →](/reference/api-reference/)
   </Card>
-  <Card title="Compliance & Legal" icon="document">
-    Privacy policies, GDPR compliance documentation, and legal information.
+  <Card title="Database Schema" icon="setting">
+    PostgreSQL tables, indexes, triggers, encryption columns, relationships
+    [Read more →](/reference/database-schema/)
+  </Card>
+  <Card title="Environment Variables" icon="puzzle">
+    Complete configuration reference, security settings, deployment parameters
+    [Read more →](/reference/environment-variables/)
   </Card>
 </CardGrid>
 
-### Technology Stack
+## Quick Start
 
-- **Backend**: Go 1.23+ with Fiber v2, PostgreSQL (pgx driver), Redis, JWT authentication
-- **Frontend**: React 18, TypeScript, Vite 5, Zustand (state management), TipTap (editor)
-- **Encryption**: XChaCha20-Poly1305 (client-side), Argon2id (password hashing)
-- **Infrastructure**: Docker/Podman, PostgreSQL 15, Redis 7
+```bash
+# Clone repository
+git clone https://github.com/RelativeSure/LeafLock
+cd LeafLock
 
-### Quick Links
+# Start with Docker Compose
+docker compose up -d
 
-- [Developer Guide](/guides/developer-guide/) - Technical setup and development
-- [Admin Guide](/admin/admin-guide/) - System administration
-- [Privacy Policy](/legal/privacy-policy/) - Data protection information
-- [GitHub Repository](https://github.com/RelativeSure/LeafLock) - Source code
+# Or with Podman
+make up
+
+# Access application
+open http://localhost:3000
+```
+
+**Default admin**: `admin@leaflock.app` / Configure via `DEFAULT_ADMIN_PASSWORD`
+
+## Features
+
+- Client-side encryption (XChaCha20-Poly1305, 256-bit keys)
+- Password hashing (Argon2id, 64MB memory)
+- JWT authentication with Redis session validation
+- Real-time WebSocket collaboration
+- Version history and soft-delete trash
+- Folder/tag organization
+- Template system
+- File attachments (encrypted in-database)
+- Searchable encryption (HMAC-based keyword index)
+- GDPR-compliant data handling
+
+## Deployment
+
+- **Docker/Podman**: `docker-compose.yml` with PostgreSQL, Redis, backend, frontend
+- **Kubernetes**: Helm charts in `helm/leaflock/`
+- **Railway**: IPv6 private network support
+- **Coolify**: Single-server deployment
+
+[View deployment guides →](/deployment/)
+
+## Architecture
+
+**Backend** (`backend/`):
+- `main.go` - HTTP server, routes
+- `handlers/` - API endpoints
+- `crypto/` - Argon2id password hashing
+- `database/` - PostgreSQL schema, migrations
+- `middleware/` - JWT validation, CORS, rate limiting
+
+**Frontend** (`frontend/src/`):
+- `App.tsx` - CryptoService (libsodium encryption)
+- `components/` - React UI components
+- `services/` - API clients
+
+**Database**:
+- Encrypted columns: `BYTEA` (ChaCha20-Poly1305 or XChaCha20-Poly1305)
+- Hashed columns: `BYTEA` (SHA-256) or `TEXT` (Argon2id)
+- Indexed for performance: partial indexes on active records
+
+## Security
+
+**Threat Model**: Zero-knowledge protects against server compromise and database dumps. Does not protect against client-side XSS or phishing.
+
+**Recommendations**:
+- HTTPS required
+- Strong passwords (12+ chars, complexity enforced)
+- MFA recommended
+- Regular key rotation (planned feature)
+- CSP headers configured
+
+## Links
+
+- [Encryption Technical Details](/reference/encryption-technical/)
+- [API Reference](/reference/api-reference/)
+- [Database Schema](/reference/database-schema/)
+- [Environment Variables](/reference/environment-variables/)
+- [GitHub Repository](https://github.com/RelativeSure/LeafLock)

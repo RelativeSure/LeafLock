@@ -1,638 +1,125 @@
 ---
 title: Development Guide
-description: Complete development setup and guidelines for contributing to LeafLock with modern tools and best practices.
+description: LeafLock development environment and build pipeline reference.
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
-import { Card, CardGrid } from '@astrojs/starlight/components';
-import { Badge } from '@astrojs/starlight/components';
+import { Tabs, TabItem, Card, CardGrid, Code } from '@astrojs/starlight/components';
 
-This guide helps you set up a development environment and contribute effectively to LeafLock.
+## Workspace Setup
 
-## Quick Start
-
-### 1. Clone and Setup
-
-```bash
-git clone <repository-url>
+<Tabs>
+  <TabItem label="Podman (default)">
+    <Code
+      code={`git clone https://github.com/RelativeSure/LeafLock.git
 cd LeafLock
 cp .env.example .env
-# Edit .env with your settings
-```
-
-### 2. Start Development Environment
-
-<Tabs>
-  <TabItem label="Podman (Recommended)">
-    ```bash
-    make up          # Start all services
-    make logs        # View logs
-    make down        # Stop services
-    ```
+make up
+make logs`}
+      language="bash"
+    />
   </TabItem>
   <TabItem label="Docker Compose">
-    ```bash
-    docker compose up -d      # Start services
-    docker compose logs -f    # View logs
-    docker compose down       # Stop services
-    ```
-  </TabItem>
-</Tabs>
-
-### 3. Access Your Development Environment
-
-<CardGrid>
-  <Card title="🌐 Frontend" icon="laptop">
-    **URL:** http://localhost:3000
-    **Tech:** React 18 + TypeScript + Vite
-  </Card>
-  <Card title="⚡ Backend API" icon="rocket">
-    **URL:** http://localhost:8080
-    **Health:** http://localhost:8080/api/v1/health
-  </Card>
-</CardGrid>
-
-## Technology Stack
-
-### Backend Architecture
-
-<Card title="🔧 Go Backend" icon="seti:go">
-**Framework:** Fiber v2 (Fast HTTP framework)
-**Database:** PostgreSQL 15 with pgx driver
-**Cache:** Redis 7 for sessions
-**Security:** JWT + Argon2id + XChaCha20-Poly1305
-**Key Files:** `backend/main.go` (entry point)
-</Card>
-
-**Core Dependencies:**
-```go
-github.com/gofiber/fiber/v2    // Web framework
-github.com/jackc/pgx/v5        // PostgreSQL driver
-github.com/redis/go-redis/v9   // Redis client
-```
-
-### Frontend Architecture
-
-<Card title="⚛️ React Frontend" icon="seti:react">
-**Framework:** React 18 + TypeScript
-**Build Tool:** Vite 5
-**State:** Zustand (lightweight state management)
-**Editor:** TipTap (rich text editing)
-**Encryption:** libsodium-wrappers (client-side)
-</Card>
-
-**Core Dependencies:**
-```json
-"@tanstack/react-query"    // Server state management
-"zustand"                  // Client state management
-"libsodium-wrappers"       // Encryption library
-```
-
-### UI Components & Icons
-
-<Card title="🎨 shadcn/ui + Radix UI" icon="seti:react">
-**Component Library:** shadcn/ui built on Radix UI primitives
-**Icon Library:** lucide-react v0.544.0 (official shadcn icons)
-**Location:** `frontend/src/components/ui/`
-**Styling:** Tailwind CSS with custom design tokens
-</Card>
-
-**Available Components:**
-```tsx
-// Import shadcn components from ui directory
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Dialog } from '@/components/ui/dialog'
-// ... and more: Input, Select, Switch, Table, Tooltip, Badge, Alert
-```
-
-**Icon Usage:**
-```tsx
-// Always use lucide-react for icons (already installed)
-import { Shield, Lock, Github, ExternalLink } from 'lucide-react'
-
-<Shield className="h-4 w-4" />  // Standard size
-<Lock className="h-5 w-5" />    // Larger
-```
-
-**Guidelines:**
-- Use existing shadcn components from `components/ui/`
-- All icons must be from `lucide-react` package
-- Follow Tailwind utility-first CSS patterns
-- Maintain accessibility with proper ARIA labels
-
-## Database Architecture
-
-### Automatic Schema Management
-
-<Card title="🗄️ Database Initialization" icon="seti:postgres">
-**Zero-Configuration Setup:**
-- Schema automatically created on first startup
-- Migrations run automatically on every startup
-- No manual database setup required
-- Full encryption and security built-in
-</Card>
-
-LeafLock uses PostgreSQL with **automatic schema initialization**. When the backend starts:
-
-1. **Connects to PostgreSQL** (via environment variables)
-2. **Creates all tables** if they don't exist (idempotent DDL)
-3. **Runs migrations** if schema changes detected
-4. **Seeds default data** (roles, admin user if enabled)
-5. **Ready to serve** - typically takes 2-5 seconds
-
-### Schema Location and Structure
-
-<Card title="📋 Schema Definition" icon="document">
-**File:** `backend/database/schema.go`
-**Contains:**
-- Complete table definitions (CREATE TABLE IF NOT EXISTS)
-- Indexes for performance optimization
-- Triggers for automatic timestamps
-- Functions for data cleanup
-- RBAC role seeding
-</Card>
-
-**Key Tables:**
-```sql
-users              -- User accounts with encrypted emails
-workspaces         -- User workspaces with encrypted names
-notes              -- Encrypted notes with version tracking
-note_versions      -- Historical versions of notes
-folders            -- Encrypted folder structure
-tags               -- Encrypted tags for organization
-collaborations     -- Note sharing and permissions
-attachments        -- Encrypted file attachments
-audit_log          -- Security and compliance logging
-roles              -- RBAC role definitions
-user_roles         -- User role assignments
-```
-
-### Migration System
-
-**How It Works:**
-- Uses `_migrations` table to track applied migrations
-- Runs idempotent SQL (CREATE IF NOT EXISTS, ALTER ADD COLUMN IF NOT EXISTS)
-- No down migrations - schema is additive
-- Automatic on every startup (configurable)
-
-**Migration Behavior:**
-<Tabs>
-  <TabItem label="Default (Recommended)">
-    ```bash
-    SKIP_MIGRATION_CHECK=false  # Runs migrations every startup
-    ```
-    - ✅ Always up-to-date schema
-    - ✅ Safe for development and production
-    - ✅ Adds ~1-2 seconds to startup
-  </TabItem>
-  <TabItem label="Skip (Advanced)">
-    ```bash
-    SKIP_MIGRATION_CHECK=true   # Skips migration check
-    ```
-    - ⚠️ Only for development when schema is known current
-    - ⚠️ Risk of data inconsistencies
-    - ⚠️ Not recommended for production
-  </TabItem>
-</Tabs>
-
-### Database Operations
-
-**Connection Management:**
-- Uses `pgx/v5` driver (high performance)
-- Connection pool automatically configured
-- Prepared statements for query optimization
-- Context-based timeouts
-
-**Startup Logs:**
-```
-🔧 Connecting to database...
-✅ Database connected successfully
-🔧 Running database migrations...
-⏱️  Database setup completed in 2.3s
-✅ Database migrations complete
-```
-
-### Environment Configuration
-
-**Required Variables:**
-```bash
-# Database connection (Docker service name or hostname)
-POSTGRES_HOST=postgres
-POSTGRES_PORT=5432
-POSTGRES_DB=leaflock
-POSTGRES_USER=leaflock
-POSTGRES_PASSWORD=your_secure_password
-
-# Migration control (optional)
-SKIP_MIGRATION_CHECK=false  # false = run migrations (default)
-```
-
-**Docker Compose Behavior:**
-- PostgreSQL starts first (via `depends_on`)
-- Backend waits for PostgreSQL to be ready
-- Automatically creates database if it doesn't exist
-- Schema created on first connection
-
-### Encrypted Fields
-
-<Card title="🔐 Database Encryption" icon="seti:lock">
-**Zero-Knowledge Architecture:**
-- All sensitive data encrypted before storage
-- Server never sees plaintext content
-- Email addresses encrypted with deterministic encryption (for login)
-- Note content uses client-side XChaCha20-Poly1305
-- Workspace keys encrypted with user's master key
-</Card>
-
-**Encrypted Columns:**
-```go
-email_encrypted         // User emails (server-side)
-email_search_hash       // For login lookups (deterministic)
-master_key_encrypted    // User's master encryption key
-name_encrypted          // Workspace/folder/tag names
-content_encrypted       // Note content (client-side encrypted)
-title_encrypted         // Note titles
-```
-
-### Admin User Initialization
-
-On first startup with empty database:
-
-1. **Checks for existing users**
-2. **If none exist** and `ENABLE_DEFAULT_ADMIN=true`:
-   - Creates admin user with configured credentials
-   - Creates default workspace for admin
-   - Assigns admin role
-   - Logs credentials for first login
-3. **Takes ~3-5 seconds** during first boot
-
-See [Admin User Management](/admin/user-management) for details.
-
-### Database Maintenance
-
-**Automatic Operations:**
-- Old deleted notes cleaned up after 30 days
-- Audit log retention managed automatically
-- No manual vacuum or cleanup needed
-
-**Manual Operations:**
-```bash
-# Access database directly (Docker)
-docker compose exec postgres psql -U leaflock -d leaflock
-
-# Run manual query
-docker compose exec postgres psql -U leaflock -d leaflock -c "SELECT COUNT(*) FROM users;"
-
-# Backup database
-docker compose exec postgres pg_dump -U leaflock leaflock > backup.sql
-
-# Restore database
-cat backup.sql | docker compose exec -T postgres psql -U leaflock leaflock
-```
-
-See [Monitoring and Backups](/admin/monitoring-and-backups) for production operations.
-
-### Development Tips
-
-**Reset Database:**
-```bash
-# Stop containers
-docker compose down
-
-# Remove volumes (⚠️ DELETES ALL DATA)
-docker volume rm leaflock_postgres_data
-
-# Start fresh
+    <Code
+      code={`git clone https://github.com/RelativeSure/LeafLock.git
+cd LeafLock
+cp .env.example .env
 docker compose up -d
-```
-
-**View Schema:**
-```bash
-# Connect to PostgreSQL
-docker compose exec postgres psql -U leaflock -d leaflock
-
-# List all tables
-\dt
-
-# Describe table
-\d users
-
-# Exit
-\q
-```
-
-**Check Migration Status:**
-```bash
-# View applied migrations
-docker compose exec postgres psql -U leaflock -d leaflock -c "SELECT * FROM _migrations ORDER BY applied_at DESC;"
-```
-
-## Development Commands
-
-### Backend Development
-
-<Tabs>
-  <TabItem label="Basic Commands">
-    ```bash
-    cd backend
-    go mod download          # Install dependencies
-    go run main.go           # Start development server
-    go build -o app .        # Build binary
-    go test -v ./...         # Run all tests
-    ```
-  </TabItem>
-  <TabItem label="Testing">
-    ```bash
-    # Run tests with coverage
-    make -C backend test-coverage
-
-    # Coverage requirement: 72%
-    make -C backend test-coverage-check
-
-    # Local test environment
-    make -C backend test-local
-    ```
-  </TabItem>
-  <TabItem label="Code Quality">
-    ```bash
-    # Format code
-    make -C backend fmt
-
-    # Lint code
-    make -C backend vet
-
-    # Run all quality checks
-    make -C backend lint
-    ```
+docker compose logs -f`}
+      language="bash"
+    />
   </TabItem>
 </Tabs>
 
-### Frontend Development
+Shut everything down with `<Code code={`make down`} language="bash" />` or `docker compose down` when finished.
 
-<Tabs>
-  <TabItem label="Basic Commands">
-    ```bash
-    cd frontend
-    pnpm install             # Install dependencies
-    pnpm run dev             # Start dev server (Vite)
-    pnpm run build           # Build for production
-    pnpm test                # Run tests (Vitest)
-    ```
-  </TabItem>
-  <TabItem label="Testing">
-    ```bash
-    # Watch mode for development
-    pnpm test:watch
+## Core Services
 
-    # Coverage report
-    pnpm test:coverage
-
-    # Run specific test
-    pnpm test -- --run specific-test
-    ```
-  </TabItem>
-  <TabItem label="Code Quality">
-    ```bash
-    # Lint code
-    pnpm run lint
-
-    # Auto-fix linting issues
-    pnpm run lint:fix
-
-    # Type checking
-    pnpm run type-check
-    ```
-  </TabItem>
-</Tabs>
-
-## Code Style & Standards
-
-### Go Backend
-
-<Card title="🎯 Go Conventions" icon="seti:go">
-**Formatting:**
-- Use `gofmt -s` (automatic via Makefile)
-- Tabs for indentation
-- Package names: lowercase, single word
-
-**Naming:**
-- Exported functions/types: PascalCase
-- Private functions/variables: camelCase
-- Constants: ALL_CAPS or camelCase
-</Card>
-
-```go
-// Good examples
-func CreateUser(email string) *User { }
-type UserService struct { }
-var defaultTimeout = 30 * time.Second
-
-// File naming
-user_service.go      // Implementation
-user_service_test.go // Tests
-```
-
-### React Frontend
-
-<Card title="⚛️ Frontend Conventions" icon="seti:react">
-**Formatting:**
-- 2-space indentation
-- Prettier config: no semicolons, single quotes
-- ESLint for code quality
-
-**Components:**
-- PascalCase for component names
-- camelCase for props and variables
-- TypeScript for all new code
-</Card>
-
-```tsx
-// Good examples
-export function UserProfile({ userId }: { userId: string }) { }
-const UserList = () => { }
-
-// File naming
-UserProfile.tsx       // Component
-UserProfile.test.tsx  // Tests
-types.ts             // Type definitions
-```
-
-## Testing Guidelines
-
-### Backend Testing
-
-<Card title="🧪 Go Testing Strategy" icon="approve-check">
-**Test Types:**
-- Unit tests for business logic
-- Integration tests for database operations
-- HTTP handler tests for API endpoints
-
-**Coverage Target:** 72% minimum (enforced by CI)
-</Card>
-
-```go
-// Test file example
-func TestUserService_CreateUser(t *testing.T) {
-    // Arrange
-    service := NewUserService(mockDB)
-
-    // Act
-    user, err := service.CreateUser("test@example.com")
-
-    // Assert
-    assert.NoError(t, err)
-    assert.NotNil(t, user)
-}
-```
-
-### Frontend Testing
-
-<Card title="🎭 React Testing Strategy" icon="approve-check">
-**Tools:**
-- Vitest for test runner
-- React Testing Library for component testing
-- MSW for API mocking
-
-**Focus Areas:**
-- Component behavior
-- User interactions
-- Error states
-- Accessibility
-</Card>
-
-```tsx
-// Test example
-import { render, screen } from '@testing-library/react'
-import { UserProfile } from './UserProfile'
-
-test('displays user name', () => {
-  render(<UserProfile name="John Doe" />)
-  expect(screen.getByText('John Doe')).toBeInTheDocument()
-})
-```
-
-## Git Workflow
-
-### Commit Standards
-
-<Card title="📝 Conventional Commits" icon="github">
-**Format:** `type(scope): description`
-
-**Types:**
-- `feat:` New features
-- `fix:` Bug fixes
-- `docs:` Documentation
-- `refactor:` Code improvements
-- `test:` Test additions
-- `chore:` Maintenance tasks
-</Card>
-
-```bash
-# Good commit examples
-feat(auth): add OAuth Google integration
-fix(editor): resolve formatting issue with lists
-docs(api): update authentication endpoints
-refactor(backend): optimize database queries
-```
-
-### Pre-commit Hooks
-
-<Card title="🔍 Quality Gates" icon="approve-check">
-**Setup:**
-```bash
-bash scripts/setup-git-hooks.sh
-```
-
-**What runs:**
-- Code formatting (gofmt, prettier)
-- Linting (go vet, eslint)
-- Tests (go test, vitest)
-- Secret scanning
-- Commit message validation
-</Card>
-
-### Pull Request Guidelines
-
-<CardGrid>
-  <Card title="📋 PR Checklist" icon="list-format">
-    - [ ] Clear, descriptive title
-    - [ ] Comprehensive description
-    - [ ] Linked issues (`Closes #123`)
-    - [ ] Screenshots for UI changes
-    - [ ] Test coverage maintained
-    - [ ] No secrets in code
+<CardGrid columns={2}>
+  <Card title="Frontend" icon="laptop">
+    Runs on Vite dev server at <Code code={`http://localhost:3000`} language="text" />. Proxies authenticated calls to the backend and hosts the client-side encryption pipeline.
   </Card>
-  <Card title="🔍 Code Review" icon="approve-check">
-    - [ ] Follows style guidelines
-    - [ ] Tests pass locally
-    - [ ] Security best practices
-    - [ ] Performance considerations
-    - [ ] Documentation updated
+  <Card title="Backend" icon="terminal">
+    Go 1.23 service listening on <Code code={`http://localhost:8080`} language="text" /> with liveness at `/api/v1/health/live` and readiness at `/api/v1/health/ready`.
+  </Card>
+  <Card title="PostgreSQL" icon="database">
+    Provisioned via container `postgres` with data volume `leaflock_postgres_data`. Schema is auto-created on boot; see `/reference/database-schema` for table definitions.
+  </Card>
+  <Card title="Redis" icon="cloud">
+    Session cache and WebSocket coordination channel. Default URL is `redis://redis:6379/0` with password pulled from `.env`.
   </Card>
 </CardGrid>
 
-## Local Development Tips
+## Build Pipeline
 
-### Environment Setup
+### Backend
 
-```bash
-# Required environment variables for development
-POSTGRES_PASSWORD=your_local_postgres_password
-REDIS_PASSWORD=your_local_redis_password
-JWT_SECRET=your_64_character_jwt_secret_for_development
-SERVER_ENCRYPTION_KEY=your_32_character_encryption_key
-CORS_ORIGINS=http://localhost:3000,http://localhost:5173
-```
+<Code
+  code={`# Format and lint
+make -C backend fmt
+make -C backend vet
 
-### Debugging
+# Compile binary
+make -C backend build
 
-<CardGrid>
-  <Card title="🐛 Backend Debugging" icon="bug">
-    **Logs:** `make logs` or `docker compose logs backend`
-    **Health:** `curl http://localhost:8080/api/v1/health`
-    **Debug:** Set `LOG_LEVEL=debug` in `.env`
-  </Card>
-  <Card title="🌐 Frontend Debugging" icon="laptop">
-    **Dev Tools:** Browser developer console
-    **Network:** Check API requests in Network tab
-    **State:** React DevTools for component state
-  </Card>
-</CardGrid>
+# Run backend tests with coverage
+make -C backend test`}
+  language="bash"
+/>
 
-### Container Management
+Binary artifacts land in `backend/bin/leaflock`. The Makefile injects git metadata and enables race detection for test runs.
 
-```bash
-# Build and test locally
-make build               # Build all container images
-make status             # Check container status
-make clean              # Clean up containers and volumes
+### Frontend
 
-# Database access
-make -C backend test-db-up    # Start test database
-make -C backend test-db-down  # Stop test database
-```
+<Code
+  code={`cd frontend
+pnpm install
+pnpm run dev
+pnpm run build
+pnpm run test`}
+  language="bash"
+/>
 
-## Contributing Guidelines
+Production bundles emit to `frontend/dist` and are consumed by the Caddy image during container builds.
 
-### Before Submitting
+## Local Configuration
 
-1. **Test your changes locally**
-2. **Run the full test suite**
-3. **Check code formatting**
-4. **Update documentation if needed**
-5. **Ensure security best practices**
+All environment variables are documented in `/reference/environment-variables`. For day-to-day work ensure the following are set:
 
-### Code Review Process
+<Code
+  code={`POSTGRES_PASSWORD=<local-password>
+REDIS_PASSWORD=<local-password>
+JWT_SECRET=<64-char-secret>
+SERVER_ENCRYPTION_KEY=<32-char-key>
+CORS_ORIGINS=http://localhost:3000`}
+  language="env"
+/>
 
-<Card title="🔄 Review Workflow" icon="github">
-1. **Submit PR** with clear description
-2. **Automated checks** run (CI/CD)
-3. **Code review** by maintainers
-4. **Address feedback** and iterate
-5. **Merge** when approved and tests pass
-</Card>
+LeafLock enforces a zero-knowledge policy even locally, so password resets and key rotation rely on the same encryption workflows as production 🎯.
 
----
+## Hot Reload Architecture
 
-*This development guide provides the foundation for contributing to LeafLock. For deployment-specific information, see the deployment guides.*
+- Backend uses `air` (configured in `backend/.air.toml`) to rebuild on change when running via `make dev`.
+- Frontend Vite server performs HMR through WebSockets; keep `VITE_API_URL` unset to auto-target the Docker network.
+- Database migrations run automatically; set `SKIP_MIGRATION_CHECK=true` only for targeted benchmarks.
+
+## Quality Gates
+
+<Code
+  code={`# Full validation suite
+make lint        # aggregates backend + frontend lint
+make test        # backend unit and integration tests
+pnpm --dir frontend test --runInBand # focused frontend run
+
+# Static analysis
+make -C backend security
+pnpm --dir frontend run type-check`}
+  language="bash"
+/>
+
+CI executes the same targets inside `.github/workflows/e2e-verify.yml` before publishing container images. Keep the pipeline green and updates sail through 🚀.
+
+## Further Reading
+
+- `/reference/api-reference` for endpoint semantics and request schemas
+- `/reference/encryption-technical` for client cryptography internals
+- `/deployment/` for platform-specific compose, Helm, and Railway recipes

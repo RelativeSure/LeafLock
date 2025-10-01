@@ -1,112 +1,47 @@
 ---
-title: Docker
-description: Deploy LeafLock with Docker and Docker Compose in development or production.
+title: Docker Deployment
+description: Deploy LeafLock with Docker Compose
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
-import { Card, CardGrid } from '@astrojs/starlight/components';
-import { Badge } from '@astrojs/starlight/components';
 
-Run LeafLock with Docker and Docker Compose. The sections below walk through the architecture, configuration, and tuning tips that matter in development and production.
+## Container Stack
 
-## Container Architecture
+**Services**:
+- Frontend: React + Caddy (Port 3000/80)
+- Backend: Go + Fiber (Port 8080)
+- PostgreSQL: 15-alpine (Port 5432)
+- Redis: 7-alpine (Port 6379)
 
-<Card title="🐳 Multi-Container Architecture" icon="docker">
-**LeafLock Container Stack:**
-- **Frontend:** React app served by Nginx
-- **Backend:** Go application with Fiber framework
-- **Database:** PostgreSQL 15 with encrypted storage
-- **Cache:** Redis 7 for session management
-- **Proxy:** Nginx reverse proxy (optional)
-
-**Benefits:**
-- Isolated service boundaries
-- Easy scaling and management
-- Consistent environments
-- Simple backup and recovery
-</Card>
+**Why Caddy**: Dynamic DNS resolution prevents 502 errors on platforms with changing IPv6 addresses (Railway). NGINX caches DNS, causing connection failures.
 
 ## Prerequisites
 
-<CardGrid>
-  <Card title="🐳 Docker Engine" icon="laptop">
-    - Docker Engine 20.10+
-    - Docker Compose v2.0+
-    - Minimum 4GB RAM
-    - 10GB available disk space
-  </Card>
-  <Card title="🌐 Network Requirements" icon="setting">
-    - Internet access for image pulls
-    - Available ports: 80, 443, 8080, 3000
-    - Domain name (for production SSL)
-  </Card>
-</CardGrid>
+- Docker Engine 20.10+
+- Docker Compose v2.0+
+- 4GB RAM minimum
+- 10GB disk space
 
 ## Quick Start
 
-### 1. Clone and Configure
-
 ```bash
-# Clone repository
 git clone <repository-url>
 cd LeafLock
-
-# Copy environment template
 cp .env.example .env
+nano .env  # Configure required variables
 
-# Edit environment variables
-nano .env
+docker compose up -d
 ```
 
-### 2. Start Services
+**Access**: Frontend at `http://localhost:3000`, Backend at `http://localhost:8080`
 
-<Tabs>
-  <TabItem label="Development">
-    ```bash
-    # Start all services
-    docker compose up -d
+[Environment variable reference →](/reference/environment-variables/)
 
-    # View logs
-    docker compose logs -f
+## Frontend Container
 
-    # Access application
-    # Frontend: http://localhost:3000
-    # Backend: http://localhost:8080
-    ```
-  </TabItem>
-  <TabItem label="Production">
-    ```bash
-    # Use production compose file
-    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-
-    # Or build and start
-    docker compose build
-    docker compose up -d
-    ```
-  </TabItem>
-</Tabs>
-
-## Container Configuration
-
-### Frontend Container
-
-<Card title="⚛️ React Frontend Container" icon="seti:react">
-**Base Image:** `node:18-alpine` → `caddy:2.8-alpine`
-**Build Process:**
-1. Install dependencies with pnpm
-2. Build React application with Vite
-3. Serve with Caddy reverse proxy
-
-**Key Features:**
-- Multi-stage build for minimal image size
-- Dynamic DNS resolution (fixes 502 errors)
-- Automatic security headers
-- Gzip/Zstd compression enabled
-- Health checks configured
-</Card>
+**Dockerfile** (`frontend/Dockerfile`):
 
 ```dockerfile
-# frontend/Dockerfile
 FROM node:18-alpine AS builder
 WORKDIR /app
 COPY package*.json pnpm-lock.yaml ./
@@ -126,26 +61,50 @@ ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
 ```
 
-> **Important:** LeafLock uses Caddy instead of NGINX to avoid 502 Bad Gateway errors caused by DNS caching. Caddy dynamically resolves backend DNS on every request, which is critical for platforms like Railway with dynamic IPv6 IPs.
+**Key Features**:
+- Multi-stage build (node builder → caddy runtime)
+- Dynamic DNS resolution via `docker-entrypoint.sh`
+- Security headers configured
+- Gzip/Zstd compression
+- Health check at `/health`
 
-### Backend Container
+**Caddyfile** (`frontend/Caddyfile`):
 
-<Card title="⚡ Go Backend Container" icon="seti:go">
-**Base Image:** `golang:1.21-alpine` → `alpine:3.18`
-**Build Process:**
-1. Download Go modules
-2. Build optimized binary
-3. Run in minimal Alpine container
+```text
+:{$PORT} {
+    handle /health {
+        respond "OK" 200
+    }
 
-**Security Features:**
-- Non-root user execution
-- Minimal attack surface
-- Health check endpoints
-- Graceful shutdown handling
-</Card>
+    handle /api/* {
+        reverse_proxy {$BACKEND_INTERNAL_URL} {
+            header_up Host {upstream_hostport}
+        }
+    }
+
+    handle {
+        root * /usr/share/caddy
+        try_files {path} {path}/ /index.html
+        file_server
+    }
+
+    header {
+        -Server
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    encode gzip zstd
+}
+```
+
+## Backend Container
+
+**Dockerfile** (`backend/Dockerfile`):
 
 ```dockerfile
-# backend/Dockerfile
 FROM golang:1.21-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -165,9 +124,12 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=30s \
 CMD ["./app"]
 ```
 
-## Docker Compose Configuration
+**Security**:
+- Non-root user execution (UID 1001)
+- Multi-stage build (minimal runtime image)
+- Health check at `/api/v1/health`
 
-### Development Environment
+## Docker Compose
 
 <Tabs>
   <TabItem label="docker-compose.yml">
@@ -183,8 +145,6 @@ CMD ["./app"]
           POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
         volumes:
           - postgres_data:/var/lib/postgresql/data
-        ports:
-          - "5432:5432"
         healthcheck:
           test: ["CMD-SHELL", "pg_isready -U postgres"]
           interval: 30s
@@ -197,26 +157,21 @@ CMD ["./app"]
         command: redis-server --requirepass ${REDIS_PASSWORD}
         volumes:
           - redis_data:/data
-        ports:
-          - "6379:6379"
         healthcheck:
-          test: ["CMD", "redis-cli", "ping"]
+          test: ["CMD", "redis-cli", "--auth", "${REDIS_PASSWORD}", "ping"]
           interval: 30s
           timeout: 3s
           retries: 5
 
       backend:
-        build:
-          context: ./backend
-          dockerfile: Dockerfile
+        build: ./backend
         environment:
-          - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/notes?sslmode=disable
-          - REDIS_URL=redis:6379
-          - REDIS_PASSWORD=${REDIS_PASSWORD}
-          - JWT_SECRET=${JWT_SECRET}
-          - SERVER_ENCRYPTION_KEY=${SERVER_ENCRYPTION_KEY}
-          - CORS_ORIGINS=${CORS_ORIGINS}
-          - PORT=8080
+          DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/notes?sslmode=disable
+          REDIS_URL: redis:6379
+          REDIS_PASSWORD: ${REDIS_PASSWORD}
+          JWT_SECRET: ${JWT_SECRET}
+          SERVER_ENCRYPTION_KEY: ${SERVER_ENCRYPTION_KEY}
+          CORS_ORIGINS: ${CORS_ORIGINS}
         ports:
           - "8080:8080"
         depends_on:
@@ -229,12 +184,10 @@ CMD ["./app"]
       frontend:
         build:
           context: ./frontend
-          dockerfile: Dockerfile
           args:
-            - VITE_API_URL=${VITE_API_URL}
+            VITE_API_URL: ${VITE_API_URL}
         environment:
-          - BACKEND_INTERNAL_URL=http://backend:8080
-          - PORT=3000
+          BACKEND_INTERNAL_URL: http://backend:8080
         ports:
           - "3000:80"
         depends_on:
@@ -255,102 +208,56 @@ CMD ["./app"]
       postgres:
         volumes:
           - /var/lib/leaflock/postgres:/var/lib/postgresql/data
-        ports: [] # Remove external port exposure
-        environment:
-          POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+        ports: []
+        networks:
+          - internal
 
       redis:
         volumes:
           - /var/lib/leaflock/redis:/data
-        ports: [] # Remove external port exposure
+        ports: []
+        networks:
+          - internal
 
       backend:
         environment:
-          - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/notes?sslmode=require
-          - APP_ENV=production
-          - ENABLE_METRICS=true
+          DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/notes?sslmode=require
+          APP_ENV: production
+          ENABLE_METRICS: true
         ports:
-          - "127.0.0.1:8080:8080" # Bind to localhost only
+          - "127.0.0.1:8080:8080"
+        networks:
+          - internal
 
       frontend:
         ports:
           - "80:80"
           - "443:443"
-        environment:
-          - BACKEND_INTERNAL_URL=http://backend:8080
-        depends_on:
-          - backend
-        restart: unless-stopped
+        networks:
+          - internal
+          - external
+
+    networks:
+      internal:
+        driver: bridge
+        internal: true
+      external:
+        driver: bridge
     ```
   </TabItem>
 </Tabs>
 
-## Environment Configuration
-
-### Required Environment Variables
-
-<Tabs>
-  <TabItem label="Database & Cache">
-    ```bash
-    # PostgreSQL Configuration
-    POSTGRES_PASSWORD=your_secure_postgres_password_64_chars_min
-    DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/notes?sslmode=disable
-
-    # Redis Configuration
-    REDIS_PASSWORD=your_secure_redis_password_32_chars_min
-    REDIS_URL=redis:6379
-    ```
-  </TabItem>
-  <TabItem label="Security Keys">
-    ```bash
-    # JWT Secret (64+ characters)
-    JWT_SECRET=your_64_character_jwt_secret_base64_encoded_string
-
-    # Server Encryption Key (32 characters)
-    SERVER_ENCRYPTION_KEY=your_32_character_encryption_key
-
-    # CORS Origins
-    CORS_ORIGINS=http://localhost:3000,https://yourdomain.com
-    ```
-  </TabItem>
-  <TabItem label="Application">
-    ```bash
-    # Frontend API URL
-    VITE_API_URL=http://localhost:8080
-
-    # Application Environment
-    APP_ENV=development
-    PORT=8080
-
-    # Admin User
-    ENABLE_DEFAULT_ADMIN=true
-    DEFAULT_ADMIN_EMAIL=admin@leaflock.app
-    DEFAULT_ADMIN_PASSWORD=SecureAdminPassword123!
-    ```
-  </TabItem>
-</Tabs>
-
-### Generate Secure Values
-
+**Production Start**:
 ```bash
-# Generate all required secrets
-echo "POSTGRES_PASSWORD=$(openssl rand -base64 32)"
-echo "REDIS_PASSWORD=$(openssl rand -base64 32)"
-echo "JWT_SECRET=$(openssl rand -base64 64)"
-echo "SERVER_ENCRYPTION_KEY=$(openssl rand -base64 32)"
-echo "DEFAULT_ADMIN_PASSWORD=$(openssl rand -base64 32)"
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
-## Production Deployment
+## SSL/TLS Setup
 
-### SSL/TLS Configuration
-
-<Card title="🔒 HTTPS Setup" icon="lock">
-**Option 1: Caddy Automatic HTTPS (Recommended)**
-
-Caddy can automatically obtain and renew SSL certificates:
+**Caddy Automatic HTTPS** (Recommended):
 
 ```text
+# frontend/Caddyfile
 yourdomain.com {
     reverse_proxy /api/* backend:8080
     root * /usr/share/caddy
@@ -361,328 +268,70 @@ yourdomain.com {
 
 Caddy automatically:
 - Obtains Let's Encrypt certificates
-- Renews certificates before expiration
-- Redirects HTTP to HTTPS
-- Sets up OCSP stapling
+- Renews before expiration
+- Redirects HTTP → HTTPS
+- Enables OCSP stapling
 
-**Option 2: Manual Certificates with Certbot**
+**Manual Certbot**:
 
 ```bash
-# Install certbot
-sudo apt-get install certbot
+certbot certonly --standalone -d yourdomain.com
 
-# Obtain certificate (standalone mode)
-sudo certbot certonly --standalone -d yourdomain.com
+# Update Caddyfile
+yourdomain.com {
+    tls /etc/letsencrypt/live/yourdomain.com/fullchain.pem \
+        /etc/letsencrypt/live/yourdomain.com/privkey.pem
+    # ... rest of config
+}
 
-# Certificates saved to:
-# /etc/letsencrypt/live/yourdomain.com/fullchain.pem
-# /etc/letsencrypt/live/yourdomain.com/privkey.pem
-
-# Mount in docker-compose.yml:
+# Mount in docker-compose.yml
 volumes:
   - /etc/letsencrypt:/etc/letsencrypt:ro
 ```
 
-Then update Caddyfile:
-```text
-yourdomain.com {
-    tls /etc/letsencrypt/live/yourdomain.com/fullchain.pem /etc/letsencrypt/live/yourdomain.com/privkey.pem
-    # ... rest of configuration
-}
-```
-</Card>
+## Backup & Recovery
 
-### Production Docker Compose
-
-<Tabs>
-  <TabItem label="Secure Composition">
-    ```yaml
-    version: '3.8'
-
-    services:
-      postgres:
-        image: postgres:15-alpine
-        environment:
-          POSTGRES_DB: notes
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-        volumes:
-          - postgres_data:/var/lib/postgresql/data
-        networks:
-          - internal
-        restart: unless-stopped
-        healthcheck:
-          test: ["CMD-SHELL", "pg_isready -U postgres"]
-          interval: 30s
-          timeout: 20s
-          retries: 5
-
-      redis:
-        image: redis:7-alpine
-        command: redis-server --requirepass ${REDIS_PASSWORD}
-        volumes:
-          - redis_data:/data
-        networks:
-          - internal
-        restart: unless-stopped
-        healthcheck:
-          test: ["CMD", "redis-cli", "ping"]
-          interval: 30s
-          timeout: 3s
-          retries: 5
-
-      backend:
-        build: ./backend
-        environment:
-          DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/notes?sslmode=require
-          REDIS_URL: redis:6379
-          REDIS_PASSWORD: ${REDIS_PASSWORD}
-          JWT_SECRET: ${JWT_SECRET}
-          SERVER_ENCRYPTION_KEY: ${SERVER_ENCRYPTION_KEY}
-          CORS_ORIGINS: https://yourdomain.com
-          APP_ENV: production
-        networks:
-          - internal
-        depends_on:
-          postgres:
-            condition: service_healthy
-          redis:
-            condition: service_healthy
-        restart: unless-stopped
-
-      frontend:
-        build:
-          context: ./frontend
-          args:
-            VITE_API_URL: https://yourdomain.com/api/v1
-        environment:
-          BACKEND_INTERNAL_URL: http://backend:8080
-        ports:
-          - "80:80"
-          - "443:443"
-        networks:
-          - internal
-          - external
-        depends_on:
-          - backend
-        restart: unless-stopped
-
-    networks:
-      internal:
-        driver: bridge
-        internal: true
-      external:
-        driver: bridge
-
-    volumes:
-      postgres_data:
-        driver: local
-        driver_opts:
-          type: none
-          o: bind
-          device: /var/lib/leaflock/postgres
-      redis_data:
-        driver: local
-        driver_opts:
-          type: none
-          o: bind
-          device: /var/lib/leaflock/redis
-    ```
-  </TabItem>
-  <TabItem label="Caddyfile">
-    ```text
-    # frontend/Caddyfile
-    {
-        admin off
-        auto_https off  # Disable when behind reverse proxy
-        servers {
-            trusted_proxies static private_ranges
-        }
-    }
-
-    :{$PORT} {
-        # Health check endpoint
-        handle /health {
-            respond "OK" 200
-        }
-
-        # Proxy API requests to backend
-        handle /api/* {
-            reverse_proxy {$BACKEND_INTERNAL_URL} {
-                header_up Host {upstream_hostport}
-            }
-        }
-
-        # Serve static files
-        handle {
-            root * /usr/share/caddy
-            try_files {path} {path}/ /index.html
-            file_server
-        }
-
-        # Security headers
-        header {
-            -Server
-            X-Content-Type-Options "nosniff"
-            X-Frame-Options "DENY"
-            X-XSS-Protection "1; mode=block"
-            Referrer-Policy "strict-origin-when-cross-origin"
-        }
-
-        # Compression
-        encode gzip zstd
-
-        # Logging
-        log {
-            output stdout
-            format console
-            level INFO
-        }
-    }
-    ```
-
-    > **Note:** For production with custom domains, enable `auto_https` and configure your domain directly in the Caddyfile. Caddy will automatically obtain SSL certificates.
-  </TabItem>
-</Tabs>
-
-## Container Management
-
-### Common Operations
-
-<CardGrid>
-  <Card title="🔄 Service Management" icon="setting">
-    ```bash
-    # Start services
-    docker compose up -d
-
-    # Stop services
-    docker compose down
-
-    # Restart specific service
-    docker compose restart backend
-
-    # Scale services
-    docker compose up --scale backend=3 -d
-    ```
-  </Card>
-  <Card title="📊 Monitoring" icon="list-format">
-    ```bash
-    # View logs
-    docker compose logs -f backend
-
-    # Check service status
-    docker compose ps
-
-    # Monitor resource usage
-    docker stats
-
-    # Inspect containers
-    docker compose exec backend sh
-    ```
-  </Card>
-</CardGrid>
-
-### Health Checks
+**Database Backup**:
 
 ```bash
-# Check all services health
-docker compose ps
+# Backup
+docker compose exec -T postgres pg_dump -U postgres notes | gzip > backup_$(date +%Y%m%d).sql.gz
 
-# Test health endpoints
-curl http://localhost:3000/health        # Frontend
-curl http://localhost:8080/api/v1/health # Backend
-
-# Database health
-docker compose exec postgres pg_isready -U postgres
-
-# Redis health
-docker compose exec redis redis-cli ping
-```
-
-## Backup and Recovery
-
-### Database Backup
-
-<Card title="💾 PostgreSQL Backup Strategy" icon="document">
-**Automated Backup:**
-```bash
-#!/bin/bash
-# backup-script.sh
-DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="leaflock_backup_$DATE.sql"
-
-docker compose exec -T postgres pg_dump -U postgres notes > $BACKUP_FILE
-gzip $BACKUP_FILE
-
-# Upload to S3 or backup storage
-aws s3 cp $BACKUP_FILE.gz s3://your-backup-bucket/
-```
-
-**Restore Process:**
-```bash
-# Stop application
+# Restore
 docker compose stop backend frontend
-
-# Restore database
-gunzip < backup_file.sql.gz | docker compose exec -T postgres psql -U postgres notes
-
-# Restart application
+gunzip < backup.sql.gz | docker compose exec -T postgres psql -U postgres notes
 docker compose start backend frontend
 ```
-</Card>
 
-### Volume Backup
+**Volume Backup**:
 
 ```bash
-# Backup persistent volumes
-docker run --rm -v leaflock_postgres_data:/data -v $(pwd):/backup alpine tar czf /backup/postgres_backup.tar.gz -C /data .
-docker run --rm -v leaflock_redis_data:/data -v $(pwd):/backup alpine tar czf /backup/redis_backup.tar.gz -C /data .
-
-# Restore volumes
-docker run --rm -v leaflock_postgres_data:/data -v $(pwd):/backup alpine tar xzf /backup/postgres_backup.tar.gz -C /data
+docker run --rm \
+  -v leaflock_postgres_data:/data \
+  -v $(pwd):/backup \
+  alpine tar czf /backup/postgres.tar.gz -C /data .
 ```
 
-## Troubleshooting
+## Health Checks
 
-### Common Issues
+```bash
+# Frontend
+curl http://localhost:3000/health
 
-<CardGrid>
-  <Card title="🔌 Container Connectivity" icon="warning">
-    **Issue:** Services can't communicate
+# Backend
+curl http://localhost:8080/api/v1/health/live
 
-    **Solutions:**
-    1. Check network configuration
-    2. Verify service names in environment variables
-    3. Ensure containers are on same network
-    4. Check firewall settings
+# Database
+docker compose exec postgres pg_isready -U postgres
 
-    ```bash
-    # Debug network
-    docker network ls
-    docker network inspect leaflock_default
-    ```
-  </Card>
-  <Card title="🗄️ Database Issues" icon="error">
-    **Issue:** Database connection failures
+# Redis
+docker compose exec redis redis-cli --auth "$REDIS_PASSWORD" ping
+```
 
-    **Solutions:**
-    1. Check PostgreSQL container logs
-    2. Verify database credentials
-    3. Ensure database is ready before backend starts
-    4. Check SSL mode configuration
+## Resource Limits
 
-    ```bash
-    # Debug database
-    docker compose logs postgres
-    docker compose exec postgres psql -U postgres
-    ```
-  </Card>
-</CardGrid>
+**Memory Constraints**:
 
-### Performance Optimization
-
-<Card title="🏎️ Container Performance" icon="rocket">
-**Memory Limits:**
 ```yaml
 services:
   backend:
@@ -692,118 +341,123 @@ services:
           memory: 512M
         reservations:
           memory: 256M
+  frontend:
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
 ```
 
-**Build Optimization:**
-```dockerfile
-# Use build cache
-COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
+## Troubleshooting
 
-# Multi-stage builds
-FROM node:18-alpine AS builder
-# ... build steps
-FROM caddy:2.8-alpine
-COPY --from=builder /app/dist /usr/share/caddy
+### 502 Bad Gateway
+
+**Cause**: DNS caching in reverse proxy
+**Solution**: LeafLock uses Caddy with dynamic DNS resolution. Check `BACKEND_INTERNAL_URL` points to correct service name (`backend:8080`).
+
+### Database Connection Refused
+
+**Cause**: Backend starts before PostgreSQL ready
+**Solution**: Health checks configured in compose. Verify `depends_on` with `service_healthy` condition.
+
+### Redis AUTH Failed
+
+**Cause**: Missing or incorrect `REDIS_PASSWORD`
+**Solution**: Ensure `REDIS_PASSWORD` set in `.env` and matches in backend `REDIS_URL`.
+
+### Build Failures
+
+**Cause**: Missing dependencies or network issues
+**Solution**:
+```bash
+docker compose build --no-cache
+docker system prune -a
 ```
-</Card>
 
-## Monitoring and Observability
+## Security Hardening
 
-### Container Metrics
+**Container Security Options**:
 
-<Card title="📈 Metrics Collection" icon="list-format">
-**Prometheus Integration:**
 ```yaml
-# Add to docker-compose.yml
+services:
+  backend:
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+```
+
+**Read-Only Root Filesystem**:
+
+```yaml
+services:
+  backend:
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100m
+```
+
+## Monitoring
+
+**Prometheus Metrics** (if `ENABLE_METRICS=true`):
+
+```yaml
 prometheus:
   image: prom/prometheus
   volumes:
     - ./prometheus.yml:/etc/prometheus/prometheus.yml
   ports:
     - "9090:9090"
-
-grafana:
-  image: grafana/grafana
-  ports:
-    - "3001:3000"
-  environment:
-    - GF_SECURITY_ADMIN_PASSWORD=admin
 ```
 
-**Health Check Monitoring:**
-```bash
-# Custom health check script
-#!/bin/bash
-services=("frontend" "backend" "postgres" "redis")
-for service in "${services[@]}"; do
-  status=$(docker compose ps -q $service | xargs docker inspect -f '{{.State.Health.Status}}')
-  echo "$service: $status"
-done
-```
-</Card>
-
-### Log Management
-
-```bash
-# Centralized logging with ELK
-# Add to docker-compose.yml
-elasticsearch:
-  image: docker.elastic.co/elasticsearch/elasticsearch:7.14.0
-  environment:
-    - discovery.type=single-node
-
-logstash:
-  image: docker.elastic.co/logstash/logstash:7.14.0
-  volumes:
-    - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
-
-kibana:
-  image: docker.elastic.co/kibana/kibana:7.14.0
-  ports:
-    - "5601:5601"
-```
-
-## Security Hardening
-
-### Container Security
-
-<Card title="🔒 Security Best Practices" icon="lock">
-**Container Hardening:**
-- Run containers as non-root user
-- Use minimal base images (Alpine)
-- Scan images for vulnerabilities
-- Keep base images updated
-- Use secrets management for sensitive data
-
-**Network Security:**
-- Use internal networks for service communication
-- Expose only necessary ports
-- Implement proper firewall rules
-- Use HTTPS for all external communication
-</Card>
+**Prometheus Config**:
 
 ```yaml
-# Security-focused compose configuration
-version: '3.8'
+# prometheus.yml
+scrape_configs:
+  - job_name: 'leaflock-backend'
+    static_configs:
+      - targets: ['backend:8080']
+    metrics_path: '/metrics'
+```
 
-services:
-  app:
-    security_opt:
-      - no-new-privileges:true
-    read_only: true
-    tmpfs:
-      - /tmp:rw,noexec,nosuid,size=100m
-    cap_drop:
-      - ALL
-    cap_add:
-      - CHOWN
-      - DAC_OVERRIDE
+## Common Commands
+
+```bash
+# Start services
+docker compose up -d
+
+# View logs
+docker compose logs -f backend
+
+# Restart service
+docker compose restart backend
+
+# Stop all
+docker compose down
+
+# Stop and remove volumes
+docker compose down -v
+
+# Scale backend
+docker compose up --scale backend=3 -d
+
+# Exec into container
+docker compose exec backend sh
+
+# Check resource usage
+docker stats
 ```
 
 ---
 
-<Badge text="Docker Production Ready" variant="success" size="large" />
-
-*This Docker deployment guide provides production-ready configurations with security, performance, and monitoring best practices.*
+**References**:
+- [Environment Variables →](/reference/environment-variables/)
+- [Database Schema →](/reference/database-schema/)
+- [API Reference →](/reference/api-reference/)

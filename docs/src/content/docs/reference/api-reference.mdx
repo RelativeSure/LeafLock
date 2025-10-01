@@ -1,0 +1,898 @@
+---
+title: API Reference
+description: Complete REST API and WebSocket protocol specification for LeafLock
+---
+
+## API Overview
+
+**Base URL**: `/api/v1`
+**Authentication**: JWT Bearer token in `Authorization` header
+**Content-Type**: `application/json`
+**WebSocket**: `/ws` endpoint for real-time collaboration
+
+## Authentication Endpoints
+
+### POST /auth/register
+
+Register a new user account.
+
+**Request Body**:
+```json
+{
+  "email": "user@example.com",
+  "password": "SecurePassword123!"
+}
+```
+
+**Validation**:
+- Email: Valid email format
+- Password: Minimum 12 characters
+
+**Response** (201):
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Rate Limit**: Configurable via `ENABLE_REGISTRATION_RATE_LIMIT` (default: unlimited)
+
+---
+
+### POST /auth/login
+
+Authenticate and receive JWT token.
+
+**Request Body**:
+```json
+{
+  "email": "user@example.com",
+  "password": "SecurePassword123!",
+  "mfa_code": "123456"  // Optional, required if MFA enabled
+}
+```
+
+**Response** (200):
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "mfa_required": false
+}
+```
+
+**MFA Flow**:
+If MFA enabled and code not provided:
+```json
+{
+  "mfa_required": true,
+  "session": "temp_session_id"
+}
+```
+
+**Errors**:
+- 401: Invalid credentials
+- 429: Too many failed attempts (account locked)
+
+---
+
+### POST /auth/admin-recovery
+
+Admin account recovery endpoint (requires recovery token).
+
+**Request Body**:
+```json
+{
+  "email": "admin@leaflock.app",
+  "password": "NewSecurePassword123!",
+  "recovery_token": "recovery_token_from_logs",
+  "confirm_deletion": true
+}
+```
+
+---
+
+### GET /auth/registration
+
+Check if registration is enabled.
+
+**Response** (200):
+```json
+{
+  "enabled": true
+}
+```
+
+## Protected Endpoints
+
+All endpoints below require `Authorization: Bearer <token>` header.
+
+### MFA Management
+
+#### GET /auth/mfa/status
+
+Get MFA status for authenticated user.
+
+**Response** (200):
+```json
+{
+  "enabled": true,
+  "backup_codes_remaining": 8
+}
+```
+
+---
+
+#### POST /auth/mfa/begin
+
+Start MFA setup process.
+
+**Response** (200):
+```json
+{
+  "secret": "JBSWY3DPEHPK3PXP",
+  "qr_code": "otpauth://totp/LeafLock:user@example.com?secret=...",
+  "backup_codes": ["12345678", "87654321", ...]
+}
+```
+
+---
+
+#### POST /auth/mfa/enable
+
+Enable MFA after verification.
+
+**Request Body**:
+```json
+{
+  "code": "123456"
+}
+```
+
+**Response** (200):
+```json
+{
+  "success": true
+}
+```
+
+---
+
+#### POST /auth/mfa/disable
+
+Disable MFA.
+
+**Request Body**:
+```json
+{
+  "code": "123456"
+}
+```
+
+## Notes Endpoints
+
+All note content is encrypted client-side. API stores `title_encrypted` and `content_encrypted` as base64-encoded ciphertext.
+
+### GET /notes
+
+Retrieve all notes for authenticated user.
+
+**Response** (200):
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "workspace_id": "660e8400-e29b-41d4-a716-446655440001",
+    "title_encrypted": "base64_encrypted_title",
+    "content_encrypted": "base64_encrypted_content",
+    "created_at": "2025-01-15T10:30:00Z",
+    "updated_at": "2025-01-15T14:20:00Z",
+    "folder_id": "770e8400-e29b-41d4-a716-446655440002",
+    "version": 3
+  }
+]
+```
+
+---
+
+### GET /notes/:id
+
+Get a single note by ID.
+
+**Response** (200): Same structure as individual note above.
+
+---
+
+### POST /notes
+
+Create a new note.
+
+**Request Body**:
+```json
+{
+  "title_encrypted": "base64_encrypted_title",
+  "content_encrypted": "base64_encrypted_content",
+  "folder_id": "770e8400-e29b-41d4-a716-446655440002"  // Optional
+}
+```
+
+**Response** (201):
+```json
+{
+  "id": "880e8400-e29b-41d4-a716-446655440003",
+  "workspace_id": "660e8400-e29b-41d4-a716-446655440001",
+  "created_at": "2025-01-15T15:00:00Z"
+}
+```
+
+---
+
+### PUT /notes/:id
+
+Update an existing note.
+
+**Request Body**:
+```json
+{
+  "title_encrypted": "base64_encrypted_updated_title",
+  "content_encrypted": "base64_encrypted_updated_content"
+}
+```
+
+**Note**: Creates a new version automatically. Access via `/notes/:id/versions`.
+
+---
+
+### DELETE /notes/:id
+
+Soft-delete a note (moves to trash).
+
+**Response** (204): No content
+
+---
+
+### GET /notes/trash
+
+Get all soft-deleted notes.
+
+**Response** (200): Array of notes with `deleted_at` timestamp.
+
+---
+
+### POST /notes/:id/restore
+
+Restore a note from trash.
+
+**Response** (200):
+```json
+{
+  "success": true
+}
+```
+
+---
+
+### DELETE /notes/:id/permanent
+
+Permanently delete a note (cannot be recovered).
+
+**Response** (204): No content
+
+---
+
+### GET /notes/:id/versions
+
+Get version history for a note.
+
+**Response** (200):
+```json
+[
+  {
+    "id": "version_id",
+    "note_id": "note_id",
+    "version_number": 2,
+    "title_encrypted": "base64_encrypted_title_v2",
+    "content_encrypted": "base64_encrypted_content_v2",
+    "created_at": "2025-01-15T12:00:00Z",
+    "created_by": "user_id"
+  }
+]
+```
+
+---
+
+### POST /notes/:id/versions/:version
+
+Restore a specific version of a note.
+
+**Response** (200): Updated note object
+
+## Tags Endpoints
+
+### GET /tags
+
+Get all tags for authenticated user.
+
+**Response** (200):
+```json
+[
+  {
+    "id": "tag_id",
+    "user_id": "user_id",
+    "name_encrypted": "base64_encrypted_tag_name",
+    "color": "#3b82f6",
+    "created_at": "2025-01-15T10:00:00Z"
+  }
+]
+```
+
+---
+
+### POST /tags
+
+Create a new tag.
+
+**Request Body**:
+```json
+{
+  "name_encrypted": "base64_encrypted_tag_name",
+  "color": "#3b82f6"
+}
+```
+
+---
+
+### DELETE /tags/:id
+
+Delete a tag.
+
+**Response** (204): No content
+
+---
+
+### POST /notes/:id/tags
+
+Assign a tag to a note.
+
+**Request Body**:
+```json
+{
+  "tag_id": "tag_id"
+}
+```
+
+---
+
+### DELETE /notes/:id/tags/:tag_id
+
+Remove a tag from a note.
+
+**Response** (204): No content
+
+---
+
+### GET /tags/:id/notes
+
+Get all notes with a specific tag.
+
+**Response** (200): Array of note objects
+
+## Folders Endpoints
+
+### GET /folders
+
+Get all folders for authenticated user.
+
+**Response** (200):
+```json
+[
+  {
+    "id": "folder_id",
+    "user_id": "user_id",
+    "parent_id": "parent_folder_id",  // null for root folders
+    "name_encrypted": "base64_encrypted_folder_name",
+    "color": "#3b82f6",
+    "position": 0,
+    "created_at": "2025-01-15T10:00:00Z"
+  }
+]
+```
+
+---
+
+### POST /folders
+
+Create a new folder.
+
+**Request Body**:
+```json
+{
+  "name_encrypted": "base64_encrypted_folder_name",
+  "parent_id": "parent_folder_id",  // Optional
+  "color": "#3b82f6",
+  "position": 0
+}
+```
+
+---
+
+### DELETE /folders/:id
+
+Delete a folder.
+
+**Response** (204): No content
+
+**Note**: Notes in deleted folder have `folder_id` set to NULL.
+
+---
+
+### POST /notes/:id/folder
+
+Move a note to a folder.
+
+**Request Body**:
+```json
+{
+  "folder_id": "folder_id"  // or null to remove from folder
+}
+```
+
+## Templates Endpoints
+
+### GET /templates
+
+Get all templates for authenticated user.
+
+**Response** (200):
+```json
+[
+  {
+    "id": "template_id",
+    "user_id": "user_id",
+    "name_encrypted": "base64_encrypted_template_name",
+    "description_encrypted": "base64_encrypted_description",
+    "content_encrypted": "base64_encrypted_template_content",
+    "icon": "📝",
+    "is_public": false,
+    "usage_count": 5,
+    "created_at": "2025-01-15T10:00:00Z"
+  }
+]
+```
+
+---
+
+### GET /templates/:id
+
+Get a single template.
+
+**Response** (200): Template object
+
+---
+
+### POST /templates
+
+Create a new template.
+
+**Request Body**:
+```json
+{
+  "name_encrypted": "base64_encrypted_name",
+  "description_encrypted": "base64_encrypted_description",
+  "content_encrypted": "base64_encrypted_content",
+  "icon": "📝",
+  "is_public": false
+}
+```
+
+---
+
+### PUT /templates/:id
+
+Update a template.
+
+**Request Body**: Same as POST
+
+---
+
+### DELETE /templates/:id
+
+Delete a template.
+
+**Response** (204): No content
+
+---
+
+### POST /templates/:id/use
+
+Create a note from a template.
+
+**Response** (201): New note object
+
+## Collaboration Endpoints
+
+### POST /notes/:id/share
+
+Share a note with another user.
+
+**Request Body**:
+```json
+{
+  "user_email": "collaborator@example.com",
+  "permission": "read",  // or "write", "admin"
+  "key_encrypted": "base64_encrypted_note_key"
+}
+```
+
+---
+
+### GET /notes/:id/collaborators
+
+Get all collaborators for a note.
+
+**Response** (200):
+```json
+[
+  {
+    "user_id": "collaborator_user_id",
+    "email": "collaborator@example.com",
+    "permission": "read",
+    "created_at": "2025-01-15T10:00:00Z"
+  }
+]
+```
+
+---
+
+### DELETE /notes/:id/collaborators/:userId
+
+Remove a collaborator from a note.
+
+**Response** (204): No content
+
+---
+
+### GET /collaborations
+
+Get all notes shared with authenticated user.
+
+**Response** (200): Array of note objects with collaboration metadata
+
+## Attachments Endpoints
+
+### POST /notes/:noteId/attachments
+
+Upload an attachment to a note.
+
+**Request Body** (multipart/form-data):
+```
+file: <binary file data>
+filename_encrypted: base64_encrypted_filename
+```
+
+**Response** (201):
+```json
+{
+  "id": "attachment_id",
+  "note_id": "note_id",
+  "filename_encrypted": "base64_encrypted_filename",
+  "size_bytes": 102400,
+  "mime_type": "image/png",
+  "created_at": "2025-01-15T10:00:00Z"
+}
+```
+
+**Storage Limit**: Default 5MB per user (configurable via `storage_limit` column)
+
+---
+
+### GET /notes/:noteId/attachments
+
+Get all attachments for a note.
+
+**Response** (200): Array of attachment objects
+
+---
+
+### GET /notes/:noteId/attachments/:attachmentId
+
+Download an attachment.
+
+**Response** (200): Binary file data with appropriate `Content-Type` header
+
+---
+
+### DELETE /notes/:noteId/attachments/:attachmentId
+
+Delete an attachment.
+
+**Response** (204): No content
+
+## Search Endpoints
+
+### POST /search
+
+Search notes by encrypted keywords.
+
+**Request Body**:
+```json
+{
+  "query_encrypted": "base64_encrypted_search_query"
+}
+```
+
+**Response** (200):
+```json
+{
+  "results": [
+    {
+      "note_id": "note_id",
+      "title_encrypted": "base64_encrypted_title",
+      "snippet_encrypted": "base64_encrypted_snippet",
+      "relevance_score": 0.95
+    }
+  ]
+}
+```
+
+**Note**: Search uses HMAC-based encrypted keyword index (`search_index` table).
+
+## Import/Export Endpoints
+
+### GET /storage
+
+Get storage usage information.
+
+**Response** (200):
+```json
+{
+  "used": 2097152,      // bytes used
+  "limit": 5242880,     // storage limit (5MB default)
+  "percentage": 40.0
+}
+```
+
+---
+
+### POST /notes/import
+
+Import a single note.
+
+**Request Body**:
+```json
+{
+  "title": "Note Title",
+  "content": "Note content",
+  "format": "markdown"  // or "html", "plain"
+}
+```
+
+**Note**: Content is encrypted client-side before import.
+
+---
+
+### POST /notes/:id/export
+
+Export a note.
+
+**Request Body**:
+```json
+{
+  "format": "markdown"  // or "html", "pdf"
+}
+```
+
+**Response** (200):
+```json
+{
+  "title": "Note Title",
+  "content": "Decrypted note content",
+  "format": "markdown"
+}
+```
+
+---
+
+### POST /notes/bulk-import
+
+Import multiple notes at once.
+
+**Request Body**:
+```json
+{
+  "notes": [
+    {
+      "title": "Note 1",
+      "content": "Content 1",
+      "tags": ["tag1", "tag2"]
+    }
+  ]
+}
+```
+
+**Response** (200):
+```json
+{
+  "imported": 5,
+  "failed": 0,
+  "errors": []
+}
+```
+
+## Health Check Endpoints
+
+### GET /health/live
+
+Basic liveness check (responds immediately).
+
+**Response** (200):
+```json
+{
+  "status": "live",
+  "timestamp": "2025-01-15T10:30:00Z",
+  "uptime": "15m30s"
+}
+```
+
+**Use Case**: Container orchestration liveness probes
+
+---
+
+### GET /health/ready
+
+Readiness check with database and Redis health.
+
+**Response** (200):
+```json
+{
+  "status": "ready",
+  "timestamp": "2025-01-15T10:30:00Z",
+  "uptime": "15m30s"
+}
+```
+
+**Response during initialization** (503):
+```json
+{
+  "status": "initializing",
+  "admin_ready": true,
+  "templates_ready": true,
+  "allowlist_ready": true,
+  "redis_ready": true
+}
+```
+
+**Use Case**: Load balancer readiness probes
+
+---
+
+### GET /health
+
+Legacy health check (deprecated, use `/health/ready`).
+
+## WebSocket Protocol
+
+**Endpoint**: `/ws`
+**Protocol**: WebSocket over HTTP/HTTPS
+**Authentication**: JWT token in query parameter or upgrade header
+
+### Connection
+
+```javascript
+const ws = new WebSocket('ws://localhost:8080/ws?token=<jwt_token>');
+```
+
+### Message Format
+
+All WebSocket messages are JSON:
+
+```json
+{
+  "type": "note_update",
+  "payload": {
+    "note_id": "note_id",
+    "content_encrypted": "base64_encrypted_content",
+    "user_id": "user_id",
+    "timestamp": "2025-01-15T10:30:00Z"
+  }
+}
+```
+
+### Message Types
+
+| Type | Direction | Description |
+|------|-----------|-------------|
+| `note_update` | Server → Client | Note content changed by collaborator |
+| `cursor_position` | Bidirectional | Real-time cursor position for collaboration |
+| `user_joined` | Server → Client | User joined collaboration session |
+| `user_left` | Server → Client | User left collaboration session |
+| `presence` | Client → Server | Heartbeat to maintain connection |
+
+### Collaboration Example
+
+```javascript
+// Send cursor position
+ws.send(JSON.stringify({
+  type: 'cursor_position',
+  payload: {
+    note_id: 'note_id',
+    position: { line: 10, column: 25 },
+    user_id: 'user_id'
+  }
+}));
+
+// Receive note update
+ws.onmessage = (event) => {
+  const message = JSON.parse(event.data);
+  if (message.type === 'note_update') {
+    // Decrypt and apply update
+    const content = await cryptoService.decryptData(message.payload.content_encrypted);
+    updateEditor(content);
+  }
+};
+```
+
+## Error Responses
+
+All errors follow consistent format:
+
+```json
+{
+  "error": "Error message description"
+}
+```
+
+### Status Codes
+
+| Code | Meaning | Common Causes |
+|------|---------|---------------|
+| 400 | Bad Request | Invalid JSON, missing required fields |
+| 401 | Unauthorized | Missing/invalid JWT token |
+| 403 | Forbidden | Insufficient permissions |
+| 404 | Not Found | Resource doesn't exist |
+| 409 | Conflict | Duplicate email, concurrent update |
+| 429 | Too Many Requests | Rate limit exceeded |
+| 500 | Internal Server Error | Server-side error |
+| 503 | Service Unavailable | Database/Redis connection failed |
+
+## Rate Limiting
+
+**Global Rate Limit**: 100 requests per minute per IP
+**Registration Rate Limit**: Optional (configurable)
+**Key Generator**: Client IP address via `X-Forwarded-For` header
+
+## Security Headers
+
+All API responses include:
+
+- `X-Request-ID`: Unique request identifier for debugging
+- `Content-Security-Policy`: Strict CSP policy
+- `X-Frame-Options`: DENY
+- `X-Content-Type-Options`: nosniff
+- `Strict-Transport-Security`: max-age=31536000 (production only)
+
+## CORS Configuration
+
+**Allowed Origins**: Configurable via `CORS_ORIGINS` environment variable
+**Credentials**: Enabled
+**Allowed Headers**: `Origin`, `Content-Type`, `Accept`, `Authorization`, `X-CSRF-Token`
+**Allowed Methods**: `GET`, `POST`, `PUT`, `DELETE`, `OPTIONS`
+
+## CSRF Protection
+
+**Token Header**: `X-CSRF-Token`
+**Cookie Name**: `csrf_token`
+**Expiration**: 1 hour
+**Exempted Paths**: `/api/v1/health/*`, `/api/v1/auth/*`
+
+## Implementation Files
+
+| Component | File Path |
+|-----------|-----------|
+| Auth handlers | `backend/handlers/auth.go` |
+| Notes handlers | `backend/handlers/notes.go` |
+| WebSocket hub | `backend/websocket/hub.go` |
+| JWT middleware | `backend/middleware/jwt.go` |
+| Rate limiting | `backend/main.go` (Fiber limiter) |
+| API routes | `backend/main.go` (`setupRoutes()`) |

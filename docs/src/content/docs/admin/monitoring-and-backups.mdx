@@ -1,239 +1,65 @@
 ---
-title: "Monitoring and Backups"
-description: "Comprehensive monitoring with Prometheus metrics and automated backup capabilities with S3 support."
+title: Monitoring and Backups
+description: Observe LeafLock runtime health and track encrypted data backups.
 sidebar:
   order: 2
 ---
 
-import { Aside } from '@astrojs/starlight/components';
+import { Code } from '@astrojs/starlight/components';
 
-LeafLock now includes comprehensive monitoring with Prometheus metrics and automated backup capabilities with S3 support.
+## Monitoring Overview
+LeafLock exposes native Prometheus metrics under `/metrics`. Set `ENABLE_METRICS=true` (default) to keep the handler active. In production place the endpoint behind an internal network or require an authorization proxy.
 
-## Prometheus Metrics
+<Code
+  code={`curl -s http://localhost:8080/metrics | grep leaflock_`}
+  language="bash"
+/>
 
-### Enabling Metrics
+## Metric Families
 
-Metrics are enabled by default. To disable them, set `ENABLE_METRICS=false` in your environment.
+### Encryption and Collaboration Signals
+- `leaflock_active_users` – authenticated sessions currently online (WebSocket handshake counts only after encryption keys are exchanged).
+- `leaflock_notes_total` – CRUD operations against encrypted notes; spikes indicate key rotation or bulk import activity.
+- `leaflock_collaborations_active` – live shared workspaces.
+- `leaflock_websocket_connections` – concurrent encrypted channels between browser clients and the collaboration service.
 
-### Available Metrics
+### API Surface
+- `leaflock_http_requests_total` – labelled by method, route, and status.
+- `leaflock_http_request_duration_seconds` – histogram for call latency. Track the `admin` and `auth` buckets separately because MFA and key generation have higher variance.
+- `leaflock_errors_total` – aggregated by component for alerting.
 
-The application exposes the following metrics at `/metrics`:
+### Persistence Layers
+- `leaflock_db_connections_active` / `leaflock_db_connections_idle` – monitor connection pool tuning for PostgreSQL.
+- `leaflock_db_queries_total` – emitted per statement type (select, insert, update, delete).
+- `leaflock_redis_connections_active` / `leaflock_redis_operations_total` – ensure session cache pressure stays within limits.
 
-#### HTTP Metrics
-- `leaflock_http_requests_total` - Total HTTP requests by method, endpoint, and status code
-- `leaflock_http_request_duration_seconds` - HTTP request duration histogram
+### Backup Lifecycle
+- `leaflock_backups_total{status="success|failed"}` – incremented by the backup runner for each execution.
+- `leaflock_backup_duration_seconds` – execution time histogram (slow runs usually mean S3 throttling or large WAL delta).
+- `leaflock_backup_size_bytes` – last successful archive size.
 
-#### Application Metrics
-- `leaflock_active_users` - Number of currently active users
-- `leaflock_notes_total` - Total notes operations (create, update, delete)
-- `leaflock_collaborations_active` - Number of active collaborations
-- `leaflock_websocket_connections` - Active WebSocket connections
+## Alerting Baselines
+- trigger on `leaflock_http_errors_total{component="api"}` rate > 5/min with a 10 minute window.
+- alert when `leaflock_websocket_connections` drops to zero while `leaflock_active_users` > 0.
+- investigate `leaflock_backup_duration_seconds` p95 > 600s; this usually precedes S3 timeout errors.
+- page when no successful backup has been observed for 24 hours: `max_over_time(leaflock_backups_total{status="success"}[24h]) == 0`.
 
-#### Database Metrics
-- `leaflock_db_connections_active` - Active database connections
-- `leaflock_db_connections_idle` - Idle database connections
-- `leaflock_db_queries_total` - Total database queries by operation
+## Dashboards
+Prometheus/Grafana dashboards should graph the metric families above plus runtime logs tagged with `component=auth` and `component=backup`. A starter dashboard lives in `docs/grafana-dashboard.json`; import it and point the Prometheus datasource at the `/metrics` scrape target.
 
-#### Redis Metrics
-- `leaflock_redis_connections_active` - Active Redis connections
-- `leaflock_redis_operations_total` - Total Redis operations
+## Backup Execution
+LeafLock ships a single backup runner with S3-compatible output. Configure the backup-related variables documented in `/reference/environment-variables` (`ENABLE_BACKUPS`, `BACKUP_S3_BUCKET`, encryption key, schedule). The job reports directly into the metrics listed earlier.
 
-#### Error Metrics
-- `leaflock_errors_total` - Total errors by type and component
+Deployment-specific runbooks contain the operational commands for each platform:
+- Docker / Podman: `/deployment/docker/#backup--recovery`
+- Kubernetes: `/deployment/kubernetes/#backup-and-recovery`
+- Railway: `/deployment/railway/#database-migrations-and-backups`
 
-#### Backup Metrics
-- `leaflock_backups_total` - Total backup operations by status
-- `leaflock_backup_duration_seconds` - Backup duration histogram
-- `leaflock_backup_size_bytes` - Last backup size
-
-### Accessing Metrics
-
-```bash
-# Check if metrics are enabled
-curl http://localhost:8080/metrics
-
-# View specific metrics
-curl http://localhost:8080/metrics | grep leaflock_notes_total
-```
-
-## Automated S3 Backups
-
-### Configuration
-
-Add the following environment variables to your `.env` file:
-
-```bash
-# Enable backups
-ENABLE_BACKUPS=true
-
-# S3 Configuration
-BACKUP_S3_BUCKET=your-backup-bucket-name
-BACKUP_S3_ACCESS_KEY=your_access_key
-BACKUP_S3_SECRET_KEY=your_secret_key
-BACKUP_S3_REGION=us-east-1
-BACKUP_S3_ENDPOINT=https://s3.amazonaws.com
-
-# Backup encryption (32 characters)
-BACKUP_ENCRYPTION_KEY=your_32_character_encryption_key
-
-# Schedule (cron format) - default: daily at 2 AM
-BACKUP_SCHEDULE=0 2 * * *
-
-# Retention (days) - default: 30 days
-BACKUP_RETENTION_DAYS=30
-```
-
-### S3 Bucket Setup
-
-1. Create an S3 bucket for backups
-2. Create an IAM user with the following policy:
-
-```json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "s3:PutObject",
-                "s3:GetObject",
-                "s3:DeleteObject",
-                "s3:ListBucket"
-            ],
-            "Resource": [
-                "arn:aws:s3:::your-backup-bucket/*",
-                "arn:aws:s3:::your-backup-bucket"
-            ]
-        }
-    ]
-}
-```
-
-### Backup Features
-
-<Aside type="note">
-- **Encrypted backups**: All backups are encrypted with AES-256
-- **Automatic retention**: Old backups are automatically cleaned up
-- **Health monitoring**: Backup status is exposed via Prometheus metrics
-- **Manual restore**: Use the restore script for point-in-time recovery
-</Aside>
-
-### Running Backups
-
-#### With Docker Compose
-
-```bash
-# Start with backup service
-make up
-
-# Run immediate backup
-docker compose exec backup /usr/local/bin/backup.sh
-
-# View backup logs
-docker compose logs backup -f
-```
-
-#### Manual Backup
-
-```bash
-# Run backup script directly
-./scripts/backup.sh
-
-# List available backups
-./scripts/restore.sh --list
-
-# Restore from specific backup
-./scripts/restore.sh --file backups/2025/01/21/leaflock_backup_20250121_020000.sql.gz.enc
-```
-
-### Backup Storage Structure
-
-Backups are stored in S3 with the following structure:
-
-```
-s3://your-bucket/
-└── backups/
-    └── 2025/
-        └── 01/
-            └── 21/
-                ├── leaflock_backup_20250121_020000.sql.gz.enc
-                ├── leaflock_backup_20250121_140000.sql.gz.enc
-                └── ...
-```
-
-## Kubernetes Monitoring
-
-When deploying with Helm, monitoring is automatically configured:
-
-### ServiceMonitor
-
-The chart creates a ServiceMonitor for Prometheus Operator:
-
-```yaml
-monitoring:
-  enabled: true
-  serviceMonitor:
-    enabled: true
-    namespace: monitoring
-    interval: 30s
-```
-
-### Prometheus Rules
-
-Pre-configured alerts include:
-
-- `LeafLockBackendDown` - Backend service is unavailable
-- `LeafLockHighErrorRate` - High error rate detected
-- `LeafLockBackupFailed` - Backup operation failed
-
-### Backup CronJob
-
-Automated backups run as a Kubernetes CronJob:
-
-```yaml
-backup:
-  enabled: true
-  schedule: "0 2 * * *"
-  retentionDays: 30
-```
-
-## Grafana Dashboard
-
-A sample Grafana dashboard is available at `docs/grafana-dashboard.json` with:
-
-- Request rate and latency graphs
-- Error rate monitoring
-- Database and Redis connection metrics
-- Backup status and size tracking
-- Active user and collaboration counts
+Use those guides for cron schedules, restore commands, and IAM examples. This page focuses on observing the outcome and wiring metrics into your alerting stack.
 
 ## Troubleshooting
+- **Metrics endpoint empty**: verify `ENABLE_METRICS=true` and that your reverse proxy forwards requests to `/metrics` without stripping headers.
+- **Missing backup samples**: confirm the backup container logs `backup completed` and that the schedule (cron expression) is valid.
+- **Inconsistent `leaflock_active_users` counts**: ensure WebSocket ingress traffic terminates TLS before proxying to the backend; TLS termination errors prevent the session increment hook from running.
 
-### Metrics Not Working
-
-1. Check `ENABLE_METRICS` environment variable
-2. Verify `/metrics` endpoint is accessible
-3. Check application logs for errors
-
-### Backup Failures
-
-1. Verify S3 credentials and permissions
-2. Check `BACKUP_ENCRYPTION_KEY` is set
-3. Review backup logs: `docker compose logs backup`
-4. Test S3 connectivity manually
-
-### Common Issues
-
-<Aside type="caution">
-- **Permission denied**: Ensure backup user has write access to `/tmp/backups`
-- **S3 access denied**: Verify IAM policy allows required S3 operations
-- **Encryption errors**: Ensure `BACKUP_ENCRYPTION_KEY` is exactly 32 characters
-- **Database connection**: Check PostgreSQL connection from backup container
-</Aside>
-
-## Security Considerations
-
-- Backup encryption keys should be stored securely
-- S3 credentials should use least-privilege IAM policies
-- Regular backup restore testing is recommended
-- Metrics endpoint should be secured in production environments
+Backups are only useful when tested regularly. Schedule restore drills alongside monitoring to guarantee encrypted archives remain decryptable with your stored keys.

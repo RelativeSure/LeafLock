@@ -1,0 +1,612 @@
+---
+title: Database Schema
+description: Complete PostgreSQL database schema reference for LeafLock
+---
+
+## Schema Overview
+
+**Database**: PostgreSQL 15+
+**Required Extensions**: `uuid-ossp`, `pgcrypto`, `pg_trgm`
+**Schema File**: `backend/database/schema.go`
+
+LeafLock uses PostgreSQL with extensive encryption for zero-knowledge architecture. All user-generated content is stored encrypted.
+
+## Core Tables
+
+### users
+
+User accounts with encrypted email and authentication data.
+
+```sql
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email_hash BYTEA UNIQUE NOT NULL,              -- SHA-256 hash for uniqueness
+    email_encrypted BYTEA NOT NULL,                -- ChaCha20-Poly1305 encrypted email
+    email_search_hash BYTEA UNIQUE,                -- Deterministic hash for login lookups
+    password_hash TEXT NOT NULL,                   -- Argon2id: $argon2id$v=19$m=65536,t=3,p=4$...
+    salt BYTEA NOT NULL,                           -- 16 bytes for Argon2id
+    master_key_encrypted BYTEA NOT NULL,           -- User's master key (future: key recovery)
+    public_key BYTEA,                              -- RSA public key for sharing
+    private_key_encrypted BYTEA,                   -- RSA private key encrypted with derived key
+    mfa_secret_encrypted BYTEA,                    -- TOTP secret (ChaCha20-Poly1305 encrypted)
+    mfa_enabled BOOLEAN DEFAULT false,
+    is_admin BOOLEAN DEFAULT false,
+    storage_used BIGINT DEFAULT 0,                 -- Bytes used by attachments
+    storage_limit BIGINT DEFAULT 5242880,          -- 5MB default limit
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    last_login TIMESTAMPTZ,
+    failed_attempts INT DEFAULT 0,                 -- Failed login counter
+    locked_until TIMESTAMPTZ,                      -- Account lock expiration
+    deleted_at TIMESTAMPTZ                         -- Soft delete timestamp
+);
+```
+
+**Indexes**:
+```sql
+idx_users_email_search_hash ON users(email_search_hash) WHERE email_search_hash IS NOT NULL;
+idx_users_count_fast ON users(id) WHERE deleted_at IS NULL;
+idx_users_admin_flag ON users(is_admin) WHERE is_admin = true;
+idx_users_email_hash ON users(email_hash) WHERE email_hash IS NOT NULL;
+```
+
+**Trigger**: `update_users_updated_at` - Auto-updates `updated_at` on row modification
+
+---
+
+### workspaces
+
+Workspaces for organizing notes with their own encryption keys.
+
+```sql
+CREATE TABLE workspaces (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name_encrypted BYTEA NOT NULL,                 -- Workspace name (client-side encrypted)
+    owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    encryption_key_encrypted BYTEA NOT NULL,       -- Workspace key encrypted with owner's master key
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Key Concept**: Each workspace has its own encryption key, allowing key rotation per workspace rather than per user.
+
+**Trigger**: `update_workspaces_updated_at`
+
+---
+
+### notes
+
+Encrypted note storage with version tracking and hierarchy support.
+
+```sql
+CREATE TABLE notes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+    title_encrypted BYTEA NOT NULL,                -- XChaCha20-Poly1305 encrypted
+    content_encrypted BYTEA NOT NULL,              -- XChaCha20-Poly1305 encrypted
+    content_hash BYTEA NOT NULL,                   -- SHA-256 for integrity verification
+    parent_id UUID REFERENCES notes(id) ON DELETE CASCADE,  -- For nested notes
+    folder_id UUID REFERENCES folders(id) ON DELETE SET NULL,
+    template_id UUID REFERENCES templates(id) ON DELETE SET NULL,
+    position INT DEFAULT 0,                        -- Custom ordering
+    version INT DEFAULT 1,                         -- Current version number
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ                         -- Soft delete (trash)
+);
+```
+
+**Indexes**:
+```sql
+idx_notes_workspace ON notes(workspace_id) WHERE deleted_at IS NOT NULL;
+idx_notes_parent ON notes(parent_id);
+idx_notes_created ON notes(created_by, created_at DESC);
+idx_notes_folder ON notes(folder_id);
+```
+
+**Trigger**: `update_notes_updated_at`
+
+**Cleanup**: `cleanup_old_deleted_notes()` function removes notes with `deleted_at` older than 30 days
+
+---
+
+### note_versions
+
+Version history for notes.
+
+```sql
+CREATE TABLE note_versions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    version_number INT NOT NULL,
+    title_encrypted BYTEA NOT NULL,
+    content_encrypted BYTEA NOT NULL,
+    content_hash BYTEA NOT NULL,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(note_id, version_number)
+);
+```
+
+**Purpose**: Every note update creates a new version entry, allowing full history tracking and rollback.
+
+---
+
+### search_index
+
+Encrypted searchable keyword index using HMAC.
+
+```sql
+CREATE TABLE search_index (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    keyword_hash BYTEA NOT NULL,                   -- HMAC(keyword) for searchable encryption
+    position INT,                                  -- Keyword position in document
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Index**: `idx_search_keyword ON search_index(keyword_hash);`
+
+**How It Works**:
+1. Client extracts keywords from plaintext
+2. Client computes HMAC of each keyword
+3. Client stores HMAC hashes in search_index
+4. For search: compute HMAC of search term, lookup matching hashes
+5. Client decrypts matching notes to verify relevance
+
+---
+
+## Organization Tables
+
+### folders
+
+Hierarchical folder structure for organizing notes.
+
+```sql
+CREATE TABLE folders (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    parent_id UUID REFERENCES folders(id) ON DELETE CASCADE,  -- NULL for root folders
+    name_encrypted BYTEA NOT NULL,
+    color VARCHAR(7) DEFAULT '#3b82f6',
+    position INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Indexes**:
+```sql
+idx_folders_user ON folders(user_id);
+idx_folders_parent ON folders(parent_id);
+idx_folders_position ON folders(user_id, position);
+```
+
+**Trigger**: `update_folders_updated_at`
+
+---
+
+### tags
+
+Tags for categorizing notes.
+
+```sql
+CREATE TABLE tags (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    name_encrypted BYTEA NOT NULL,
+    color VARCHAR(7) DEFAULT '#3b82f6',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, name_encrypted)
+);
+```
+
+**Indexes**:
+```sql
+idx_tags_user ON tags(user_id);
+```
+
+**Trigger**: `update_tags_updated_at`
+
+---
+
+### note_tags
+
+Junction table linking notes to tags (many-to-many).
+
+```sql
+CREATE TABLE note_tags (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    tag_id UUID REFERENCES tags(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(note_id, tag_id)
+);
+```
+
+**Indexes**:
+```sql
+idx_note_tags_note ON note_tags(note_id);
+idx_note_tags_tag ON note_tags(tag_id);
+```
+
+---
+
+### templates
+
+Reusable note templates.
+
+```sql
+CREATE TABLE templates (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    name_encrypted BYTEA NOT NULL,
+    description_encrypted BYTEA,
+    content_encrypted BYTEA NOT NULL,
+    tags TEXT[],                                   -- Array of tag names for categorization
+    icon VARCHAR(50) DEFAULT '📝',
+    is_public BOOLEAN DEFAULT false,
+    usage_count INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Trigger**: `update_templates_updated_at`
+
+---
+
+## Collaboration Tables
+
+### collaborations
+
+Note sharing and permissions.
+
+```sql
+CREATE TABLE collaborations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    permission TEXT CHECK (permission IN ('read', 'write', 'admin')),
+    key_encrypted BYTEA NOT NULL,                  -- Note key encrypted with user's public key
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(note_id, user_id)
+);
+```
+
+**Permission Levels**:
+- `read`: View note only
+- `write`: Edit note content
+- `admin`: Manage collaborators, delete note
+
+**Encryption**: Note's encryption key is encrypted with collaborator's public key, enabling zero-knowledge sharing.
+
+---
+
+## File Storage
+
+### attachments
+
+Encrypted file attachments stored in database.
+
+```sql
+CREATE TABLE attachments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    filename_encrypted BYTEA NOT NULL,
+    content_encrypted BYTEA NOT NULL,              -- Full file content encrypted
+    mime_type TEXT,
+    size_bytes BIGINT,
+    checksum BYTEA NOT NULL,                       -- SHA-256 of encrypted content
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Storage Strategy**: Files stored directly in PostgreSQL (via BYTEA) for simplicity. For production at scale, consider moving to object storage (S3, MinIO) with encrypted references.
+
+**Size Limit**: Enforced via `users.storage_limit` (default 5MB per user).
+
+---
+
+## Security & Audit Tables
+
+### audit_log
+
+Security audit trail with encrypted metadata.
+
+```sql
+CREATE TABLE audit_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id),
+    action TEXT NOT NULL,                          -- e.g., "login", "note_created", "note_deleted"
+    resource_type TEXT,                            -- e.g., "note", "user", "folder"
+    resource_id UUID,
+    ip_address_encrypted BYTEA,                    -- ChaCha20-Poly1305 encrypted
+    user_agent_encrypted BYTEA,                    -- ChaCha20-Poly1305 encrypted
+    metadata JSONB,                                -- Additional context (non-sensitive)
+    metadata_encrypted BYTEA,                      -- Encrypted sensitive metadata
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Indexes**:
+```sql
+idx_audit_user ON audit_log(user_id, created_at DESC);
+idx_audit_action ON audit_log(action, created_at DESC);
+```
+
+**Retention**: Configure cleanup job to remove old audit logs (default: keep indefinitely).
+
+---
+
+### key_rotations
+
+Track encryption key rotation operations.
+
+```sql
+CREATE TABLE key_rotations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    old_key_hash BYTEA NOT NULL,
+    new_key_hash BYTEA NOT NULL,
+    items_rotated INT DEFAULT 0,
+    completed BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+);
+```
+
+**Purpose**: Future feature for re-encrypting all user data with new encryption key.
+
+---
+
+## RBAC Tables
+
+### roles
+
+Role-based access control roles.
+
+```sql
+CREATE TABLE roles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT UNIQUE NOT NULL                      -- e.g., "admin", "user", "moderator", "auditor"
+);
+```
+
+**Default Roles**:
+```sql
+INSERT INTO roles (name) VALUES ('admin'), ('user'), ('moderator'), ('auditor');
+```
+
+---
+
+### user_roles
+
+Junction table for user-role assignments.
+
+```sql
+CREATE TABLE user_roles (
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, role_id)
+);
+```
+
+---
+
+## System Tables
+
+### app_settings
+
+Key-value store for application configuration.
+
+```sql
+CREATE TABLE app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Trigger**: `update_settings_updated_at`
+
+**Example Settings**:
+- `registration_enabled`: "true" or "false"
+- `maintenance_mode`: "true" or "false"
+- `max_notes_per_user`: "1000"
+
+---
+
+### announcements
+
+System-wide announcement messages.
+
+```sql
+CREATE TABLE announcements (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,                         -- Markdown content
+    visibility TEXT CHECK (visibility IN ('all', 'logged_in')) DEFAULT 'logged_in',
+    style JSONB DEFAULT '{}',                      -- Style config (colors, icons)
+    active BOOLEAN DEFAULT true,
+    dismissible BOOLEAN DEFAULT true,
+    priority INT DEFAULT 0,
+    start_date TIMESTAMPTZ,
+    end_date TIMESTAMPTZ,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Index**: `idx_announcements_active ON announcements(active, priority DESC, created_at DESC);`
+
+---
+
+## GDPR Compliance
+
+### gdpr_keys
+
+Storage for email decryption keys (GDPR data access requests).
+
+```sql
+CREATE TABLE gdpr_keys (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email_hash BYTEA UNIQUE NOT NULL,              -- SHA-256 hash of email
+    deletion_key BYTEA NOT NULL,                   -- Key to decrypt email for GDPR requests
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Purpose**: Allows administrators to decrypt email addresses for GDPR data access/deletion requests without compromising zero-knowledge architecture for note content.
+
+---
+
+## Triggers
+
+### update_updated_at_column()
+
+Automatically updates `updated_at` timestamp on row modification.
+
+```sql
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+```
+
+**Applied to**:
+- users
+- workspaces
+- notes
+- tags
+- folders
+- templates
+- app_settings
+
+---
+
+## Cleanup Functions
+
+### cleanup_old_deleted_notes()
+
+Permanently deletes notes in trash older than 30 days.
+
+```sql
+CREATE OR REPLACE FUNCTION cleanup_old_deleted_notes()
+RETURNS void AS $$
+BEGIN
+    DELETE FROM notes
+    WHERE deleted_at IS NOT NULL
+      AND deleted_at < NOW() - INTERVAL '30 days';
+END;
+$$ LANGUAGE plpgsql;
+```
+
+**Execution**: Run via background service every 24 hours.
+
+---
+
+## Migrations
+
+**Migration System**: Built-in migration tracking in `_migrations` table (not shown in schema).
+
+**Index**: `idx_migrations_version ON _migrations(version, applied_at DESC);`
+
+**Deployment**: Migrations run automatically on startup unless `SKIP_MIGRATION_CHECK=true` (not recommended).
+
+---
+
+## Performance Optimization
+
+### Index Strategy
+
+**Partial Indexes**: Used extensively to improve query performance on filtered data.
+
+**Example**:
+```sql
+CREATE INDEX idx_users_count_fast ON users(id) WHERE deleted_at IS NULL;
+```
+
+This index speeds up `COUNT(*)` queries for active users without scanning deleted accounts.
+
+### Foreign Key Cascades
+
+**ON DELETE CASCADE**: Used for parent-child relationships (workspace→notes, note→attachments)
+
+**ON DELETE SET NULL**: Used for optional relationships (note→folder)
+
+---
+
+## Data Retention
+
+| Table | Retention Policy |
+|-------|------------------|
+| notes (deleted) | 30 days in trash, then permanent deletion |
+| audit_log | Indefinite (configurable) |
+| note_versions | Indefinite |
+| attachments | Deleted with parent note |
+| sessions (Redis) | JWT expiration (default: 24 hours) |
+
+---
+
+## Encrypted vs. Plaintext Columns
+
+### Client-Side Encrypted (XChaCha20-Poly1305)
+
+- `notes.title_encrypted`
+- `notes.content_encrypted`
+- `folders.name_encrypted`
+- `tags.name_encrypted`
+- `templates.name_encrypted`, `content_encrypted`
+- `attachments.filename_encrypted`, `content_encrypted`
+
+### Server-Side Encrypted (ChaCha20-Poly1305)
+
+- `users.email_encrypted`
+- `users.mfa_secret_encrypted`
+- `audit_log.ip_address_encrypted`
+- `audit_log.user_agent_encrypted`
+
+### Hashed (SHA-256 or Argon2id)
+
+- `users.email_hash` (SHA-256)
+- `users.password_hash` (Argon2id)
+- `notes.content_hash` (SHA-256)
+
+---
+
+## Schema Version
+
+**Current Version**: Managed via migrations in `_migrations` table
+
+**Schema File**: `backend/database/schema.go`
+
+**Extensions Required**:
+```sql
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+```
+
+---
+
+## Database Size Estimates
+
+| Component | Typical Size (per user) |
+|-----------|--------------------------|
+| User account | ~1 KB |
+| Note (avg) | ~5-10 KB encrypted |
+| Attachment | Variable (limited to 5MB per user by default) |
+| Audit log entry | ~500 bytes |
+| Search index entry | ~100 bytes per keyword |
+
+**Scaling**: For 10,000 users with 100 notes each: ~5-10 GB database size (excluding large attachments).

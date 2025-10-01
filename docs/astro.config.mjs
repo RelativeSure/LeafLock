@@ -11,7 +11,11 @@ export default defineConfig({
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/RelativeSure/LeafLock' }],
 			sidebar: [
 				{
-					label: 'Guides',
+					label: 'Technical Reference',
+					autogenerate: { directory: 'reference' },
+				},
+				{
+					label: 'Getting Started',
 					autogenerate: { directory: 'guides' },
 				},
 				{
@@ -19,20 +23,16 @@ export default defineConfig({
 					autogenerate: { directory: 'deployment' },
 				},
 				{
-					label: 'Troubleshooting',
-					autogenerate: { directory: 'troubleshooting' },
+					label: 'Development',
+					autogenerate: { directory: 'development' },
 				},
 				{
 					label: 'Administration',
 					autogenerate: { directory: 'admin' },
 				},
 				{
-					label: 'Development',
-					autogenerate: { directory: 'development' },
-				},
-				{
-					label: 'Reference',
-					autogenerate: { directory: 'reference' },
+					label: 'Troubleshooting',
+					autogenerate: { directory: 'troubleshooting' },
 				},
 				{
 					label: 'Legal',
