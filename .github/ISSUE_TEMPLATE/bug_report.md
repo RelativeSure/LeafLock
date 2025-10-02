@@ -27,8 +27,8 @@ If applicable, add screenshots or paste relevant logs.
 
 ## Environment
 
-- App version/commit: 
-- Browser/OS: 
+- App version/commit:
+- Browser/OS:
 - Deployment: Docker | Railway | Kubernetes | Local | Other
 
 ## Additional Context

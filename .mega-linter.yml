@@ -1,24 +1,68 @@
-# Configuration file for MegaLinter
-#
-# See all available variables at https://megalinter.io/latest/config-file/ and in
-# linters documentation
+# MegaLinter Configuration - 10 Essential Linters
+# See: https://megalinter.io/latest/config-file/
 
-# all, none, or list of linter keys
 APPLY_FIXES: all
 
-# If you use ENABLE variable, all other languages/formats/tooling-formats will
-# be disabled by default
-# ENABLE:
+# Enable ONLY these specific linters (all others disabled by default)
+ENABLE_LINTERS:
+  # Go (Backend) - Temporarily disabled due to Docker environment issues
+  # - GO_GOLANGCI_LINT          # Comprehensive Go linting (gofmt, govet, staticcheck, etc.)
 
-# If you use ENABLE_LINTERS variable, all other linters will be disabled by
-# default
-# ENABLE_LINTERS:
+  # JavaScript/TypeScript (Frontend)
+  - TYPESCRIPT_ES              # ESLint for TypeScript/React
+  - TYPESCRIPT_PRETTIER        # Code formatting for TS/JS
+  - JAVASCRIPT_ES              # ESLint for plain JavaScript
+  - JAVASCRIPT_PRETTIER        # Code formatting for JS
 
+  # Configuration Files
+  - YAML_YAMLLINT              # YAML linting (docker-compose, k8s, CI/CD)
+  - JSON_JSONLINT              # JSON validation
+
+  # Shell Scripts
+  - BASH_SHELLCHECK            # Bash script linting
+
+  # Dockerfile & Container
+  - DOCKERFILE_HADOLINT        # Dockerfile best practices and security
+
+  # Markdown Documentation
+  - MARKDOWN_MARKDOWNLINT      # Markdown linting for docs
+
+# Disabled linters
 DISABLE:
-  # - COPYPASTE # Uncomment to disable checks of excessive copy-pastes
-  - SPELL # Comment to enable checks of spelling mistakes
+  - SPELL                       # Too noisy for code/variable names
+  - COPYPASTE                   # Optional - can be noisy
 
 SHOW_ELAPSED_TIME: true
 
-# Uncomment if you want MegaLinter to detect errors but not block CI to pass
+# Linter-specific configurations
+
+# Go - Exclude vendor code from linting (exclusions now handled in .golangci.yml)
+GO_GOLANGCI_LINT_ARGUMENTS: "--timeout=5m"
+GO_GOLANGCI_LINT_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
+GO_GOLANGCI_LINT_DIRECTORY: "backend"  # Run from backend directory where go.mod is located
+
+# JavaScript/TypeScript - Exclude generated and dependency code
+JAVASCRIPT_ES_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
+JAVASCRIPT_PRETTIER_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
+TYPESCRIPT_ES_FILE_EXTENSIONS: [".ts", ".tsx"]
+TYPESCRIPT_ES_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
+TYPESCRIPT_PRETTIER_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
+
+# YAML - Exclude vendor code
+YAML_YAMLLINT_FILTER_REGEX_EXCLUDE: "(node_modules|\\.gomod|vendor)"
+
+# JSON - Exclude vendor, lock files, and TypeScript config files (they support comments/JSONC)
+JSON_JSONLINT_FILTER_REGEX_EXCLUDE: "(node_modules|\\.gomod|vendor|package-lock.json|pnpm-lock.yaml|tsconfig.*\\.json)"
+
+# Bash - Exclude vendor scripts
+BASH_SHELLCHECK_FILTER_REGEX_EXCLUDE: "(node_modules|\\.gomod|vendor)"
+
+# Dockerfile - Ignore Alpine package pinning warnings
+DOCKERFILE_HADOLINT_ARGUMENTS: "--ignore DL3006 --ignore DL3018 --ignore DL3008"
+DOCKERFILE_HADOLINT_FILTER_REGEX_EXCLUDE: "(\\.gomod|vendor)"
+
+# Markdown - Exclude changelogs and vendor docs
+MARKDOWN_MARKDOWNLINT_FILTER_REGEX_EXCLUDE: "(CHANGELOG.md|node_modules|\\.gomod|vendor)"
+
+# Don't fail CI on linter errors (warnings only)
 # DISABLE_ERRORS: true

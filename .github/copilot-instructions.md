@@ -169,7 +169,7 @@ These commands MUST be allowed to complete:
 
 These are configurable via environment variables:
 - `DEFAULT_ADMIN_EMAIL`
-- `DEFAULT_ADMIN_PASSWORD` 
+- `DEFAULT_ADMIN_PASSWORD`
 - `ENABLE_DEFAULT_ADMIN=true`
 
 ## Key Validation Workflows
@@ -224,7 +224,7 @@ cd ../frontend && pnpm run test && pnpm run build
 
 ## Repository Structure Reference
 
-```
+```plaintext
 backend/          - Go service with Fiber framework
 ├── main.go       - Entry point
 ├── Makefile      - Build and test automation  
@@ -251,7 +251,7 @@ Makefile          - Root automation (Podman/Docker)
 
 ### Build Issues
 1. Check Go/Node versions match requirements
-2. Run `go mod download` and `pnpm install` 
+2. Run `go mod download` and `pnpm install`
 3. Clear caches: `go clean -cache` and `pnpm store prune`
 
 ### Runtime Issues  

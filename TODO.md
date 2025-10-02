@@ -21,7 +21,7 @@ Using synchronous mode with extended health check timeouts:
 
 ### Failed Attempt
 Tried adding panic recovery with `defer recover()` but got Go compile errors:
-```
+```plaintext
 ./main.go:6878:13: use of package recover not in selector
 ```
 

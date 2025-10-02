@@ -54,7 +54,7 @@ func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
 	ctx := context.Background()
 	var theme string
 
-	err = h.db.QueryRow(ctx, `
+	err := h.db.QueryRow(ctx, `
 		SELECT COALESCE(theme_preference, 'system')
 		FROM users
 		WHERE id = $1 AND deleted_at IS NULL
@@ -114,7 +114,7 @@ func (h *SettingsHandler) UpdateSettings(c *fiber.Ctx) error {
 	}
 
 	ctx := context.Background()
-	_, err = h.db.Exec(ctx, `
+	_, err := h.db.Exec(ctx, `
 		UPDATE users
 		SET theme_preference = $1, updated_at = NOW()
 		WHERE id = $2 AND deleted_at IS NULL

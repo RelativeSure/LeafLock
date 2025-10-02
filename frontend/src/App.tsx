@@ -2325,8 +2325,8 @@ function SecureNotesApp() {
         const currentContent = contentRef.current
         const currentSelectedNote = selectedNoteRef.current
 
-        if (currentSelectedNote) {
-          // Update existing note
+        if (currentSelectedNote && currentSelectedNote.id) {
+          // Update existing note (only if ID exists and is not empty)
           await api.updateNote(currentSelectedNote.id, currentTitle, currentContent)
           console.log('✅ Updated existing note:', currentSelectedNote.id)
 

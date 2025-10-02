@@ -65,7 +65,7 @@ make test-race
 
 ## Frontend Testing (React)
 
-### Unit Tests
+### Frontend Unit Tests
 ```bash
 cd frontend
 npm test

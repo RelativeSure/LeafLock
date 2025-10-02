@@ -74,9 +74,9 @@ Copy `.env.example` to `.env` and configure:
 - `CORS_ORIGINS` - Allowed frontend origins
 
 ### Service Ports
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8080
-- Health check: http://localhost:8080/api/v1/health
+- Frontend: <http://localhost:3000>
+- Backend API: <http://localhost:8080>
+- Health check: <http://localhost:8080/api/v1/health>
 
 ## Security Considerations
 
@@ -185,7 +185,7 @@ curl https://your-domain.com/api/v1/health/ready
 
 ### Default Admin User
 The application creates a default admin user automatically if none exists:
-- **Email**: Configured via `DEFAULT_ADMIN_EMAIL` (default: admin@leaflock.app)
+- **Email**: Configured via `DEFAULT_ADMIN_EMAIL` (default: <admin@leaflock.app>)
 - **Password**: Configured via `DEFAULT_ADMIN_PASSWORD` (supports complex passwords with special characters)
 - **Creation**: Automatic on first startup if no users exist
 - **Validation**: Full password complexity validation with special character support
