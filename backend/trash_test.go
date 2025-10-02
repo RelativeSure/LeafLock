@@ -31,7 +31,7 @@ func (suite *TrashHandlerTestSuite) SetupTest() {
 
 	// Generate test encryption key
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, _ = rand.Read(key) // Test setup
 	suite.crypto = NewCryptoService(key)
 
 	suite.handler = &NotesHandler{
@@ -116,7 +116,7 @@ func (suite *TrashHandlerTestSuite) TestGetTrashSuccess() {
 	suite.Equal(200, resp.StatusCode)
 
 	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
+	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 	suite.Contains(response, "notes")
 	notes := response["notes"].([]interface{})
@@ -154,7 +154,7 @@ func (suite *TrashHandlerTestSuite) TestRestoreNoteSuccess() {
 	suite.Equal(200, resp.StatusCode)
 
 	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
+	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 	suite.Equal("Note restored successfully", response["message"])
 }
@@ -191,7 +191,7 @@ func (suite *TrashHandlerTestSuite) TestPermanentlyDeleteNoteSuccess() {
 	suite.Equal(200, resp.StatusCode)
 
 	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
+	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 	suite.Equal("Note permanently deleted successfully", response["message"])
 }
@@ -221,7 +221,7 @@ func (suite *TrashHandlerTestSuite) TestInvalidNoteID() {
 	suite.Equal(400, resp.StatusCode)
 
 	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
+	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 	suite.Equal("Invalid note ID", response["error"])
 }
 

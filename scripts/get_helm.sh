@@ -17,13 +17,13 @@
 # The install script is based off of the MIT-licensed script from glide,
 # the package manager for Go: https://github.com/Masterminds/glide.sh/blob/master/get
 
-: ${BINARY_NAME:="helm"}
-: ${USE_SUDO:="true"}
-: ${DEBUG:="false"}
-: ${VERIFY_CHECKSUM:="true"}
-: ${VERIFY_SIGNATURES:="false"}
-: ${HELM_INSTALL_DIR:="/usr/local/bin"}
-: ${GPG_PUBRING:="pubring.kbx"}
+: "${BINARY_NAME:=helm}"
+: "${USE_SUDO:=true}"
+: "${DEBUG:=false}"
+: "${VERIFY_CHECKSUM:=true}"
+: "${VERIFY_SIGNATURES:=false}"
+: "${HELM_INSTALL_DIR:=/usr/local/bin}"
+: "${GPG_PUBRING:=pubring.kbx}"
 
 HAS_CURL="$(type "curl" &> /dev/null && echo true || echo false)"
 HAS_WGET="$(type "wget" &> /dev/null && echo true || echo false)"
@@ -49,7 +49,7 @@ initArch() {
 
 # initOS discovers the operating system for this system.
 initOS() {
-  OS=$(echo `uname`|tr '[:upper:]' '[:lower:]')
+  OS=$(uname | tr '[:upper:]' '[:lower:]')
 
   case "$OS" in
     # Minimalist GNU for Windows
@@ -59,7 +59,7 @@ initOS() {
 
 # runs the given command as root (detects if we are root already)
 runAsRoot() {
-  if [ $EUID -ne 0 -a "$USE_SUDO" = "true" ]; then
+  if [ "$EUID" -ne 0 ] && [ "$USE_SUDO" = "true" ]; then
     sudo "${@}"
   else
     "${@}"
@@ -112,7 +112,7 @@ verifySupported() {
 
 # checkDesiredVersion checks if the desired version is available.
 checkDesiredVersion() {
-  if [ "x$DESIRED_VERSION" == "x" ]; then
+  if [ -z "$DESIRED_VERSION" ]; then
     # Get tag from release URL
     local latest_release_url="https://get.helm.sh/helm-latest-version"
     local latest_release_response=""
@@ -122,7 +122,7 @@ checkDesiredVersion() {
       latest_release_response=$( wget "$latest_release_url" -q -O - 2>&1 || true )
     fi
     TAG=$( echo "$latest_release_response" | grep '^v[0-9]' )
-    if [ "x$TAG" == "x" ]; then
+    if [ -z "$TAG" ]; then
       printf "Could not retrieve the latest release tag information from %s: %s\n" "${latest_release_url}" "${latest_release_response}"
       exit 1
     fi
@@ -193,8 +193,8 @@ installFile() {
 # verifyChecksum verifies the SHA256 checksum of the binary package.
 verifyChecksum() {
   printf "Verifying checksum... "
-  local sum=$(openssl sha1 -sha256 ${HELM_TMP_FILE} | awk '{print $2}')
-  local expected_sum=$(cat ${HELM_SUM_FILE})
+  local sum=$(openssl sha1 -sha256 "${HELM_TMP_FILE}" | awk '{print $2}')
+  local expected_sum=$(cat "${HELM_SUM_FILE}")
   if [ "$sum" != "$expected_sum" ]; then
     echo "SHA sum of ${HELM_TMP_FILE} does not match. Aborting."
     exit 1
@@ -216,7 +216,8 @@ verifySignatures() {
   fi
   local gpg_keyring="${HELM_TMP_ROOT}/keyring.gpg"
   local gpg_homedir="${HELM_TMP_ROOT}/gnupg"
-  mkdir -p -m 0700 "${gpg_homedir}"
+  mkdir -p "${gpg_homedir}"
+  chmod 0700 "${gpg_homedir}"
   local gpg_stderr_device="/dev/null"
   if [ "${DEBUG}" == "true" ]; then
     gpg_stderr_device="/dev/stderr"
@@ -267,9 +268,9 @@ fail_trap() {
 # testVersion tests the installed client to make sure it is working.
 testVersion() {
   set +e
-  HELM="$(command -v $BINARY_NAME)"
+  HELM="$(command -v "$BINARY_NAME")"
   if [ "$?" = "1" ]; then
-    echo "$BINARY_NAME not found. Is $HELM_INSTALL_DIR on your "'$PATH?'
+    echo "$BINARY_NAME not found. Is $HELM_INSTALL_DIR on your \$PATH?"
     exit 1
   fi
   set -e
@@ -303,7 +304,7 @@ if [ "${DEBUG}" == "true" ]; then
 fi
 
 # Parsing input arguments (if any)
-export INPUT_ARGUMENTS="${@}"
+export INPUT_ARGUMENTS="${*}"
 set -u
 while [[ $# -gt 0 ]]; do
   case $1 in

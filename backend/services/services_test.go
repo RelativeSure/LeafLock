@@ -352,8 +352,8 @@ func TestIsUserInAdminAllowlist(t *testing.T) {
 
 	t.Run("checks environment variable as fallback", func(t *testing.T) {
 		adminAllowlist.Store(make(map[string]struct{}))
-		os.Setenv("ADMIN_USER_IDS", "user3,user4")
-		defer os.Unsetenv("ADMIN_USER_IDS")
+		_ = os.Setenv("ADMIN_USER_IDS", "user3,user4") // Test setup
+		defer func() { _ = os.Unsetenv("ADMIN_USER_IDS") }()
 
 		if !IsUserInAdminAllowlist("user3") {
 			t.Error("Expected user3 to be found in environment")
@@ -400,13 +400,13 @@ func TestLoadAllowlistFromSources(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer os.Remove(tmpFile.Name())
+		defer func() { _ = os.Remove(tmpFile.Name()) }() // Test cleanup
 
 		content := "ADMIN_USER_IDS=file_user1,file_user2\n"
 		if _, err := tmpFile.WriteString(content); err != nil {
 			t.Fatal(err)
 		}
-		tmpFile.Close()
+		_ = tmpFile.Close() // Test cleanup
 
 		result, _ := LoadAllowlistFromSources("", tmpFile.Name())
 
@@ -424,11 +424,11 @@ func TestLoadAllowlistFromSources(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer os.Remove(tmpFile.Name())
+		defer func() { _ = os.Remove(tmpFile.Name()) }() // Test cleanup
 
 		content := "ADMIN_USER_IDS=file_user1\n"
-		tmpFile.WriteString(content)
-		tmpFile.Close()
+		_, _ = tmpFile.WriteString(content) // Test setup
+		_ = tmpFile.Close()                  // Test cleanup
 
 		result, _ := LoadAllowlistFromSources("env_user1", tmpFile.Name())
 
@@ -442,11 +442,11 @@ func TestLoadAllowlistFromSources(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer os.Remove(tmpFile.Name())
+		defer func() { _ = os.Remove(tmpFile.Name()) }() // Test cleanup
 
 		content := "# This is a comment\n\nADMIN_USER_IDS=user1\n# Another comment\n"
-		tmpFile.WriteString(content)
-		tmpFile.Close()
+		_, _ = tmpFile.WriteString(content) // Test setup
+		_ = tmpFile.Close()                  // Test cleanup
 
 		result, _ := LoadAllowlistFromSources("", tmpFile.Name())
 
@@ -460,11 +460,11 @@ func TestLoadAllowlistFromSources(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer os.Remove(tmpFile.Name())
+		defer func() { _ = os.Remove(tmpFile.Name()) }() // Test cleanup
 
 		content := `ADMIN_USER_IDS="user1,user2"`
-		tmpFile.WriteString(content)
-		tmpFile.Close()
+		_, _ = tmpFile.WriteString(content) // Test setup
+		_ = tmpFile.Close()                  // Test cleanup
 
 		result, _ := LoadAllowlistFromSources("", tmpFile.Name())
 

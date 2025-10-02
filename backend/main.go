@@ -383,7 +383,9 @@ func main() {
 		MaxRetries:   3,
 		PoolTimeout:  5 * time.Second,
 	})
-	defer rdb.Close()
+	defer func() {
+		_ = rdb.Close() // Best effort cleanup
+	}()
 	log.Printf("⏱️  Redis client initialized in %v", time.Since(redisStart))
 
 	// Initialize crypto service

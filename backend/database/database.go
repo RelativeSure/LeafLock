@@ -173,7 +173,9 @@ func runOptimizedMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 	if err != nil {
 		return fmt.Errorf("failed to begin migration transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx) // Rollback is safe to call even if tx was committed
+	}()
 
 	// Execute the schema
 	if _, err := tx.Exec(ctx, DatabaseSchema); err != nil {

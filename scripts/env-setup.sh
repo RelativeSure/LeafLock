@@ -45,7 +45,7 @@ log_section() {
 # Function to generate secure random strings
 generate_password() {
     local length=${1:-32}
-    openssl rand -base64 $((length * 3 / 4)) | tr -d "=+/" | cut -c1-$length
+    openssl rand -base64 $((length * 3 / 4)) | tr -d "=+/" | cut -c1-"$length"
 }
 
 generate_hex() {
@@ -416,12 +416,12 @@ compare_environments() {
     
     if [[ -n "$only_in_1" ]]; then
         log_warn "Variables only in $file1:"
-        echo "$only_in_1" | sed 's/^/  - /'
+        while IFS= read -r line; do echo "  - $line"; done <<< "$only_in_1"
     fi
-    
+
     if [[ -n "$only_in_2" ]]; then
         log_warn "Variables only in $file2:"
-        echo "$only_in_2" | sed 's/^/  - /'
+        while IFS= read -r line; do echo "  - $line"; done <<< "$only_in_2"
     fi
     
     if [[ -z "$only_in_1" && -z "$only_in_2" ]]; then
@@ -599,12 +599,10 @@ EOF
 }
 
 # Check dependencies
-for cmd in openssl; do
-    if ! command -v "$cmd" &> /dev/null; then
-        log_error "Required command '$cmd' is not installed"
-        exit 1
-    fi
-done
+if ! command -v openssl &> /dev/null; then
+    log_error "Required command 'openssl' is not installed"
+    exit 1
+fi
 
 # Ensure we have at least one argument
 if [[ $# -eq 0 ]]; then

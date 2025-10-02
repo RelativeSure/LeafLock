@@ -184,7 +184,8 @@ test_api_endpoints() {
     )
     
     for endpoint in "${endpoints[@]}"; do
-        IFS':' read -r path expected <<< "$endpoint"
+        local path expected
+        IFS=':' read -r path expected <<< "$endpoint"
         test_http_endpoint "$base_url$path" "API Endpoint $path" 5 "$expected"
     done
 }

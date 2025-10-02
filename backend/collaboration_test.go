@@ -22,7 +22,7 @@ func TestCollaborationFeatures(t *testing.T) {
 	}
 	defer func() {
 		if closer, ok := db.(interface{ Close() error }); ok {
-			closer.Close()
+			_ = closer.Close() // Test cleanup
 		}
 	}()
 

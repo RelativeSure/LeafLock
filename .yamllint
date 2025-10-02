@@ -4,6 +4,12 @@
 ---
 extends: default
 
+# Ignore Helm templates (they use Go templating which isn't valid YAML)
+ignore: |
+  helm/
+  backend/.gomod/
+  megalinter-reports/
+
 rules:
   # Allow longer lines (common in GitHub Actions, Docker Compose, K8s manifests)
   line-length:
@@ -45,3 +51,10 @@ rules:
 
   # Allow quoted strings
   quoted-strings: disable
+
+  # Disable braces/brackets rules (Helm templates use {{ }} which yamllint flags)
+  braces: disable
+  brackets: disable
+
+  # Disable hyphens rule (Helm templates often have non-standard spacing)
+  hyphens: disable

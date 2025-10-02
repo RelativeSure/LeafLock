@@ -27,12 +27,13 @@ else
 fi
 
 # Function to cleanup background processes
+# shellcheck disable=SC2329  # Function is used in trap
 cleanup() {
     echo ""
     echo "🧹 Cleaning up..."
     if [ -n "$BACKEND_PID" ]; then
-        kill $BACKEND_PID 2>/dev/null || true
-        wait $BACKEND_PID 2>/dev/null || true
+        kill "$BACKEND_PID" 2>/dev/null || true
+        wait "$BACKEND_PID" 2>/dev/null || true
     fi
     rm -f /tmp/leaflock-backend-*.log
     echo -e "${BLUE}Cleanup complete${NC}"

@@ -33,7 +33,9 @@ func (suite *NotesHandlerTestSuite) SetupTest() {
 
 	// Generate test encryption key
 	key := make([]byte, 32)
-	rand.Read(key)
+	if _, err := rand.Read(key); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 	suite.crypto = NewCryptoService(key)
 
 	suite.handler = &NotesHandler{
@@ -126,7 +128,7 @@ func (suite *NotesHandlerTestSuite) TestGetNotesSuccess() {
 	suite.Equal(200, resp.StatusCode)
 
 	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
+	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 	suite.Contains(response, "notes")
 	notes := response["notes"].([]interface{})
@@ -174,7 +176,7 @@ func (suite *NotesHandlerTestSuite) TestGetNoteSuccess() {
 	suite.Equal(200, resp.StatusCode)
 
 	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
+	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 	suite.Equal(noteID.String(), response["id"])
 	suite.NotEmpty(response["title_encrypted"])
@@ -247,7 +249,7 @@ func (suite *NotesHandlerTestSuite) TestCreateNoteSuccess() {
 	suite.Equal(201, resp.StatusCode)
 
 	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
+	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 	suite.Equal(noteID.String(), response["id"])
 	suite.Equal("Note created successfully", response["message"])
@@ -388,7 +390,7 @@ func (suite *DatabaseIntegrationTestSuite) TearDownSuite() {
 func (suite *DatabaseIntegrationTestSuite) TearDownTest() {
 	// Clean up test data after each test
 	ctx := context.Background()
-	suite.db.Exec(ctx, "TRUNCATE users, workspaces, notes, audit_log CASCADE")
+	_, _ = suite.db.Exec(ctx, "TRUNCATE users, workspaces, notes, audit_log CASCADE") // Test cleanup
 }
 
 func (suite *DatabaseIntegrationTestSuite) TestUserRegistrationFlow() {
@@ -397,12 +399,16 @@ func (suite *DatabaseIntegrationTestSuite) TestUserRegistrationFlow() {
 	// Generate test data
 	email := "test@example.com"
 	salt := make([]byte, 32)
-	rand.Read(salt)
+	if _, err := rand.Read(salt); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 	passwordHash := HashPassword("TestPassword123!", salt)
 
 	encryptedEmail := []byte("encrypted_email_data")
 	encryptedMasterKey := make([]byte, 64)
-	rand.Read(encryptedMasterKey)
+	if _, err := rand.Read(encryptedMasterKey); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 
 	// Test user creation
 	var userID uuid.UUID
@@ -442,7 +448,9 @@ func (suite *DatabaseIntegrationTestSuite) TestWorkspaceCreation() {
 	// Create workspace
 	encryptedName := []byte("encrypted_workspace_name")
 	encryptedKey := make([]byte, 64)
-	rand.Read(encryptedKey)
+	if _, err := rand.Read(encryptedKey); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 
 	var workspaceID uuid.UUID
 	err := suite.db.QueryRow(ctx, `
@@ -535,55 +543,6 @@ func (suite *DatabaseIntegrationTestSuite) TestNotesOperations() {
 	suite.Equal(0, count)
 }
 
-// TestSessionManagement - OBSOLETE: Sessions moved to Redis
-func (suite *DatabaseIntegrationTestSuite) _TestSessionManagement_OBSOLETE() {
-	ctx := context.Background()
-
-	userID := suite.createTestUser()
-
-	// Create session
-	tokenHash := []byte("session_token_hash")
-	encryptedIP := []byte("encrypted_ip")
-	encryptedUA := []byte("encrypted_user_agent")
-	expiresAt := time.Now().Add(24 * time.Hour)
-
-	var sessionID uuid.UUID
-	err := suite.db.QueryRow(ctx, `
-		INSERT INTO sessions (user_id, token_hash, ip_address_encrypted, user_agent_encrypted, expires_at)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id`,
-		userID, tokenHash, encryptedIP, encryptedUA, expiresAt,
-	).Scan(&sessionID)
-
-	suite.NoError(err)
-	suite.NotEqual(uuid.Nil, sessionID)
-
-	// Test session cleanup function
-	_, err = suite.db.Exec(ctx, "SELECT cleanup_expired_sessions()")
-	suite.NoError(err)
-
-	// Create expired session
-	expiredSession := time.Now().Add(-time.Hour)
-	_, err = suite.db.Exec(ctx, `
-		INSERT INTO sessions (user_id, token_hash, ip_address_encrypted, user_agent_encrypted, expires_at)
-		VALUES ($1, $2, $3, $4, $5)`,
-		userID, []byte("expired_hash"), encryptedIP, encryptedUA, expiredSession,
-	)
-	suite.NoError(err)
-
-	// Run cleanup and verify expired session is removed
-	_, err = suite.db.Exec(ctx, "SELECT cleanup_expired_sessions()")
-	suite.NoError(err)
-
-	var sessionCount int
-	err = suite.db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM sessions WHERE expires_at < NOW()`,
-	).Scan(&sessionCount)
-
-	suite.NoError(err)
-	suite.Equal(0, sessionCount)
-}
-
 func (suite *DatabaseIntegrationTestSuite) TestAuditLogging() {
 	ctx := context.Background()
 
@@ -628,11 +587,15 @@ func (suite *DatabaseIntegrationTestSuite) createTestUser() uuid.UUID {
 
 	email := "test@example.com"
 	salt := make([]byte, 32)
-	rand.Read(salt)
+	if _, err := rand.Read(salt); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 	passwordHash := HashPassword("TestPassword123!", salt)
 	encryptedEmail := []byte("encrypted_email")
 	encryptedMasterKey := make([]byte, 64)
-	rand.Read(encryptedMasterKey)
+	if _, err := rand.Read(encryptedMasterKey); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 
 	var userID uuid.UUID
 	err := suite.db.QueryRow(ctx, `
@@ -651,7 +614,9 @@ func (suite *DatabaseIntegrationTestSuite) createTestWorkspace(userID uuid.UUID)
 
 	encryptedName := []byte("encrypted_workspace_name")
 	encryptedKey := make([]byte, 64)
-	rand.Read(encryptedKey)
+	if _, err := rand.Read(encryptedKey); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 
 	var workspaceID uuid.UUID
 	err := suite.db.QueryRow(ctx, `
@@ -707,11 +672,11 @@ func TestSQLInjectionPrevention(t *testing.T) {
 			if err == nil {
 				// Verify no damage was done
 				var count int
-				db.QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&count)
+				_ = db.QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&count) // Test verification
 				assert.Equal(t, 1, count, "Only the inserted user should exist")
 
 				var retrievedEmail string
-				db.QueryRow(ctx, "SELECT email FROM users WHERE email = $1", email).Scan(&retrievedEmail)
+				_ = db.QueryRow(ctx, "SELECT email FROM users WHERE email = $1", email).Scan(&retrievedEmail) // Test verification
 				assert.Equal(t, email, retrievedEmail, "Email should be stored as literal data")
 			}
 		})
@@ -727,7 +692,9 @@ func TestRateLimitingBypass(t *testing.T) {
 	}
 
 	// Generate test key
-	rand.Read(config.EncryptionKey)
+	if _, err := rand.Read(config.EncryptionKey); err != nil {
+		t.Fatalf("Failed to generate random data: %v", err)
+	}
 
 	crypto := NewCryptoService(config.EncryptionKey)
 	mockDB := &MockDB{}
@@ -771,8 +738,12 @@ func TestEncryptionKeyRotation(t *testing.T) {
 	// Test encryption with different keys
 	oldKey := make([]byte, 32)
 	newKey := make([]byte, 32)
-	rand.Read(oldKey)
-	rand.Read(newKey)
+	if _, err := rand.Read(oldKey); err != nil {
+		t.Fatalf("Failed to generate random data: %v", err)
+	}
+	if _, err := rand.Read(newKey); err != nil {
+		t.Fatalf("Failed to generate random data: %v", err)
+	}
 
 	oldCrypto := NewCryptoService(oldKey)
 	newCrypto := NewCryptoService(newKey)

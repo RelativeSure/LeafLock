@@ -5,8 +5,8 @@ APPLY_FIXES: all
 
 # Enable ONLY these specific linters (all others disabled by default)
 ENABLE_LINTERS:
-  # Go (Backend) - Temporarily disabled due to Docker environment issues
-  # - GO_GOLANGCI_LINT          # Comprehensive Go linting (gofmt, govet, staticcheck, etc.)
+  # Go (Backend) - Non-blocking in MegaLinter, runs properly in .github/workflows/golangci-lint.yml
+  - GO_GOLANGCI_LINT          # Separate workflow with Go 1.25 handles actual linting
 
   # JavaScript/TypeScript (Frontend)
   - TYPESCRIPT_ES              # ESLint for TypeScript/React
@@ -32,14 +32,21 @@ DISABLE:
   - SPELL                       # Too noisy for code/variable names
   - COPYPASTE                   # Optional - can be noisy
 
+# Non-blocking linters (enabled but won't fail CI)
+# GO linter runs but is non-blocking due to MegaLinter's outdated Go version (1.24.7 < required 1.25)
+# Local golangci-lint testing confirms 0 errors - run `cd backend && golangci-lint run`
+DISABLE_ERRORS_LINTERS:
+  - GO_GOLANGCI_LINT
+
 SHOW_ELAPSED_TIME: true
 
 # Linter-specific configurations
 
-# Go - Exclude vendor code from linting (exclusions now handled in .golangci.yml)
-GO_GOLANGCI_LINT_ARGUMENTS: "--timeout=5m"
+# Go - Run from backend subdirectory using wrapper script
+GO_GOLANGCI_LINT_CLI_EXECUTABLE: ["bash", "/tmp/lint/scripts/golangci-lint-wrapper.sh"]
+GO_GOLANGCI_LINT_ARGUMENTS: "--timeout=5m -c .golangci.yml ./..."
 GO_GOLANGCI_LINT_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
-GO_GOLANGCI_LINT_DIRECTORY: "backend"  # Run from backend directory where go.mod is located
+GO_GOLANGCI_LINT_CLI_LINT_MODE: "project"
 
 # JavaScript/TypeScript - Exclude generated and dependency code
 JAVASCRIPT_ES_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
@@ -48,7 +55,8 @@ TYPESCRIPT_ES_FILE_EXTENSIONS: [".ts", ".tsx"]
 TYPESCRIPT_ES_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
 TYPESCRIPT_PRETTIER_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
 
-# YAML - Exclude vendor code
+# YAML - Exclude vendor code and use project config
+YAML_YAMLLINT_ARGUMENTS: "-c .yamllint"
 YAML_YAMLLINT_FILTER_REGEX_EXCLUDE: "(node_modules|\\.gomod|vendor)"
 
 # JSON - Exclude vendor, lock files, and TypeScript config files (they support comments/JSONC)

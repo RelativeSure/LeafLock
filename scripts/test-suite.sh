@@ -60,7 +60,7 @@ run_test() {
     
     print_status "RUNNING" "Starting $test_name"
     
-    if timeout ${timeout}s bash -c "$command" > "$log_file" 2>&1; then
+    if timeout "${timeout}s" bash -c "$command" > "$log_file" 2>&1; then
         print_status "SUCCESS" "$test_name completed successfully"
         TESTS_PASSED=$((TESTS_PASSED + 1))
         return 0
@@ -337,11 +337,13 @@ EOF
         for log_file in "$TEST_RESULTS_DIR"/*.log; do
             if [ -f "$log_file" ]; then
                 local test_name=$(basename "$log_file" .log)
-                echo "<div class='log-section'>" >> "$report_file"
-                echo "<h3>$test_name</h3>" >> "$report_file"
-                echo "<div class='log-content'>" >> "$report_file"
-                cat "$log_file" >> "$report_file"
-                echo "</div></div>" >> "$report_file"
+                {
+                    echo "<div class='log-section'>"
+                    echo "<h3>$test_name</h3>"
+                    echo "<div class='log-content'>"
+                    cat "$log_file"
+                    echo "</div></div>"
+                } >> "$report_file"
             fi
         done
     fi

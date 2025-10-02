@@ -70,7 +70,7 @@ setup_rootless() {
     
     # Enable lingering for user (allows containers to run without login)
     if command -v loginctl &> /dev/null; then
-        loginctl enable-linger $USER
+        loginctl enable-linger "$USER"
         echo -e "${GREEN}✅ User lingering enabled${NC}"
     fi
     

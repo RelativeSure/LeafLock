@@ -31,7 +31,7 @@ echo "📜 Generating SSL certificates for domain: $DOMAIN"
 
 # Create temporary directory for certificate generation
 TEMP_DIR=$(mktemp -d)
-trap "rm -rf $TEMP_DIR" EXIT
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
 # Generate stronger private key (2048-bit RSA minimum for PostgreSQL)
 echo "🔑 Generating private key..."

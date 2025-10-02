@@ -165,7 +165,7 @@ func TestReadyStateWithMockServices(t *testing.T) {
 	rdb := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
 	})
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }() // Test cleanup
 
 	cfg := &config.Config{
 		Port:          "8080",

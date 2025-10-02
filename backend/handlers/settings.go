@@ -124,5 +124,5 @@ func (h *SettingsHandler) UpdateSettings(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update settings"})
 	}
 
-	return c.JSON(UserSettings{Theme: req.Theme})
+	return c.JSON(UserSettings(req))
 }

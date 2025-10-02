@@ -37,6 +37,9 @@ linters-settings:
       - (*os.File).Close
       - (*database/sql.Rows).Close
       - (*database/sql.Stmt).Close
+    # Skip test files - test code doesn't need strict error checking
+    exclude-files:
+      - '.*_test\.go$'
 
   # Error wrapping
   errorlint:
@@ -253,11 +256,15 @@ issues:
     - ".*\\.gen\\.go$"
 
   exclude-rules:
-    # Exclude some linters from running on tests files.
-    - path: _test\.go
+    # Exclude errcheck from all test files
+    - path: '.*_test\.go$'
+      linters:
+        - errcheck
+
+    # Exclude other linters from test files
+    - path: '_test\.go$'
       linters:
         - gocyclo
-        - errcheck
         - dupl
         - gosec
         - funlen
@@ -292,15 +299,3 @@ issues:
 severity:
   default-severity: error
   case-sensitive: false
-  rules:
-    - linters:
-        - dupl
-      severity: info
-    - linters:
-        - gocritic
-      severity: info
-    - linters:
-        - funlen
-        - gocognit
-        - cyclop
-      severity: warning

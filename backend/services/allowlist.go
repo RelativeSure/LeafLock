@@ -60,7 +60,9 @@ func LoadAllowlistFromSources(envList string, filePath string) (map[string]struc
 	// include file if present
 	if filePath != "" {
 		if f, err := os.Open(filePath); err == nil {
-			defer f.Close()
+			defer func() {
+				_ = f.Close() // Best effort cleanup
+			}()
 			scanner := bufio.NewScanner(f)
 			for scanner.Scan() {
 				line := strings.TrimSpace(scanner.Text())

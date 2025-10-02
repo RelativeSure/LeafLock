@@ -28,8 +28,8 @@ set -euo pipefail
 : "${BACKEND_INTERNAL_URL:?Set BACKEND_INTERNAL_URL (e.g., http://backend:8080)}"
 VITE_API_URL="/api"
 
-auth_header=("Authorization: Bearer ${COOLIFY_TOKEN}")
-json_header=("Content-Type: application/json")
+auth_header="Authorization: Bearer ${COOLIFY_TOKEN}"
+json_header="Content-Type: application/json"
 
 echo "Coolify URL: ${COOLIFY_URL}"
 
@@ -53,14 +53,14 @@ api_put() {
   curl -sS -X PUT -H "${auth_header}" -H "${json_header}" -d "${body}" "${COOLIFY_URL}${path}"
 }
 
-echo "\n==> Attaching Postgres to backend (private)"
+printf "\n==> Attaching Postgres to backend (private)\n"
 # NOTE: Endpoint path can vary slightly across Coolify versions. If this 404s, check your version's API docs.
 # Expected behavior: creates an attachment so DB env vars (POSTGRESQL_*) inject into the backend app.
 api_post "/api/v1/resources/${BACKEND_ID}/attachments" "$(jq -n --arg db "${POSTGRES_ID}" '{database_id: $db}')" || {
   echo "Attachment endpoint may differ on your Coolify version. Please adjust the path." >&2
 }
 
-echo "\n==> Upserting frontend env vars (VITE_API_URL, BACKEND_INTERNAL_URL)"
+printf "\n==> Upserting frontend env vars (VITE_API_URL, BACKEND_INTERNAL_URL)\n"
 # Upsert environment variables for the frontend app. On some versions, the endpoint is /environment-variables, others /secrets.
 # The payload shape may differ; two common patterns are shown below. The script tries PUT first, then POST.
 
@@ -77,10 +77,10 @@ if ! api_put "/api/v1/resources/${FRONTEND_ID}/environment-variables" "${ENV_PAY
   api_post "/api/v1/resources/${FRONTEND_ID}/environment-variables" "$(jq -n --arg key "BACKEND_INTERNAL_URL" --arg value "${BACKEND_INTERNAL_URL}" '{key:$key, value:$value, is_build_time:false}')" || true
 fi
 
-echo "\n==> Triggering redeploys (backend then frontend)"
+printf "\n==> Triggering redeploys (backend then frontend)\n"
 # Redeploy endpoints can be /api/v1/resources/{id}/deploy or /api/v1/applications/{id}/deploy
 api_post "/api/v1/resources/${BACKEND_ID}/deploy" '{}' || echo "Fallback: try /api/v1/applications/${BACKEND_ID}/deploy" >&2
 api_post "/api/v1/resources/${FRONTEND_ID}/deploy" '{}' || echo "Fallback: try /api/v1/applications/${FRONTEND_ID}/deploy" >&2
 
-echo "\nAll requests attempted. If any step failed, please check your Coolify version and adjust endpoint paths accordingly."
+printf "\nAll requests attempted. If any step failed, please check your Coolify version and adjust endpoint paths accordingly.\n"
 
