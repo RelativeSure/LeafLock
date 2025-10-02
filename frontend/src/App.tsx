@@ -2085,7 +2085,13 @@ function SecureNotesApp() {
       // Cmd/Ctrl + N: New note
       if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
         e.preventDefault()
-        setSelectedNote(null)
+        setSelectedNote({
+          id: '',
+          title: '',
+          content: '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
         setCurrentView('editor')
       }
 
@@ -2817,7 +2823,13 @@ function SecureNotesApp() {
           <div className="p-4 border-t border-border space-y-2">
             <Button
               onClick={() => {
-                setSelectedNote(null)
+                setSelectedNote({
+                  id: '',
+                  title: '',
+                  content: '',
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
                 setCurrentView('editor')
               }}
               className="w-full"
@@ -3246,7 +3258,7 @@ function SecureNotesApp() {
             <TemplatesManager onClose={() => setCurrentView('notes')} mode="manage" />
           </Suspense>
         </div>
-      ) : isAuthenticated && isAdmin && currentView === 'admin' ? (
+      ) : isAuthenticated && encryptionStatus === 'unlocked' && isAdmin && currentView === 'admin' ? (
         <Suspense fallback={<ComponentLoader />}>
           <AdminPage api={api} onBack={() => setCurrentView('notes')} />
         </Suspense>

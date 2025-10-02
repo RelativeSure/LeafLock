@@ -12,17 +12,42 @@ LeafLock provides comprehensive **OpenAPI 3.0** (Swagger) documentation for all 
 ## Access Swagger UI
 
 <CardGrid columns={2}>
-  <Card title="Interactive Browser" icon="open-book">
-    **URL**: `/api/v1/docs`
+  <Card title="Public Swagger UI" icon="open-book">
+    **Production**: `https://leaflock.app/swagger`
+
+    **Local**: `http://localhost:8080/swagger`
 
     Browse and test API endpoints directly in your browser with the Swagger UI interface.
   </Card>
-  <Card title="OpenAPI Specification" icon="document">
-    **URL**: `/api/v1/docs/openapi.json`
+  <Card title="API Documentation" icon="document">
+    **Production**: `https://leaflock.app/api/v1/docs`
+
+    **Local**: `http://localhost:8080/api/v1/docs`
+
+    Alternative Swagger UI path under the `/api/v1` prefix.
+  </Card>
+</CardGrid>
+
+<CardGrid columns={2}>
+  <Card title="OpenAPI JSON (Public)" icon="document">
+    **Production**: `https://leaflock.app/swagger/openapi.json`
+
+    **Local**: `http://localhost:8080/swagger/openapi.json`
 
     Machine-readable OpenAPI 3.0 specification for API clients and code generation tools.
   </Card>
+  <Card title="OpenAPI JSON (API)" icon="document">
+    **Production**: `https://leaflock.app/api/v1/docs/openapi.json`
+
+    **Local**: `http://localhost:8080/api/v1/docs/openapi.json`
+
+    Alternative OpenAPI spec path under the `/api/v1` prefix.
+  </Card>
 </CardGrid>
+
+### Quick Access
+
+**Primary URL**: [https://leaflock.app/swagger](https://leaflock.app/swagger) ✨
 
 ## Features
 

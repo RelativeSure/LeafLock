@@ -46,8 +46,8 @@ func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	userID, err := uuid.Parse(userIDVal.(string))
-	if err != nil {
+	userID, ok := userIDVal.(uuid.UUID)
+	if !ok {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid user ID"})
 	}
 
@@ -89,8 +89,8 @@ func (h *SettingsHandler) UpdateSettings(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	userID, err := uuid.Parse(userIDVal.(string))
-	if err != nil {
+	userID, ok := userIDVal.(uuid.UUID)
+	if !ok {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid user ID"})
 	}
 

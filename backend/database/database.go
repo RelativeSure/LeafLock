@@ -18,7 +18,7 @@ import (
 )
 
 // MigrationSchemaVersion tracks the current schema version
-const MigrationSchemaVersion = "2024.12.25.002" // Updated for performance optimizations
+const MigrationSchemaVersion = "2024.12.25.003" // Updated for theme_preference column
 
 // Database interface for dependency injection and testing
 type Database interface {
