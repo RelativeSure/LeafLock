@@ -124,6 +124,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	tagsHandler := handlers.NewTagsHandler(db, crypto)
 	foldersHandler := handlers.NewFoldersHandler(db, crypto)
 	templatesHandler := handlers.NewTemplatesHandler(db, crypto)
+	settingsHandler := handlers.NewSettingsHandler(db)
 	collabHandler := handlers.NewCollaborationHandler(db, crypto)
 	attachmentsHandler := handlers.NewAttachmentsHandler(db, crypto)
 	searchHandler := handlers.NewSearchHandler(db, crypto)
@@ -293,6 +294,10 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	protected.Post("/notes/import", importExportHandler.ImportNote)
 	protected.Post("/notes/:id/export", importExportHandler.ExportNote)
 	protected.Post("/notes/bulk-import", importExportHandler.BulkImport)
+
+	// User settings endpoints
+	protected.Get("/settings", settingsHandler.GetSettings)
+	protected.Put("/settings", settingsHandler.UpdateSettings)
 
 	hub := websocketpkg.NewHub()
 	go hub.Run()

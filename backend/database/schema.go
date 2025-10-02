@@ -43,6 +43,9 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS storage_limit BIGINT DEFAULT 5242880;
 -- Add soft delete column for users table (required for idx_users_count_fast index)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 
+-- Add theme preference column for user customization
+ALTER TABLE users ADD COLUMN IF NOT EXISTS theme_preference VARCHAR(20) DEFAULT 'system';
+
 
 -- GDPR compliance: Add table to store GDPR deletion keys for email recovery
 CREATE TABLE IF NOT EXISTS gdpr_keys (
