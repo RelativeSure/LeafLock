@@ -1,0 +1,277 @@
+---
+title: Managing MFA
+description: User guide for managing Multi-Factor Authentication settings
+---
+
+# Managing Your MFA Settings
+
+This guide covers how to manage your Multi-Factor Authentication (MFA) after you've enabled it.
+
+## Accessing MFA Settings
+
+1. Log in to your LeafLock account
+2. Click on **Settings** or your profile icon
+3. Navigate to **Security** → **Multi-Factor Authentication**
+
+You'll see your current MFA status and management options.
+
+## Disabling MFA
+
+If you need to disable two-factor authentication:
+
+### Security Warning
+
+Disabling MFA makes your account less secure. You'll only need your password to sign in, which is less protected than MFA. Only disable if absolutely necessary.
+
+### Step-by-Step: Disable MFA
+
+1. Go to **Settings** → **Security** → **MFA**
+2. Click the **Disable MFA** button
+3. You'll be prompted to enter a verification code
+4. Open your authenticator app
+5. Enter the current 6-digit code for LeafLock
+6. Click **Disable MFA**
+
+### What Happens After Disabling
+
+When you disable MFA:
+- You can log in with just your email and password
+- Your TOTP secret is deleted
+- All backup codes are invalidated and deleted
+- Your account is less secure
+
+### Can't Access Your Authenticator?
+
+If you can't get a code from your authenticator app:
+1. Use a [backup code](/authentication/backup-codes) instead
+2. Or contact your administrator for [MFA reset](/authentication/admin-mfa-management)
+
+---
+
+## Regenerating Backup Codes
+
+Backup codes are one-time use codes for emergency access. You should regenerate them periodically or when needed.
+
+### When to Regenerate
+
+Consider regenerating backup codes when:
+- You've used more than 7 of your 10 codes
+- You suspect codes may have been compromised
+- You want to refresh your security (every 6-12 months)
+- You've shared a code (not recommended, but it happens)
+
+### Step-by-Step: Regenerate Backup Codes
+
+1. Go to **Settings** → **Security** → **MFA**
+2. In the **Backup Recovery Codes** section, click **Regenerate Backup Codes**
+3. Enter your **password** to confirm (not your TOTP code)
+4. Click **Generate New Codes**
+5. You'll see 10 new backup codes
+6. **Important**: Download or copy these codes immediately
+7. Store them securely (password manager, encrypted storage)
+8. Click **I've Saved My Backup Codes**
+
+### Important Notes
+
+- **Old codes are invalidated**: All previous backup codes (including unused ones) stop working immediately
+- **No recovery**: You cannot view backup codes after this screen closes
+- **Password required**: You need your account password, not a TOTP code
+
+### Storing Your New Codes
+
+**Recommended storage locations**:
+- Password manager (1Password, Bitwarden, LastPass)
+- Encrypted note-taking app
+- Physical paper in a secure location
+
+**DO NOT store in**:
+- Unencrypted text files
+- Email or unencrypted cloud storage
+- Shared documents
+
+---
+
+## Checking Backup Code Status
+
+You can check how many backup codes you have remaining without viewing the actual codes.
+
+### View Backup Code Status
+
+1. Go to **Settings** → **Security** → **MFA**
+2. Click **View Backup Code Status**
+3. You'll see:
+   - **Total codes**: 10 (always)
+   - **Remaining codes**: Number of unused codes
+   - **Used codes**: Number already consumed
+
+### Understanding the Numbers
+
+| Remaining | Status | Recommendation |
+|-----------|--------|----------------|
+| 10 | All codes available | No action needed |
+| 7-9 | A few codes used | Still plenty |
+| 4-6 | Half used | Consider regenerating soon |
+| 1-3 | Running low | Regenerate backup codes |
+| 0 | All codes used | Regenerate immediately |
+
+### If You Run Out of Backup Codes
+
+- You can still log in with your authenticator app (no problem)
+- But you have **no emergency backup** if you lose your device
+- **Immediately regenerate** new codes after logging in
+
+---
+
+## MFA Lifecycle Management
+
+### The Complete MFA Journey
+
+```
+Enable MFA
+    ↓
+Save Backup Codes
+    ↓
+Use MFA Daily (authenticator app)
+    ↓
+Monitor Backup Code Usage
+    ↓
+Regenerate Codes (when needed)
+    ↓
+Continue Using MFA
+```
+
+### Best Practices for Ongoing Use
+
+#### Daily Usage
+1. Keep your authenticator app installed and backed up
+2. Use TOTP codes (not backup codes) for normal logins
+3. Ensure your device clock is accurate (for TOTP)
+
+#### Regular Maintenance
+1. Check backup code status monthly
+2. Regenerate codes if you've used more than 6
+3. Update your stored codes after regenerating
+
+#### Device Management
+1. Set up MFA on multiple devices (if your authenticator supports it)
+2. Keep backup codes accessible but secure
+3. Update MFA if you get a new phone
+
+---
+
+## Switching to a New Device
+
+If you're getting a new phone or tablet:
+
+### Option 1: Transfer Authenticator App (Recommended)
+
+Most authenticator apps support cloud backup or transfer:
+
+**Google Authenticator**:
+1. On old device: Settings → Transfer accounts → Export accounts
+2. Scan QR code with new device
+3. Verify MFA still works
+
+**Authy**:
+- Automatically syncs across devices with your Authy account
+
+**1Password/Bitwarden**:
+- Syncs automatically to all devices
+
+### Option 2: Re-setup MFA
+
+If you can't transfer:
+1. Log in on your computer (using your authenticator app from old device)
+2. Disable MFA (using old device for verification)
+3. Enable MFA again (scan QR with new device)
+4. Save new backup codes
+
+### Option 3: Use Backup Code (Emergency)
+
+If you already lost your old device:
+1. Log in with email and password
+2. Use a backup code when prompted for MFA
+3. After logging in, disable MFA
+4. Re-enable MFA with your new device
+5. Generate and save new backup codes
+
+---
+
+## Troubleshooting Common Issues
+
+### "Invalid code" when trying to disable MFA
+
+**Possible causes**:
+- Time synchronization issue
+- Looking at wrong account in authenticator
+- Code expired (30-second window)
+
+**Solutions**:
+1. Check device time is accurate (enable auto-sync)
+2. Wait for a new code to generate
+3. Verify you're using the LeafLock entry in your app
+
+### Can't regenerate backup codes
+
+**Cause**: Wrong password entered
+
+**Solution**:
+- Make sure you're entering your **account password**, not a TOTP code
+- Check caps lock is off
+- Try resetting your password if you've forgotten it
+
+### Lost both authenticator and backup codes
+
+**Solution**: Contact your system administrator
+- See [Admin MFA Management](/authentication/admin-mfa-management) for reset procedures
+- You'll need to verify your identity
+- Admin can reset MFA, allowing password-only login
+- Re-enable MFA immediately after regaining access
+
+---
+
+## Security Recommendations
+
+### Best Practices
+
+- Keep your authenticator app backed up (if supported)
+- Store backup codes in a password manager
+- Use MFA on all accounts that support it
+- Keep one physical backup of codes in a secure location
+- Regenerate codes periodically
+- Use strong, unique password alongside MFA
+
+### What to Avoid
+
+- Never share your TOTP codes with anyone
+- Don't take screenshots of backup codes
+- Don't store codes in unencrypted cloud storage
+- Don't use the same password on multiple sites
+- Don't disable MFA unless absolutely necessary
+- Don't ignore low backup code warnings
+
+---
+
+## Quick Reference
+
+### Enable MFA
+Settings → Security → MFA → **Enable MFA**
+
+### Disable MFA
+Settings → Security → MFA → **Disable MFA** (requires TOTP code)
+
+### Check Backup Codes
+Settings → Security → MFA → **View Backup Code Status**
+
+### Regenerate Backup Codes
+Settings → Security → MFA → **Regenerate Backup Codes** (requires password)
+
+---
+
+## Related Resources
+
+- [Initial MFA Setup Guide](/authentication/setup-guide)
+- [Understanding Backup Codes](/authentication/backup-codes)
+- [Troubleshooting MFA Issues](/authentication/troubleshooting)
+- [Admin MFA Management](/authentication/admin-mfa-management)
+- [API Documentation](/authentication/api-endpoints)

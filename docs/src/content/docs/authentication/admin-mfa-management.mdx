@@ -1,0 +1,627 @@
+---
+title: Admin MFA Management
+description: Administrative guide for managing MFA and user account recovery
+---
+
+# Admin MFA Management
+
+This guide is for system administrators who need to manage MFA settings or assist users with account access issues.
+
+## Database-Level MFA Reset
+
+If a user loses access to both their authenticator device and backup codes, administrators can reset MFA directly via the database.
+
+### Emergency MFA Reset Procedure
+
+#### Prerequisites
+- Database admin access (PostgreSQL)
+- User's account identifier (user ID or email)
+
+#### Reset Script Location
+```
+backend/scripts/reset-mfa.sql
+```
+
+### Option 1: Reset by User ID
+
+If you know the user's UUID:
+
+```sql
+UPDATE users
+SET mfa_enabled = false,
+    mfa_secret_encrypted = NULL,
+    mfa_backup_codes = NULL,
+    mfa_backup_codes_used = NULL
+WHERE id = '550e8400-e29b-41d4-a716-446655440000';
+```
+
+### Option 2: Reset by Email (Advanced)
+
+**Note**: Emails are stored encrypted. You need the `email_search_hash` for this query.
+
+1. First, locate the user:
+```sql
+SELECT id, mfa_enabled
+FROM users
+WHERE email_search_hash = E'\\xYOUR_HASH_HERE';
+```
+
+2. Then reset MFA:
+```sql
+UPDATE users
+SET mfa_enabled = false,
+    mfa_secret_encrypted = NULL,
+    mfa_backup_codes = NULL,
+    mfa_backup_codes_used = NULL
+WHERE email_search_hash = E'\\xYOUR_HASH_HERE';
+```
+
+### Verify Reset Success
+
+```sql
+SELECT
+  id,
+  mfa_enabled,
+  CASE
+    WHEN mfa_secret_encrypted IS NOT NULL THEN 'has_secret'
+    ELSE 'no_secret'
+  END as secret_status,
+  CASE
+    WHEN mfa_backup_codes IS NOT NULL THEN array_length(mfa_backup_codes, 1)
+    ELSE 0
+  END as backup_codes_count
+FROM users
+WHERE id = '550e8400-e29b-41d4-a716-446655440000';
+```
+
+Expected result after reset:
+```
+mfa_enabled: false
+secret_status: no_secret
+backup_codes_count: 0
+```
+
+## User Recovery Process
+
+After resetting MFA for a user:
+
+1. **Notify the user** that their MFA has been reset
+2. User can now **log in with email and password only** (no MFA required)
+3. **Recommend** the user re-enable MFA from Security Settings
+4. User should set up MFA again following the [Setup Guide](/authentication/setup-guide)
+
+## Advanced SQL Queries for Admins
+
+### User MFA Status Queries
+
+#### Find All Users with MFA Enabled
+
+```sql
+-- Simple list
+SELECT id, email_encrypted, mfa_enabled, created_at, last_login
+FROM users
+WHERE mfa_enabled = true
+ORDER BY last_login DESC NULLS LAST;
+
+-- With backup code counts
+SELECT
+  id,
+  email_encrypted,
+  mfa_enabled,
+  CASE
+    WHEN mfa_backup_codes IS NOT NULL
+    THEN array_length(mfa_backup_codes, 1)
+    ELSE 0
+  END as total_backup_codes,
+  CASE
+    WHEN mfa_backup_codes_used IS NOT NULL
+    THEN array_length(mfa_backup_codes_used, 1)
+    ELSE 0
+  END as used_backup_codes,
+  (CASE
+    WHEN mfa_backup_codes IS NOT NULL
+    THEN array_length(mfa_backup_codes, 1)
+    ELSE 0
+  END -
+  CASE
+    WHEN mfa_backup_codes_used IS NOT NULL
+    THEN array_length(mfa_backup_codes_used, 1)
+    ELSE 0
+  END) as remaining_codes
+FROM users
+WHERE mfa_enabled = true;
+```
+
+#### MFA Adoption Statistics
+
+```sql
+-- Overall MFA adoption rate
+SELECT
+  COUNT(*) as total_users,
+  COUNT(*) FILTER (WHERE mfa_enabled = true) as mfa_enabled_count,
+  COUNT(*) FILTER (WHERE mfa_enabled = false) as mfa_disabled_count,
+  ROUND(
+    100.0 * COUNT(*) FILTER (WHERE mfa_enabled = true) / NULLIF(COUNT(*), 0),
+    2
+  ) as mfa_adoption_percentage
+FROM users
+WHERE deleted_at IS NULL;
+
+-- MFA adoption by admin status
+SELECT
+  is_admin,
+  COUNT(*) as user_count,
+  COUNT(*) FILTER (WHERE mfa_enabled = true) as mfa_enabled,
+  ROUND(
+    100.0 * COUNT(*) FILTER (WHERE mfa_enabled = true) / NULLIF(COUNT(*), 0),
+    2
+  ) as mfa_percentage
+FROM users
+WHERE deleted_at IS NULL
+GROUP BY is_admin;
+```
+
+### Backup Code Management Queries
+
+#### Users Running Low on Backup Codes
+
+```sql
+-- Users with less than 3 remaining backup codes
+SELECT
+  id,
+  email_encrypted,
+  last_login,
+  array_length(mfa_backup_codes, 1) as total_codes,
+  COALESCE(array_length(mfa_backup_codes_used, 1), 0) as used_codes,
+  (array_length(mfa_backup_codes, 1) -
+   COALESCE(array_length(mfa_backup_codes_used, 1), 0)) as remaining_codes
+FROM users
+WHERE mfa_enabled = true
+  AND mfa_backup_codes IS NOT NULL
+  AND (array_length(mfa_backup_codes, 1) -
+       COALESCE(array_length(mfa_backup_codes_used, 1), 0)) < 3
+ORDER BY remaining_codes ASC;
+```
+
+#### Users Who Exhausted All Backup Codes
+
+```sql
+-- Users with 0 remaining backup codes (high risk)
+SELECT
+  id,
+  email_encrypted,
+  last_login,
+  created_at
+FROM users
+WHERE mfa_enabled = true
+  AND mfa_backup_codes IS NOT NULL
+  AND array_length(mfa_backup_codes, 1) =
+      COALESCE(array_length(mfa_backup_codes_used, 1), 0)
+ORDER BY last_login DESC;
+```
+
+### Security Monitoring Queries
+
+#### Find Admin Users Without MFA (Security Risk)
+
+```sql
+-- Admin accounts without MFA enabled
+SELECT
+  id,
+  email_encrypted,
+  is_admin,
+  mfa_enabled,
+  last_login,
+  created_at
+FROM users
+WHERE is_admin = true
+  AND mfa_enabled = false
+  AND deleted_at IS NULL
+ORDER BY last_login DESC NULLS LAST;
+```
+
+#### Recently Enabled/Disabled MFA
+
+```sql
+-- Users who enabled MFA in last 7 days
+SELECT
+  user_id,
+  created_at as enabled_at
+FROM audit_log
+WHERE action = 'mfa.enabled'
+  AND created_at > NOW() - INTERVAL '7 days'
+ORDER BY created_at DESC;
+
+-- Users who disabled MFA recently (potential security concern)
+SELECT
+  user_id,
+  created_at as disabled_at
+FROM audit_log
+WHERE action = 'mfa.disabled'
+  AND created_at > NOW() - INTERVAL '30 days'
+ORDER BY created_at DESC;
+```
+
+#### Users with MFA Enabled But Never Used
+
+```sql
+-- Users who enabled MFA but haven't logged in since
+SELECT
+  u.id,
+  u.email_encrypted,
+  al.created_at as mfa_enabled_at,
+  u.last_login,
+  EXTRACT(DAY FROM NOW() - al.created_at) as days_since_enabled
+FROM users u
+JOIN audit_log al ON u.id = al.user_id
+WHERE u.mfa_enabled = true
+  AND al.action = 'mfa.enabled'
+  AND (u.last_login IS NULL OR u.last_login < al.created_at)
+ORDER BY al.created_at ASC;
+```
+
+### Bulk Operations (Use with Caution)
+
+#### Reset MFA for Multiple Specific Users
+
+```sql
+-- REQUIRES AUTHORIZATION - Reset MFA for specific user list
+BEGIN;
+
+UPDATE users
+SET mfa_enabled = false,
+    mfa_secret_encrypted = NULL,
+    mfa_backup_codes = NULL,
+    mfa_backup_codes_used = NULL
+WHERE id IN (
+  '550e8400-e29b-41d4-a716-446655440001',
+  '550e8400-e29b-41d4-a716-446655440002',
+  '550e8400-e29b-41d4-a716-446655440003'
+);
+
+-- Log the bulk reset for audit trail
+INSERT INTO audit_log (user_id, action, metadata_encrypted)
+SELECT
+  id,
+  'admin.mfa_reset',
+  'Bulk MFA reset performed by admin'::bytea
+FROM users
+WHERE id IN (
+  '550e8400-e29b-41d4-a716-446655440001',
+  '550e8400-e29b-41d4-a716-446655440002',
+  '550e8400-e29b-41d4-a716-446655440003'
+);
+
+COMMIT;
+```
+
+#### Emergency: Disable MFA for All Users
+
+```sql
+-- EXTREME CAUTION - Only for security incidents or system migration
+-- DO NOT RUN WITHOUT EXPLICIT AUTHORIZATION
+
+BEGIN;
+
+-- Count affected users first
+SELECT COUNT(*) as users_affected FROM users WHERE mfa_enabled = true;
+
+-- Uncomment below ONLY if authorized:
+/*
+UPDATE users
+SET mfa_enabled = false,
+    mfa_secret_encrypted = NULL,
+    mfa_backup_codes = NULL,
+    mfa_backup_codes_used = NULL
+WHERE mfa_enabled = true;
+
+-- Log mass reset
+INSERT INTO audit_log (user_id, action, metadata_encrypted)
+SELECT
+  id,
+  'admin.mass_mfa_reset',
+  'Emergency mass MFA reset - [REASON HERE]'::bytea
+FROM users
+WHERE mfa_enabled = false;  -- Now false after update
+*/
+
+ROLLBACK;  -- Change to COMMIT only when ready
+```
+
+## Audit Trail
+
+All MFA operations are logged in the `audit_log` table:
+
+### View MFA-Related Events
+
+```sql
+SELECT
+  created_at,
+  user_id,
+  action,
+  ip_address_encrypted,
+  user_agent_encrypted
+FROM audit_log
+WHERE action LIKE 'mfa.%'
+ORDER BY created_at DESC
+LIMIT 50;
+```
+
+### MFA Event Types
+
+| Event | Description |
+|-------|-------------|
+| `mfa.setup_started` | User began MFA setup process |
+| `mfa.enabled` | MFA successfully enabled |
+| `mfa.enable_failed` | MFA enable attempt failed (invalid code) |
+| `mfa.disabled` | User disabled MFA |
+| `mfa.disable_failed` | MFA disable attempt failed |
+| `mfa.verification_success` | Successful TOTP verification during login |
+| `mfa.verification_failed` | Failed TOTP verification |
+| `mfa.backup_code_used` | User logged in with backup code |
+| `mfa.backup_code_failed` | Invalid backup code attempt |
+| `mfa.backup_code_reuse_attempt` | Attempt to reuse a backup code |
+| `mfa.backup_codes_viewed` | User viewed backup codes info |
+| `mfa.backup_codes_regenerated` | User generated new backup codes |
+| `login.mfa_required` | User passed password check, MFA required |
+
+### Investigate Suspicious Activity
+
+Find users with multiple failed MFA attempts:
+
+```sql
+-- Failed attempts in last hour (potential brute force)
+SELECT
+  user_id,
+  COUNT(*) as failed_attempts,
+  MAX(created_at) as last_attempt,
+  array_agg(created_at ORDER BY created_at DESC) as attempt_times
+FROM audit_log
+WHERE action IN ('mfa.verification_failed', 'mfa.backup_code_failed')
+  AND created_at > NOW() - INTERVAL '1 hour'
+GROUP BY user_id
+HAVING COUNT(*) >= 5
+ORDER BY failed_attempts DESC;
+
+-- Failed attempts in last 24 hours with IP addresses
+SELECT
+  user_id,
+  COUNT(*) as failed_attempts,
+  COUNT(DISTINCT ip_address_encrypted) as unique_ips,
+  MIN(created_at) as first_attempt,
+  MAX(created_at) as last_attempt
+FROM audit_log
+WHERE action IN ('mfa.verification_failed', 'mfa.backup_code_failed')
+  AND created_at > NOW() - INTERVAL '24 hours'
+GROUP BY user_id
+HAVING COUNT(*) >= 3
+ORDER BY failed_attempts DESC;
+```
+
+### Most Active MFA Users
+
+```sql
+-- Users with most successful MFA logins (last 30 days)
+SELECT
+  user_id,
+  COUNT(*) as successful_mfa_logins,
+  MAX(created_at) as last_mfa_login,
+  MIN(created_at) as first_mfa_login
+FROM audit_log
+WHERE action = 'mfa.verification_success'
+  AND created_at > NOW() - INTERVAL '30 days'
+GROUP BY user_id
+ORDER BY successful_mfa_logins DESC
+LIMIT 20;
+```
+
+### Backup Code Usage Patterns
+
+```sql
+-- Users who've used backup codes recently (might need help)
+SELECT
+  user_id,
+  COUNT(*) as backup_codes_used_count,
+  MAX(created_at) as last_backup_code_use,
+  EXTRACT(DAY FROM NOW() - MAX(created_at)) as days_since_last_use
+FROM audit_log
+WHERE action = 'mfa.backup_code_used'
+  AND created_at > NOW() - INTERVAL '30 days'
+GROUP BY user_id
+ORDER BY backup_codes_used_count DESC;
+
+-- Suspicious: Multiple backup codes used in short time (lost device?)
+SELECT
+  user_id,
+  COUNT(*) as codes_used,
+  MIN(created_at) as first_use,
+  MAX(created_at) as last_use,
+  MAX(created_at) - MIN(created_at) as time_span
+FROM audit_log
+WHERE action = 'mfa.backup_code_used'
+  AND created_at > NOW() - INTERVAL '7 days'
+GROUP BY user_id
+HAVING COUNT(*) >= 3
+ORDER BY codes_used DESC;
+```
+
+## Backup Code Management
+
+### View Backup Code Status
+
+```sql
+SELECT
+  id,
+  email_encrypted,
+  mfa_enabled,
+  CASE
+    WHEN mfa_backup_codes IS NOT NULL
+    THEN array_length(mfa_backup_codes, 1)
+    ELSE 0
+  END as total_backup_codes,
+  CASE
+    WHEN mfa_backup_codes_used IS NOT NULL
+    THEN array_length(mfa_backup_codes_used, 1)
+    ELSE 0
+  END as used_backup_codes
+FROM users
+WHERE mfa_enabled = true;
+```
+
+### Users Running Low on Backup Codes
+
+```sql
+SELECT
+  id,
+  mfa_enabled,
+  array_length(mfa_backup_codes, 1) -
+    COALESCE(array_length(mfa_backup_codes_used, 1), 0) as remaining_codes
+FROM users
+WHERE mfa_enabled = true
+  AND (
+    array_length(mfa_backup_codes, 1) -
+    COALESCE(array_length(mfa_backup_codes_used, 1), 0)
+  ) <= 2;
+```
+
+## Security Best Practices
+
+### 1. MFA Reset Verification
+Always verify the user's identity before resetting MFA:
+- Confirm via official communication channels
+- Verify personal information
+- Document the reset request and approval
+
+### 2. Reset Logging
+Log all manual MFA resets:
+```sql
+INSERT INTO audit_log (user_id, action, resource_type, resource_id, metadata_encrypted)
+VALUES (
+  '550e8400-e29b-41d4-a716-446655440000',
+  'admin.mfa_reset',
+  'user',
+  '550e8400-e29b-41d4-a716-446655440000',
+  'Manual MFA reset by admin due to lost device'::bytea
+);
+```
+
+### 3. Recommend MFA Re-enablement
+Always recommend users re-enable MFA after recovery:
+- Send follow-up email with setup instructions
+- Link to [MFA Setup Guide](/authentication/setup-guide)
+- Explain the security benefits
+
+## Monitoring & Alerts
+
+### Set Up Alerts For:
+
+1. **Multiple failed MFA attempts** (potential brute force)
+2. **MFA disabled** on admin accounts
+3. **High volume of backup code usage** (unusual pattern)
+4. **Backup code exhaustion** (user has 0 remaining)
+
+### Example Alert Query (5+ failed attempts in 15 minutes):
+
+```sql
+SELECT
+  user_id,
+  COUNT(*) as failures,
+  array_agg(created_at ORDER BY created_at DESC) as attempt_times
+FROM audit_log
+WHERE action IN ('mfa.verification_failed', 'mfa.backup_code_failed')
+  AND created_at > NOW() - INTERVAL '15 minutes'
+GROUP BY user_id
+HAVING COUNT(*) >= 5;
+```
+
+## Rate Limiting
+
+MFA verification is rate-limited at the application level (Redis):
+
+- **TOTP codes**: 5 attempts per 15 minutes
+- **Backup codes**: 3 attempts per 15 minutes
+
+### Check Rate Limit Status (Redis)
+
+```bash
+# In Redis CLI
+redis-cli
+
+# Check rate limit keys for a user
+KEYS mfa_rate_limit:*:USER_ID
+
+# View remaining attempts
+GET mfa_rate_limit:totp:USER_ID
+TTL mfa_rate_limit:totp:USER_ID
+```
+
+### Reset Rate Limit (Emergency)
+
+```bash
+# In Redis CLI
+DEL mfa_rate_limit:totp:USER_ID
+DEL mfa_rate_limit:backup:USER_ID
+```
+
+## Common Admin Tasks
+
+### Bulk MFA Status Report
+
+```sql
+SELECT
+  COUNT(*) FILTER (WHERE mfa_enabled = true) as mfa_enabled_count,
+  COUNT(*) FILTER (WHERE mfa_enabled = false) as mfa_disabled_count,
+  ROUND(
+    100.0 * COUNT(*) FILTER (WHERE mfa_enabled = true) / COUNT(*),
+    2
+  ) as mfa_adoption_percentage
+FROM users
+WHERE deleted_at IS NULL;
+```
+
+### Recently Enabled MFA
+
+```sql
+SELECT
+  user_id,
+  created_at as enabled_at
+FROM audit_log
+WHERE action = 'mfa.enabled'
+  AND created_at > NOW() - INTERVAL '7 days'
+ORDER BY created_at DESC;
+```
+
+## Emergency Mass MFA Reset
+
+⚠️ **USE WITH EXTREME CAUTION** - This disables MFA for all users:
+
+```sql
+-- DO NOT RUN WITHOUT AUTHORIZATION
+UPDATE users
+SET mfa_enabled = false,
+    mfa_secret_encrypted = NULL,
+    mfa_backup_codes = NULL,
+    mfa_backup_codes_used = NULL
+WHERE mfa_enabled = true;
+
+-- Log the mass reset
+INSERT INTO audit_log (user_id, action, metadata_encrypted)
+SELECT
+  id,
+  'admin.mass_mfa_reset',
+  'Emergency mass MFA reset performed'::bytea
+FROM users
+WHERE mfa_enabled = false;
+```
+
+Only use this in case of:
+- Security breach requiring immediate MFA reset
+- Critical system failure affecting MFA infrastructure
+- Migration/upgrade requiring MFA reconfiguration
+
+## Support Resources
+
+- [User Setup Guide](/authentication/setup-guide)
+- [Troubleshooting Guide](/authentication/troubleshooting)
+- [API Documentation](/authentication/api-endpoints)
+- [Database Schema Reference](/reference/database-schema)

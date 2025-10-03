@@ -31,6 +31,7 @@ import AnnouncementBanner, { Announcement } from '@/components/AnnouncementBanne
 
 // Lazy loaded components for code splitting
 const AdminPage = lazy(() => import('./AdminPage'))
+const SettingsPage = lazy(() => import('@/components/settings/SettingsPage').then(module => ({ default: module.SettingsPage })))
 const ImportExportDialog = lazy(() => import('@/components/ImportExportDialog').then(module => ({ default: module.ImportExportDialog })))
 const RichTextEditor = lazy(() => import('@/components/RichTextEditor').then(module => ({ default: module.RichTextEditor })))
 const SearchBar = lazy(() => import('@/components/SearchBar'))
@@ -563,6 +564,17 @@ class SecureAPI {
 
   async getRegistrationStatus(): Promise<{ enabled: boolean }> {
     return this.request('/auth/registration')
+  }
+
+  async deleteAccount(password: string): Promise<{ success: boolean; message: string }> {
+    return this.request('/account', {
+      method: 'DELETE',
+      body: JSON.stringify({ password }),
+    })
+  }
+
+  async exportAccountData(): Promise<any> {
+    return this.request('/account/export')
   }
 
   async createNote(title: string, content: string): Promise<any> {
@@ -3239,7 +3251,7 @@ function SecureNotesApp() {
   return (
     <>
       {isAuthenticated && encryptionStatus === 'unlocked' && currentView === 'settings' ? (
-        <SecuritySettingsView api={api} onBack={() => setCurrentView('notes')} />
+        <SettingsPage api={api} onBack={() => setCurrentView('notes')} onLogout={handleLogout} />
       ) : isAuthenticated && encryptionStatus === 'unlocked' && currentView === 'tags' ? (
         <div className="h-screen flex items-center justify-center bg-background">
           <Suspense fallback={<ComponentLoader />}>

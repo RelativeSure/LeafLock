@@ -1,0 +1,69 @@
+---
+title: Multi-Factor Authentication
+description: Overview of LeafLock's MFA implementation and security features
+---
+
+# Multi-Factor Authentication (MFA)
+
+LeafLock implements Time-based One-Time Password (TOTP) multi-factor authentication to provide an additional layer of security for your account.
+
+## What is MFA?
+
+Multi-Factor Authentication (MFA) requires two forms of verification to access your account:
+1. **Something you know** - Your password
+2. **Something you have** - Your authentication device (phone/tablet with authenticator app)
+
+Even if someone obtains your password, they cannot access your account without the second factor.
+
+## Features
+
+- **TOTP-based authentication** compatible with all major authenticator apps
+- **Backup recovery codes** for emergency access
+- **QR code setup** for easy configuration
+- **Rate limiting** to prevent brute force attacks
+- **Audit logging** of all MFA events
+
+## Supported Authenticator Apps
+
+LeafLock's MFA works with any TOTP-compatible authenticator app:
+
+- **Google Authenticator** (iOS, Android)
+- **Authy** (iOS, Android, Desktop)
+- **Microsoft Authenticator** (iOS, Android)
+- **1Password** (with TOTP support)
+- **Bitwarden** (with premium)
+- **Any RFC 6238 compliant TOTP app**
+
+## Security Model
+
+### TOTP Configuration
+- **Algorithm**: SHA-1 (industry standard)
+- **Time step**: 30 seconds
+- **Code length**: 6 digits
+- **Secret storage**: Encrypted with server encryption key
+
+### Backup Codes
+- **Count**: 10 codes per user
+- **Format**: 16 characters (XXXX-XXXX-XXXX-XXXX)
+- **Storage**: Argon2id hashed (cannot be retrieved in plaintext)
+- **Usage**: One-time use only
+- **Regeneration**: Available anytime with password confirmation
+
+### Rate Limiting
+- **TOTP verification**: 5 attempts per 15 minutes per user
+- **Backup code verification**: 3 attempts per 15 minutes per user
+- **Implementation**: Redis-based rate limiting
+
+## Getting Started
+
+1. [Setup Guide](/authentication/setup-guide) - Enable MFA on your account
+2. [Admin Management](/authentication/admin-mfa-management) - Administrative MFA operations
+3. [Backup Codes](/authentication/backup-codes) - Understanding recovery codes
+4. [Troubleshooting](/authentication/troubleshooting) - Common issues and solutions
+5. [API Reference](/authentication/api-endpoints) - Developer documentation
+
+## Next Steps
+
+- [Set up MFA on your account →](/authentication/setup-guide)
+- [Learn about backup codes →](/authentication/backup-codes)
+- [View API documentation →](/authentication/api-endpoints)

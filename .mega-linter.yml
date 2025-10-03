@@ -1,4 +1,4 @@
-# MegaLinter Configuration - 10 Essential Linters
+# MegaLinter Configuration - 12 Essential Linters
 # See: https://megalinter.io/latest/config-file/
 
 APPLY_FIXES: all
@@ -27,16 +27,25 @@ ENABLE_LINTERS:
   # Markdown Documentation
   - MARKDOWN_MARKDOWNLINT      # Markdown linting for docs
 
+  # SQL Queries
+  - SQL_SQLFLUFF               # SQL linting for migrations and queries
+
+  # Security Scanning
+  - REPOSITORY_SECRETLINT      # Secret detection (API keys, tokens, etc.)
+
 # Disabled linters
 DISABLE:
   - SPELL                       # Too noisy for code/variable names
   - COPYPASTE                   # Optional - can be noisy
+  - REPOSITORY_GITLEAKS         # Redundant with SECRETLINT
+  - REPOSITORY_TRIVY            # Too slow for local development
 
 # Non-blocking linters (enabled but won't fail CI)
 # GO linter runs but is non-blocking due to MegaLinter's outdated Go version (1.24.7 < required 1.25)
 # Local golangci-lint testing confirms 0 errors - run `cd backend && golangci-lint run`
 DISABLE_ERRORS_LINTERS:
   - GO_GOLANGCI_LINT
+  - SQL_SQLFLUFF                # Non-blocking initially until SQL files are verified
 
 SHOW_ELAPSED_TIME: true
 
@@ -44,15 +53,20 @@ SHOW_ELAPSED_TIME: true
 
 # Go - Run from backend subdirectory using wrapper script
 GO_GOLANGCI_LINT_CLI_EXECUTABLE: ["bash", "/tmp/lint/scripts/golangci-lint-wrapper.sh"]
-GO_GOLANGCI_LINT_ARGUMENTS: "--timeout=5m -c .golangci.yml ./..."
+GO_GOLANGCI_LINT_ARGUMENTS: "--timeout=5m -c /tmp/lint/.github/linters/.golangci.yml ./..."
+GO_GOLANGCI_LINT_CONFIG_FILE: ".github/linters/.golangci.yml"
 GO_GOLANGCI_LINT_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
 GO_GOLANGCI_LINT_CLI_LINT_MODE: "project"
 
 # JavaScript/TypeScript - Exclude generated and dependency code
+JAVASCRIPT_ES_CONFIG_FILE: "frontend/eslint.config.js"
 JAVASCRIPT_ES_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
+JAVASCRIPT_PRETTIER_CONFIG_FILE: "frontend/.prettierrc"
 JAVASCRIPT_PRETTIER_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
 TYPESCRIPT_ES_FILE_EXTENSIONS: [".ts", ".tsx"]
+TYPESCRIPT_ES_CONFIG_FILE: "frontend/eslint.config.js"
 TYPESCRIPT_ES_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
+TYPESCRIPT_PRETTIER_CONFIG_FILE: "frontend/.prettierrc"
 TYPESCRIPT_PRETTIER_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
 
 # YAML - Exclude vendor code and use project config
@@ -63,6 +77,7 @@ YAML_YAMLLINT_FILTER_REGEX_EXCLUDE: "(node_modules|\\.gomod|vendor)"
 JSON_JSONLINT_FILTER_REGEX_EXCLUDE: "(node_modules|\\.gomod|vendor|package-lock.json|pnpm-lock.yaml|tsconfig.*\\.json)"
 
 # Bash - Exclude vendor scripts
+BASH_SHELLCHECK_CONFIG_FILE: ".github/linters/.shellcheckrc"
 BASH_SHELLCHECK_FILTER_REGEX_EXCLUDE: "(node_modules|\\.gomod|vendor)"
 
 # Dockerfile - Ignore Alpine package pinning warnings
@@ -71,6 +86,16 @@ DOCKERFILE_HADOLINT_FILTER_REGEX_EXCLUDE: "(\\.gomod|vendor)"
 
 # Markdown - Exclude changelogs and vendor docs
 MARKDOWN_MARKDOWNLINT_FILTER_REGEX_EXCLUDE: "(CHANGELOG.md|node_modules|\\.gomod|vendor)"
+
+# SQL - Dialect and configuration
+SQL_SQLFLUFF_CONFIG_FILE: ".github/linters/.sqlfluff"
+SQL_SQLFLUFF_ARGUMENTS: "--dialect postgres --exclude-rules L034,L031"
+SQL_SQLFLUFF_FILE_EXTENSIONS: [".sql"]
+SQL_SQLFLUFF_FILTER_REGEX_EXCLUDE: "(node_modules|\\.gomod|vendor)"
+
+# Security - Secret scanning
+REPOSITORY_SECRETLINT_FILTER_REGEX_EXCLUDE: "(node_modules|\\.gomod|vendor|megalinter-reports|.git)"
+REPOSITORY_SECRETLINT_ARGUMENTS: ""
 
 # Don't fail CI on linter errors (warnings only)
 # DISABLE_ERRORS: true

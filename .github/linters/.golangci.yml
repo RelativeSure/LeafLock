@@ -1,0 +1,41 @@
+# golangci-lint configuration
+# See: https://golangci-lint.run/usage/configuration/
+
+# This version is required for golangci-lint v2.x+
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  # Use issues.exclude-dirs instead of skip-dirs (deprecated)
+
+issues:
+  # Exclude directories from linting
+  exclude-dirs:
+    - .gomod
+    - vendor
+    - node_modules
+    - frontend
+  exclude-files:
+    - ".*_test.go"
+    - ".*.pb.go"
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - errcheck
+  # Note: Only using core linters compatible with all golangci-lint versions
+
+linters-settings:
+  govet:
+    check-shadowing: true
+  gofmt:
+    simplify: true
+  staticcheck:
+    checks: ["all"]

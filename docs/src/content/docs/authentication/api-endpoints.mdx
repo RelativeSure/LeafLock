@@ -1,0 +1,243 @@
+---
+title: MFA API Endpoints
+description: Developer documentation for MFA API endpoints
+---
+
+# MFA API Reference
+
+API endpoints for Multi-Factor Authentication implementation.
+
+## Authentication Flow
+
+```
+POST /api/v1/auth/login
+  ↓ (password correct + MFA enabled)
+Response: { mfa_required: true, session_token: "mfa_session_xxx" }
+  ↓
+POST /api/v1/auth/mfa/verify
+  ↓
+Response: { token: "jwt_token", user_id: "uuid", workspace_id: "uuid" }
+```
+
+## Public Endpoints
+
+### Verify MFA Code
+```http
+POST /api/v1/auth/mfa/verify
+```
+
+**Request Body:**
+```json
+{
+  "session_token": "mfa_session_xxx",
+  "code": "123456",
+  "is_backup_code": false
+}
+```
+
+**Response (Success):**
+```json
+{
+  "token": "eyJhbGc...",
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "workspace_id": "660e8400-e29b-41d4-a716-446655440000",
+  "backup_code_used": false
+}
+```
+
+## Protected Endpoints (Require JWT)
+
+### Get MFA Status
+```http
+GET /api/v1/auth/mfa/status
+Authorization: Bearer <jwt_token>
+```
+
+**Response:**
+```json
+{
+  "enabled": true,
+  "has_secret": true
+}
+```
+
+### Begin MFA Setup
+```http
+POST /api/v1/auth/mfa/begin
+Authorization: Bearer <jwt_token>
+```
+
+**Response:**
+```json
+{
+  "secret": "JBSWY3DPEHPK3PXP",
+  "otpauth_url": "otpauth://totp/LeafLock:user@example.com?secret=...",
+  "issuer": "LeafLock",
+  "account": "user@example.com"
+}
+```
+
+### Enable MFA
+```http
+POST /api/v1/auth/mfa/enable
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+```json
+{
+  "code": "123456"
+}
+```
+
+**Response:**
+```json
+{
+  "enabled": true,
+  "backup_codes": [
+    "A1B2-C3D4-E5F6-G7H8",
+    "I9J0-K1L2-M3N4-O5P6",
+    ...
+  ],
+  "message": "MFA enabled successfully..."
+}
+```
+
+### Disable MFA
+```http
+POST /api/v1/auth/mfa/disable
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+```json
+{
+  "code": "123456"
+}
+```
+
+**Response:**
+```json
+{
+  "enabled": false
+}
+```
+
+### Get Backup Codes Status
+```http
+GET /api/v1/auth/mfa/backup-codes
+Authorization: Bearer <jwt_token>
+```
+
+**Response:**
+```json
+{
+  "total": 10,
+  "remaining": 7,
+  "note": "Backup codes are stored securely..."
+}
+```
+
+### Regenerate Backup Codes
+```http
+POST /api/v1/auth/mfa/backup-codes/regenerate
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+```json
+{
+  "password": "user_password"
+}
+```
+
+**Response:**
+```json
+{
+  "codes": [
+    "A1B2-C3D4-E5F6-G7H8",
+    ...
+  ],
+  "message": "New backup codes generated..."
+}
+```
+
+## Error Responses
+
+### Invalid MFA Code
+```json
+{
+  "error": "Invalid MFA code"
+}
+```
+
+### MFA Not Enabled
+```json
+{
+  "error": "MFA not enabled"
+}
+```
+
+### Rate Limited
+```json
+{
+  "error": "Too many failed attempts. Please try again later."
+}
+```
+
+### Invalid Session Token
+```json
+{
+  "error": "Invalid or expired session token"
+}
+```
+
+## Rate Limiting
+
+- **TOTP verification**: 5 attempts per 15 minutes
+- **Backup code verification**: 3 attempts per 15 minutes
+- **Implementation**: Redis-based
+
+## Security Considerations
+
+1. **Session tokens** expire after 5 minutes
+2. **TOTP codes** are valid for ±30 seconds
+3. **Backup codes** are one-time use only
+4. **All MFA events** are audit logged
+
+## Integration Example
+
+```javascript
+// Login flow with MFA
+const loginResponse = await fetch('/api/v1/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email, password })
+})
+
+const loginData = await loginResponse.json()
+
+if (loginData.mfa_required) {
+  // Show MFA verification UI
+  const mfaCode = await promptUserForMfaCode()
+
+  const verifyResponse = await fetch('/api/v1/auth/mfa/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_token: loginData.session_token,
+      code: mfaCode,
+      is_backup_code: false
+    })
+  })
+
+  const { token, user_id } = await verifyResponse.json()
+  // Store JWT token and proceed
+}
+```
+
+## Related Documentation
+
+- [MFA Setup Guide](/authentication/setup-guide)
+- [Admin Management](/authentication/admin-mfa-management)
+- [Database Schema](/reference/database-schema)

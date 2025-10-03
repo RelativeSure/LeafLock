@@ -1,0 +1,198 @@
+---
+title: MFA Backup Codes
+description: Understanding and managing MFA backup recovery codes
+---
+
+# MFA Backup Recovery Codes
+
+Backup codes are emergency access codes that allow you to log in when you don't have access to your authenticator device.
+
+## What Are Backup Codes?
+
+- **One-time use codes** that bypass MFA
+- Generated when you enable MFA
+- **16 characters** in format: `XXXX-XXXX-XXXX-XXXX`
+- **10 codes** provided by default
+- Stored as **Argon2id hashes** (cannot be viewed after initial generation)
+
+## When to Use Backup Codes
+
+Use a backup code when:
+- Your authentication device is lost, stolen, or broken
+- Your phone battery is dead
+- You can't access your authenticator app
+- You're switching to a new device
+
+## How to Use a Backup Code
+
+1. Go to the LeafLock login page
+2. Enter your email and password
+3. On the MFA verification screen, click **Use Backup Code Instead**
+4. Enter one of your backup codes
+5. Click **Verify Backup Code**
+
+**Important**: Each code works only once and is then permanently invalidated.
+
+## Storing Backup Codes Securely
+
+### Recommended Storage Methods
+
+1. **Password Manager** (Best option)
+   - Store in 1Password, Bitwarden, LastPass, etc.
+   - Automatically encrypted and backed up
+   - Easy to access when needed
+
+2. **Encrypted Note Apps**
+   - Apple Notes (with encryption)
+   - Standard Notes
+   - Joplin
+
+3. **Physical Storage**
+   - Write codes on paper
+   - Store in a safe or lockbox
+   - Keep in multiple secure locations
+
+### Not Recommended
+
+- Unencrypted text files on your computer
+- Email inbox
+- Unencrypted cloud storage (Google Drive, Dropbox)
+- Shared documents or notes
+- Photos on your phone
+
+## Managing Your Backup Codes
+
+### Viewing Backup Code Status
+
+1. Log in to LeafLock
+2. Go to **Settings** → **Security** → **Multi-Factor Authentication**
+3. View:
+   - Total backup codes: 10
+   - Remaining codes: (varies based on usage)
+   - Used codes: (tracked automatically)
+
+### Regenerating Backup Codes
+
+You can generate new backup codes at any time:
+
+1. Go to **Settings** → **Security** → **MFA**
+2. Click **Regenerate Backup Codes**
+3. Enter your password to confirm
+4. New codes are generated and old ones are invalidated
+5. **Download or copy** the new codes immediately
+
+**Warning**: Regenerating codes invalidates ALL previous codes, including unused ones.
+
+## When to Regenerate Codes
+
+Consider generating new backup codes when:
+- You've used more than 7 of your 10 codes
+- You suspect codes may have been compromised
+- You've shared a code with someone (not recommended)
+- You want to refresh your security regularly (every 6-12 months)
+
+## Backup Code Security
+
+### How They're Stored
+
+1. **Generation**: Created using cryptographically secure random bytes
+2. **Hashing**: Hashed with Argon2id before database storage
+   - 3 iterations
+   - 64MB memory
+   - 4 parallelism
+   - 32-byte hash output
+3. **Verification**: Your input is hashed and compared to stored hash
+4. **One-time use**: After use, marked as consumed (cannot be reused)
+
+### Security Best Practices
+
+1. **Never share** backup codes with anyone
+2. **Don't email** codes to yourself
+3. **Store securely** in encrypted password manager
+4. **Keep backup** in physical secure location
+5. **Regenerate** if you suspect compromise
+6. **Delete old copies** after regenerating
+
+## Backup Code Recovery Flow
+
+### Scenario: Lost Phone
+
+1. You lose your phone with your authenticator app
+2. Go to LeafLock login
+3. Enter email and password
+4. Click **Use Backup Code Instead**
+5. Enter one of your saved backup codes
+6. Successfully log in
+7. Immediately:
+   - Disable MFA
+   - Set up MFA on a new device
+   - Generate new backup codes
+   - Securely store new codes
+
+## Running Out of Backup Codes
+
+### What Happens When You Use Your Last Code
+
+1. You'll see a warning: **"This is your last backup code"**
+2. After using it, you'll have 0 remaining codes
+3. You can still log in with your authenticator app
+4. **Immediately generate new backup codes** after logging in
+
+### If You Run Out Without Regenerating
+
+- You can still log in with your authenticator device
+- If you also lose your authenticator device, you'll need admin assistance
+- Admins can reset MFA to restore account access (see [Admin MFA Management](/authentication/admin-mfa-management))
+
+## Emergency Account Recovery
+
+If you've lost both your authenticator device and backup codes:
+
+1. **Contact your system administrator**
+2. Verify your identity through official channels
+3. Admin will reset MFA on your account
+4. You can then log in with email and password only
+5. **Immediately re-enable MFA** and save new backup codes
+
+For admin procedures, see [Admin MFA Management](/authentication/admin-mfa-management).
+
+## Frequently Asked Questions
+
+### Can I view my backup codes after initial setup?
+No. Backup codes are hashed and cannot be retrieved in plaintext. You must save them when first generated or regenerate new ones.
+
+### How many times can I regenerate codes?
+Unlimited. You can regenerate backup codes as many times as needed.
+
+### Do old codes still work after regenerating?
+No. Regenerating codes immediately invalidates all previous codes.
+
+### Can I have more than 10 backup codes?
+Currently, 10 codes are generated by default. This is sufficient for most users and aligns with security best practices.
+
+### What if I accidentally use a backup code?
+If you used a code accidentally, regenerate your codes immediately to get a fresh set.
+
+### Are backup codes encrypted?
+They're hashed (one-way encryption) using Argon2id, making them impossible to reverse-engineer from the database.
+
+## Best Practices Summary
+
+**Do:**
+1. Save codes immediately when generated
+2. Store in a password manager
+3. Keep a physical backup in a safe location
+4. Regenerate if more than 70% are used
+5. Regenerate if potentially compromised
+6. Delete old codes after regenerating
+
+**Don't:**
+1. Never email codes to yourself
+2. Never store in unencrypted cloud storage
+3. Never share codes with others
+
+## Related Resources
+
+- [MFA Setup Guide](/authentication/setup-guide)
+- [Troubleshooting MFA Issues](/authentication/troubleshooting)
+- [Admin MFA Management](/authentication/admin-mfa-management)
