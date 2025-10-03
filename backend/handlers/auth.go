@@ -179,13 +179,6 @@ func (h *AuthHandler) deleteMFASessionFromRedis(ctx context.Context, sessionToke
 	return h.redis.Del(ctx, sessionKey).Err()
 }
 
-// cleanupExpiredSessions removes expired sessions from Redis (can be called periodically)
-func (h *AuthHandler) cleanupExpiredSessions(ctx context.Context) error {
-	// Redis automatically handles expiration via TTL, but this can be used for additional cleanup
-	// For now, we rely on Redis's built-in expiration
-	return nil
-}
-
 // Register godoc
 // @Summary Register a new user
 // @Description Register a new user with email and password
@@ -1244,7 +1237,9 @@ func (h *AuthHandler) VerifyMFACode(c *fiber.Ctx) error {
 
 	// Verify session hasn't expired
 	if time.Now().After(mfaSession.ExpiresAt) {
-		h.deleteMFASessionFromRedis(ctx, req.SessionToken)
+		if err := h.deleteMFASessionFromRedis(ctx, req.SessionToken); err != nil {
+			log.Printf("Failed to delete expired MFA session: %v", err)
+		}
 		return c.Status(401).JSON(fiber.Map{"error": "Session expired"})
 	}
 
@@ -1259,7 +1254,9 @@ func (h *AuthHandler) VerifyMFACode(c *fiber.Ctx) error {
 		log.Printf("MFA session mismatch: IP %s vs %s, UA %s vs %s",
 			mfaSession.IPAddress, c.IP(),
 			mfaSession.UserAgent, string(c.Request().Header.UserAgent()))
-		h.deleteMFASessionFromRedis(ctx, req.SessionToken)
+		if err := h.deleteMFASessionFromRedis(ctx, req.SessionToken); err != nil {
+			log.Printf("Failed to delete invalid MFA session: %v", err)
+		}
 		return c.Status(401).JSON(fiber.Map{"error": "Session validation failed"})
 	}
 
