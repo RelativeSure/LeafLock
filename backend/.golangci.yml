@@ -1,5 +1,5 @@
 # GolangCI-Lint configuration for Secure Notes backend
-# See https://golangci-lint.run/usage/configuration/
+# Minimal v2 config for golangci-lint 2.5.0 / MegaLinter v9 compatibility
 
 version: "2"
 
@@ -15,23 +15,10 @@ linters:
     - ineffassign
     - staticcheck
     - unused
-  settings:
-    errcheck:
-      check-type-assertions: false
-      check-blank: false
-      ignore: fmt:.*,io/ioutil:^Read.*
-  exclusions:
-    generated: lax
-    rules:
-      - path: '_test\.go$'
-        linters:
-          - errcheck
 
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-  new: false
-  fix: false
 
 severity:
   default: error
