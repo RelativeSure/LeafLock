@@ -181,13 +181,13 @@ importers:
         specifier: 14.6.1
         version: 14.6.1(@testing-library/dom@10.4.1)
       '@types/file-saver':
-        specifier: ^2.0.7
+        specifier: 2.0.7
         version: 2.0.7
       '@types/node':
         specifier: 24.6.1
         version: 24.6.1
       '@types/qrcode.react':
-        specifier: ^3.0.0
+        specifier: 3.0.0
         version: 3.0.0(react@19.1.1)
       '@types/react':
         specifier: 19.1.16
