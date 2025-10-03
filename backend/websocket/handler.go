@@ -16,7 +16,9 @@ import (
 // HandleWebSocket handles WebSocket connections for real-time note collaboration
 // It authenticates the user, verifies access permissions, and manages the connection lifecycle
 func HandleWebSocket(c *websocket.Conn, hub *Hub, db database.Database) {
-	defer c.Close()
+	defer func() {
+		_ = c.Close() // Best effort cleanup
+	}()
 
 	// Extract note ID, user ID, and token from query params
 	noteIDStr := c.Query("note_id")
@@ -104,20 +106,13 @@ func HandleWebSocket(c *websocket.Conn, hub *Hub, db database.Database) {
 			hub.unregister <- conn
 		}()
 
-		for {
-			select {
-			case message, ok := <-conn.Send:
-				if !ok {
-					c.WriteMessage(websocket.CloseMessage, []byte{})
-					return
-				}
-
-				if err := c.WriteMessage(websocket.TextMessage, message); err != nil {
-					log.Printf("WebSocket write error: %v", err)
-					return
-				}
+		for message := range conn.Send {
+			if err := c.WriteMessage(websocket.TextMessage, message); err != nil {
+				log.Printf("WebSocket write error: %v", err)
+				return
 			}
 		}
+		_ = c.WriteMessage(websocket.CloseMessage, []byte{}) // Best effort close message
 	}()
 
 	// Handle incoming messages

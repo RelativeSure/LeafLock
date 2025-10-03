@@ -31,8 +31,12 @@ func (suite *AuthTestSuite) SetupTest() {
 	// Generate test keys
 	jwtKey := make([]byte, 64)
 	encKey := make([]byte, 32)
-	rand.Read(jwtKey)
-	rand.Read(encKey)
+	if _, err := rand.Read(jwtKey); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
+	if _, err := rand.Read(encKey); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 
 	// Create test config with special character password
 	suite.config = &Config{
@@ -217,7 +221,9 @@ func (suite *AuthTestSuite) TestEnvironmentVariableHandling() {
 
 				// Create a salt and test password hashing
 				salt := make([]byte, 32)
-				rand.Read(salt)
+				if _, err := rand.Read(salt); err != nil {
+					suite.T().Fatalf("Failed to generate random data: %v", err)
+				}
 
 				hashedPassword := HashPassword(testPassword, salt)
 				assert.NotEmpty(suite.T(), hashedPassword, "Password hash should not be empty")
@@ -347,7 +353,9 @@ func (suite *AuthTestSuite) TestCompleteAuthFlow() {
 func (suite *AuthTestSuite) TestPasswordHashingEdgeCases() {
 	suite.Run("EmptyPassword", func() {
 		salt := make([]byte, 32)
-		rand.Read(salt)
+		if _, err := rand.Read(salt); err != nil {
+			suite.T().Fatalf("Failed to generate random data: %v", err)
+		}
 
 		hash := HashPassword("", salt)
 		assert.NotEmpty(suite.T(), hash, "Should handle empty password")
@@ -358,7 +366,9 @@ func (suite *AuthTestSuite) TestPasswordHashingEdgeCases() {
 	suite.Run("VeryLongPassword", func() {
 		longPassword := strings.Repeat("a", 10000) // 10KB password
 		salt := make([]byte, 32)
-		rand.Read(salt)
+		if _, err := rand.Read(salt); err != nil {
+			suite.T().Fatalf("Failed to generate random data: %v", err)
+		}
 
 		hash := HashPassword(longPassword, salt)
 		assert.NotEmpty(suite.T(), hash, "Should handle very long password")
@@ -369,7 +379,9 @@ func (suite *AuthTestSuite) TestPasswordHashingEdgeCases() {
 		// Test with binary data (null bytes, etc.)
 		binaryPassword := string([]byte{0x00, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD})
 		salt := make([]byte, 32)
-		rand.Read(salt)
+		if _, err := rand.Read(salt); err != nil {
+			suite.T().Fatalf("Failed to generate random data: %v", err)
+		}
 
 		hash := HashPassword(binaryPassword, salt)
 		assert.NotEmpty(suite.T(), hash, "Should handle binary data in password")
@@ -453,8 +465,10 @@ func TestEnvironmentVariableSimulation(t *testing.T) {
 		testPassword := "#wmR8xWxZ&#JHZPd8HTYmafctWSe0N*jgPG%bYS@"
 
 		// Simulate setting and reading environment variable
-		os.Setenv("TEST_ADMIN_PASSWORD", testPassword)
-		defer os.Unsetenv("TEST_ADMIN_PASSWORD")
+		require.NoError(t, os.Setenv("TEST_ADMIN_PASSWORD", testPassword))
+		defer func() {
+			_ = os.Unsetenv("TEST_ADMIN_PASSWORD") // Test cleanup
+		}()
 
 		retrievedPassword := os.Getenv("TEST_ADMIN_PASSWORD")
 		assert.Equal(t, testPassword, retrievedPassword, "Environment variable should preserve special characters")
@@ -476,7 +490,9 @@ func TestPasswordPerformance(t *testing.T) {
 	t.Run("PasswordHashingPerformance", func(t *testing.T) {
 		password := "#wmR8xWxZ&#JHZPd8HTYmafctWSe0N*jgPG%bYS@"
 		salt := make([]byte, 32)
-		rand.Read(salt)
+		if _, err := rand.Read(salt); err != nil {
+			t.Fatalf("Failed to generate random data: %v", err)
+		}
 
 		// Time password hashing
 		start := time.Now()

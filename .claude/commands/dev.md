@@ -108,9 +108,9 @@ rm -f .env
 
 ## URLs
 
-- **Frontend:** http://localhost:3000
-- **Backend:** http://localhost:8080  
-- **Health Check:** http://localhost:8080/api/v1/health
+- **Frontend:** <http://localhost:3000>
+- **Backend:** <http://localhost:8080>  
+- **Health Check:** <http://localhost:8080/api/v1/health>
 
 ## Troubleshooting
 

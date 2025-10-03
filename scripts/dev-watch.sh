@@ -334,7 +334,7 @@ main() {
     show_banner
     
     # Clear log file
-    > "$LOG_FILE"
+    true > "$LOG_FILE"
     
     check_prerequisites
     setup_dev_database

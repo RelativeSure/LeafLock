@@ -211,7 +211,7 @@ func TestJWTMiddleware(t *testing.T) {
 	rdb := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
 	})
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }() // Test cleanup
 
 	t.Run("Valid JWT token is accepted", func(t *testing.T) {
 		app := fiber.New()
@@ -288,7 +288,7 @@ func TestJWTMiddleware(t *testing.T) {
 // TestAdminAllowlist tests the admin allowlist functions
 func TestAdminAllowlist(t *testing.T) {
 	// Clear environment
-	os.Unsetenv("ADMIN_USER_IDS")
+	_ = os.Unsetenv("ADMIN_USER_IDS") // Test setup
 
 	t.Run("Empty allowlist returns false", func(t *testing.T) {
 		StoreAllowlist(make(map[string]struct{}))
@@ -339,7 +339,7 @@ func BenchmarkJWTMiddleware(b *testing.B) {
 	secret := []byte("test-secret-key-at-least-32-characters-long")
 	crypto := &MockCryptoService{}
 	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }() // Benchmark cleanup
 
 	app := fiber.New()
 	testUserID := uuid.New()

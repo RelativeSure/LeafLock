@@ -405,7 +405,9 @@ func TestLargePlaintext(t *testing.T) {
 // BenchmarkEncrypt benchmarks the encryption performance
 func BenchmarkEncrypt(b *testing.B) {
 	key := make([]byte, 32)
-	rand.Read(key)
+	if _, err := rand.Read(key); err != nil {
+		b.Fatalf("Failed to generate random data: %v", err)
+	}
 	cs := NewCryptoService(key)
 	plaintext := []byte("Benchmark plaintext data for encryption testing")
 
@@ -418,7 +420,9 @@ func BenchmarkEncrypt(b *testing.B) {
 // BenchmarkDecrypt benchmarks the decryption performance
 func BenchmarkDecrypt(b *testing.B) {
 	key := make([]byte, 32)
-	rand.Read(key)
+	if _, err := rand.Read(key); err != nil {
+		b.Fatalf("Failed to generate random data: %v", err)
+	}
 	cs := NewCryptoService(key)
 	plaintext := []byte("Benchmark plaintext data for decryption testing")
 	ciphertext, _ := cs.Encrypt(plaintext)
@@ -432,7 +436,9 @@ func BenchmarkDecrypt(b *testing.B) {
 // BenchmarkEncryptDeterministic benchmarks deterministic encryption
 func BenchmarkEncryptDeterministic(b *testing.B) {
 	key := make([]byte, 32)
-	rand.Read(key)
+	if _, err := rand.Read(key); err != nil {
+		b.Fatalf("Failed to generate random data: %v", err)
+	}
 	cs := NewCryptoService(key)
 	plaintext := []byte("test@example.com")
 	context := "email"
@@ -446,7 +452,9 @@ func BenchmarkEncryptDeterministic(b *testing.B) {
 // BenchmarkHashEmail benchmarks email hashing
 func BenchmarkHashEmail(b *testing.B) {
 	key := make([]byte, 32)
-	rand.Read(key)
+	if _, err := rand.Read(key); err != nil {
+		b.Fatalf("Failed to generate random data: %v", err)
+	}
 	cs := NewCryptoService(key)
 	email := "user@example.com"
 

@@ -1,0 +1,455 @@
+---
+title: Frontend UI Components
+description: Shadcn UI component library implementation and usage guide
+---
+
+import { Tabs, TabItem, Card, CardGrid, Code } from '@astrojs/starlight/components';
+
+## Overview
+
+LeafLock's frontend uses **Shadcn UI** - a collection of re-usable components built on **Radix UI** primitives and styled with **Tailwind CSS**. This provides accessibility, theming, and a consistent design system out of the box.
+
+## Component Library
+
+### Installed Components
+
+<CardGrid columns={3}>
+  <Card title="Form Components" icon="pencil">
+    - Button
+    - Input
+    - Textarea
+    - Checkbox
+    - Label
+    - Select
+    - Switch
+    - Form (react-hook-form)
+  </Card>
+  <Card title="Layout Components" icon="document">
+    - Card
+    - Tabs
+    - Separator
+    - Sheet (slide-out panels)
+    - ScrollArea
+    - Dialog
+    - Popover
+  </Card>
+  <Card title="Feedback Components" icon="information">
+    - Alert
+    - Badge
+    - Skeleton (loading states)
+    - Toaster (Sonner notifications)
+    - Tooltip
+  </Card>
+</CardGrid>
+
+### Data Display
+
+- **Table** - Sortable, filterable tables
+- **Avatar** - User profile images with fallbacks
+- **Command** - Command palette / search
+- **Combobox** - Searchable select dropdowns
+- **DropdownMenu** - Contextual menus
+
+## Installation Method
+
+Components are installed using the official Shadcn CLI:
+
+<Code code={`pnpm dlx shadcn@latest add [component-name]`} language="bash" />
+
+This ensures:
+- ✅ Latest official components from shadcn.com
+- ✅ Automatic dependency installation
+- ✅ Correct TypeScript types
+- ✅ Proper Radix UI primitive versions
+
+**Example**:
+<Tabs>
+  <TabItem label="Single Component">
+    <Code code={`pnpm dlx shadcn@latest add button`} language="bash" />
+  </TabItem>
+  <TabItem label="Multiple Components">
+    <Code code={`pnpm dlx shadcn@latest add button card input label`} language="bash" />
+  </TabItem>
+</Tabs>
+
+## Configuration
+
+Shadcn components are configured via `components.json`:
+
+```json
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "tailwind.config.js",
+    "css": "src/index.css",
+    "baseColor": "slate",
+    "cssVariables": true
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils"
+  }
+}
+```
+
+### Theme Tokens
+
+CSS variables in `src/index.css` define the design system:
+
+```css
+:root {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(222.2 84% 4.9%);
+  --primary: hsl(217.2 91.2% 59.8%);
+  --secondary: hsl(210 40% 96%);
+  --destructive: hsl(0 84.2% 60.2%);
+  --muted: hsl(210 40% 96%);
+  --accent: hsl(210 40% 96%);
+  --border: hsl(214.3 31.8% 91.4%);
+  --ring: hsl(217.2 91.2% 59.8%);
+}
+
+.dark {
+  --background: hsl(222.2 84% 4.9%);
+  --foreground: hsl(210 40% 98%);
+  /* ... dark mode tokens */
+}
+```
+
+Components automatically adapt to light/dark theme via CSS custom properties.
+
+## Usage Examples
+
+### Skeleton Loading States
+
+Replace custom spinners with semantic skeleton components:
+
+<Tabs>
+  <TabItem label="Usage">
+```tsx
+import { Skeleton } from '@/components/ui/skeleton'
+
+function NoteSkeleton() {
+  return (
+    <div className="p-4 space-y-3">
+      <Skeleton className="h-4 w-3/4" />
+      <Skeleton className="h-3 w-full" />
+      <Skeleton className="h-3 w-2/3" />
+    </div>
+  )
+}
+```
+  </TabItem>
+  <TabItem label="Result">
+    Renders animated loading placeholders that match the final content's layout
+  </TabItem>
+</Tabs>
+
+### Toast Notifications (Sonner)
+
+Modern, accessible toast notifications:
+
+```tsx
+import { toast } from 'sonner'
+
+// Success notification
+toast.success('Note saved successfully!')
+
+// Error notification
+toast.error('Failed to save note')
+
+// Loading state
+toast.loading('Saving...')
+
+// Promise-based
+toast.promise(saveNote(), {
+  loading: 'Saving...',
+  success: 'Note saved!',
+  error: 'Failed to save'
+})
+```
+
+**Setup** (in App.tsx):
+```tsx
+import { Toaster } from '@/components/ui/sonner'
+
+function App() {
+  return (
+    <ThemeProvider>
+      <YourApp />
+      <Toaster />
+    </ThemeProvider>
+  )
+}
+```
+
+### Sheet (Slide-out Panels)
+
+Mobile-friendly slide-out panels for settings, menus:
+
+```tsx
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+
+<Sheet open={open} onOpenChange={setOpen}>
+  <SheetTrigger asChild>
+    <Button variant="outline">Open Settings</Button>
+  </SheetTrigger>
+  <SheetContent side="right">
+    <SheetHeader>
+      <SheetTitle>Settings</SheetTitle>
+    </SheetHeader>
+    <div className="space-y-4 mt-4">
+      {/* Settings content */}
+    </div>
+  </SheetContent>
+</Sheet>
+```
+
+**Sides**: `left`, `right`, `top`, `bottom`
+
+### Dropdown Menu
+
+Accessible dropdown menus with keyboard navigation:
+
+```tsx
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+
+<DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <Button variant="ghost">
+      <MoreVertical className="h-4 w-4" />
+    </Button>
+  </DropdownMenuTrigger>
+  <DropdownMenuContent align="end">
+    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+    <DropdownMenuItem onClick={handleEdit}>
+      Edit
+    </DropdownMenuItem>
+    <DropdownMenuItem onClick={handleShare}>
+      Share
+    </DropdownMenuItem>
+    <DropdownMenuSeparator />
+    <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+      Delete
+    </DropdownMenuItem>
+  </DropdownMenuContent>
+</DropdownMenu>
+```
+
+### Tabs
+
+Tabbed interfaces with keyboard navigation:
+
+```tsx
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+
+<Tabs defaultValue="account">
+  <TabsList>
+    <TabsTrigger value="account">Account</TabsTrigger>
+    <TabsTrigger value="password">Password</TabsTrigger>
+    <TabsTrigger value="security">Security</TabsTrigger>
+  </TabsList>
+  <TabsContent value="account">
+    <AccountSettings />
+  </TabsContent>
+  <TabsContent value="password">
+    <PasswordSettings />
+  </TabsContent>
+  <TabsContent value="security">
+    <SecuritySettings />
+  </TabsContent>
+</Tabs>
+```
+
+### Forms (with react-hook-form)
+
+Type-safe forms with validation:
+
+```tsx
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+
+const formSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(12),
+})
+
+function LoginForm() {
+  const form = useForm({
+    resolver: zodResolver(formSchema),
+  })
+
+  const onSubmit = (values) => {
+    console.log(values)
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input placeholder="you@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit">Submit</Button>
+      </form>
+    </Form>
+  )
+}
+```
+
+## Accessibility Features
+
+All Shadcn components include:
+
+✅ **ARIA attributes** - Proper role, aria-label, aria-describedby
+✅ **Keyboard navigation** - Tab, Enter, Escape, Arrow keys
+✅ **Focus management** - Focus trap in modals, focus rings
+✅ **Screen reader support** - Semantic HTML, live regions
+✅ **Color contrast** - WCAG AA compliant color tokens
+
+## Styling System
+
+### Utility Classes
+
+Components use Tailwind utility classes with the `cn()` helper:
+
+```tsx
+import { cn } from '@/lib/utils'
+
+<div className={cn(
+  "base-classes",
+  condition && "conditional-classes",
+  className
+)} />
+```
+
+The `cn()` function merges Tailwind classes intelligently, handling conflicts.
+
+### Variants (CVA)
+
+Components use `class-variance-authority` for variant management:
+
+```tsx
+import { cva } from 'class-variance-authority'
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground",
+        destructive: "bg-destructive text-destructive-foreground",
+        outline: "border border-input bg-background",
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+        sm: "h-9 rounded-md px-3",
+        lg: "h-11 rounded-md px-8",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+)
+```
+
+## Implementation Status
+
+### Current Usage in App.tsx
+
+- ✅ **Skeleton** - Loading states for notes, components
+- ✅ **Card** - Dialogs, overlays, settings panels
+- ✅ **Toaster** - Global toast notifications
+- ✅ **Button, Input, Label** - Forms throughout app
+- ✅ **Alert** - Error/success messages
+- ✅ **Badge** - Status indicators, tags
+- ✅ **Dialog** - Modals for confirmations
+- ✅ **Select, Switch** - Settings controls
+
+### Planned Refactors
+
+🔲 **SearchBar** → `Command` + `Dialog` for command palette
+🔲 **TagsManager** → `Sheet` for slide-out panel
+🔲 **FoldersManager** → `Sheet` with `Form` components
+🔲 **Settings menus** → `DropdownMenu` for user actions
+🔲 **Import/Export** → `Tabs` for different formats
+
+## Adding New Components
+
+To add a new Shadcn component:
+
+1. **Install via CLI**:
+   ```bash
+   pnpm dlx shadcn@latest add [component-name]
+   ```
+
+2. **Import in your file**:
+   ```tsx
+   import { ComponentName } from '@/components/ui/component-name'
+   ```
+
+3. **Use with props**:
+   ```tsx
+   <ComponentName variant="default" size="md" />
+   ```
+
+4. **Customize if needed**:
+   Edit `src/components/ui/component-name.tsx` to adjust variants, styles, or behavior.
+
+## Resources
+
+- **Official Docs**: [ui.shadcn.com](https://ui.shadcn.com)
+- **Radix UI**: [radix-ui.com](https://www.radix-ui.com)
+- **Tailwind CSS**: [tailwindcss.com](https://tailwindcss.com)
+- **Component Source**: `frontend/src/components/ui/`
+- **Theme Config**: `frontend/src/index.css`
+
+## Dependencies
+
+```json
+{
+  "@radix-ui/react-*": "Latest primitives",
+  "class-variance-authority": "^0.7.1",
+  "clsx": "^2.1.1",
+  "tailwind-merge": "^3.3.1",
+  "lucide-react": "^0.544.0",
+  "sonner": "^2.0.7",
+  "react-hook-form": "^7.63.0",
+  "@hookform/resolvers": "^5.2.2"
+}
+```
+
+All dependencies are managed via `pnpm` and automatically installed when adding components via the Shadcn CLI.

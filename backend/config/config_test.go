@@ -22,8 +22,8 @@ func TestGetEnvOrDefault(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.envValue != "" {
-				os.Setenv(tt.key, tt.envValue)
-				defer os.Unsetenv(tt.key)
+				_ = os.Setenv(tt.key, tt.envValue) // Test setup
+				defer func() { _ = os.Unsetenv(tt.key) }()
 			}
 			result := GetEnvOrDefault(tt.key, tt.defaultValue)
 			if result != tt.expected {
@@ -54,10 +54,10 @@ func TestGetEnvAsBool(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.envValue != "" {
-				os.Setenv(tt.key, tt.envValue)
-				defer os.Unsetenv(tt.key)
+				_ = os.Setenv(tt.key, tt.envValue) // Test setup
+				defer func() { _ = os.Unsetenv(tt.key) }()
 			} else {
-				os.Unsetenv(tt.key)
+				_ = os.Unsetenv(tt.key) // Test setup
 			}
 			result := GetEnvAsBool(tt.key, tt.defaultValue)
 			if result != tt.expected {
@@ -84,10 +84,10 @@ func TestGetEnvAsInt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.envValue != "" {
-				os.Setenv(tt.key, tt.envValue)
-				defer os.Unsetenv(tt.key)
+				_ = os.Setenv(tt.key, tt.envValue) // Test setup
+				defer func() { _ = os.Unsetenv(tt.key) }()
 			} else {
-				os.Unsetenv(tt.key)
+				_ = os.Unsetenv(tt.key) // Test setup
 			}
 			result := GetEnvAsInt(tt.key, tt.defaultValue)
 			if result != tt.expected {
@@ -114,10 +114,10 @@ func TestGetEnvAsStringSlice(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.envValue != "" {
-				os.Setenv(tt.key, tt.envValue)
-				defer os.Unsetenv(tt.key)
+				_ = os.Setenv(tt.key, tt.envValue) // Test setup
+				defer func() { _ = os.Unsetenv(tt.key) }()
 			} else {
-				os.Unsetenv(tt.key)
+				_ = os.Unsetenv(tt.key) // Test setup
 			}
 			result := GetEnvAsStringSlice(tt.key, tt.defaultValue)
 			if len(result) != len(tt.expected) {
@@ -195,17 +195,17 @@ func TestBuildDatabaseURLFromEnv(t *testing.T) {
 	defer func() {
 		for _, env := range originalEnvs {
 			if env.value != "" {
-				os.Setenv(env.key, env.value)
+				_ = os.Setenv(env.key, env.value) // Test cleanup
 			} else {
-				os.Unsetenv(env.key)
+				_ = os.Unsetenv(env.key) // Test cleanup
 			}
 		}
 	}()
 
 	t.Run("returns empty when required vars missing", func(t *testing.T) {
-		os.Unsetenv("POSTGRESQL_HOST")
-		os.Unsetenv("POSTGRESQL_USER")
-		os.Unsetenv("POSTGRESQL_DATABASE")
+		_ = os.Unsetenv("POSTGRESQL_HOST")   // Test setup
+		_ = os.Unsetenv("POSTGRESQL_USER")   // Test setup
+		_ = os.Unsetenv("POSTGRESQL_DATABASE") // Test setup
 		result := buildDatabaseURLFromEnv()
 		if result != "" {
 			t.Errorf("expected empty string, got %s", result)
@@ -213,11 +213,11 @@ func TestBuildDatabaseURLFromEnv(t *testing.T) {
 	})
 
 	t.Run("builds URL with all vars set", func(t *testing.T) {
-		os.Setenv("POSTGRESQL_HOST", "localhost")
-		os.Setenv("POSTGRESQL_USER", "testuser")
-		os.Setenv("POSTGRESQL_PASSWORD", "testpass")
-		os.Setenv("POSTGRESQL_DATABASE", "testdb")
-		os.Setenv("POSTGRESQL_PORT", "5432")
+		_ = os.Setenv("POSTGRESQL_HOST", "localhost")     // Test setup
+		_ = os.Setenv("POSTGRESQL_USER", "testuser")      // Test setup
+		_ = os.Setenv("POSTGRESQL_PASSWORD", "testpass")  // Test setup
+		_ = os.Setenv("POSTGRESQL_DATABASE", "testdb")    // Test setup
+		_ = os.Setenv("POSTGRESQL_PORT", "5432")          // Test setup
 
 		result := buildDatabaseURLFromEnv()
 		if result == "" {

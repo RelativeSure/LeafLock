@@ -110,47 +110,6 @@ func (h *AuthHandler) storeSessionInRedis(ctx context.Context, tokenHash []byte,
 	return h.redis.Set(ctx, sessionKey, encryptedData, duration).Err()
 }
 
-// Validate session from Redis
-func (h *AuthHandler) validateSessionInRedis(ctx context.Context, tokenHash []byte) (*SessionData, error) {
-	sessionKey := fmt.Sprintf("session:%x", tokenHash)
-
-	// Get encrypted session data from Redis
-	encryptedData, err := h.redis.Get(ctx, sessionKey).Bytes()
-	if err != nil {
-		if err.Error() == "redis: nil" {
-			return nil, fmt.Errorf("session not found")
-		}
-		return nil, fmt.Errorf("failed to get session from Redis: %w", err)
-	}
-
-	// Decrypt session data
-	data, err := h.crypto.Decrypt(encryptedData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt session data: %w", err)
-	}
-
-	// Deserialize session data
-	var sessionData SessionData
-	if err := json.Unmarshal(data, &sessionData); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal session data: %w", err)
-	}
-
-	// Check if session is expired
-	if time.Now().After(sessionData.ExpiresAt) {
-		// Delete expired session
-		h.redis.Del(ctx, sessionKey)
-		return nil, fmt.Errorf("session expired")
-	}
-
-	return &sessionData, nil
-}
-
-// Delete session from Redis
-func (h *AuthHandler) deleteSessionFromRedis(ctx context.Context, tokenHash []byte) error {
-	sessionKey := fmt.Sprintf("session:%x", tokenHash)
-	return h.redis.Del(ctx, sessionKey).Err()
-}
-
 // Register godoc
 // @Summary Register a new user
 // @Description Register a new user with email and password
@@ -233,7 +192,9 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Database error"})
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx) // Rollback is safe to call even if tx was committed
+	}()
 
 	// Store GDPR deletion key
 	_, err = tx.Exec(ctx, `
@@ -419,11 +380,13 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 		if lockDuration > 0 {
 			lockUntil := time.Now().Add(lockDuration)
-			h.db.Exec(ctx, `
+			if _, err := h.db.Exec(ctx, `
                 UPDATE users SET failed_attempts = $1, locked_until = $2
                 WHERE id = $3`,
 				failedAttempts, lockUntil, userID,
-			)
+			); err != nil {
+				log.Printf("Warning: Failed to lock user account: %v", err)
+			}
 			h.logAudit(ctx, userID, "login.locked", "user", userID, c)
 
 			// Calculate time remaining for the lockout message
@@ -445,7 +408,9 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 			})
 		}
 
-		h.db.Exec(ctx, `UPDATE users SET failed_attempts = $1 WHERE id = $2`, failedAttempts, userID)
+		if _, err := h.db.Exec(ctx, `UPDATE users SET failed_attempts = $1 WHERE id = $2`, failedAttempts, userID); err != nil {
+			log.Printf("Warning: Failed to update failed login attempts: %v", err)
+		}
 		h.logAudit(ctx, userID, "login.failed", "user", userID, c)
 
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
@@ -479,11 +444,13 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	}
 
 	// Reset failed attempts and update last login
-	h.db.Exec(ctx, `
+	if _, err := h.db.Exec(ctx, `
         UPDATE users SET failed_attempts = 0, locked_until = NULL, last_login = NOW()
         WHERE id = $1`,
 		userID,
-	)
+	); err != nil {
+		log.Printf("Warning: Failed to reset failed login attempts: %v", err)
+	}
 
 	// Generate session
 	sessionToken := make([]byte, 32)
@@ -514,7 +481,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	// Get workspace
 	var workspaceID uuid.UUID
-	h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&workspaceID)
+	_ = h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&workspaceID) // Best effort, workspaceID will be nil UUID if not found
 
 	return c.JSON(fiber.Map{
 		"token":        token,
@@ -598,7 +565,9 @@ func (h *AuthHandler) AdminRecovery(c *fiber.Ctx) error {
 		log.Printf("❌ Failed to start recovery transaction: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "Recovery failed"})
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx) // Rollback is safe to call even if tx was committed
+	}()
 
 	// If user exists, delete them and all related data
 	if userFound {

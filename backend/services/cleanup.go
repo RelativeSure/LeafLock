@@ -16,11 +16,8 @@ func StartCleanupService(db Database) {
 		// Run initial cleanup
 		RunCleanupTasks(ctx, db)
 
-		for {
-			select {
-			case <-ticker.C:
-				RunCleanupTasks(ctx, db)
-			}
+		for range ticker.C {
+			RunCleanupTasks(ctx, db)
 		}
 	}()
 }
@@ -53,7 +50,7 @@ func RunCleanupTasks(ctx context.Context, db Database) {
 
 	// Get count of deleted notes
 	var deletedCount int
-	db.QueryRow(ctx, "SELECT COUNT(*) FROM notes WHERE deleted_at < NOW() - INTERVAL '30 days' AND deleted_at IS NOT NULL").Scan(&deletedCount)
+	_ = db.QueryRow(ctx, "SELECT COUNT(*) FROM notes WHERE deleted_at < NOW() - INTERVAL '30 days' AND deleted_at IS NOT NULL").Scan(&deletedCount) // Best effort count
 
 	if deletedCount > 0 {
 		log.Printf("🗑️ Permanently deleted %d notes older than 30 days", deletedCount)

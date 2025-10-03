@@ -1,0 +1,360 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+  "title": "LeafLock API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "/" }
+  ],
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "Health check",
+        "responses": {
+          "200": {"description": "OK"}
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "summary": "Register user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/RegisterRequest"}
+            }
+          }
+        },
+        "responses": {
+          "201": {"description": "Created", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RegisterResponse"}, "examples": {"success": {"summary": "Successful registration", "value": {"message": "Registration successful", "token": "<jwt>", "user_id": "11111111-1111-1111-1111-111111111111", "workspace_id": "22222222-2222-2222-2222-222222222222"}}}}}},
+          "400": {"description": "Invalid request"},
+          "409": {"description": "Duplicate email"}
+        }
+      }
+    },
+    "/api/v1/notes": {
+      "get": {
+        "summary": "List notes",
+        "security": [{"bearerAuth": []}],
+        "responses": {
+          "200": {"description": "OK", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/NoteListResponse"}, "examples": {"empty": {"summary": "No notes yet", "value": {"notes": []}}, "one": {"summary": "Single note", "value": {"notes": [{"id": "33333333-3333-3333-3333-333333333333", "title": "Welcome", "content": "Hello World", "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}]}}}}}},
+          "401": {"description": "Unauthorized"}
+        }
+      }
+    },
+    "/api/v1/notes/shared": {
+      "get": {
+        "summary": "List shared notes",
+        "description": "Get all notes that have been shared with the authenticated user",
+        "security": [{"bearerAuth": []}],
+        "responses": {
+          "200": {"description": "OK", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SharedNoteListResponse"}}}},
+          "401": {"description": "Unauthorized"}
+        }
+      }
+    },
+    "/api/v1/notes/{id}/share": {
+      "post": {
+        "summary": "Share note",
+        "description": "Share a note with another user by email",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/ShareNoteRequest"}
+            }
+          }
+        },
+        "responses": {
+          "201": {"description": "Note shared successfully"},
+          "400": {"description": "Invalid request"},
+          "404": {"description": "Note or user not found"},
+          "409": {"description": "Note already shared with user"}
+        }
+      }
+    },
+    "/api/v1/notes/{id}/collaborators": {
+      "get": {
+        "summary": "List collaborators",
+        "description": "Get list of users who have access to a note",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}
+        ],
+        "responses": {
+          "200": {"description": "OK", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CollaboratorListResponse"}}}},
+          "401": {"description": "Unauthorized"},
+          "404": {"description": "Note not found"}
+        }
+      }
+    },
+    "/api/v1/notes/{id}/collaborators/{userId}": {
+      "delete": {
+        "summary": "Remove collaborator",
+        "description": "Remove a user's access to a note",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}},
+          {"name": "userId", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}
+        ],
+        "responses": {
+          "200": {"description": "Collaborator removed successfully"},
+          "401": {"description": "Unauthorized"},
+          "404": {"description": "Note or collaboration not found"}
+        }
+      }
+    },
+    "/api/v1/notes/import": {
+      "post": {
+        "summary": "Import note from file",
+        "description": "Import a single note from a markdown, text, HTML, or JSON file",
+        "security": [{"bearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "File to import (.md, .txt, .html, .json)"
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {"description": "Note imported successfully", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ImportNoteResponse"}}}},
+          "400": {"description": "Invalid file or unsupported format"},
+          "401": {"description": "Unauthorized"}
+        }
+      }
+    },
+    "/api/v1/notes/{id}/export": {
+      "post": {
+        "summary": "Export note to file",
+        "description": "Export a note in the specified format",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/ExportNoteRequest"}
+            }
+          }
+        },
+        "responses": {
+          "200": {"description": "Note exported successfully", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExportNoteResponse"}}}},
+          "400": {"description": "Invalid format"},
+          "401": {"description": "Unauthorized"},
+          "404": {"description": "Note not found"}
+        }
+      }
+    },
+    "/api/v1/notes/bulk-import": {
+      "post": {
+        "summary": "Import multiple notes from files",
+        "description": "Import multiple notes from files (up to 50 files)",
+        "security": [{"bearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "maxItems": 50,
+                    "description": "Files to import (.md, .txt, .html, .json)"
+                  }
+                },
+                "required": ["files"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {"description": "Notes imported successfully", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/BulkImportResponse"}}}},
+          "400": {"description": "Too many files or invalid format"},
+          "401": {"description": "Unauthorized"}
+        }
+      }
+    },
+    "/ws/notes": {
+      "get": {
+        "summary": "WebSocket connection for real-time collaboration",
+        "description": "Establish WebSocket connection for real-time note editing and presence. Requires JWT token as query parameter.",
+        "parameters": [
+          {"name": "note_id", "in": "query", "required": true, "schema": {"type": "string", "format": "uuid"}, "description": "Note ID to collaborate on"},
+          {"name": "user_id", "in": "query", "required": true, "schema": {"type": "string", "format": "uuid"}, "description": "User ID"},
+          {"name": "token", "in": "query", "required": true, "schema": {"type": "string"}, "description": "JWT authentication token"}
+        ],
+        "responses": {
+          "101": {"description": "Switching Protocols - WebSocket connection established"},
+          "400": {"description": "Invalid parameters"},
+          "401": {"description": "Invalid or expired token"},
+          "403": {"description": "No access to note"}
+        },
+        "tags": ["WebSocket", "Collaboration"]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "RegisterRequest": {
+        "type": "object",
+        "properties": {
+          "email": {"type": "string", "format": "email"},
+          "password": {"type": "string", "format": "password", "minLength": 12}
+        },
+        "required": ["email", "password"]
+      },
+      "RegisterResponse": {
+        "type": "object",
+        "properties": {
+          "message": {"type": "string"},
+          "token": {"type": "string"},
+          "user_id": {"type": "string", "format": "uuid"},
+          "workspace_id": {"type": "string", "format": "uuid"}
+        }
+      },
+      "Note": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "title": {"type": "string"},
+          "content": {"type": "string"},
+          "created_at": {"type": "string", "format": "date-time"},
+          "updated_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "NoteListResponse": {
+        "type": "object",
+        "properties": {
+          "notes": {
+            "type": "array", "items": {"$ref": "#/components/schemas/Note"}
+          }
+        }
+      },
+      "SharedNoteListResponse": {
+        "type": "object",
+        "properties": {
+          "notes": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                {"$ref": "#/components/schemas/Note"},
+                {
+                  "type": "object",
+                  "properties": {
+                    "permission": {"type": "string", "enum": ["read", "write", "admin"]},
+                    "owner_email": {"type": "string", "format": "email"},
+                    "is_shared": {"type": "boolean"}
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "ShareNoteRequest": {
+        "type": "object",
+        "required": ["user_email", "permission"],
+        "properties": {
+          "user_email": {"type": "string", "format": "email"},
+          "permission": {"type": "string", "enum": ["read", "write", "admin"]}
+        }
+      },
+      "Collaborator": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "note_id": {"type": "string", "format": "uuid"},
+          "user_id": {"type": "string", "format": "uuid"},
+          "user_email": {"type": "string", "format": "email"},
+          "permission": {"type": "string", "enum": ["read", "write", "admin"]},
+          "created_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "CollaboratorListResponse": {
+        "type": "object",
+        "properties": {
+          "collaborators": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/Collaborator"}
+          }
+        }
+      },
+      "ExportNoteRequest": {
+        "type": "object",
+        "required": ["format"],
+        "properties": {
+          "format": {"type": "string", "enum": ["markdown", "text", "html", "json"], "description": "Export format"}
+        }
+      },
+      "ExportNoteResponse": {
+        "type": "object",
+        "properties": {
+          "content": {"type": "string", "description": "Exported note content"},
+          "filename": {"type": "string", "description": "Suggested filename"},
+          "format": {"type": "string", "description": "Export format used"}
+        }
+      },
+      "ImportNoteResponse": {
+        "type": "object",
+        "properties": {
+          "note": {"$ref": "#/components/schemas/Note"},
+          "message": {"type": "string", "description": "Success message"}
+        }
+      },
+      "BulkImportResponse": {
+        "type": "object",
+        "properties": {
+          "imported_notes": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/Note"}
+          },
+          "imported_count": {"type": "integer", "description": "Number of notes successfully imported"},
+          "skipped_count": {"type": "integer", "description": "Number of files skipped"},
+          "message": {"type": "string", "description": "Summary message"}
+        }
+      },
+      "Note": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "title": {"type": "string"},
+          "content": {"type": "string"},
+          "created_at": {"type": "string", "format": "date-time"},
+          "updated_at": {"type": "string", "format": "date-time"},
+          "is_shared": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}

@@ -355,8 +355,9 @@ diagnose_network() {
     
     log_search "Testing port connectivity..."
     for port_info in "${ports_to_test[@]}"; do
-        IFS':' read -r host port service <<< "$port_info"
-        
+        local host port service
+        IFS=':' read -r host port service <<< "$port_info"
+
         if timeout 5 bash -c "cat < /dev/null > /dev/tcp/$host/$port" 2>/dev/null; then
             log_success "$service ($host:$port) is reachable"
         else
@@ -749,12 +750,10 @@ EOF
 }
 
 # Check for required commands
-for cmd in curl; do
-    if ! command -v "$cmd" &> /dev/null; then
-        log_error "Required command '$cmd' is not installed"
-        exit 1
-    fi
-done
+if ! command -v curl &> /dev/null; then
+    log_error "Required command 'curl' is not installed"
+    exit 1
+fi
 
 # Run main function
 main "$@"

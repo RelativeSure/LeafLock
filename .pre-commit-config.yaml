@@ -117,23 +117,24 @@ repos:
     hooks:
       - id: env-check
         name: env-security-check
-        entry: bash -c '
-          # Check for accidentally staged .env files
-          if git diff --cached --name-only | grep -E "^\.env$"; then
-            echo "❌ .env file is staged for commit. This file contains secrets!";
-            echo "Run: git reset HEAD .env";
-            exit 1;
-          fi
-          
-          # Check for hardcoded secrets in staged files
-          if git diff --cached | grep -E "(password|secret|key|token).*=.*(admin|password|secret|123)" -i; then
-            echo "❌ Potential hardcoded secrets detected in staged changes";
-            echo "Please review and remove any hardcoded secrets";
-            exit 1;
-          fi
-          
-          echo "✅ Environment security check passed"
-        '
+        entry: |
+          bash -c '
+            # Check for accidentally staged .env files
+            if git diff --cached --name-only | grep -E "^\.env$"; then
+              echo "❌ .env file is staged for commit. This file contains secrets!";
+              echo "Run: git reset HEAD .env";
+              exit 1;
+            fi
+
+            # Check for hardcoded secrets in staged files
+            if git diff --cached | grep -E "(password|secret|key|token).*=.*(admin|password|secret|123)" -i; then
+              echo "❌ Potential hardcoded secrets detected in staged changes";
+              echo "Please review and remove any hardcoded secrets";
+              exit 1;
+            fi
+
+            echo "✅ Environment security check passed"
+          '
         language: system
         always_run: true
         pass_filenames: false
@@ -143,17 +144,18 @@ repos:
     hooks:
       - id: check-documentation
         name: documentation-freshness-check
-        entry: bash -c '
-          # Check if API changes require documentation updates
-          if git diff --cached --name-only | grep -E "(main\.go|.*\.go)" && ! git diff --cached --name-only | grep -E "\.md$"; then
-            echo "⚠️  Go files changed but no documentation updated. Consider updating relevant .md files";
-          fi
-          
-          # Check for TODO/FIXME comments in production code
-          if git diff --cached | grep -E "TODO|FIXME|XXX|HACK" -i; then
-            echo "⚠️  TODO/FIXME comments found in staged changes. Consider addressing before commit";
-          fi
-        '
+        entry: |
+          bash -c '
+            # Check if API changes require documentation updates
+            if git diff --cached --name-only | grep -E "(main\.go|.*\.go)" && ! git diff --cached --name-only | grep -E "\.md$"; then
+              echo "⚠️  Go files changed but no documentation updated. Consider updating relevant .md files";
+            fi
+
+            # Check for TODO/FIXME comments in production code
+            if git diff --cached | grep -E "TODO|FIXME|XXX|HACK" -i; then
+              echo "⚠️  TODO/FIXME comments found in staged changes. Consider addressing before commit";
+            fi
+          '
         language: system
         always_run: true
         pass_filenames: false

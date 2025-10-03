@@ -49,7 +49,7 @@ echo -e "${BLUE}📊 Service Status:${NC}"
 check_port() {
     local port=$1
     local name=$2
-    if nc -z 127.0.0.1 $port 2>/dev/null || timeout 1 bash -c "echo > /dev/tcp/127.0.0.1/$port" 2>/dev/null; then
+    if nc -z 127.0.0.1 "$port" 2>/dev/null || timeout 1 bash -c "echo > /dev/tcp/127.0.0.1/$port" 2>/dev/null; then
         echo -e "  ${GREEN}✅ $name (port $port) - Listening${NC}"
         return 0
     else

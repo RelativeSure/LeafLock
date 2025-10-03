@@ -49,9 +49,9 @@ LeafLock is a privacy-first notes application with end-to-end encryption, real-t
    docker compose up --build
    ```
 
-   - Frontend UI: http://localhost:3000
-   - Backend API: http://localhost:8080
-   - API health check: http://localhost:8080/api/v1/health
+   - Frontend UI: <http://localhost:3000>
+   - Backend API: <http://localhost:8080>
+   - API health check: <http://localhost:8080/api/v1/health>
    - Built assets are rebuilt automatically each time you rerun with `--build`
 
 4. Stop everything when finished:

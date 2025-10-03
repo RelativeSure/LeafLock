@@ -3,7 +3,7 @@ package server
 import (
 	"fmt"
 	"io"
-	"math/rand"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"testing"
@@ -18,13 +18,13 @@ func supportsIPv6Loopback() bool {
 	if err != nil {
 		return false
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }() // Test cleanup
 
 	done := make(chan struct{})
 	go func() {
 		conn, err := ln.Accept()
 		if err == nil {
-			conn.Close()
+			_ = conn.Close() // Test cleanup
 		}
 		close(done)
 	}()
@@ -33,21 +33,20 @@ func supportsIPv6Loopback() bool {
 	if err != nil {
 		return false
 	}
-	conn.Close()
+	_ = conn.Close() // Test cleanup
 	<-done
 	return true
 }
 
 func acquireRandomPort(t *testing.T) string {
 	t.Helper()
-	rand.Seed(time.Now().UnixNano())
 	for i := 0; i < 20; i++ {
-		candidate := 40000 + rand.Intn(20000)
+		candidate := 40000 + rand.IntN(20000)
 		ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", candidate))
 		if err != nil {
 			continue
 		}
-		ln.Close()
+		_ = ln.Close() // Test cleanup
 		return fmt.Sprintf("%d", candidate)
 	}
 	t.Fatalf("failed to find available port after multiple attempts")
@@ -60,8 +59,8 @@ func waitForHTTP(t *testing.T, url string, expect int, timeout time.Duration) {
 	for time.Now().Before(deadline) {
 		resp, err := http.Get(url)
 		if err == nil {
-			io.Copy(io.Discard, resp.Body)
-			resp.Body.Close()
+			_, _ = io.Copy(io.Discard, resp.Body) // Test operation
+			_ = resp.Body.Close()                  // Test cleanup
 			if resp.StatusCode == expect {
 				return
 			}
@@ -76,7 +75,7 @@ func waitForTCPDial(addr string, timeout time.Duration) error {
 	for time.Now().Before(deadline) {
 		conn, err := net.DialTimeout("tcp", addr, 500*time.Millisecond)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close() // Test cleanup
 			return nil
 		}
 		time.Sleep(50 * time.Millisecond)

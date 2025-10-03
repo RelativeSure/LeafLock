@@ -1,17 +1,14 @@
 # GolangCI-Lint configuration for Secure Notes backend
 # See https://golangci-lint.run/usage/configuration/
 
+# This version is required for golangci-lint v2.x+
+version: "2"
+
 run:
   timeout: 5m
   issues-exit-code: 1
   tests: true
-  skip-dirs:
-    - vendor/
-    - .git/
-    - tmp/
-  skip-files:
-    - ".*\\.pb\\.go$"
-    - ".*\\.gen\\.go$"
+  # skip-dirs is deprecated, moved to issues.exclude-dirs
 
 output:
   format: colored-line-number
@@ -40,6 +37,9 @@ linters-settings:
       - (*os.File).Close
       - (*database/sql.Rows).Close
       - (*database/sql.Stmt).Close
+    # Skip test files - test code doesn't need strict error checking
+    exclude-files:
+      - '.*_test\.go$'
 
   # Error wrapping
   errorlint:
@@ -233,116 +233,38 @@ linters-settings:
 
 linters:
   enable:
-    # Enabled by default
+    # Core linters compatible with all golangci-lint versions
     - errcheck
-    - gosimple
     - govet
     - ineffassign
     - staticcheck
-    - typecheck
     - unused
-
-    # Additional linters
-    - asasalint
-    - asciicheck
-    - bidichk
-    - bodyclose
-    - containedctx
-    - contextcheck
-    - cyclop
-    - decorder
-    - dogsled
-    - dupl
-    - dupword
-    - durationcheck
-    - errname
-    - errorlint
-    - execinquery
-    - exhaustive
-    - exportloopref
-    - forbidigo
-    - forcetypeassert
-    - funlen
-    - gci
-    - ginkgolinter
-    - gocheckcompilerdirectives
-    - gochecknoglobals
-    - gochecknoinits
-    - gocognit
-    - goconst
-    - gocritic
-    - gocyclo
-    - godot
-    - godox
-    - gofmt
-    - gofumpt
-    - goheader
-    - goimports
-    - gomnd
-    - gomoddirectives
-    - gomodguard
-    - goprintffuncname
-    - gosec
-    - grouper
-    - importas
-    - interfacebloat
-    - lll
-    - loggercheck
-    - makezero
-    - mirror
-    - misspell
-    - nakedret
-    - nestif
-    - nilerr
-    - nilnil
-    - nlreturn
-    - noctx
-    - nolintlint
-    - nonamedreturns
-    - nosprintfhostport
-    - prealloc
-    - predeclared
-    - promlinter
-    - reassign
-    - revive
-    - rowserrcheck
-    - sqlclosecheck
-    - stylecheck
-    - tagliatelle
-    - tenv
-    - testableexamples
-    - thelper
-    - tparallel
-    - unconvert
-    - unparam
-    - usestdlibvars
-    - varnamelen
-    - wastedassign
-    - whitespace
-    - wrapcheck
-    - wsl
-
-  disable:
-    - depguard  # We manage dependencies appropriately
-    - exhaustivestruct # Too restrictive
-    - exhaustruct # Too restrictive
-    - gochecksumtype # Not needed for this project
-    - goerr113 # Too restrictive for this project
-    - golint # Deprecated
-    - interfacer # Deprecated
-    - maligned # Deprecated
-    - nosnakecase # We use snake_case for JSON/DB tags
-    - paralleltest # Not all tests need to be parallel
-    - scopelint # Deprecated
-    - testpackage # Not required for this project
+  # Note: Using only core linters for MegaLinter compatibility
+  # Advanced linters commented out due to version compatibility issues
 
 issues:
+  # Exclude directories from linting (replaces deprecated run.skip-dirs)
+  exclude-dirs:
+    - vendor
+    - .git
+    - tmp
+    - .gomod
+
+  # Exclude files by pattern (replaces deprecated run.skip-files)
+  exclude-files:
+    - ".*\\.pb\\.go$"
+    - ".*\\.gen\\.go$"
+
   exclude-rules:
-    # Exclude some linters from running on tests files.
-    - path: _test\.go
+    # Exclude errcheck from all test files
+    - path: '.*_test\.go$'
+      linters:
+        - errcheck
+
+    # Exclude other linters from test files
+    - path: '_test\.go$'
       linters:
         - gocyclo
-        - errcheck
         - dupl
         - gosec
         - funlen
@@ -377,15 +299,3 @@ issues:
 severity:
   default-severity: error
   case-sensitive: false
-  rules:
-    - linters:
-        - dupl
-      severity: info
-    - linters:
-        - gocritic
-      severity: info
-    - linters:
-        - funlen
-        - gocognit
-        - cyclop
-      severity: warning

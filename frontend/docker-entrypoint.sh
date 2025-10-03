@@ -77,7 +77,7 @@ normalize_backend_url() {
             last_segment=${host_part##*:}
             if printf '%s' "$last_segment" | grep -Eq '^[0-9]+$'; then
               port="$last_segment"
-              host_part=${host_part%:$last_segment}
+              host_part=${host_part%:"$last_segment"}
             fi
           fi
           ;;

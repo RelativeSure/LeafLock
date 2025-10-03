@@ -25,6 +25,29 @@
   --radius: 0.5rem;
 }
 
+.theme-blue {
+  /* Blue theme - Professional blue color scheme */
+  --background: hsl(210 100% 97%);
+  --foreground: hsl(210 50% 10%);
+  --card: hsl(210 100% 99%);
+  --card-foreground: hsl(210 50% 10%);
+  --popover: hsl(210 100% 99%);
+  --popover-foreground: hsl(210 50% 10%);
+  --primary: hsl(210 100% 50%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(210 60% 90%);
+  --secondary-foreground: hsl(210 50% 15%);
+  --muted: hsl(210 40% 92%);
+  --muted-foreground: hsl(210 30% 40%);
+  --accent: hsl(210 80% 85%);
+  --accent-foreground: hsl(210 50% 15%);
+  --destructive: hsl(0 84.2% 60.2%);
+  --destructive-foreground: hsl(0 0% 98%);
+  --border: hsl(210 40% 85%);
+  --input: hsl(210 40% 85%);
+  --ring: hsl(210 100% 50%);
+}
+
 .dark {
   /* Dark theme variables with HSL wrapper */
   --background: hsl(222.2 84% 4.9%);

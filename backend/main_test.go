@@ -296,7 +296,9 @@ func TestCryptoService(t *testing.T) {
 func TestPasswordHashing(t *testing.T) {
 	password := "TestPassword123!"
 	salt := make([]byte, 32)
-	rand.Read(salt)
+	if _, err := rand.Read(salt); err != nil {
+		t.Fatalf("Failed to generate random data: %v", err)
+	}
 
 	t.Run("appcrypto.HashPassword", func(t *testing.T) {
 		hash := appcrypto.HashPassword(password, salt)
@@ -345,16 +347,16 @@ func TestConfig(t *testing.T) {
 
 	defer func() {
 		// Restore environment
-		os.Setenv("JWT_SECRET", originalJWT)
-		os.Setenv("SERVER_ENCRYPTION_KEY", originalEncKey)
-		os.Setenv("DATABASE_URL", originalDBURL)
+		_ = os.Setenv("JWT_SECRET", originalJWT)          // Test cleanup
+		_ = os.Setenv("SERVER_ENCRYPTION_KEY", originalEncKey) // Test cleanup
+		_ = os.Setenv("DATABASE_URL", originalDBURL)      // Test cleanup
 	}()
 
 	t.Run("LoadConfigWithDefaults", func(t *testing.T) {
 		// Clear environment variables
-		os.Unsetenv("JWT_SECRET")
-		os.Unsetenv("SERVER_ENCRYPTION_KEY")
-		os.Unsetenv("DATABASE_URL")
+		_ = os.Unsetenv("JWT_SECRET")          // Test setup
+		_ = os.Unsetenv("SERVER_ENCRYPTION_KEY") // Test setup
+		_ = os.Unsetenv("DATABASE_URL")        // Test setup
 
 		config := LoadConfig()
 
@@ -371,9 +373,9 @@ func TestConfig(t *testing.T) {
 		testEncKey := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{0x42}, 32))
 		testDBURL := "postgres://test:test@localhost:5432/testdb"
 
-		os.Setenv("JWT_SECRET", testJWT)
-		os.Setenv("SERVER_ENCRYPTION_KEY", testEncKey)
-		os.Setenv("DATABASE_URL", testDBURL)
+		_ = os.Setenv("JWT_SECRET", testJWT)          // Test setup
+		_ = os.Setenv("SERVER_ENCRYPTION_KEY", testEncKey) // Test setup
+		_ = os.Setenv("DATABASE_URL", testDBURL)      // Test setup
 
 		config := LoadConfig()
 
@@ -393,7 +395,9 @@ func TestJWTMiddleware(t *testing.T) {
 
 	// Generate test encryption key
 	key := make([]byte, 32)
-	rand.Read(key)
+	if _, err := rand.Read(key); err != nil {
+		t.Fatalf("Failed to generate random data: %v", err)
+	}
 	crypto := appcrypto.NewCryptoService(key)
 
 	middleware := JWTMiddleware(secret, rdb, crypto)
@@ -502,7 +506,9 @@ func (suite *AuthHandlerTestSuite) SetupTest() {
 
 	// Generate test encryption key
 	key := make([]byte, 32)
-	rand.Read(key)
+	if _, err := rand.Read(key); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 	suite.crypto = appcrypto.NewCryptoService(key)
 
 	suite.config = &appconfig.Config{
@@ -580,7 +586,7 @@ func (suite *AuthHandlerTestSuite) TestRegisterSuccess() {
 	suite.Equal(201, resp.StatusCode)
 
 	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
+	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 	suite.Equal("Registration successful", response["message"])
 	suite.NotEmpty(response["token"])
@@ -702,7 +708,7 @@ func (suite *AuthHandlerTestSuite) TestLoginSuccess() {
 	suite.Equal(200, resp.StatusCode)
 
 	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
+	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 	suite.NotEmpty(response["token"])
 	suite.NotEmpty(response["session"])
@@ -804,7 +810,7 @@ func setupTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 
 	cleanup := func() {
 		// Clean up test data
-		pool.Exec(ctx, "TRUNCATE users, workspaces, notes, audit_log CASCADE")
+		_, _ = pool.Exec(ctx, "TRUNCATE users, workspaces, notes, audit_log CASCADE") // Test cleanup
 		pool.Close()
 	}
 
@@ -827,8 +833,8 @@ func setupTestRedis(t *testing.T) (*redis.Client, func()) {
 	}
 
 	cleanup := func() {
-		rdb.FlushDB(ctx)
-		rdb.Close()
+		_ = rdb.FlushDB(ctx).Err() // Test cleanup
+		_ = rdb.Close()             // Test cleanup
 	}
 
 	return rdb, cleanup
@@ -838,7 +844,9 @@ func setupTestRedis(t *testing.T) (*redis.Client, func()) {
 func BenchmarkPasswordHashing(b *testing.B) {
 	password := "TestPassword123!"
 	salt := make([]byte, 32)
-	rand.Read(salt)
+	if _, err := rand.Read(salt); err != nil {
+		b.Fatalf("Failed to generate random data: %v", err)
+	}
 
 	b.Run("appcrypto.HashPassword", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
@@ -856,22 +864,26 @@ func BenchmarkPasswordHashing(b *testing.B) {
 
 func BenchmarkCryptoService(b *testing.B) {
 	key := make([]byte, 32)
-	rand.Read(key)
+	if _, err := rand.Read(key); err != nil {
+		b.Fatalf("Failed to generate random data: %v", err)
+	}
 	crypto := appcrypto.NewCryptoService(key)
 
 	plaintext := make([]byte, 1024) // 1KB test data
-	rand.Read(plaintext)
+	if _, err := rand.Read(plaintext); err != nil {
+		b.Fatalf("Failed to generate random data: %v", err)
+	}
 
 	b.Run("Encrypt", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			crypto.Encrypt(plaintext)
+			_, _ = crypto.Encrypt(plaintext) // Benchmark operation
 		}
 	})
 
 	ciphertext, _ := crypto.Encrypt(plaintext)
 	b.Run("Decrypt", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			crypto.Decrypt(ciphertext)
+			_, _ = crypto.Decrypt(ciphertext) // Benchmark operation
 		}
 	})
 }

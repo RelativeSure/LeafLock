@@ -74,9 +74,9 @@ Copy `.env.example` to `.env` and configure:
 - `CORS_ORIGINS` - Allowed frontend origins
 
 ### Service Ports
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8080
-- Health check: http://localhost:8080/api/v1/health
+- Frontend: <http://localhost:3000>
+- Backend API: <http://localhost:8080>
+- Health check: <http://localhost:8080/api/v1/health>
 
 ## Security Considerations
 
@@ -126,6 +126,21 @@ cd frontend && pnpm run build
 ### Database Operations
 The application uses PostgreSQL with encrypted fields. Database migrations and schema are handled within the Go backend code.
 
+**⚠️ CRITICAL: Migration Version Management**
+
+When modifying database schema files, you **MUST** bump the migration version:
+
+1. **File to modify**: `backend/database/database.go`
+2. **Constant to update**: `MigrationSchemaVersion` (line 21)
+3. **Format**: `YYYY.MM.DD.NNN` (increment the last number)
+4. **Example**: `2024.12.25.002` → `2024.12.25.003`
+
+**Files that require version bump:**
+- `backend/database/schema.go` - Any ALTER TABLE, CREATE TABLE, CREATE INDEX
+- Any file adding/modifying database structure
+
+**Why critical**: Existing deployments skip migrations if version matches. Without a version bump, new columns/tables will never be created on existing databases, causing runtime query failures.
+
 ## Startup Performance Optimization
 
 ### Fast Startup Configuration
@@ -170,7 +185,7 @@ curl https://your-domain.com/api/v1/health/ready
 
 ### Default Admin User
 The application creates a default admin user automatically if none exists:
-- **Email**: Configured via `DEFAULT_ADMIN_EMAIL` (default: admin@leaflock.app)
+- **Email**: Configured via `DEFAULT_ADMIN_EMAIL` (default: <admin@leaflock.app>)
 - **Password**: Configured via `DEFAULT_ADMIN_PASSWORD` (supports complex passwords with special characters)
 - **Creation**: Automatic on first startup if no users exist
 - **Validation**: Full password complexity validation with special character support

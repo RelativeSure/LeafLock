@@ -1,0 +1,60 @@
+# yamllint configuration
+# See: https://yamllint.readthedocs.io/en/stable/configuration.html
+
+---
+extends: default
+
+# Ignore Helm templates (they use Go templating which isn't valid YAML)
+ignore: |
+  helm/
+  backend/.gomod/
+  megalinter-reports/
+
+rules:
+  # Allow longer lines (common in GitHub Actions, Docker Compose, K8s manifests)
+  line-length:
+    max: 200  # Increased from default 80
+    level: warning
+
+  # Allow trailing spaces (auto-fixed by editors)
+  trailing-spaces: disable
+
+  # Allow missing document start (not all YAML files need ---)
+  document-start: disable
+
+  # Relax indentation rules (different projects have different styles)
+  indentation: disable
+
+  # Allow yes/no instead of forcing true/false
+  truthy: disable
+
+  # Allow comments without proper indentation
+  comments-indentation: disable
+
+  # Comments don't need starting spaces
+  comments: disable
+
+  # Allow empty values
+  empty-values: disable
+
+  # Allow empty lines
+  empty-lines: disable
+
+  # Relax new line at end of file
+  new-line-at-end-of-file: disable
+
+  # Allow key duplicates in certain cases (like GitHub Actions)
+  key-duplicates: disable
+
+  # Allow octal values
+  octal-values: disable
+
+  # Allow quoted strings
+  quoted-strings: disable
+
+  # Disable braces/brackets rules (Helm templates use {{ }} which yamllint flags)
+  braces: disable
+  brackets: disable
+
+  # Disable hyphens rule (Helm templates often have non-standard spacing)
+  hyphens: disable

@@ -98,8 +98,8 @@ analyze_logs() {
     if command -v podman >/dev/null 2>&1; then
         # Get recent backend logs
         podman logs --tail=100 leaflock-backend 2>/dev/null | tee "$LOG_DIR/backend-recent.log" | {
-            error_count=$(grep -i "error\|panic\|fatal" | wc -l)
-            warn_count=$(grep -i "warn" | wc -l)
+            error_count=$(grep -ci "error\|panic\|fatal")
+            warn_count=$(grep -ci "warn")
             
             echo "Error patterns found:"
             echo "  Errors/Panics/Fatals: $error_count"
@@ -123,7 +123,7 @@ analyze_logs() {
         log_info "Analyzing development logs..."
         tail -100 /tmp/leaflock-dev.log > "$LOG_DIR/development.log"
         
-        error_count=$(grep -i "error\|failed\|exception" "$LOG_DIR/development.log" | wc -l)
+        error_count=$(grep -ci "error\|failed\|exception" "$LOG_DIR/development.log")
         if [ "$error_count" -gt 0 ]; then
             log_warning "Development errors found:"
             grep -i "error\|failed\|exception" "$LOG_DIR/development.log" | tail -3
@@ -280,7 +280,7 @@ app_debug() {
         log_success ".env file exists"
         
         # Check for empty values
-        empty_vars=$(grep -E "^[A-Z_]+=$" .env | wc -l)
+        empty_vars=$(grep -cE "^[A-Z_]+=$" .env)
         if [ "$empty_vars" -gt 0 ]; then
             log_warning "$empty_vars environment variables are empty"
             grep -E "^[A-Z_]+=$" .env | head -3

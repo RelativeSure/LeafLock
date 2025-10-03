@@ -33,8 +33,8 @@ func (suite *SecurityTestSuite) SetupTest() {
 	// Generate test keys
 	jwtKey := make([]byte, 64)
 	encKey := make([]byte, 32)
-	rand.Read(jwtKey)
-	rand.Read(encKey)
+	_, _ = rand.Read(jwtKey) // Test setup
+	_, _ = rand.Read(encKey)  // Test setup
 
 	suite.config = &Config{
 		JWTSecret:        jwtKey,
@@ -126,7 +126,7 @@ func (suite *SecurityTestSuite) TestSQLInjectionPrevention() {
 
 			// Response should not contain SQL error messages
 			var response map[string]interface{}
-			json.NewDecoder(resp.Body).Decode(&response)
+			_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 			responseStr := fmt.Sprintf("%v", response)
 			assert.NotContains(suite.T(), strings.ToLower(responseStr), "syntax error")
@@ -167,7 +167,7 @@ func (suite *SecurityTestSuite) TestXSSPrevention() {
 			require.NoError(suite.T(), err)
 
 			var response map[string]interface{}
-			json.NewDecoder(resp.Body).Decode(&response)
+			_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 			// Email should be returned as-is (server doesn't render HTML)
 			// But ensure no script execution context is created
@@ -286,7 +286,7 @@ func (suite *SecurityTestSuite) TestPasswordSecurity() {
 	suite.Run("TimingAttackResistance", func() {
 		// Test that password verification takes similar time for valid/invalid passwords
 		salt := make([]byte, 32)
-		rand.Read(salt)
+		_, _ = rand.Read(salt) // Test setup
 		validHash := HashPassword("ValidPassword123!", salt)
 
 		// Measure time for valid password
@@ -355,7 +355,7 @@ func (suite *SecurityTestSuite) TestPasswordSecurity() {
 		for _, pwd := range strongPasswords {
 			suite.Run(fmt.Sprintf("StrongPassword_%s", pwd), func() {
 				salt := make([]byte, 32)
-				rand.Read(salt)
+				_, _ = rand.Read(salt) // Test setup
 
 				hash := HashPassword(pwd, salt)
 				assert.NotEmpty(suite.T(), hash)
@@ -445,8 +445,8 @@ func (suite *SecurityTestSuite) TestEncryptionSecurity() {
 		// Create two crypto services with different keys
 		key1 := make([]byte, 32)
 		key2 := make([]byte, 32)
-		rand.Read(key1)
-		rand.Read(key2)
+		_, _ = rand.Read(key1) // Test setup
+		_, _ = rand.Read(key2) // Test setup
 
 		crypto1 := NewCryptoService(key1)
 		crypto2 := NewCryptoService(key2)
@@ -568,7 +568,7 @@ func (suite *SecurityTestSuite) TestInputValidation() {
 				assert.True(suite.T(), resp.StatusCode < 500, "Should handle Unicode without server error")
 
 				var response map[string]interface{}
-				json.NewDecoder(resp.Body).Decode(&response)
+				_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 				if respEmail, ok := response["email"].(string); ok {
 					assert.Equal(suite.T(), email, respEmail, "Unicode should be preserved")
@@ -677,7 +677,7 @@ func (suite *SecurityTestSuite) TestInformationDisclosure() {
 
 		// Should not expose internal paths or stack traces
 		body := make([]byte, 1024)
-		resp.Body.Read(body)
+		_, _ = resp.Body.Read(body) // Test response parsing
 		bodyStr := string(body)
 
 		assert.NotContains(suite.T(), bodyStr, "/usr/")
@@ -749,7 +749,7 @@ func TestPenetrationTesting(t *testing.T) {
 		defer cleanupRedis()
 
 		key := make([]byte, 32)
-		rand.Read(key)
+		_, _ = rand.Read(key) // Test setup
 		crypto := NewCryptoService(key)
 
 		app.Get("/protected", JWTMiddleware(jwtSecret, rdb, crypto), func(c *fiber.Ctx) error {

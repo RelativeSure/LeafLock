@@ -93,7 +93,9 @@ func (h *AttachmentsHandler) UploadAttachment(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to read file"})
 	}
-	defer fileContent.Close()
+	defer func() {
+		_ = fileContent.Close() // Best effort cleanup
+	}()
 
 	content, err := io.ReadAll(fileContent)
 	if err != nil {

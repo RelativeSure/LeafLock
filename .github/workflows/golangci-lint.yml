@@ -1,0 +1,53 @@
+# Go Linting with golangci-lint
+# Runs golangci-lint on the backend directory
+# Separate from MegaLinter due to Go version requirements (1.25+)
+name: 🔍 Go Lint
+
+on:
+  push:
+    branches: [main, master, develop]
+    paths:
+      - 'backend/**/*.go'
+      - 'backend/go.mod'
+      - 'backend/go.sum'
+      - 'backend/.golangci.yml'
+      - '.github/workflows/golangci-lint.yml'
+  pull_request:
+    paths:
+      - 'backend/**/*.go'
+      - 'backend/go.mod'
+      - 'backend/go.sum'
+      - 'backend/.golangci.yml'
+      - '.github/workflows/golangci-lint.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  golangci-lint:
+    name: 🔍 Lint Go Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: backend/go.sum
+
+      - name: 🔍 Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: backend
+          args: --config .golangci.yml --timeout 5m
+
+      - name: 📊 Report Results
+        if: always()
+        run: |
+          echo "✅ Go linting completed"
+          echo "Configuration: backend/.golangci.yml"
+          echo "Go version: 1.25"

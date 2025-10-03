@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -10,17 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-// mockWebSocketConn is a mock implementation for testing
-type mockWebSocketConn struct {
-	messages [][]byte
-	closed   bool
-}
-
-func (m *mockWebSocketConn) WriteMessage(messageType int, data []byte) error {
-	m.messages = append(m.messages, data)
-	return nil
-}
 
 // TestNewHub verifies that NewHub creates a properly initialized Hub
 func TestNewHub(t *testing.T) {
@@ -553,43 +541,4 @@ func BenchmarkBroadcastToNote(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		hub.broadcastToNote(noteID, testMessage, userID)
 	}
-}
-
-// mockDatabase is a mock implementation of database.Database for testing
-type mockDatabase struct {
-	hasAccess bool
-	queryErr  error
-}
-
-func (m *mockDatabase) QueryRow(ctx context.Context, sql string, args ...interface{}) mockRow {
-	return mockRow{hasAccess: m.hasAccess, err: m.queryErr}
-}
-
-func (m *mockDatabase) Query(ctx context.Context, sql string, args ...interface{}) (interface{}, error) {
-	return nil, nil
-}
-
-func (m *mockDatabase) Exec(ctx context.Context, sql string, args ...interface{}) (interface{}, error) {
-	return nil, nil
-}
-
-func (m *mockDatabase) Begin(ctx context.Context) (interface{}, error) {
-	return nil, nil
-}
-
-type mockRow struct {
-	hasAccess bool
-	err       error
-}
-
-func (m mockRow) Scan(dest ...interface{}) error {
-	if m.err != nil {
-		return m.err
-	}
-	if len(dest) > 0 {
-		if ptr, ok := dest[0].(*bool); ok {
-			*ptr = m.hasAccess
-		}
-	}
-	return nil
 }

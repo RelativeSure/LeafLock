@@ -124,6 +124,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	tagsHandler := handlers.NewTagsHandler(db, crypto)
 	foldersHandler := handlers.NewFoldersHandler(db, crypto)
 	templatesHandler := handlers.NewTemplatesHandler(db, crypto)
+	settingsHandler := handlers.NewSettingsHandler(db)
 	collabHandler := handlers.NewCollaborationHandler(db, crypto)
 	attachmentsHandler := handlers.NewAttachmentsHandler(db, crypto)
 	searchHandler := handlers.NewSearchHandler(db, crypto)
@@ -214,6 +215,14 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 		return c.JSON(health)
 	})
 
+	// Swagger documentation endpoints
+	api.Get("/docs", swaggerUIHandler)
+	api.Get("/docs/openapi.json", swaggerJSONHandler)
+
+	// Public swagger access (outside /api/v1 prefix)
+	app.Get("/swagger", swaggerUIHandler)
+	app.Get("/swagger/openapi.json", swaggerJSONHandler)
+
 	if env := strings.ToLower(strings.TrimSpace(config.Environment)); env != "development" && env != "local" {
 		regLimiter := limiter.New(limiter.Config{
 			Max:        5,
@@ -294,6 +303,10 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	protected.Post("/notes/:id/export", importExportHandler.ExportNote)
 	protected.Post("/notes/bulk-import", importExportHandler.BulkImport)
 
+	// User settings endpoints
+	protected.Get("/settings", settingsHandler.GetSettings)
+	protected.Put("/settings", settingsHandler.UpdateSettings)
+
 	hub := websocketpkg.NewHub()
 	go hub.Run()
 
@@ -370,7 +383,9 @@ func main() {
 		MaxRetries:   3,
 		PoolTimeout:  5 * time.Second,
 	})
-	defer rdb.Close()
+	defer func() {
+		_ = rdb.Close() // Best effort cleanup
+	}()
 	log.Printf("⏱️  Redis client initialized in %v", time.Since(redisStart))
 
 	// Initialize crypto service

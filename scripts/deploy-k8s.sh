@@ -40,12 +40,12 @@ log_error() {
 # Function to generate secure random strings
 generate_password() {
     local length=${1:-32}
-    openssl rand -base64 $length | tr -d "=+/" | cut -c1-$length
+    openssl rand -base64 "$length" | tr -d "=+/" | cut -c1-"$length"
 }
 
 generate_base64() {
     local length=${1:-32}
-    openssl rand -base64 $length
+    openssl rand -base64 "$length"
 }
 
 # Function to check dependencies
@@ -278,7 +278,7 @@ wait_for_deployment() {
     
     for deployment in "${deployments[@]}"; do
         log_info "Waiting for $deployment deployment..."
-        kubectl rollout status deployment/leaflock-$deployment -n "$NAMESPACE" --timeout=300s
+        kubectl rollout status deployment/leaflock-"$deployment" -n "$NAMESPACE" --timeout=300s
     done
     
     # Wait for StatefulSets (PostgreSQL, Redis)

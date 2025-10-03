@@ -57,7 +57,7 @@ echo "⚠️  NOTICE: Using self-signed certificates. For production, use CA-sig
 
 # Create temporary directory for certificate generation
 TEMP_DIR=$(mktemp -d)
-trap "rm -rf $TEMP_DIR" EXIT
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
 # Generate strong private key
 echo "🔑 Generating RSA private key (2048-bit)..."

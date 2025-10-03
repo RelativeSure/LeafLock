@@ -69,6 +69,7 @@ validate_coolify_compose_structure() {
     local total_validations=10
 
     # 1. Check for required parameter substitution
+    # shellcheck disable=SC2016
     if grep -q '\${.*:?.*}' "$compose_path"; then
         log_success "Required parameter substitution found"
         ((validations_passed++))
@@ -282,6 +283,7 @@ validate_coolify_v4_compatibility() {
     fi
 
     # 5. Check for environment variable security
+    # shellcheck disable=SC2016
     if grep -q '\${.*:?.*Please set.*}' "$compose_path"; then
         log_success "Environment variables have security validation"
         ((compatibility_score++))
