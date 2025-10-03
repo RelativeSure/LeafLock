@@ -53,15 +53,20 @@ SHOW_ELAPSED_TIME: true
 
 # Go - Run from backend subdirectory using wrapper script
 GO_GOLANGCI_LINT_CLI_EXECUTABLE: ["bash", "/tmp/lint/scripts/golangci-lint-wrapper.sh"]
-GO_GOLANGCI_LINT_ARGUMENTS: "--timeout=5m -c .golangci.yml ./..."
+GO_GOLANGCI_LINT_ARGUMENTS: "--timeout=5m -c /tmp/lint/.github/linters/.golangci.yml ./..."
+GO_GOLANGCI_LINT_CONFIG_FILE: ".github/linters/.golangci.yml"
 GO_GOLANGCI_LINT_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
 GO_GOLANGCI_LINT_CLI_LINT_MODE: "project"
 
 # JavaScript/TypeScript - Exclude generated and dependency code
+JAVASCRIPT_ES_CONFIG_FILE: "frontend/eslint.config.js"
 JAVASCRIPT_ES_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
+JAVASCRIPT_PRETTIER_CONFIG_FILE: "frontend/.prettierrc"
 JAVASCRIPT_PRETTIER_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
 TYPESCRIPT_ES_FILE_EXTENSIONS: [".ts", ".tsx"]
+TYPESCRIPT_ES_CONFIG_FILE: "frontend/eslint.config.js"
 TYPESCRIPT_ES_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
+TYPESCRIPT_PRETTIER_CONFIG_FILE: "frontend/.prettierrc"
 TYPESCRIPT_PRETTIER_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
 
 # YAML - Exclude vendor code and use project config
@@ -72,6 +77,7 @@ YAML_YAMLLINT_FILTER_REGEX_EXCLUDE: "(node_modules|\\.gomod|vendor)"
 JSON_JSONLINT_FILTER_REGEX_EXCLUDE: "(node_modules|\\.gomod|vendor|package-lock.json|pnpm-lock.yaml|tsconfig.*\\.json)"
 
 # Bash - Exclude vendor scripts
+BASH_SHELLCHECK_CONFIG_FILE: ".github/linters/.shellcheckrc"
 BASH_SHELLCHECK_FILTER_REGEX_EXCLUDE: "(node_modules|\\.gomod|vendor)"
 
 # Dockerfile - Ignore Alpine package pinning warnings
@@ -82,6 +88,7 @@ DOCKERFILE_HADOLINT_FILTER_REGEX_EXCLUDE: "(\\.gomod|vendor)"
 MARKDOWN_MARKDOWNLINT_FILTER_REGEX_EXCLUDE: "(CHANGELOG.md|node_modules|\\.gomod|vendor)"
 
 # SQL - Dialect and configuration
+SQL_SQLFLUFF_CONFIG_FILE: ".github/linters/.sqlfluff"
 SQL_SQLFLUFF_ARGUMENTS: "--dialect postgres --exclude-rules L034,L031"
 SQL_SQLFLUFF_FILE_EXTENSIONS: [".sql"]
 SQL_SQLFLUFF_FILTER_REGEX_EXCLUDE: "(node_modules|\\.gomod|vendor)"

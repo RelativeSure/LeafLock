@@ -10,7 +10,7 @@
 -- WHERE id = 'USER_UUID_HERE';
 
 -- Option 2: Reset MFA by email (requires email_search_hash)
--- First, you need to generate the email_search_hash using the backend's encryption service
+-- First, generate the email_search_hash using backend encryption
 -- Then run:
 -- UPDATE users
 -- SET mfa_enabled = false,
@@ -28,8 +28,10 @@
 
 -- Verify MFA was reset
 -- SELECT id, mfa_enabled,
---        CASE WHEN mfa_secret_encrypted IS NOT NULL THEN 'has_secret' ELSE 'no_secret' END as secret_status,
---        CASE WHEN mfa_backup_codes IS NOT NULL THEN array_length(mfa_backup_codes, 1) ELSE 0 END as backup_codes_count
+--   CASE WHEN mfa_secret_encrypted IS NOT NULL
+--     THEN 'has_secret' ELSE 'no_secret' END as secret_status,
+--   CASE WHEN mfa_backup_codes IS NOT NULL
+--     THEN array_length(mfa_backup_codes, 1) ELSE 0 END as codes_count
 -- FROM users
 -- WHERE id = 'USER_UUID_HERE';
 

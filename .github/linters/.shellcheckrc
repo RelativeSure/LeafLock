@@ -1,0 +1,17 @@
+# ShellCheck configuration
+# See: https://www.shellcheck.net/wiki/
+
+# Disable noisy/low-priority checks
+disable=SC2034  # Variables appear unused (often false positives with sourced files)
+disable=SC2155  # Declare and assign separately (too verbose for simple cases)
+disable=SC2162  # read without -r (not critical in most cases)
+disable=SC1090  # Can't follow non-constant source (expected behavior)
+disable=SC1091  # Not following sourced files (expected behavior)
+disable=SC2164  # cd without error handling (handled at higher level)
+disable=SC2235  # Use { ..; } instead of (..) (style preference)
+
+# Keep these important checks enabled:
+# SC2086 - Missing quotes (security/correctness issue)
+# SC2181 - Check exit code directly
+# SC2046 - Quote command substitutions
+# SC2006 - Use $() instead of backticks
