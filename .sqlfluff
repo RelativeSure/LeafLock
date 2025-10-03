@@ -1,0 +1,46 @@
+# SQLFluff Configuration
+# See: https://docs.sqlfluff.com/en/stable/configuration.html
+
+[sqlfluff]
+# Set dialect to PostgreSQL
+dialect = postgres
+
+# Exclude directories
+exclude_rules = L034,L031
+
+# Templater configuration
+templater = raw
+
+# File encoding
+encoding = utf-8
+
+[sqlfluff:indentation]
+# Indentation rules
+indented_joins = false
+indented_using_on = true
+template_blocks_indent = true
+
+[sqlfluff:layout:type:comma]
+# Comma placement
+spacing_before = touch
+line_position = trailing
+
+[sqlfluff:rules]
+# Allow longer lines for complex queries
+max_line_length = 120
+
+# Disable overly strict rules
+# L034: Select wildcards (SELECT *) - common in migrations
+# L031: Avoid aliases in FROM/JOIN - too strict for complex queries
+
+[sqlfluff:rules:L010]
+# Capitalisation of keywords
+capitalisation_policy = upper
+
+[sqlfluff:rules:L014]
+# Unquoted identifiers
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:L030]
+# Function names
+capitalisation_policy = upper

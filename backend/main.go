@@ -256,6 +256,11 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	protected.Post("/auth/mfa/begin", authHandler.BeginMFASetup)
 	protected.Post("/auth/mfa/enable", authHandler.EnableMFA)
 	protected.Post("/auth/mfa/disable", authHandler.DisableMFA)
+	protected.Get("/auth/mfa/backup-codes", authHandler.GetBackupCodes)
+	protected.Post("/auth/mfa/backup-codes/regenerate", authHandler.RegenerateBackupCodes)
+
+	// Public MFA verification endpoint (doesn't require JWT)
+	api.Post("/auth/mfa/verify", authHandler.VerifyMFACode)
 
 	protected.Get("/notes", notesHandler.GetNotes)
 	protected.Get("/notes/:id", notesHandler.GetNote)

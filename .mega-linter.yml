@@ -1,4 +1,4 @@
-# MegaLinter Configuration - 10 Essential Linters
+# MegaLinter Configuration - 12 Essential Linters
 # See: https://megalinter.io/latest/config-file/
 
 APPLY_FIXES: all
@@ -27,16 +27,25 @@ ENABLE_LINTERS:
   # Markdown Documentation
   - MARKDOWN_MARKDOWNLINT      # Markdown linting for docs
 
+  # SQL Queries
+  - SQL_SQLFLUFF               # SQL linting for migrations and queries
+
+  # Security Scanning
+  - REPOSITORY_SECRETLINT      # Secret detection (API keys, tokens, etc.)
+
 # Disabled linters
 DISABLE:
   - SPELL                       # Too noisy for code/variable names
   - COPYPASTE                   # Optional - can be noisy
+  - REPOSITORY_GITLEAKS         # Redundant with SECRETLINT
+  - REPOSITORY_TRIVY            # Too slow for local development
 
 # Non-blocking linters (enabled but won't fail CI)
 # GO linter runs but is non-blocking due to MegaLinter's outdated Go version (1.24.7 < required 1.25)
 # Local golangci-lint testing confirms 0 errors - run `cd backend && golangci-lint run`
 DISABLE_ERRORS_LINTERS:
   - GO_GOLANGCI_LINT
+  - SQL_SQLFLUFF                # Non-blocking initially until SQL files are verified
 
 SHOW_ELAPSED_TIME: true
 
@@ -71,6 +80,15 @@ DOCKERFILE_HADOLINT_FILTER_REGEX_EXCLUDE: "(\\.gomod|vendor)"
 
 # Markdown - Exclude changelogs and vendor docs
 MARKDOWN_MARKDOWNLINT_FILTER_REGEX_EXCLUDE: "(CHANGELOG.md|node_modules|\\.gomod|vendor)"
+
+# SQL - Dialect and configuration
+SQL_SQLFLUFF_ARGUMENTS: "--dialect postgres --exclude-rules L034,L031"
+SQL_SQLFLUFF_FILE_EXTENSIONS: [".sql"]
+SQL_SQLFLUFF_FILTER_REGEX_EXCLUDE: "(node_modules|\\.gomod|vendor)"
+
+# Security - Secret scanning
+REPOSITORY_SECRETLINT_FILTER_REGEX_EXCLUDE: "(node_modules|\\.gomod|vendor|megalinter-reports|.git)"
+REPOSITORY_SECRETLINT_ARGUMENTS: ""
 
 # Don't fail CI on linter errors (warnings only)
 # DISABLE_ERRORS: true
