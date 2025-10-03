@@ -382,8 +382,7 @@ This ensures proper client IP detection when behind proxies like Cloudflare, NGI
 LeafLock is **fully compatible** with Railway's IPv6-only private network architecture:
 
 **Service Names:**
-- Backend Public: `leaflock-backend-production.up.railway.app`
-- Backend Private: `motivated-energy.railway.internal`
+- Backend Private: `motivated-energy.railway.internal` (internal only, no public access)
 - Frontend Public: `leaflock-frontend-production.up.railway.app`
 - Frontend Private: `leaflock-frontend.railway.internal`
 
@@ -391,20 +390,25 @@ LeafLock is **fully compatible** with Railway's IPv6-only private network archit
 ✅ **Backend**: Implements `ListenWithIPv6Fallback()` that binds to `[::]:{port}` (IPv6) first
 ✅ **Frontend**: Auto-detects Railway service discovery with IPv6 address normalization
 ✅ **Network**: Supports Railway's IPv6-only private mesh network via WireGuard
+✅ **Security**: Backend is private-only, accessible exclusively through frontend proxy
 
 ### Required Railway Environment Variables
 **Backend Service:**
 ```bash
-CORS_ORIGINS=https://leaflock-frontend-production.up.railway.app,https://leaflock-frontend.railway.internal,http://leaflock-frontend.railway.internal
+# Only allow requests from frontend domains (no public backend access)
+CORS_ORIGINS=https://leaflock-frontend-production.up.railway.app,https://app.yourdomain.com
 ```
 
 **Frontend Service:**
 ```bash
+# Internal backend communication (private network only)
 BACKEND_INTERNAL_URL=http://motivated-energy.railway.internal:8080
-VITE_API_URL=https://leaflock-backend-production.up.railway.app
+# Frontend serves as proxy - browser makes requests to frontend
+VITE_API_URL=/api/v1
 ```
 
 ### Verification
 - Use `bash scripts/test-ipv6.sh` to test IPv6 connectivity
 - Check logs for `🌐 HTTP server starting on [::]:8080` (IPv6 binding success)
 - Frontend service discovery automatically handles Railway's internal hostnames
+- Backend should NOT have a public domain configured in Railway dashboard

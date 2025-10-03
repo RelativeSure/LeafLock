@@ -132,6 +132,8 @@ echo $BACKEND_INTERNAL_URL
 # NOT this:
 # http://backend:8080  ❌
 # http://localhost:8080  ❌
+
+# NOTE: Backend should NOT have a public domain configured in Railway
 ```
 
 **How to find your internal hostname:**
@@ -235,7 +237,7 @@ Access to fetch at 'https://backend.railway.app/api/v1/...' from origin
 **Solution:** Update CORS_ORIGINS
 
 ```bash
-# Backend environment variable
+# Backend environment variable (frontend domains only - backend has no public access)
 CORS_ORIGINS=https://leaflock-frontend-production.up.railway.app,https://app.leaflock.app
 
 # Common mistakes:
@@ -250,11 +252,12 @@ CORS_ORIGINS=https://leaflock-frontend-production.up.railway.app,https://app.lea
 **Test CORS:**
 
 ```bash
+# Test through frontend proxy (backend is private-only)
 curl -H "Origin: https://leaflock-frontend-production.up.railway.app" \
      -H "Access-Control-Request-Method: POST" \
      -H "Access-Control-Request-Headers: Content-Type" \
      -X OPTIONS \
-     https://leaflock-backend-production.up.railway.app/api/v1/auth/login -v
+     https://leaflock-frontend-production.up.railway.app/api/v1/auth/login -v
 ```
 
 Look for:
@@ -262,6 +265,8 @@ Look for:
 < access-control-allow-origin: https://leaflock-frontend-production.up.railway.app
 < access-control-allow-credentials: true
 ```
+
+**Note:** Since the backend is private-only, you cannot test it directly. All API requests must go through the frontend proxy.
 
 ## Environment Variable Issues
 
@@ -411,8 +416,10 @@ LOG_LEVEL=debug
 # Test backend from Railway shell
 railway run --service backend curl http://localhost:8080/api/v1/health/live
 
-# Test internal connectivity
+# Test internal connectivity (backend is only accessible via private network)
 railway run --service frontend curl http://motivated-energy.railway.internal:8080/api/v1/health/live
+
+# Note: You cannot test backend directly from outside Railway - it's private-only
 ```
 
 ### Common Log Messages
@@ -453,7 +460,7 @@ If issues persist:
 ### Working Configuration
 
 ```bash
-# Backend
+# Backend (private-only, no public domain)
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 REDIS_URL=${{Redis.REDIS_URL}}
 JWT_SECRET=<64-char-secret>
@@ -466,9 +473,9 @@ TRUST_PROXY_HEADERS=true
 APP_ENV=production
 PORT=8080
 
-# Frontend
+# Frontend (public endpoint with proxy to private backend)
 BACKEND_INTERNAL_URL=http://motivated-energy.railway.internal:8080
-VITE_API_URL=https://leaflock-frontend-production.up.railway.app/api/v1
+VITE_API_URL=/api/v1
 PORT=80
 ```
 
