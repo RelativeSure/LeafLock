@@ -1360,6 +1360,27 @@ func (h *AuthHandler) VerifyMFACode(c *fiber.Ctx) error {
 		log.Printf("Warning: Failed to reset failed login attempts: %v", err)
 	}
 
+	// Generate session token for Redis storage
+	sessionToken := make([]byte, 32)
+	if _, err := rand.Read(sessionToken); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Session creation failed"})
+	}
+	sessionTokenStr := hex.EncodeToString(sessionToken)
+
+	// Hash token for storage
+	tokenHash := argon2.IDKey(sessionToken, []byte("session"), 1, 64*1024, 4, 32)
+
+	// Store session in Redis
+	expiresAt := time.Now().Add(h.config.SessionDuration)
+	err = h.storeSessionInRedis(ctx, tokenHash, userID, utils.ClientIP(c), c.Get("User-Agent"), expiresAt)
+	if err != nil {
+		log.Printf("Failed to store session in Redis: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Session creation failed"})
+	}
+
+	// Log successful login after MFA verification
+	h.logAudit(ctx, userID, "login.success", "user", userID, c)
+
 	// Generate final JWT token
 	token, err := h.generateToken(userID)
 	if err != nil {
@@ -1372,6 +1393,7 @@ func (h *AuthHandler) VerifyMFACode(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"token":        token,
+		"session":      sessionTokenStr,
 		"user_id":      userID,
 		"workspace_id": workspaceID,
 		"backup_code_used": isBackupCodeUsed,
