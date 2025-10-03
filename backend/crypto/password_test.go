@@ -299,7 +299,9 @@ func TestHashPasswordParameters(t *testing.T) {
 func BenchmarkHashPassword(b *testing.B) {
 	password := "BenchmarkPassword123!"
 	salt := make([]byte, 16)
-	rand.Read(salt)
+	if _, err := rand.Read(salt); err != nil {
+		b.Fatalf("Failed to generate random data: %v", err)
+	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -311,7 +313,9 @@ func BenchmarkHashPassword(b *testing.B) {
 func BenchmarkVerifyPassword(b *testing.B) {
 	password := "BenchmarkPassword123!"
 	salt := make([]byte, 16)
-	rand.Read(salt)
+	if _, err := rand.Read(salt); err != nil {
+		b.Fatalf("Failed to generate random data: %v", err)
+	}
 	hash := HashPassword(password, salt)
 
 	b.ResetTimer()
@@ -326,7 +330,9 @@ func BenchmarkHashPasswordParallel(b *testing.B) {
 
 	b.RunParallel(func(pb *testing.PB) {
 		salt := make([]byte, 16)
-		rand.Read(salt)
+		if _, err := rand.Read(salt); err != nil {
+			b.Fatalf("Failed to generate random data: %v", err)
+		}
 
 		for pb.Next() {
 			_ = HashPassword(password, salt)
@@ -338,7 +344,9 @@ func BenchmarkHashPasswordParallel(b *testing.B) {
 func BenchmarkVerifyPasswordParallel(b *testing.B) {
 	password := "ParallelPassword123!"
 	salt := make([]byte, 16)
-	rand.Read(salt)
+	if _, err := rand.Read(salt); err != nil {
+		b.Fatalf("Failed to generate random data: %v", err)
+	}
 	hash := HashPassword(password, salt)
 
 	b.RunParallel(func(pb *testing.PB) {

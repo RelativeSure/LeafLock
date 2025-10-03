@@ -4,7 +4,7 @@ We take security seriously. If you discover a vulnerability, please report it re
 
 ## Reporting a Vulnerability
 
-- Email: security@leaflock.app
+- Email: <security@leaflock.app>
 - Or open a private Security Advisory via GitHub Security.
 
 Please include:

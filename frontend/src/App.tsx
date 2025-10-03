@@ -23,6 +23,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Separator } from '@/components/ui/separator'
+import { Toaster } from '@/components/ui/sonner'
 import Footer from '@/components/Footer'
 import AnnouncementBanner, { Announcement } from '@/components/AnnouncementBanner'
 
@@ -42,7 +45,7 @@ import { Template } from '@/services/templatesService'
 // Loading component for lazy loaded components
 const ComponentLoader: React.FC = () => (
   <div className="flex items-center justify-center p-4">
-    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+    <Skeleton className="h-6 w-6 rounded-full" />
   </div>
 )
 
@@ -86,7 +89,7 @@ interface LoadingOverlayProps {
 
 type ViewType = 'login' | 'notes' | 'editor' | 'unlock' | 'admin' | 'settings' | 'tags' | 'folders' | 'templates'
 type EncryptionStatus = 'locked' | 'unlocked'
-type ThemeType = 'light' | 'dark' | 'system'
+type ThemeType = 'light' | 'blue' | 'dark' | 'system'
 
 // Debounce function type
 interface DebounceFunction {
@@ -97,7 +100,7 @@ interface DebounceFunction {
 // Theme context
 interface ThemeContextType {
   theme: ThemeType
-  effectiveTheme: 'light' | 'dark'
+  effectiveTheme: 'light' | 'blue' | 'dark'
   setTheme: (theme: ThemeType) => void
 }
 
@@ -112,7 +115,7 @@ const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   }
 
-  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>(getSystemTheme())
+  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'blue' | 'dark'>(getSystemTheme())
 
   // Load theme from cookie
   useEffect(() => {
@@ -121,7 +124,7 @@ const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       .find((row) => row.startsWith('theme='))
       ?.split('=')[1] as ThemeType
 
-    if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
+    if (savedTheme && ['light', 'blue', 'dark', 'system'].includes(savedTheme)) {
       setThemeState(savedTheme)
     }
   }, [])
@@ -129,12 +132,18 @@ const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   // Update effective theme when theme or system preference changes
   useEffect(() => {
     const updateEffectiveTheme = () => {
-      const newEffectiveTheme = theme === 'system' ? getSystemTheme() : theme
+      const newEffectiveTheme: 'light' | 'blue' | 'dark' = theme === 'system' ? getSystemTheme() : theme as 'light' | 'blue' | 'dark'
       setEffectiveTheme(newEffectiveTheme)
 
       // Apply theme to document
-      document.documentElement.classList.remove('light', 'dark')
-      document.documentElement.classList.add(newEffectiveTheme)
+      document.documentElement.classList.remove('light', 'theme-blue', 'dark')
+
+      // Apply theme class (light is default, no class needed)
+      if (newEffectiveTheme === 'blue') {
+        document.documentElement.classList.add('theme-blue')
+      } else if (newEffectiveTheme === 'dark') {
+        document.documentElement.classList.add('dark')
+      }
     }
 
     updateEffectiveTheme()
@@ -752,6 +761,17 @@ class SecureAPI {
     return raw as { announcements: any[] }
   }
 
+  async getUserSettings(): Promise<{ theme: ThemeType }> {
+    return await this.request('/settings')
+  }
+
+  async updateUserSettings(theme: ThemeType): Promise<void> {
+    await this.request('/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ theme })
+    })
+  }
+
   async getNotes(): Promise<Note[]> {
     const response = await this.request('/notes')
     const notes = response.notes || response || []
@@ -829,13 +849,13 @@ class SecureAPI {
 
 const api = new SecureAPI()
 
-// Loading Skeleton Components
+// Loading Skeleton Components using Shadcn
 const NoteSkeleton: React.FC = () => (
-  <div className="p-4 border-b border-gray-700 animate-pulse">
-    <div className="h-4 bg-gray-600 rounded w-3/4 mb-2"></div>
-    <div className="h-3 bg-gray-700 rounded w-full mb-1"></div>
-    <div className="h-3 bg-gray-700 rounded w-2/3 mb-2"></div>
-    <div className="h-3 bg-gray-700 rounded w-1/4"></div>
+  <div className="p-4 border-b space-y-3">
+    <Skeleton className="h-4 w-3/4" />
+    <Skeleton className="h-3 w-full" />
+    <Skeleton className="h-3 w-2/3" />
+    <Skeleton className="h-3 w-1/4" />
   </div>
 )
 
@@ -848,31 +868,16 @@ const NoteListSkeleton: React.FC = () => (
 )
 
 const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ message = 'Loading...' }) => (
-  <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
-    <div className="bg-gray-800 rounded-lg p-8 flex flex-col items-center">
-      <svg
-        className="animate-spin h-8 w-8 text-blue-500 mb-4"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle
-          className="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          strokeWidth="4"
-        ></circle>
-        <path
-          className="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-        ></path>
-      </svg>
-      <p className="text-white text-lg font-medium">{message}</p>
-      <p className="text-gray-400 text-sm mt-2">Initializing secure encryption...</p>
-    </div>
+  <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+    <Card className="w-[250px]">
+      <CardContent className="pt-6 flex flex-col items-center space-y-4">
+        <Skeleton className="h-8 w-8 rounded-full" />
+        <div className="text-center space-y-2">
+          <p className="text-lg font-medium">{message}</p>
+          <p className="text-sm text-muted-foreground">Initializing secure encryption...</p>
+        </div>
+      </CardContent>
+    </Card>
   </div>
 )
 
@@ -1161,6 +1166,26 @@ const ThemeToggle: React.FC = () => {
             strokeLinejoin="round"
             strokeWidth={2}
             d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+          />
+        </svg>
+      ),
+    },
+    {
+      value: 'blue' as ThemeType,
+      label: 'Blue',
+      icon: (
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
           />
         </svg>
       ),
@@ -2060,7 +2085,13 @@ function SecureNotesApp() {
       // Cmd/Ctrl + N: New note
       if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
         e.preventDefault()
-        setSelectedNote(null)
+        setSelectedNote({
+          id: '',
+          title: '',
+          content: '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
         setCurrentView('editor')
       }
 
@@ -2294,8 +2325,8 @@ function SecureNotesApp() {
         const currentContent = contentRef.current
         const currentSelectedNote = selectedNoteRef.current
 
-        if (currentSelectedNote) {
-          // Update existing note
+        if (currentSelectedNote && currentSelectedNote.id) {
+          // Update existing note (only if ID exists and is not empty)
           await api.updateNote(currentSelectedNote.id, currentTitle, currentContent)
           console.log('✅ Updated existing note:', currentSelectedNote.id)
 
@@ -2792,7 +2823,13 @@ function SecureNotesApp() {
           <div className="p-4 border-t border-border space-y-2">
             <Button
               onClick={() => {
-                setSelectedNote(null)
+                setSelectedNote({
+                  id: '',
+                  title: '',
+                  content: '',
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
                 setCurrentView('editor')
               }}
               className="w-full"
@@ -3221,7 +3258,7 @@ function SecureNotesApp() {
             <TemplatesManager onClose={() => setCurrentView('notes')} mode="manage" />
           </Suspense>
         </div>
-      ) : isAuthenticated && isAdmin && currentView === 'admin' ? (
+      ) : isAuthenticated && encryptionStatus === 'unlocked' && isAdmin && currentView === 'admin' ? (
         <Suspense fallback={<ComponentLoader />}>
           <AdminPage api={api} onBack={() => setCurrentView('notes')} />
         </Suspense>
@@ -3290,6 +3327,7 @@ const App: React.FC = () => {
   return (
     <ThemeProvider>
       <SecureNotesApp />
+      <Toaster />
     </ThemeProvider>
   )
 }

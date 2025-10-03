@@ -214,7 +214,9 @@ func (h *NotesHandler) UpdateNote(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Database transaction failed"})
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx) // Rollback is safe to call even if tx was committed
+	}()
 
 	// Get current version and content to save as history
 	var currentVersion int
@@ -444,7 +446,9 @@ func (h *NotesHandler) RestoreNoteVersion(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Database transaction failed"})
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx) // Rollback is safe to call even if tx was committed
+	}()
 
 	// Get the version to restore
 	var titleEnc, contentEnc, contentHash []byte

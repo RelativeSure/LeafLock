@@ -33,7 +33,7 @@ func (suite *TagsHandlerTestSuite) SetupTest() {
 
 	// Generate test encryption key
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, _ = rand.Read(key) // Test setup
 	suite.crypto = NewCryptoService(key)
 
 	suite.handler = &TagsHandler{
@@ -104,7 +104,7 @@ func (suite *TagsHandlerTestSuite) TestGetTagsSuccess() {
 	suite.Equal(200, resp.StatusCode)
 
 	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
+	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 	suite.Contains(response, "tags")
 	tags := response["tags"].([]interface{})
@@ -135,7 +135,7 @@ func (suite *TagsHandlerTestSuite) TestCreateTagSuccess() {
 	suite.Equal(201, resp.StatusCode)
 
 	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
+	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 	suite.Equal("Tag created successfully", response["message"])
 	suite.Equal(tagID.String(), response["id"])
@@ -217,7 +217,7 @@ func (suite *TagsHandlerTestSuite) TestDeleteTagSuccess() {
 	suite.Equal(200, resp.StatusCode)
 
 	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
+	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 	suite.Equal("Tag deleted successfully", response["message"])
 }
@@ -279,7 +279,7 @@ func (suite *TagsHandlerTestSuite) TestAssignTagToNoteSuccess() {
 	suite.Equal(200, resp.StatusCode)
 
 	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
+	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 	suite.Equal("Tag assigned successfully", response["message"])
 }
@@ -325,7 +325,7 @@ func (suite *TagsHandlerTestSuite) TestRemoveTagFromNoteSuccess() {
 	suite.Equal(200, resp.StatusCode)
 
 	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
+	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 	suite.Equal("Tag removed successfully", response["message"])
 }
@@ -376,7 +376,7 @@ func (suite *TagsHandlerTestSuite) TestGetNotesByTagSuccess() {
 	suite.Equal(200, resp.StatusCode)
 
 	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
+	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 	notes := response["notes"].([]interface{})
 	suite.Len(notes, 2)

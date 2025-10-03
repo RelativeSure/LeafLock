@@ -58,7 +58,9 @@ func TestComplexPasswordHashing(t *testing.T) {
 		for i, password := range specialPasswords {
 			t.Run(string(rune('A'+i)), func(t *testing.T) {
 				salt := make([]byte, 32)
-				rand.Read(salt)
+				if _, err := rand.Read(salt); err != nil {
+					t.Fatalf("Failed to generate random data: %v", err)
+				}
 
 				hash := HashPassword(password, salt)
 				assert.NotEmpty(t, hash, "Should hash special character password")
@@ -71,7 +73,9 @@ func TestComplexPasswordHashing(t *testing.T) {
 	t.Run("HashConsistency", func(t *testing.T) {
 		// Test that the same password with the same salt produces the same hash
 		salt := make([]byte, 32)
-		rand.Read(salt)
+		if _, err := rand.Read(salt); err != nil {
+			t.Fatalf("Failed to generate random data: %v", err)
+		}
 
 		hash1 := HashPassword(complexPassword, salt)
 		hash2 := HashPassword(complexPassword, salt)
@@ -80,7 +84,9 @@ func TestComplexPasswordHashing(t *testing.T) {
 
 		// Test that different salts produce different hashes
 		salt2 := make([]byte, 32)
-		rand.Read(salt2)
+		if _, err := rand.Read(salt2); err != nil {
+			t.Fatalf("Failed to generate random data: %v", err)
+		}
 		hash3 := HashPassword(complexPassword, salt2)
 
 		assert.NotEqual(t, hash1, hash3, "Different salts should produce different hashes")
@@ -147,7 +153,9 @@ func TestSeedDefaultAdminUserFunctionality(t *testing.T) {
 
 		// Generate salt like the real function does
 		salt := make([]byte, 32)
-		rand.Read(salt)
+		if _, err := rand.Read(salt); err != nil {
+			t.Fatalf("Failed to generate random data: %v", err)
+		}
 
 		// Hash password like seedDefaultAdminUser does
 		hashedPassword := HashPassword(testPassword, salt)
@@ -168,7 +176,9 @@ func TestSeedDefaultAdminUserFunctionality(t *testing.T) {
 
 		// Generate encryption key like the system does
 		encKey := make([]byte, 32)
-		rand.Read(encKey)
+		if _, err := rand.Read(encKey); err != nil {
+			t.Fatalf("Failed to generate random data: %v", err)
+		}
 		crypto := NewCryptoService(encKey)
 
 		// Test deterministic encryption for email search
@@ -231,7 +241,9 @@ func TestComplexPasswordVariations(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			salt := make([]byte, 32)
-			rand.Read(salt)
+			if _, err := rand.Read(salt); err != nil {
+				t.Fatalf("Failed to generate random data: %v", err)
+			}
 
 			hash := HashPassword(tc.password, salt)
 			if tc.valid {

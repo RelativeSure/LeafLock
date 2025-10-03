@@ -21,7 +21,7 @@ A production-ready Helm chart for deploying the LeafLock application with end-to
 
 ## Architecture
 
-```
+```plaintext
 ┌─────────────────────────────────────────────────────────────────┐
 │                         LEAFLOCK                                │
 ├─────────────────────────────────────────────────────────────────┤
@@ -447,7 +447,7 @@ For issues and questions:
 
 - **Documentation**: Check this README and inline comments
 - **Issues**: Open GitHub issue with debug output
-- **Security**: Email security@leaflock.app for vulnerabilities
+- **Security**: Email <security@leaflock.app> for vulnerabilities
 
 ## License
 

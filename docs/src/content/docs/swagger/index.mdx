@@ -1,0 +1,340 @@
+---
+title: Swagger API Documentation
+description: Interactive OpenAPI/Swagger specification for LeafLock REST API
+---
+
+import { Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Overview
+
+LeafLock provides comprehensive **OpenAPI 3.0** (Swagger) documentation for all REST API endpoints. This documentation is interactive, automatically generated from code annotations, and includes request/response examples.
+
+## Access Swagger UI
+
+<CardGrid columns={2}>
+  <Card title="Public Swagger UI" icon="open-book">
+    **Production**: `https://leaflock.app/swagger`
+
+    **Local**: `http://localhost:8080/swagger`
+
+    Browse and test API endpoints directly in your browser with the Swagger UI interface.
+  </Card>
+  <Card title="API Documentation" icon="document">
+    **Production**: `https://leaflock.app/api/v1/docs`
+
+    **Local**: `http://localhost:8080/api/v1/docs`
+
+    Alternative Swagger UI path under the `/api/v1` prefix.
+  </Card>
+</CardGrid>
+
+<CardGrid columns={2}>
+  <Card title="OpenAPI JSON (Public)" icon="document">
+    **Production**: `https://leaflock.app/swagger/openapi.json`
+
+    **Local**: `http://localhost:8080/swagger/openapi.json`
+
+    Machine-readable OpenAPI 3.0 specification for API clients and code generation tools.
+  </Card>
+  <Card title="OpenAPI JSON (API)" icon="document">
+    **Production**: `https://leaflock.app/api/v1/docs/openapi.json`
+
+    **Local**: `http://localhost:8080/api/v1/docs/openapi.json`
+
+    Alternative OpenAPI spec path under the `/api/v1` prefix.
+  </Card>
+</CardGrid>
+
+### Quick Access
+
+**Primary URL**: [https://leaflock.app/swagger](https://leaflock.app/swagger) ✨
+
+## Features
+
+### 🧪 Try It Out
+Test API endpoints directly from the Swagger UI:
+1. Click on any endpoint
+2. Click "Try it out"
+3. Fill in request parameters
+4. Execute to see live responses
+
+### 🔐 Authentication
+Authenticate your Swagger UI session:
+1. Click the **Authorize** button (top right)
+2. Enter: `Bearer YOUR_JWT_TOKEN`
+3. Click "Authorize"
+4. Your token is now included in all requests
+
+### 📝 Request/Response Schemas
+View detailed schemas for:
+- Request bodies
+- Response bodies
+- Query parameters
+- Path parameters
+- Headers
+
+### 📖 Endpoint Documentation
+Each endpoint includes:
+- **Summary** - Brief description
+- **Description** - Detailed explanation
+- **Tags** - Organized by functionality
+- **Security** - Authentication requirements
+- **Examples** - Sample requests and responses
+
+## API Organization
+
+<Tabs>
+  <TabItem label="Authentication">
+    **Tag**: `Authentication`
+
+    - `POST /auth/register` - Register new user
+    - `POST /auth/login` - Authenticate user
+    - `POST /auth/logout` - End session
+    - `POST /auth/refresh` - Refresh JWT token
+    - `GET /auth/mfa/status` - Check MFA status
+    - `POST /auth/mfa/setup` - Setup MFA
+    - `POST /auth/mfa/verify` - Verify MFA code
+    - `POST /auth/mfa/disable` - Disable MFA
+  </TabItem>
+  <TabItem label="Notes">
+    **Tag**: `Notes`
+
+    - `GET /notes` - List all notes
+    - `POST /notes` - Create note
+    - `GET /notes/{id}` - Get note
+    - `PUT /notes/{id}` - Update note
+    - `DELETE /notes/{id}` - Delete note
+    - `GET /notes/shared` - List shared notes
+    - `GET /notes/trash` - List trashed notes
+    - `POST /notes/{id}/restore` - Restore note
+  </TabItem>
+  <TabItem label="Collaboration">
+    **Tag**: `Collaboration`
+
+    - `POST /notes/{id}/share` - Share note
+    - `DELETE /notes/{id}/share/{user_id}` - Unshare
+    - `GET /notes/{id}/shares` - List shares
+    - `PUT /notes/{id}/share/{user_id}` - Update permissions
+  </TabItem>
+  <TabItem label="Tags & Folders">
+    **Tags**: `Tags`, `Folders`
+
+    - `GET /tags` - List tags
+    - `POST /tags` - Create tag
+    - `DELETE /tags/{id}` - Delete tag
+    - `GET /folders` - List folders
+    - `POST /folders` - Create folder
+    - `DELETE /folders/{id}` - Delete folder
+  </TabItem>
+  <TabItem label="Admin">
+    **Tag**: `Admin`
+
+    - `GET /admin/users` - List users
+    - `GET /admin/users/{id}` - Get user details
+    - `PUT /admin/users/{id}/admin` - Grant/revoke admin
+    - `POST /admin/users/{id}/roles` - Assign role
+    - `DELETE /admin/users/{id}/roles/{role}` - Remove role
+    - `GET /admin/registration` - Get registration status
+    - `PUT /admin/registration` - Enable/disable registration
+  </TabItem>
+</Tabs>
+
+## Specification Files
+
+The OpenAPI specification is available in multiple formats:
+
+### JSON Format
+```
+/api/v1/docs/openapi.json
+```
+**Size**: ~13KB
+**Use**: API clients, code generators, validation tools
+
+### YAML Format
+```
+/api/v1/docs/swagger.yaml
+```
+**Size**: ~5.7KB
+**Use**: Human-readable format, easier to diff
+
+### Swagger 2.0 (Legacy)
+```
+/api/v1/docs/swagger.json
+```
+**Size**: ~11.6KB
+**Use**: Tools that require Swagger 2.0 instead of OpenAPI 3.0
+
+## Code Generation
+
+Generate API clients from the OpenAPI spec:
+
+<Tabs>
+  <TabItem label="TypeScript">
+    ```bash
+    # Using openapi-generator-cli
+    npx @openapitools/openapi-generator-cli generate \
+      -i http://localhost:8080/api/v1/docs/openapi.json \
+      -g typescript-fetch \
+      -o ./generated-client
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```bash
+    # Using openapi-generator
+    openapi-generator-cli generate \
+      -i http://localhost:8080/api/v1/docs/openapi.json \
+      -g python \
+      -o ./python-client
+    ```
+  </TabItem>
+  <TabItem label="Go">
+    ```bash
+    # Using oapi-codegen
+    oapi-codegen \
+      -package api \
+      http://localhost:8080/api/v1/docs/openapi.json \
+      > client.go
+    ```
+  </TabItem>
+</Tabs>
+
+## Implementation Details
+
+### Swagger Integration
+
+LeafLock uses **swaggo/swag** to generate Swagger documentation from code annotations:
+
+```go
+// @Summary Register a new user
+// @Description Register a new user with email and password
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body RegisterRequest true "Registration data"
+// @Success 201 {object} RegisterResponse "User registered successfully"
+// @Failure 400 {object} ErrorResponse "Invalid request"
+// @Failure 409 {object} ErrorResponse "Email already exists"
+// @Router /auth/register [post]
+func (h *AuthHandler) Register(c *fiber.Ctx) error {
+    // Implementation
+}
+```
+
+### Serving Swagger UI
+
+The Swagger UI is served at `/api/v1/docs` via embedded HTML:
+
+```go
+// backend/swagger.go
+func swaggerUIHandler(c *fiber.Ctx) error {
+    const tpl = `<!doctype html>
+    <html>
+      <head>
+        <title>LeafLock API Docs</title>
+        <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+      </head>
+      <body>
+        <div id="swagger-ui"></div>
+        <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+        <script>
+          SwaggerUIBundle({
+            url: '/api/v1/docs/openapi.json',
+            dom_id: '#swagger-ui',
+          });
+        </script>
+      </body>
+    </html>`
+    // ...
+}
+```
+
+### Regenerating Docs
+
+To regenerate Swagger docs after adding/modifying endpoints:
+
+```bash
+cd backend
+swag init --parseDependency --parseInternal --output ./docs/swagger
+```
+
+This scans all `@` annotations in Go files and generates:
+- `docs.go` - Embedded docs for the Go binary
+- `swagger.json` - Swagger 2.0 format
+- `swagger.yaml` - YAML format
+- OpenAPI 3.0 conversion (via backend transformation)
+
+## Security Schemas
+
+The API uses **JWT Bearer authentication**:
+
+```yaml
+securityDefinitions:
+  BearerAuth:
+    type: apiKey
+    name: Authorization
+    in: header
+    description: 'Type "Bearer" followed by a space and JWT token.'
+```
+
+### Usage in Swagger UI
+
+1. Obtain JWT token via `POST /auth/login`
+2. Click **Authorize** in Swagger UI
+3. Enter: `Bearer eyJhbGciOiJIUzI1...`
+4. Click **Authorize**
+
+All subsequent requests will include the `Authorization` header automatically.
+
+## Common Response Codes
+
+| Code | Meaning | When It Occurs |
+|------|---------|---------------|
+| 200 | OK | Successful GET/PUT request |
+| 201 | Created | Successful POST (resource created) |
+| 204 | No Content | Successful DELETE |
+| 400 | Bad Request | Invalid request body or parameters |
+| 401 | Unauthorized | Missing or invalid JWT token |
+| 403 | Forbidden | Valid token but insufficient permissions |
+| 404 | Not Found | Resource doesn't exist |
+| 409 | Conflict | Duplicate resource (e.g., email already registered) |
+| 500 | Internal Server Error | Server-side error |
+
+## Validation & Testing
+
+### Testing with curl
+
+```bash
+# Get OpenAPI spec
+curl http://localhost:8080/api/v1/docs/openapi.json
+
+# Test endpoint with JWT
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     http://localhost:8080/api/v1/notes
+```
+
+### Validation Tools
+
+Validate the OpenAPI spec:
+
+```bash
+# Using swagger-cli
+npx swagger-cli validate http://localhost:8080/api/v1/docs/openapi.json
+
+# Using openapi-generator-cli
+npx @openapitools/openapi-generator-cli validate \
+  -i http://localhost:8080/api/v1/docs/openapi.json
+```
+
+## Resources
+
+- **Swagger Editor**: [editor.swagger.io](https://editor.swagger.io) - Paste spec to visualize
+- **OpenAPI Generator**: [openapi-generator.tech](https://openapi-generator.tech) - Client generation
+- **Swaggo Documentation**: [github.com/swaggo/swag](https://github.com/swaggo/swag) - Annotation reference
+- **OpenAPI Specification**: [spec.openapis.org](https://spec.openapis.org/oas/latest.html) - Official spec
+
+## Next Steps
+
+1. **Explore the API**: Visit `/api/v1/docs` in your browser
+2. **Generate a client**: Use openapi-generator with your language of choice
+3. **Integrate**: Use the generated client in your application
+4. **Contribute**: Add annotations to new endpoints following existing patterns

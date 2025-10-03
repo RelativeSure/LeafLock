@@ -93,16 +93,16 @@ retry_command() {
     local max_attempts="${3:-$MAX_RETRIES}"
     
     local attempt=1
-    while [ $attempt -le $max_attempts ]; do
+    while [ "$attempt" -le "$max_attempts" ]; do
         log_info "Attempting $description (attempt $attempt/$max_attempts)"
-        
+
         if eval "$command"; then
             log_success "$description succeeded"
             return 0
         else
             log_warning "$description failed (attempt $attempt/$max_attempts)"
-            
-            if [ $attempt -lt $max_attempts ]; then
+
+            if [ "$attempt" -lt "$max_attempts" ]; then
                 log_info "Waiting $RETRY_DELAY seconds before retry..."
                 sleep $RETRY_DELAY
             fi
@@ -478,7 +478,7 @@ monitor_errors() {
         
         # Check for high error rates in logs
         if command -v podman >/dev/null 2>&1; then
-            error_count=$(podman logs --tail=50 leaflock-backend 2>/dev/null | grep -i "error\|panic\|fatal" | wc -l)
+            error_count=$(podman logs --tail=50 leaflock-backend 2>/dev/null | grep -ci "error\|panic\|fatal")
             if [ "$error_count" -gt 5 ]; then
                 log_warning "High error rate detected in backend logs ($error_count errors)"
             fi

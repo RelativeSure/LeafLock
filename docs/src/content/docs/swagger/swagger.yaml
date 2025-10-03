@@ -1,0 +1,236 @@
+basePath: /api/v1
+definitions:
+  main.LoginRequest:
+    properties:
+      email:
+        type: string
+      mfa_code:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  main.RegisterRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 12
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  main.ShareNoteRequest:
+    properties:
+      permission:
+        enum:
+        - read
+        - write
+        - admin
+        type: string
+      user_email:
+        type: string
+    required:
+    - permission
+    - user_email
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: A secure notes application with end-to-end encryption and collaboration
+    features
+  title: LeafLock API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user with email and password
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/main.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Invalid credentials
+          schema:
+            additionalProperties: true
+            type: object
+        "423":
+          description: MFA required
+          schema:
+            additionalProperties: true
+            type: object
+      summary: User login
+      tags:
+      - Authentication
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with email and password
+      parameters:
+      - description: Registration data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/main.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User registered successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Email already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "503":
+          description: Registration disabled
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register a new user
+      tags:
+      - Authentication
+  /notes:
+    get:
+      description: Get all notes for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of notes
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all notes
+      tags:
+      - Notes
+  /notes/{id}/collaborators:
+    get:
+      description: Get list of users who have access to a note
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of collaborators
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid note ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Note not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get note collaborators
+      tags:
+      - Collaboration
+  /notes/{id}/share:
+    post:
+      consumes:
+      - application/json
+      description: Share a note with another user by email and set permission level
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Share request data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/main.ShareNoteRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Note shared successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Note or user not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Note already shared with user
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Share a note with another user
+      tags:
+      - Collaboration
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

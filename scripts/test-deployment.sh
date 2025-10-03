@@ -131,7 +131,7 @@ wait_for_service() {
     log_info "Waiting for $service_name to be healthy..."
 
     local attempt=1
-    while [ $attempt -le $max_attempts ]; do
+    while [ "$attempt" -le "$max_attempts" ]; do
         if curl -sf "$health_url" > /dev/null 2>&1; then
             log_success "$service_name is healthy"
             return 0
@@ -308,6 +308,7 @@ test_special_characters() {
 
     # Check if the admin password with special characters was loaded correctly
     local backend_env_test
+    # shellcheck disable=SC2016
     backend_env_test=$($compose_cmd --env-file .env.test exec -T backend sh -c 'echo "Admin password length: ${#DEFAULT_ADMIN_PASSWORD}"' 2>/dev/null || echo "ERROR")
 
     if echo "$backend_env_test" | grep -q "Admin password length: 24"; then

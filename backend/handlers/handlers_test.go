@@ -228,11 +228,15 @@ func (suite *AuthHandlerTestSuite) SetupTest() {
 
 	// Generate test encryption key
 	key := make([]byte, 32)
-	rand.Read(key)
+	if _, err := rand.Read(key); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 	suite.cryptoSvc = crypto.NewCryptoService(key)
 
 	jwtSecret := make([]byte, 64)
-	rand.Read(jwtSecret)
+	if _, err := rand.Read(jwtSecret); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 
 	suite.cfg = &config.Config{
 		JWTSecret:         jwtSecret,
@@ -321,7 +325,7 @@ func (suite *AuthHandlerTestSuite) TestRegisterSuccess() {
 	suite.Equal(201, resp.StatusCode)
 
 	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
+	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 	suite.Contains(response, "token")
 	suite.Contains(response, "user_id")
@@ -388,7 +392,9 @@ func (suite *NotesHandlerTestSuite) SetupTest() {
 	suite.mockDB = &MockDB{}
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	if _, err := rand.Read(key); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 	suite.cryptoSvc = crypto.NewCryptoService(key)
 
 	suite.handler = NewNotesHandler(suite.mockDB, suite.cryptoSvc)
@@ -463,7 +469,7 @@ func (suite *NotesHandlerTestSuite) TestGetNotesSuccess() {
 	suite.Equal(200, resp.StatusCode)
 
 	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
+	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 	suite.Contains(response, "notes")
 }
@@ -687,7 +693,9 @@ func (suite *TagsHandlerTestSuite) SetupTest() {
 	suite.mockDB = &MockDB{}
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	if _, err := rand.Read(key); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 	suite.cryptoSvc = crypto.NewCryptoService(key)
 
 	suite.handler = NewTagsHandler(suite.mockDB, suite.cryptoSvc)
@@ -795,7 +803,9 @@ func (suite *FoldersHandlerTestSuite) SetupTest() {
 	suite.mockDB = &MockDB{}
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	if _, err := rand.Read(key); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 	suite.cryptoSvc = crypto.NewCryptoService(key)
 
 	suite.handler = NewFoldersHandler(suite.mockDB, suite.cryptoSvc)
@@ -858,7 +868,9 @@ func (suite *TemplatesHandlerTestSuite) SetupTest() {
 	suite.mockDB = &MockDB{}
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	if _, err := rand.Read(key); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 	suite.cryptoSvc = crypto.NewCryptoService(key)
 
 	suite.handler = NewTemplatesHandler(suite.mockDB, suite.cryptoSvc)
@@ -924,7 +936,9 @@ func (suite *CollaborationHandlerTestSuite) SetupTest() {
 	suite.mockDB = &MockDB{}
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	if _, err := rand.Read(key); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 	suite.cryptoSvc = crypto.NewCryptoService(key)
 
 	suite.handler = NewCollaborationHandler(suite.mockDB, suite.cryptoSvc)
@@ -974,7 +988,9 @@ func (suite *AttachmentsHandlerTestSuite) SetupTest() {
 	suite.mockDB = &MockDB{}
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	if _, err := rand.Read(key); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 	suite.cryptoSvc = crypto.NewCryptoService(key)
 
 	suite.handler = NewAttachmentsHandler(suite.mockDB, suite.cryptoSvc)
@@ -1039,7 +1055,9 @@ func (suite *SearchHandlerTestSuite) SetupTest() {
 	suite.mockDB = &MockDB{}
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	if _, err := rand.Read(key); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 	suite.cryptoSvc = crypto.NewCryptoService(key)
 
 	suite.handler = NewSearchHandler(suite.mockDB, suite.cryptoSvc)
@@ -1117,7 +1135,9 @@ func (suite *ImportExportHandlerTestSuite) SetupTest() {
 	suite.mockDB = &MockDB{}
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	if _, err := rand.Read(key); err != nil {
+		suite.T().Fatalf("Failed to generate random data: %v", err)
+	}
 	suite.cryptoSvc = crypto.NewCryptoService(key)
 
 	suite.handler = NewImportExportHandler(suite.mockDB, suite.cryptoSvc)
@@ -1158,7 +1178,7 @@ func (suite *ImportExportHandlerTestSuite) TestGetStorageInfoSuccess() {
 	suite.Equal(200, resp.StatusCode)
 
 	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
+	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
 
 	suite.Contains(response, "storage_used")
 	suite.Contains(response, "storage_limit")

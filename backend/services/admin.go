@@ -292,7 +292,9 @@ func (a *AdminService) repairIncompleteAdminUser(info *AdminUserInfo) error {
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx) // Rollback is safe to call even if tx was committed
+	}()
 
 	log.Printf("🔧 Repairing incomplete admin user (ID: %s)", info.UserID)
 	log.Printf("   - Has workspace: %t", info.HasWorkspace)
@@ -407,7 +409,9 @@ func (a *AdminService) createAdminUserInDatabase() error {
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx) // Rollback is safe to call even if tx was committed
+	}()
 
 	// Store GDPR deletion key (same as main.go)
 	_, err = tx.Exec(ctx, `
@@ -477,15 +481,6 @@ func getEnvBool(key string, defaultValue bool) bool {
 func isValidEmail(email string) bool {
 	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	return emailRegex.MatchString(email)
-}
-
-// generateSecureID generates a cryptographically secure random ID
-func generateSecureID() (string, error) {
-	bytes := make([]byte, 16)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%x", bytes), nil
 }
 
 // hashPassword implements the same Argon2id hashing as main.go HashPassword function

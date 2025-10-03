@@ -40,7 +40,7 @@ log_error() {
 # Function to generate secure random strings
 generate_password() {
     local length=${1:-32}
-    openssl rand -base64 $length | tr -d "=+/" | cut -c1-$length
+    openssl rand -base64 "$length" | tr -d "=+/" | cut -c1-"$length"
 }
 
 # Function to validate environment
