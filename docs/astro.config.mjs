@@ -19,6 +19,10 @@ export default defineConfig({
 					autogenerate: { directory: 'guides' },
 				},
 				{
+					label: 'Authentication',
+					autogenerate: { directory: 'authentication' },
+				},
+				{
 					label: 'Deployment',
 					autogenerate: { directory: 'deployment' },
 				},

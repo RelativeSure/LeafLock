@@ -1,0 +1,141 @@
+---
+title: MFA Setup Guide
+description: Step-by-step guide to enable Multi-Factor Authentication
+---
+
+# Multi-Factor Authentication Setup Guide
+
+This guide will help you set up Two-Factor Authentication (2FA/MFA) on your LeafLock account.
+
+## Prerequisites
+
+- An active LeafLock account
+- A smartphone or tablet
+- An authenticator app installed (see [supported apps](/authentication#supported-authenticator-apps))
+
+## Step 1: Access Security Settings
+
+1. Log in to your LeafLock account
+2. Click on your profile icon or settings gear
+3. Navigate to **Settings** → **Security** → **Multi-Factor Authentication**
+
+## Step 2: Begin MFA Setup
+
+1. Click the **Enable MFA** button
+2. You'll be presented with a QR code and a text secret
+
+## Step 3: Scan QR Code
+
+### Using Your Authenticator App:
+
+1. Open your authenticator app
+2. Tap the **+** or **Add** button
+3. Select **Scan QR Code** or **Scan Barcode**
+4. Point your camera at the QR code on screen
+5. The app will automatically add a LeafLock entry
+
+### Alternative: Manual Entry
+
+If you can't scan the QR code:
+
+1. In your authenticator app, select **Enter a setup key** or **Manual entry**
+2. Enter the following details:
+   - **Account name**: Your email address
+   - **Secret key**: The text code shown below the QR code
+   - **Type of key**: Time-based
+3. Save the entry
+
+## Step 4: Verify Your Code
+
+1. Your authenticator app will display a 6-digit code
+2. Enter this code in the verification field on LeafLock
+3. Click **Verify & Enable**
+
+## Step 5: Save Backup Codes
+
+**IMPORTANT:** After verification, you'll be shown 10 backup recovery codes.
+
+### What to Do:
+
+1. **Download** the codes as a text file, or
+2. **Copy** the codes to a secure location
+
+### Where to Store Backup Codes:
+
+**Recommended storage locations:**
+- Password manager (1Password, Bitwarden, etc.)
+- Encrypted note-taking app
+- Physical paper in a secure location (safe, lockbox)
+
+**Not recommended:**
+- Unencrypted text file on your computer
+- Email or cloud storage without encryption
+- Shared documents
+
+### Backup Code Format:
+```
+A1B2-C3D4-E5F6-G7H8
+I9J0-K1L2-M3N4-O5P6
+...
+```
+
+Each code is 16 characters and can only be used **once**.
+
+## Step 6: Complete Setup
+
+1. Check the box confirming you've saved your backup codes
+2. Click **I've Saved My Backup Codes**
+3. MFA is now enabled
+
+## Logging In with MFA
+
+From now on, when you log in:
+
+1. Enter your email and password
+2. You'll be prompted for your 6-digit MFA code
+3. Open your authenticator app
+4. Enter the current code for LeafLock
+5. Click **Verify**
+
+### Using a Backup Code
+
+If you don't have access to your authenticator app:
+
+1. On the MFA verification screen, click **Use Backup Code Instead**
+2. Enter one of your backup recovery codes
+3. Click **Verify Backup Code**
+
+**Note**: Each backup code can only be used once. After using one, you'll have one less code available.
+
+## Testing Your Setup
+
+It's recommended to test MFA before fully relying on it:
+
+1. While still logged in, open an incognito/private browser window
+2. Try logging in to verify MFA works correctly
+3. Test both authenticator code and a backup code
+
+## Troubleshooting
+
+### "Invalid MFA code" error
+- Ensure your device's clock is accurate (TOTP requires time synchronization)
+- Wait for a new code to generate (codes expire every 30 seconds)
+- Check that you're looking at the correct account in your authenticator app
+
+### Can't scan QR code
+- Try increasing screen brightness
+- Use manual entry instead (see Step 3)
+- Try a different authenticator app
+
+### Lost access to authenticator app
+- Use a backup code to log in
+- Consider setting up MFA on a new device
+- Generate new backup codes from security settings
+
+For more issues, see the [Troubleshooting Guide](/authentication/troubleshooting).
+
+## Next Steps
+
+- [Learn about backup codes →](/authentication/backup-codes)
+- [Understand admin MFA management →](/authentication/admin-mfa-management)
+- [Read troubleshooting tips →](/authentication/troubleshooting)

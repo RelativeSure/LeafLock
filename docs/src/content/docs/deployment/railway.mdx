@@ -63,14 +63,15 @@ Follow these steps to deploy LeafLock on Railway's managed platform with full IP
 Railway provides internal hostnames for service-to-service communication:
 
 ```bash
-# Public endpoints
+# Public endpoint (frontend only)
 frontend: https://leaflock-frontend-production.up.railway.app
-backend:  https://leaflock-backend-production.up.railway.app
 
-# Private network (IPv6)
+# Private network (IPv6) - backend is private-only
 frontend: leaflock-frontend.railway.internal
-backend:  motivated-energy.railway.internal  # Railway-generated name
+backend:  motivated-energy.railway.internal  # Railway-generated, internal only
 ```
+
+**Security Note:** The backend service should NOT have a public domain configured. All API access goes through the frontend's Caddy reverse proxy.
 
 ## Deployment Process
 
@@ -133,7 +134,7 @@ ENABLE_DEFAULT_ADMIN=true
 DEFAULT_ADMIN_EMAIL=ops@your-domain.com
 DEFAULT_ADMIN_PASSWORD=<VeryStrongPassword>
 
-# CORS for Railway (include public + preview domains)
+# CORS for Railway (frontend domains only - backend has no public access)
 CORS_ORIGINS=https://leaflock-frontend-production.up.railway.app,https://leaflock-frontend-main.up.railway.app
 
 # Runtime flags
@@ -178,7 +179,7 @@ You can codify the entire stack using Railway's configuration file (`railway.jso
         "path": "./frontend",
         "dockerfilePath": "frontend/Dockerfile",
         "variables": {
-          "VITE_API_URL": "https://leaflock-backend-production.up.railway.app",
+          "VITE_API_URL": "/api/v1",
           "BACKEND_INTERNAL_URL": "http://leaflock-backend.railway.internal:8080",
           "PORT": "80"
         }
@@ -204,11 +205,11 @@ Railway resolves plugin connection variables (e.g. `PGHOST`, `PGPASSWORD`, `REDI
 
 **Environment Variables (Frontend):**
 ```bash
-# Internal proxy target (private mesh)
+# Internal proxy target (private mesh) - backend is NOT publicly accessible
 BACKEND_INTERNAL_URL=http://leaflock-backend.railway.internal:8080
 
-# URL embedded in the SPA (public endpoint)
-VITE_API_URL=https://leaflock-backend-production.up.railway.app
+# Browser makes requests to frontend, which proxies to backend
+VITE_API_URL=/api/v1
 
 # Optional tuning
 VITE_ENABLE_ADMIN_PANEL=false
@@ -216,10 +217,11 @@ PORT=80
 NODE_ENV=production
 ```
 
-The frontend entrypoint now auto-detects Railway's service discovery. Supplying both `BACKEND_INTERNAL_URL` (private HTTP) and `VITE_API_URL` (public HTTPS) ensures:
+The frontend entrypoint now auto-detects Railway's service discovery. Supplying `BACKEND_INTERNAL_URL` and `VITE_API_URL` ensures:
 
-- Caddy proxies `/api` traffic across Railway's private mesh, avoiding CORS issues
-- The built SPA calls the public backend URL when the browser makes direct requests
+- Caddy proxies `/api` traffic across Railway's private mesh to the backend
+- Browser requests stay within the frontend domain (no direct backend access)
+- Backend remains private-only, reducing attack surface
 - Horizontal scaling works automatically—every replica resolves the latest backend hostname via Caddy's dynamic DNS
 
 ### 4. Database Service
@@ -405,7 +407,8 @@ Because Caddy re-resolves DNS on every request, scaling either service just work
    ```bash
    railway logs backend
    railway logs frontend
-   curl https://leaflock-backend-production.up.railway.app/api/v1/health
+   # Test through frontend proxy (backend is private-only)
+   curl https://leaflock-frontend-production.up.railway.app/api/v1/health
    ```
 
 4. **Scale if needed**
@@ -455,9 +458,9 @@ Because Caddy re-resolves DNS on every request, scaling either service just work
 ### Complete Frontend Configuration
 
 ```bash
-# Backend Communication
+# Backend Communication (private network only)
 BACKEND_INTERNAL_URL=http://motivated-energy.railway.internal:8080
-VITE_API_URL=https://leaflock-backend-production.up.railway.app
+VITE_API_URL=/api/v1
 
 # Build Configuration
 VITE_ENABLE_ADMIN_PANEL=false
@@ -483,11 +486,11 @@ PORT=3000
 
 3. **Update Environment Variables**
    ```bash
-   # Backend CORS
+   # Backend CORS (frontend domains only)
    CORS_ORIGINS=https://leaflock.yourdomain.com,https://leaflock-frontend-production.up.railway.app
 
-   # Frontend API URL
-   VITE_API_URL=https://leaflock-backend-production.up.railway.app
+   # Frontend API URL (proxied through frontend)
+   VITE_API_URL=/api/v1
    ```
 </Card>
 
@@ -525,8 +528,8 @@ Railway automatically provides SSL certificates for:
 # Frontend health check
 curl https://leaflock-frontend-production.up.railway.app/
 
-# Backend health check
-curl https://leaflock-backend-production.up.railway.app/api/v1/health
+# Backend health check (through frontend proxy - backend is private-only)
+curl https://leaflock-frontend-production.up.railway.app/api/v1/health
 
 # Expected response
 {

@@ -1,0 +1,392 @@
+---
+title: MFA Quick Reference
+description: Quick reference guide for MFA operations and SQL queries
+---
+
+# MFA Quick Reference
+
+Quick reference for administrators and developers working with LeafLock MFA.
+
+## Common Admin SQL Queries
+
+### Quick Reset MFA by User ID
+
+```sql
+-- Copy-paste ready - just replace the UUID
+UPDATE users
+SET mfa_enabled = false,
+    mfa_secret_encrypted = NULL,
+    mfa_backup_codes = NULL,
+    mfa_backup_codes_used = NULL
+WHERE id = 'PASTE_UUID_HERE';
+```
+
+### Find User by Email (Admin CLI Helper)
+
+Since emails are encrypted, you need to search via the application or use:
+
+```bash
+# In your backend, create a helper script or use existing admin tools
+# Example: node scripts/find-user-by-email.js user@example.com
+```
+
+### Check MFA Status for Specific User
+
+```sql
+SELECT
+  id,
+  mfa_enabled,
+  CASE WHEN mfa_secret_encrypted IS NOT NULL THEN 'yes' ELSE 'no' END as has_secret,
+  CASE WHEN mfa_backup_codes IS NOT NULL
+       THEN array_length(mfa_backup_codes, 1)
+       ELSE 0 END as backup_codes_total,
+  CASE WHEN mfa_backup_codes_used IS NOT NULL
+       THEN array_length(mfa_backup_codes_used, 1)
+       ELSE 0 END as backup_codes_used
+FROM users
+WHERE id = 'USER_UUID_HERE';
+```
+
+### MFA Adoption Rate
+
+```sql
+SELECT
+  COUNT(*) FILTER (WHERE mfa_enabled = true) * 100.0 / COUNT(*) as percentage
+FROM users
+WHERE deleted_at IS NULL;
+```
+
+### Users Without MFA
+
+```sql
+SELECT id, email_encrypted, last_login
+FROM users
+WHERE mfa_enabled = false
+  AND deleted_at IS NULL
+ORDER BY last_login DESC NULLS LAST
+LIMIT 20;
+```
+
+### Recent Failed MFA Attempts
+
+```sql
+SELECT user_id, COUNT(*) as failures, MAX(created_at) as last_fail
+FROM audit_log
+WHERE action IN ('mfa.verification_failed', 'mfa.backup_code_failed')
+  AND created_at > NOW() - INTERVAL '1 hour'
+GROUP BY user_id
+HAVING COUNT(*) >= 3;
+```
+
+## API Endpoints Cheat Sheet
+
+### Public Endpoints
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| POST | `/api/v1/auth/login` | Login (returns MFA requirement) |
+| POST | `/api/v1/auth/mfa/verify` | Verify TOTP/backup code |
+
+### Protected Endpoints (Require JWT)
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/api/v1/auth/mfa/status` | Get user's MFA status |
+| POST | `/api/v1/auth/mfa/begin` | Start MFA setup (get QR) |
+| POST | `/api/v1/auth/mfa/enable` | Enable MFA (verify code) |
+| POST | `/api/v1/auth/mfa/disable` | Disable MFA (verify code) |
+| GET | `/api/v1/auth/mfa/backup-codes` | Get backup codes info |
+| POST | `/api/v1/auth/mfa/backup-codes/regenerate` | Generate new codes |
+
+## User Workflow Diagrams
+
+### Setup Flow
+
+```
+User Login → Settings → Security → Enable MFA
+    ↓
+Show QR Code
+    ↓
+User Scans with App
+    ↓
+User Enters 6-Digit Code
+    ↓
+Verify Code → Generate 10 Backup Codes
+    ↓
+User Saves Backup Codes
+    ↓
+MFA Enabled ✓
+```
+
+### Login Flow with MFA
+
+```
+Enter Email/Password
+    ↓
+Password Correct?
+    ├─ No → Error
+    └─ Yes
+        ↓
+    MFA Enabled?
+        ├─ No → Login Success
+        └─ Yes
+            ↓
+        Show MFA Prompt
+            ↓
+        User Enters Code (TOTP or Backup)
+            ↓
+        Code Valid?
+            ├─ No → Error (Rate Limited)
+            └─ Yes → Login Success
+```
+
+### Disable Flow
+
+```
+Settings → Security → Disable MFA Button
+    ↓
+Enter TOTP Code (from authenticator app)
+    ↓
+Verify Code
+    ↓
+Delete MFA Secret + All Backup Codes
+    ↓
+MFA Disabled ✓
+```
+
+## Troubleshooting Decision Tree
+
+```
+User Can't Log In
+    ↓
+Has MFA Enabled?
+    ├─ No → Check password
+    └─ Yes
+        ↓
+    Has Authenticator App?
+        ├─ Yes
+        │   ↓
+        │   Code Not Working?
+        │       ├─ Check device time sync
+        │       ├─ Wait for new code
+        │       └─ Verify correct account
+        └─ No
+            ↓
+        Has Backup Codes?
+            ├─ Yes → Use Backup Code
+            └─ No → Contact Admin for Reset
+```
+
+## Rate Limiting Reference
+
+| Operation | Limit | Window | Storage |
+|-----------|-------|--------|---------|
+| TOTP Verification | 5 attempts | 15 min | Redis |
+| Backup Code Verification | 3 attempts | 15 min | Redis |
+| MFA Setup | 10 attempts | 1 hour | Redis |
+
+### Check Rate Limit (Redis CLI)
+
+```bash
+# TOTP rate limit
+redis-cli GET "mfa_rate_limit:totp:USER_ID"
+redis-cli TTL "mfa_rate_limit:totp:USER_ID"
+
+# Backup code rate limit
+redis-cli GET "mfa_rate_limit:backup:USER_ID"
+
+# Reset rate limit (emergency)
+redis-cli DEL "mfa_rate_limit:totp:USER_ID"
+redis-cli DEL "mfa_rate_limit:backup:USER_ID"
+```
+
+## MFA Event Types
+
+Quick reference for audit log queries:
+
+| Action | When It Happens |
+|--------|-----------------|
+| `mfa.setup_started` | User begins MFA setup |
+| `mfa.enabled` | MFA successfully enabled |
+| `mfa.enable_failed` | Invalid code during setup |
+| `mfa.disabled` | User disables MFA |
+| `mfa.disable_failed` | Invalid code when disabling |
+| `mfa.verification_success` | Successful TOTP login |
+| `mfa.verification_failed` | Failed TOTP attempt |
+| `mfa.backup_code_used` | User logs in with backup code |
+| `mfa.backup_code_failed` | Invalid backup code |
+| `mfa.backup_code_reuse_attempt` | Tried to reuse a code |
+| `mfa.backup_codes_viewed` | User checked backup status |
+| `mfa.backup_codes_regenerated` | New codes generated |
+| `login.mfa_required` | Password OK, MFA needed |
+
+## Security Checklist
+
+### For Admins
+
+- [ ] Monitor MFA adoption rate weekly
+- [ ] Check for admin accounts without MFA
+- [ ] Review failed MFA attempts daily
+- [ ] Audit users with exhausted backup codes
+- [ ] Verify MFA reset requests properly
+- [ ] Log all manual MFA resets
+- [ ] Set up alerts for suspicious patterns
+
+### For Users
+
+- [ ] Enable MFA on your account
+- [ ] Save backup codes in password manager
+- [ ] Keep one physical backup in safe location
+- [ ] Test MFA before fully relying on it
+- [ ] Regenerate codes when running low
+- [ ] Use authenticator app for daily logins
+- [ ] Only use backup codes in emergencies
+
+## Database Table Reference
+
+### Users Table (MFA Columns)
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `mfa_enabled` | BOOLEAN | Is MFA active? |
+| `mfa_secret_encrypted` | BYTEA | Encrypted TOTP secret |
+| `mfa_backup_codes` | BYTEA[] | Hashed backup codes |
+| `mfa_backup_codes_used` | BYTEA[] | Used backup code hashes |
+
+### Audit Log Table
+
+| Column | Purpose |
+|--------|---------|
+| `user_id` | UUID of user |
+| `action` | Event type (see above) |
+| `created_at` | Timestamp |
+| `ip_address_encrypted` | Encrypted IP |
+| `user_agent_encrypted` | Encrypted user agent |
+
+## Common Admin Tasks
+
+### Task: User Lost Phone
+
+1. Verify user identity
+2. Run SQL reset: `UPDATE users SET mfa_enabled = false... WHERE id = 'UUID'`
+3. Notify user MFA is reset
+4. User logs in with password only
+5. User re-enables MFA with new device
+6. User saves new backup codes
+
+### Task: Check MFA Adoption
+
+```sql
+SELECT
+  ROUND(COUNT(*) FILTER (WHERE mfa_enabled = true) * 100.0 / COUNT(*), 2) as pct
+FROM users
+WHERE deleted_at IS NULL;
+```
+
+### Task: Find Suspicious Failed Attempts
+
+```sql
+SELECT user_id, COUNT(*) as fails
+FROM audit_log
+WHERE action LIKE 'mfa.%_failed'
+  AND created_at > NOW() - INTERVAL '24 hours'
+GROUP BY user_id
+HAVING COUNT(*) >= 5;
+```
+
+### Task: Users Running Low on Backup Codes
+
+```sql
+SELECT id, (
+  array_length(mfa_backup_codes, 1) -
+  COALESCE(array_length(mfa_backup_codes_used, 1), 0)
+) as remaining
+FROM users
+WHERE mfa_enabled = true
+HAVING remaining < 3;
+```
+
+## Response Code Reference
+
+### Success Responses
+
+| Code | Meaning |
+|------|---------|
+| 200 | MFA verification successful |
+| 200 | MFA status retrieved |
+| 201 | MFA enabled successfully |
+
+### Error Responses
+
+| Code | Meaning | Action |
+|------|---------|--------|
+| 401 | Invalid MFA code | User should retry |
+| 401 | Invalid backup code | Check code format |
+| 423 | Rate limited | Wait 15 minutes |
+| 400 | MFA not enabled | User needs to enable first |
+| 500 | Server error | Check logs |
+
+## Environment Variables
+
+```bash
+# Backend
+JWT_SECRET=your-jwt-secret-64-chars
+SERVER_ENCRYPTION_KEY=your-32-char-key
+REDIS_PASSWORD=your-redis-password
+
+# Rate limiting (optional overrides)
+MFA_TOTP_RATE_LIMIT=5
+MFA_BACKUP_RATE_LIMIT=3
+MFA_RATE_WINDOW_MINUTES=15
+```
+
+## Monitoring Queries for Alerts
+
+### Alert: 5+ Failed Attempts (Last 15 Min)
+
+```sql
+SELECT user_id, COUNT(*)
+FROM audit_log
+WHERE action IN ('mfa.verification_failed', 'mfa.backup_code_failed')
+  AND created_at > NOW() - INTERVAL '15 minutes'
+GROUP BY user_id
+HAVING COUNT(*) >= 5;
+```
+
+### Alert: Admin Without MFA
+
+```sql
+SELECT id
+FROM users
+WHERE is_admin = true
+  AND mfa_enabled = false;
+```
+
+### Alert: User Exhausted All Backup Codes
+
+```sql
+SELECT id
+FROM users
+WHERE mfa_enabled = true
+  AND array_length(mfa_backup_codes, 1) =
+      COALESCE(array_length(mfa_backup_codes_used, 1), 0);
+```
+
+## Quick Links
+
+- [Setup Guide](/authentication/setup-guide) - For users enabling MFA
+- [Managing MFA](/authentication/managing-mfa) - User management guide
+- [Admin Guide](/authentication/admin-mfa-management) - Full admin documentation
+- [API Reference](/authentication/api-endpoints) - Complete API docs
+- [Troubleshooting](/authentication/troubleshooting) - Common issues
+
+## Emergency Contacts
+
+**For Users:**
+- Can't log in? Contact your system administrator
+- Lost device? Use backup codes or request MFA reset
+
+**For Admins:**
+- Database access required for manual resets
+- Check audit logs for suspicious activity
+- Follow MFA reset verification procedures

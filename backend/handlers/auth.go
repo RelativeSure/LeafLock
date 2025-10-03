@@ -26,6 +26,7 @@ import (
 	"leaflock/config"
 	"leaflock/crypto"
 	"leaflock/database"
+	"leaflock/services"
 	"leaflock/utils"
 )
 
@@ -54,6 +55,19 @@ type SessionData struct {
 	UserAgent string    `json:"user_agent"`
 	CreatedAt time.Time `json:"created_at"`
 	ExpiresAt time.Time `json:"expires_at"`
+	MFAState  string    `json:"mfa_state,omitempty"` // "pending", "verified", or empty for no MFA
+}
+
+// MFASessionData structure for temporary MFA sessions
+type MFASessionData struct {
+	UserID         string    `json:"user_id"`
+	Email          string    `json:"email"`
+	IPAddress      string    `json:"ip_address"`
+	UserAgent      string    `json:"user_agent"`
+	CreatedAt      time.Time `json:"created_at"`
+	ExpiresAt      time.Time `json:"expires_at"`
+	MFAEnabled     bool      `json:"mfa_enabled"`
+	PasswordVerified bool    `json:"password_verified"`
 }
 
 // RegisterRequest represents a user registration request
@@ -108,6 +122,68 @@ func (h *AuthHandler) storeSessionInRedis(ctx context.Context, tokenHash []byte,
 	duration := time.Until(expiresAt)
 
 	return h.redis.Set(ctx, sessionKey, encryptedData, duration).Err()
+}
+
+// storeMFASessionInRedis stores temporary MFA session data in Redis
+func (h *AuthHandler) storeMFASessionInRedis(ctx context.Context, sessionToken string, data MFASessionData) error {
+	// Serialize MFA session data
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("failed to marshal MFA session data: %w", err)
+	}
+
+	// Encrypt MFA session data for security
+	encryptedData, err := h.crypto.Encrypt(jsonData)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt MFA session data: %w", err)
+	}
+
+	// Store in Redis with 5-minute expiration for MFA verification
+	sessionKey := fmt.Sprintf("mfa_session:%s", sessionToken)
+	duration := 5 * time.Minute
+
+	return h.redis.Set(ctx, sessionKey, encryptedData, duration).Err()
+}
+
+// getMFASessionFromRedis retrieves and decrypts MFA session data from Redis
+func (h *AuthHandler) getMFASessionFromRedis(ctx context.Context, sessionToken string) (*MFASessionData, error) {
+	sessionKey := fmt.Sprintf("mfa_session:%s", sessionToken)
+
+	// Get encrypted data from Redis
+	encryptedData, err := h.redis.Get(ctx, sessionKey).Bytes()
+	if err == redis.Nil {
+		return nil, fmt.Errorf("MFA session not found or expired")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get MFA session from Redis: %w", err)
+	}
+
+	// Decrypt session data
+	decryptedData, err := h.crypto.Decrypt(encryptedData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt MFA session data: %w", err)
+	}
+
+	// Deserialize session data
+	var sessionData MFASessionData
+	if err := json.Unmarshal(decryptedData, &sessionData); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal MFA session data: %w", err)
+	}
+
+	return &sessionData, nil
+}
+
+// deleteMFASessionFromRedis removes MFA session from Redis after use
+func (h *AuthHandler) deleteMFASessionFromRedis(ctx context.Context, sessionToken string) error {
+	sessionKey := fmt.Sprintf("mfa_session:%s", sessionToken)
+	return h.redis.Del(ctx, sessionKey).Err()
+}
+
+// cleanupExpiredSessions removes expired sessions from Redis (can be called periodically)
+func (h *AuthHandler) cleanupExpiredSessions(ctx context.Context) error {
+	// Redis automatically handles expiration via TTL, but this can be used for additional cleanup
+	// For now, we rely on Redis's built-in expiration
+	return nil
 }
 
 // Register godoc
@@ -416,31 +492,39 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
-	// Verify MFA if enabled
+	// Check if MFA is enabled - if yes, create temporary session token
 	if mfaEnabled {
-		if strings.TrimSpace(req.MFACode) == "" {
-			return c.Status(200).JSON(fiber.Map{"mfa_required": true})
-		}
-		if len(mfaSecret) == 0 {
-			log.Printf("mfa secret missing for user %s", userID)
-			return c.Status(500).JSON(fiber.Map{"error": "MFA validation failed"})
-		}
-		secretBytes, err := h.crypto.Decrypt(mfaSecret)
+		// Generate temporary MFA session token
+		mfaService := services.NewMFAService()
+		sessionToken, err := mfaService.GenerateMFASessionToken(userID.String())
 		if err != nil {
-			log.Printf("failed to decrypt mfa secret for user %s: %v", userID, err)
-			return c.Status(500).JSON(fiber.Map{"error": "MFA validation failed"})
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to create MFA session"})
 		}
-		secret := strings.TrimSpace(string(secretBytes))
-		code := strings.TrimSpace(req.MFACode)
-		if secret == "" {
-			log.Printf("empty mfa secret for user %s", userID)
-			return c.Status(500).JSON(fiber.Map{"error": "MFA validation failed"})
-		}
-		if !totp.Validate(code, secret) {
-			h.logAudit(ctx, userID, "login.mfa_failed", "user", userID, c)
 
-			return c.Status(401).JSON(fiber.Map{"error": "Invalid MFA code"})
+		// Create MFA session data with full context
+		mfaSessionData := MFASessionData{
+			UserID:           userID.String(),
+			Email:            req.Email,
+			IPAddress:        c.IP(),
+			UserAgent:        string(c.Request().Header.UserAgent()),
+			CreatedAt:        time.Now(),
+			ExpiresAt:        time.Now().Add(5 * time.Minute),
+			MFAEnabled:       true,
+			PasswordVerified: true,
 		}
+
+		// Store encrypted MFA session in Redis
+		if err := h.storeMFASessionInRedis(ctx, sessionToken, mfaSessionData); err != nil {
+			log.Printf("Failed to store MFA session in Redis: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to create MFA session"})
+		}
+
+		h.logAudit(ctx, userID, "login.mfa_required", "user", userID, c)
+
+		return c.Status(200).JSON(fiber.Map{
+			"mfa_required":  true,
+			"session_token": sessionToken,
+		})
 	}
 
 	// Reset failed attempts and update last login
@@ -770,6 +854,16 @@ func (h *AuthHandler) findExistingUserWithDifferentKey(ctx context.Context, emai
 	return "", sql.ErrNoRows
 }
 
+// GetMFAStatus godoc
+// @Summary Get MFA status
+// @Description Get the current MFA status for the authenticated user
+// @Tags MFA
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]interface{} "MFA status"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Server error"
+// @Router /auth/mfa/status [get]
 func (h *AuthHandler) GetMFAStatus(c *fiber.Ctx) error {
 	v := c.Locals("user_id")
 	uid, ok := v.(uuid.UUID)
@@ -788,6 +882,16 @@ func (h *AuthHandler) GetMFAStatus(c *fiber.Ctx) error {
 	})
 }
 
+// BeginMFASetup godoc
+// @Summary Begin MFA setup
+// @Description Start MFA setup process and get QR code
+// @Tags MFA
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Setup data with QR code"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Server error"
+// @Router /auth/mfa/begin [post]
 func (h *AuthHandler) BeginMFASetup(c *fiber.Ctx) error {
 	v := c.Locals("user_id")
 	uid, ok := v.(uuid.UUID)
@@ -839,6 +943,19 @@ func (h *AuthHandler) BeginMFASetup(c *fiber.Ctx) error {
 	})
 }
 
+// EnableMFA godoc
+// @Summary Enable MFA
+// @Description Enable MFA after verifying TOTP code
+// @Tags MFA
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body mfaCodeRequest true "TOTP code"
+// @Success 200 {object} map[string]interface{} "MFA enabled with backup codes"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 401 {object} map[string]interface{} "Invalid code"
+// @Failure 500 {object} map[string]interface{} "Server error"
+// @Router /auth/mfa/enable [post]
 func (h *AuthHandler) EnableMFA(c *fiber.Ctx) error {
 	v := c.Locals("user_id")
 	uid, ok := v.(uuid.UUID)
@@ -873,13 +990,51 @@ func (h *AuthHandler) EnableMFA(c *fiber.Ctx) error {
 		h.logAudit(ctx, uid, "mfa.enable_failed", "user", uid, c)
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid MFA code"})
 	}
-	if _, err := h.db.Exec(ctx, `UPDATE users SET mfa_enabled = TRUE WHERE id = $1`, uid); err != nil {
+
+	// Generate backup codes
+	mfaService := services.NewMFAService()
+	backupCodes, err := mfaService.GenerateBackupCodes(10)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate backup codes"})
+	}
+
+	// Hash backup codes before storage
+	hashedCodes := make([][]byte, len(backupCodes))
+	for i, code := range backupCodes {
+		hashedCodes[i] = mfaService.HashBackupCode(code)
+	}
+
+	// Enable MFA and store backup codes
+	if _, err := h.db.Exec(ctx, `
+		UPDATE users
+		SET mfa_enabled = TRUE, mfa_backup_codes = $1, mfa_backup_codes_used = NULL
+		WHERE id = $2
+	`, hashedCodes, uid); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to enable MFA"})
 	}
+
 	h.logAudit(ctx, uid, "mfa.enabled", "user", uid, c)
-	return c.JSON(fiber.Map{"enabled": true})
+
+	return c.JSON(fiber.Map{
+		"enabled":      true,
+		"backup_codes": backupCodes,
+		"message":      "MFA enabled successfully. Save these backup codes securely - they won't be shown again.",
+	})
 }
 
+// DisableMFA godoc
+// @Summary Disable MFA
+// @Description Disable MFA after verifying TOTP code
+// @Tags MFA
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body mfaCodeRequest true "TOTP code"
+// @Success 200 {object} map[string]interface{} "MFA disabled"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 401 {object} map[string]interface{} "Invalid code"
+// @Failure 500 {object} map[string]interface{} "Server error"
+// @Router /auth/mfa/disable [post]
 func (h *AuthHandler) DisableMFA(c *fiber.Ctx) error {
 	v := c.Locals("user_id")
 	uid, ok := v.(uuid.UUID)
@@ -914,11 +1069,335 @@ func (h *AuthHandler) DisableMFA(c *fiber.Ctx) error {
 		h.logAudit(ctx, uid, "mfa.disable_failed", "user", uid, c)
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid MFA code"})
 	}
-	if _, err := h.db.Exec(ctx, `UPDATE users SET mfa_enabled = FALSE, mfa_secret_encrypted = NULL WHERE id = $1`, uid); err != nil {
+	if _, err := h.db.Exec(ctx, `UPDATE users SET mfa_enabled = FALSE, mfa_secret_encrypted = NULL, mfa_backup_codes = NULL, mfa_backup_codes_used = NULL WHERE id = $1`, uid); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to disable MFA"})
 	}
 	h.logAudit(ctx, uid, "mfa.disabled", "user", uid, c)
 	return c.JSON(fiber.Map{"enabled": false})
+}
+
+// GetBackupCodes godoc
+// @Summary Get backup codes status
+// @Description Get backup codes count and remaining codes
+// @Tags MFA
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Backup codes info"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "MFA not enabled"
+// @Failure 500 {object} map[string]interface{} "Server error"
+// @Router /auth/mfa/backup-codes [get]
+func (h *AuthHandler) GetBackupCodes(c *fiber.Ctx) error {
+	v := c.Locals("user_id")
+	uid, ok := v.(uuid.UUID)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+
+	ctx := c.Context()
+	var backupCodes [][]byte
+	var backupCodesUsed [][]byte
+
+	err := h.db.QueryRow(ctx, `
+		SELECT mfa_backup_codes, mfa_backup_codes_used
+		FROM users
+		WHERE id = $1 AND mfa_enabled = true
+	`, uid).Scan(&backupCodes, &backupCodesUsed)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.Status(404).JSON(fiber.Map{"error": "MFA not enabled or no backup codes found"})
+		}
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve backup codes"})
+	}
+
+	// Calculate remaining codes
+	remaining := len(backupCodes)
+	if backupCodesUsed != nil {
+		remaining -= len(backupCodesUsed)
+	}
+
+	h.logAudit(ctx, uid, "mfa.backup_codes_viewed", "user", uid, c)
+
+	return c.JSON(fiber.Map{
+		"total":     len(backupCodes),
+		"remaining": remaining,
+		"note":      "Backup codes are stored securely and cannot be retrieved in plaintext",
+	})
+}
+
+// RegenerateBackupCodes godoc
+// @Summary Regenerate backup codes
+// @Description Generate new backup codes after password verification
+// @Tags MFA
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body object{password=string} true "User password"
+// @Success 200 {object} map[string]interface{} "New backup codes"
+// @Failure 400 {object} map[string]interface{} "Invalid request or MFA not enabled"
+// @Failure 401 {object} map[string]interface{} "Invalid password"
+// @Failure 500 {object} map[string]interface{} "Server error"
+// @Router /auth/mfa/backup-codes/regenerate [post]
+func (h *AuthHandler) RegenerateBackupCodes(c *fiber.Ctx) error {
+	v := c.Locals("user_id")
+	uid, ok := v.(uuid.UUID)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+
+	var req struct {
+		Password string `json:"password" validate:"required"`
+	}
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	ctx := c.Context()
+
+	// Verify password before regenerating codes
+	var passwordHash string
+	var mfaEnabled bool
+	err := h.db.QueryRow(ctx, `
+		SELECT password_hash, mfa_enabled
+		FROM users
+		WHERE id = $1
+	`, uid).Scan(&passwordHash, &mfaEnabled)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to verify user"})
+	}
+
+	if !mfaEnabled {
+		return c.Status(400).JSON(fiber.Map{"error": "MFA is not enabled"})
+	}
+
+	if !crypto.VerifyPassword(req.Password, passwordHash) {
+		h.logAudit(ctx, uid, "mfa.backup_codes_regen_failed", "user", uid, c)
+		return c.Status(401).JSON(fiber.Map{"error": "Invalid password"})
+	}
+
+	// Generate new backup codes using MFA service
+	mfaService := services.NewMFAService()
+	codes, err := mfaService.GenerateBackupCodes(10)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate backup codes"})
+	}
+
+	// Hash the backup codes before storage
+	hashedCodes := make([][]byte, len(codes))
+	for i, code := range codes {
+		hashedCodes[i] = mfaService.HashBackupCode(code)
+	}
+
+	// Update database with new backup codes and clear used codes
+	_, err = h.db.Exec(ctx, `
+		UPDATE users
+		SET mfa_backup_codes = $1, mfa_backup_codes_used = NULL
+		WHERE id = $2
+	`, hashedCodes, uid)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to save backup codes"})
+	}
+
+	h.logAudit(ctx, uid, "mfa.backup_codes_regenerated", "user", uid, c)
+
+	return c.JSON(fiber.Map{
+		"codes":   codes,
+		"message": "New backup codes generated. Save these securely - they won't be shown again.",
+	})
+}
+
+// VerifyMFACode godoc
+// @Summary Verify MFA code
+// @Description Verify TOTP or backup code during login
+// @Tags MFA
+// @Accept json
+// @Produce json
+// @Param request body object{session_token=string,code=string,is_backup_code=bool} true "Verification data"
+// @Success 200 {object} map[string]interface{} "Login successful with JWT token"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 401 {object} map[string]interface{} "Invalid code or session"
+// @Failure 500 {object} map[string]interface{} "Server error"
+// @Router /auth/mfa/verify [post]
+func (h *AuthHandler) VerifyMFACode(c *fiber.Ctx) error {
+	var req struct {
+		SessionToken string `json:"session_token" validate:"required"`
+		Code         string `json:"code" validate:"required"`
+		IsBackupCode bool   `json:"is_backup_code"`
+	}
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	ctx := c.Context()
+
+	// Retrieve and decrypt MFA session from Redis
+	mfaSession, err := h.getMFASessionFromRedis(ctx, req.SessionToken)
+	if err != nil {
+		log.Printf("Failed to get MFA session: %v", err)
+		return c.Status(401).JSON(fiber.Map{"error": "Invalid or expired session token"})
+	}
+
+	// Verify session hasn't expired
+	if time.Now().After(mfaSession.ExpiresAt) {
+		h.deleteMFASessionFromRedis(ctx, req.SessionToken)
+		return c.Status(401).JSON(fiber.Map{"error": "Session expired"})
+	}
+
+	// Parse user ID from session
+	var userID uuid.UUID
+	if err := userID.UnmarshalText([]byte(mfaSession.UserID)); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Invalid session data"})
+	}
+
+	// Security: Verify IP and User-Agent match
+	if mfaSession.IPAddress != c.IP() || mfaSession.UserAgent != string(c.Request().Header.UserAgent()) {
+		log.Printf("MFA session mismatch: IP %s vs %s, UA %s vs %s",
+			mfaSession.IPAddress, c.IP(),
+			mfaSession.UserAgent, string(c.Request().Header.UserAgent()))
+		h.deleteMFASessionFromRedis(ctx, req.SessionToken)
+		return c.Status(401).JSON(fiber.Map{"error": "Session validation failed"})
+	}
+
+	code := strings.TrimSpace(req.Code)
+	if code == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Code required"})
+	}
+
+	// Verify the code (TOTP or backup code)
+	var verified bool
+	var isBackupCodeUsed bool
+
+	if req.IsBackupCode {
+		// Verify backup code
+		var backupCodes [][]byte
+		var backupCodesUsed [][]byte
+
+		err := h.db.QueryRow(ctx, `
+			SELECT mfa_backup_codes, mfa_backup_codes_used
+			FROM users
+			WHERE id = $1
+		`, userID).Scan(&backupCodes, &backupCodesUsed)
+
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to verify backup code"})
+		}
+
+		mfaService := services.NewMFAService()
+		isValid, codeIndex := mfaService.VerifyBackupCode(code, backupCodes)
+
+		if !isValid {
+			h.logAudit(ctx, userID, "mfa.backup_code_failed", "user", userID, c)
+			return c.Status(401).JSON(fiber.Map{"error": "Invalid backup code"})
+		}
+
+		// Check if backup code was already used
+		for _, usedHash := range backupCodesUsed {
+			if bytes.Equal(usedHash, backupCodes[codeIndex]) {
+				h.logAudit(ctx, userID, "mfa.backup_code_reuse_attempt", "user", userID, c)
+				return c.Status(401).JSON(fiber.Map{"error": "This backup code has already been used"})
+			}
+		}
+
+		// Mark backup code as used
+		backupCodesUsed = append(backupCodesUsed, backupCodes[codeIndex])
+		_, err = h.db.Exec(ctx, `
+			UPDATE users
+			SET mfa_backup_codes_used = $1
+			WHERE id = $2
+		`, backupCodesUsed, userID)
+
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to mark backup code as used"})
+		}
+
+		verified = true
+		isBackupCodeUsed = true
+		h.logAudit(ctx, userID, "mfa.backup_code_used", "user", userID, c)
+
+	} else {
+		// Verify TOTP code
+		var secretEnc []byte
+		err := h.db.QueryRow(ctx, `SELECT mfa_secret_encrypted FROM users WHERE id = $1`, userID).Scan(&secretEnc)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to verify MFA code"})
+		}
+
+		secretBytes, err := h.crypto.Decrypt(secretEnc)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to access MFA secret"})
+		}
+
+		secret := strings.TrimSpace(string(secretBytes))
+		if !totp.Validate(code, secret) {
+			h.logAudit(ctx, userID, "mfa.verification_failed", "user", userID, c)
+			return c.Status(401).JSON(fiber.Map{"error": "Invalid MFA code"})
+		}
+
+		verified = true
+		h.logAudit(ctx, userID, "mfa.verification_success", "user", userID, c)
+	}
+
+	if !verified {
+		return c.Status(401).JSON(fiber.Map{"error": "Verification failed"})
+	}
+
+	// Delete the temporary MFA session from Redis
+	if err := h.deleteMFASessionFromRedis(ctx, req.SessionToken); err != nil {
+		log.Printf("Warning: Failed to delete MFA session: %v", err)
+	}
+
+	// Reset failed attempts and update last login
+	if _, err := h.db.Exec(ctx, `
+        UPDATE users SET failed_attempts = 0, locked_until = NULL, last_login = NOW()
+        WHERE id = $1`,
+		userID,
+	); err != nil {
+		log.Printf("Warning: Failed to reset failed login attempts: %v", err)
+	}
+
+	// Generate session token for Redis storage
+	sessionToken := make([]byte, 32)
+	if _, err := rand.Read(sessionToken); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Session creation failed"})
+	}
+	sessionTokenStr := hex.EncodeToString(sessionToken)
+
+	// Hash token for storage
+	tokenHash := argon2.IDKey(sessionToken, []byte("session"), 1, 64*1024, 4, 32)
+
+	// Store session in Redis
+	expiresAt := time.Now().Add(h.config.SessionDuration)
+	err = h.storeSessionInRedis(ctx, tokenHash, userID, utils.ClientIP(c), c.Get("User-Agent"), expiresAt)
+	if err != nil {
+		log.Printf("Failed to store session in Redis: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Session creation failed"})
+	}
+
+	// Log successful login after MFA verification
+	h.logAudit(ctx, userID, "login.success", "user", userID, c)
+
+	// Generate final JWT token
+	token, err := h.generateToken(userID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Token generation failed"})
+	}
+
+	// Get workspace
+	var workspaceID uuid.UUID
+	_ = h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&workspaceID)
+
+	return c.JSON(fiber.Map{
+		"token":        token,
+		"session":      sessionTokenStr,
+		"user_id":      userID,
+		"workspace_id": workspaceID,
+		"backup_code_used": isBackupCodeUsed,
+	})
 }
 
 func (h *AuthHandler) generateToken(userID uuid.UUID) (string, error) {

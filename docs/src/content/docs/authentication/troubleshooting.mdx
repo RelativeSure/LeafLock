@@ -1,0 +1,78 @@
+---
+title: MFA Troubleshooting
+description: Common MFA issues and solutions
+---
+
+# MFA Troubleshooting Guide
+
+Common issues and solutions for Multi-Factor Authentication.
+
+## "Invalid MFA code" Error
+
+### Cause
+- Time synchronization issue between device and server
+- Code has expired (30-second window)
+- Wrong account in authenticator app
+
+### Solutions
+1. **Check device time**:
+   - Ensure automatic date & time is enabled
+   - Sync time with internet time server
+   - Verify timezone is correct
+
+2. **Wait for new code**:
+   - TOTP codes expire every 30 seconds
+   - Wait for the authenticator to generate a new code
+
+3. **Verify correct account**:
+   - Check you're viewing the LeafLock entry
+   - Account name should match your email
+
+## Can't Scan QR Code
+
+### Solutions
+1. Increase screen brightness
+2. Move camera closer or further away
+3. Clean camera lens
+4. Use manual entry instead:
+   - Copy the text secret
+   - Open authenticator app
+   - Select "Enter a setup key"
+   - Paste the secret
+
+## Lost Authenticator Device
+
+### If you have backup codes:
+1. Log in using a backup code
+2. Disable MFA
+3. Set up MFA on new device
+4. Generate new backup codes
+
+### If you don't have backup codes:
+- Contact your administrator for MFA reset
+- See [Admin MFA Management](/authentication/admin-mfa-management)
+
+## Rate Limited ("Too many attempts")
+
+### Cause
+Exceeded maximum failed verification attempts
+
+### Wait times:
+- 5 failed TOTP attempts: 15-minute lockout
+- 3 failed backup codes: 15-minute lockout
+
+### Solution
+Wait for the lockout period to expire, then try again with correct code.
+
+## Backup Code Not Working
+
+### Check:
+1. Code format: `XXXX-XXXX-XXXX-XXXX` (16 characters)
+2. Code not previously used (one-time use only)
+3. Codes not regenerated (old codes invalidated)
+
+## Next Steps
+
+- [Setup Guide](/authentication/setup-guide)
+- [Backup Codes](/authentication/backup-codes)
+- [Admin Management](/authentication/admin-mfa-management)

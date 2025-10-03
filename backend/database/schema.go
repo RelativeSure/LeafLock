@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS users (
     private_key_encrypted BYTEA, -- Encrypted with user's derived key
     mfa_secret_encrypted BYTEA, -- Encrypted TOTP secret
     mfa_enabled BOOLEAN DEFAULT false,
+    mfa_backup_codes BYTEA[], -- Array of hashed backup codes (Argon2id)
+    mfa_backup_codes_used BYTEA[], -- Track used backup codes
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     last_login TIMESTAMPTZ,
