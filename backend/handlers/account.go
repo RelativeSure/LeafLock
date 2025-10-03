@@ -159,7 +159,7 @@ func (h *AccountHandler) DeleteAccount(c *fiber.Ctx) error {
 	}
 
 	// Clear all Redis sessions for this user
-	sessionPattern := fmt.Sprintf("session:*")
+	sessionPattern := "session:*"
 	iter := h.redis.Scan(ctx, 0, sessionPattern, 0).Iterator()
 	for iter.Next(ctx) {
 		key := iter.Val()
