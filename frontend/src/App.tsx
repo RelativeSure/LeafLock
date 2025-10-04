@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group'
 import { LoadingOverlay } from '@/features/common/LoadingOverlay'
 import { ErrorNotice } from '@/features/common/ErrorNotice'
 import { OnboardingOverlay } from '@/features/onboarding/OnboardingOverlay'
@@ -1404,7 +1405,7 @@ function LeafLockApp() {
 
     return (
       <div className="flex-1 flex flex-col" role="main" aria-label="Note editor">
-        <header className="bg-gray-800 border-b border-gray-700 px-6 py-4">
+        <header className="bg-card border-b border-border px-6 py-4">
           <label htmlFor="note-title" className="sr-only">
             Note title
           </label>
@@ -1414,10 +1415,10 @@ function LeafLockApp() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Note title..."
-            className="w-full bg-transparent text-xl font-semibold text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded px-2 py-1 -mx-2"
+            className="w-full bg-transparent text-xl font-semibold text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 rounded px-2 py-1 -mx-2"
           />
           <div
-            className="flex items-center justify-between mt-2 text-sm text-gray-400"
+            className="flex items-center justify-between mt-1 text-sm text-muted-foreground"
             aria-live="polite"
           >
             <div className="flex items-center">
@@ -1430,17 +1431,18 @@ function LeafLockApp() {
               )}
               {!saving && lastSaved && <span>Last saved {lastSaved.toLocaleTimeString()}</span>}
               {!saving && !lastSaved && (title || content) && (
-                <span className="text-yellow-400">Unsaved changes</span>
+                <span className="text-yellow-500">Unsaved changes</span>
               )}
             </div>
 
-            <div className="flex items-center space-x-4">
+            <ButtonGroup>
               {/* Manual Save Button */}
-              <button
+              <Button
                 data-save-action
                 onClick={handleSave}
                 disabled={saving || (!title && !content)}
-                className="flex items-center px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm rounded transition-colors"
+                variant="default"
+                size="sm"
                 title="Save note manually (Ctrl+S)"
               >
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1452,25 +1454,28 @@ function LeafLockApp() {
                   />
                 </svg>
                 Save
-              </button>
+              </Button>
 
-              {/* Encryption Status */}
-              <span className="flex items-center" aria-label="Encryption status">
-                <svg
-                  className="w-4 h-4 mr-1 text-green-500"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                  aria-hidden="true"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Encrypted
-              </span>
-            </div>
+              <ButtonGroupSeparator />
+
+              {/* Tags Selector */}
+              {selectedNote && selectedNote.id && (
+                <>
+                  <Suspense fallback={<div className="h-8 w-20 bg-muted rounded animate-pulse"></div>}>
+                    <TagSelector
+                      noteId={selectedNote.id}
+                      size="sm"
+                    />
+                  </Suspense>
+                  <ButtonGroupSeparator />
+                </>
+              )}
+
+              {/* Encryption Status Badge */}
+              <Badge variant="secondary" className="text-xs">
+                🔒 E2E
+              </Badge>
+            </ButtonGroup>
           </div>
         </header>
 
@@ -1486,19 +1491,6 @@ function LeafLockApp() {
         )}
 
         <div className="flex-1 p-6">
-          {/* Tags Selector */}
-          {selectedNote && (
-            <div className="mb-4">
-              <Suspense fallback={<div className="h-8 bg-gray-100 rounded animate-pulse"></div>}>
-                <TagSelector
-                  noteId={selectedNote.id}
-                  size="sm"
-                  className="mb-2"
-                />
-              </Suspense>
-            </div>
-          )}
-
           <Suspense fallback={<ComponentLoader />}>
             <RichTextEditor
               content={content}

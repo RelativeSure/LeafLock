@@ -66,7 +66,7 @@ class TagsService {
    * Get all tags for the current user
    */
   async getTags(): Promise<Tag[]> {
-    const response = await fetch(`${this.baseUrl}/api/v1/tags`, {
+    const response = await fetch(`${this.baseUrl}/tags`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     })
@@ -84,7 +84,7 @@ class TagsService {
    * Create a new tag
    */
   async createTag(tag: CreateTagRequest): Promise<Tag> {
-    const response = await fetch(`${this.baseUrl}/api/v1/tags`, {
+    const response = await fetch(`${this.baseUrl}/tags`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(tag),
@@ -102,7 +102,7 @@ class TagsService {
    * Delete a tag
    */
   async deleteTag(tagId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/v1/tags/${tagId}`, {
+    const response = await fetch(`${this.baseUrl}/tags/${tagId}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     })
@@ -117,7 +117,7 @@ class TagsService {
    * Get notes associated with a tag
    */
   async getNotesByTag(tagId: string): Promise<NotesResponse['notes']> {
-    const response = await fetch(`${this.baseUrl}/api/v1/tags/${tagId}/notes`, {
+    const response = await fetch(`${this.baseUrl}/tags/${tagId}/notes`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     })
@@ -135,7 +135,7 @@ class TagsService {
    * Assign a tag to a note
    */
   async assignTagToNote(noteId: string, tagId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/v1/notes/${noteId}/tags`, {
+    const response = await fetch(`${this.baseUrl}/notes/${noteId}/tags`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify({ tag_id: tagId }),
@@ -151,7 +151,7 @@ class TagsService {
    * Remove a tag from a note
    */
   async removeTagFromNote(noteId: string, tagId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/v1/notes/${noteId}/tags/${tagId}`, {
+    const response = await fetch(`${this.baseUrl}/notes/${noteId}/tags/${tagId}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     })
