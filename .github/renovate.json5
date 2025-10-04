@@ -7,7 +7,6 @@
   prHourlyLimit: 10,
   rebaseWhen: 'conflicted',
   dependencyDashboard: true,
-  dependencyDashboardApproval: true,
   ignoreTests: true,
   pinDigests: false,
   gomod: {
@@ -64,8 +63,9 @@
       automerge: false,
     },
     {
-      description: 'Security updates - auto-merge patch versions',
+      description: 'Security updates - auto-merge patch and minor versions',
       matchUpdateTypes: [
+        'minor',
         'patch',
       ],
       automerge: true,
