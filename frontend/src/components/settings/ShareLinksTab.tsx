@@ -237,7 +237,11 @@ export function ShareLinksTab() {
                       <TableCell className="font-medium max-w-[200px] truncate">
                         {link.note_title || 'Untitled Note'}
                         {link.has_password && (
-                          <Shield className="inline h-3 w-3 ml-2 text-yellow-600" title="Password protected" />
+                          <Shield
+                            className="inline h-3 w-3 ml-2 text-yellow-600"
+                            aria-label="Password protected"
+                            role="img"
+                          />
                         )}
                       </TableCell>
                       <TableCell>{getPermissionBadge(link.permission)}</TableCell>

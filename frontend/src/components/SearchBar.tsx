@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { Search, X, Loader2 } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { searchService, SearchResult } from '../services/searchService'
 import { Input } from './ui/input'
 import { Button } from './ui/button'
+import { Spinner } from '@/components/ui/spinner'
 
 interface SearchBarProps {
   onSearchResults: (results: SearchResult[], query: string) => void
@@ -81,9 +82,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         />
 
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center">
-          {isSearching && (
-            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-          )}
+          {isSearching && <Spinner className="w-4 h-4 text-gray-400" aria-hidden="true" />}
 
           {query && !isSearching && (
             <Button

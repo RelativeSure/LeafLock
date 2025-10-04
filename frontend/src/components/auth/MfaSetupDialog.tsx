@@ -12,19 +12,13 @@ import { QrCodeDisplay } from './QrCodeDisplay'
 import { TotpInput } from './TotpInput'
 import { MfaBackupCodes } from './MfaBackupCodes'
 import { Loader2 } from 'lucide-react'
-
-interface MfaSetupData {
-  secret: string
-  otpauth_url: string
-  issuer?: string
-  account?: string
-}
+import type { MfaSetup, MfaStatus } from '@/lib/schemas'
 
 interface MfaSetupDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  setupData: MfaSetupData | null
-  onVerify: (code: string) => Promise<{ backup_codes?: string[] }>
+  setupData: MfaSetup | null
+  onVerify: (code: string) => Promise<MfaStatus & { backup_codes?: string[] }>
   onComplete: () => void
 }
 
@@ -49,10 +43,12 @@ export function MfaSetupDialog({
 
     try {
       const result = await onVerify(code)
-      if (result.backup_codes) {
+      if (result.backup_codes && result.backup_codes.length > 0) {
         setBackupCodes(result.backup_codes)
         setStep('backup')
+        return
       }
+      handleComplete()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid code. Please try again.')
       setTotpCode('')

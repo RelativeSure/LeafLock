@@ -151,8 +151,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         ALLOWED_ATTR: [
           'href', 'title', 'alt', 'src', 'class', 'style',
           'target', 'rel', 'colspan', 'rowspan'
-        ],
-        ALLOWED_PROTOCOLS: ['http', 'https', 'mailto', 'data']
+        ]
       })
       onChange(sanitizedHtml)
     },

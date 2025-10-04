@@ -347,16 +347,16 @@ func TestConfig(t *testing.T) {
 
 	defer func() {
 		// Restore environment
-		_ = os.Setenv("JWT_SECRET", originalJWT)          // Test cleanup
+		_ = os.Setenv("JWT_SECRET", originalJWT)               // Test cleanup
 		_ = os.Setenv("SERVER_ENCRYPTION_KEY", originalEncKey) // Test cleanup
-		_ = os.Setenv("DATABASE_URL", originalDBURL)      // Test cleanup
+		_ = os.Setenv("DATABASE_URL", originalDBURL)           // Test cleanup
 	}()
 
 	t.Run("LoadConfigWithDefaults", func(t *testing.T) {
 		// Clear environment variables
-		_ = os.Unsetenv("JWT_SECRET")          // Test setup
+		_ = os.Unsetenv("JWT_SECRET")            // Test setup
 		_ = os.Unsetenv("SERVER_ENCRYPTION_KEY") // Test setup
-		_ = os.Unsetenv("DATABASE_URL")        // Test setup
+		_ = os.Unsetenv("DATABASE_URL")          // Test setup
 
 		config := LoadConfig()
 
@@ -373,9 +373,9 @@ func TestConfig(t *testing.T) {
 		testEncKey := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{0x42}, 32))
 		testDBURL := "postgres://test:test@localhost:5432/testdb"
 
-		_ = os.Setenv("JWT_SECRET", testJWT)          // Test setup
+		_ = os.Setenv("JWT_SECRET", testJWT)               // Test setup
 		_ = os.Setenv("SERVER_ENCRYPTION_KEY", testEncKey) // Test setup
-		_ = os.Setenv("DATABASE_URL", testDBURL)      // Test setup
+		_ = os.Setenv("DATABASE_URL", testDBURL)           // Test setup
 
 		config := LoadConfig()
 
@@ -834,7 +834,7 @@ func setupTestRedis(t *testing.T) (*redis.Client, func()) {
 
 	cleanup := func() {
 		_ = rdb.FlushDB(ctx).Err() // Test cleanup
-		_ = rdb.Close()             // Test cleanup
+		_ = rdb.Close()            // Test cleanup
 	}
 
 	return rdb, cleanup
@@ -963,8 +963,12 @@ func (suite *LockoutTestSuite) SetupTest() {
 }
 
 func (suite *LockoutTestSuite) TearDownTest() {
-	suite.cleanupDB()
-	suite.cleanupRedis()
+	if suite.cleanupDB != nil {
+		suite.cleanupDB()
+	}
+	if suite.cleanupRedis != nil {
+		suite.cleanupRedis()
+	}
 }
 
 func (suite *LockoutTestSuite) TestProgressiveRateLimit() {

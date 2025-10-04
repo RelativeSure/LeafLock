@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense, lazy } from 'react'
 import sodium from 'libsodium-wrappers'
-import { Lock, Shield, MessageSquare, Settings, Book, Info, Hash, Folder, FileText, Plus } from 'lucide-react'
+import { Shield, Settings, Hash, Folder, FileText, Plus } from 'lucide-react'
 import {
   adminListUsersResponseSchema,
   adminActionResponseSchema,
@@ -18,15 +18,20 @@ import {
 
 // shadcn/ui components
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { LoadingOverlay } from '@/features/common/LoadingOverlay'
+import { ErrorNotice } from '@/features/common/ErrorNotice'
+import { OnboardingOverlay } from '@/features/onboarding/OnboardingOverlay'
+import { LoginView } from '@/features/auth/LoginView'
+import { UnlockView } from '@/features/auth/UnlockView'
+import type { AuthResponse } from '@/types/auth'
+import { Spinner } from '@/components/ui/spinner'
 import { Toaster } from '@/components/ui/sonner'
 import Footer from '@/components/Footer'
 import AnnouncementBanner, { Announcement } from '@/components/AnnouncementBanner'
+import { getStoredAuthToken, persistAuthToken, clearStoredAuthToken } from '@/utils/auth'
 
 // Lazy loaded components for code splitting
 const AdminPage = lazy(() => import('./AdminPage'))
@@ -41,6 +46,7 @@ const FoldersManager = lazy(() => import('@/components/FoldersManager'))
 const TemplatesManager = lazy(() => import('@/components/TemplatesManager'))
 import { SearchResult } from '@/services/searchService'
 import { Template } from '@/services/templatesService'
+import { ThemeProvider, useTheme, type ThemeType } from '@/ThemeContext'
 
 // Loading component for lazy loaded components
 const ComponentLoader: React.FC = () => (
@@ -60,123 +66,13 @@ interface Note {
   content_encrypted?: string
 }
 
-interface AuthResponse {
-  token: string
-  user_id: string
-  mfa_required?: boolean
-  session?: string
-}
-
-interface ErrorBoundaryProps {
-  error: string | Error
-  onRetry?: () => void
-  onDismiss?: () => void
-  className?: string
-}
-
-interface OnboardingOverlayProps {
-  step: number
-  onNext: () => void
-  onPrev: () => void
-  onSkip: () => void
-  onComplete: () => void
-}
-
-interface LoadingOverlayProps {
-  message?: string
-}
-
 
 type ViewType = 'login' | 'notes' | 'editor' | 'unlock' | 'admin' | 'settings' | 'tags' | 'folders' | 'templates'
 type EncryptionStatus = 'locked' | 'unlocked'
-type ThemeType = 'light' | 'blue' | 'dark' | 'system'
-
 // Debounce function type
 interface DebounceFunction {
   (...args: any[]): void
   cancel: () => void
-}
-
-// Theme context
-interface ThemeContextType {
-  theme: ThemeType
-  effectiveTheme: 'light' | 'blue' | 'dark'
-  setTheme: (theme: ThemeType) => void
-}
-
-const ThemeContext = React.createContext<ThemeContextType | undefined>(undefined)
-
-// Theme provider component
-const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<ThemeType>('system')
-
-  // Get system preference
-  const getSystemTheme = (): 'light' | 'dark' => {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-  }
-
-  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'blue' | 'dark'>(getSystemTheme())
-
-  // Load theme from cookie
-  useEffect(() => {
-    const savedTheme = document.cookie
-      .split('; ')
-      .find((row) => row.startsWith('theme='))
-      ?.split('=')[1] as ThemeType
-
-    if (savedTheme && ['light', 'blue', 'dark', 'system'].includes(savedTheme)) {
-      setThemeState(savedTheme)
-    }
-  }, [])
-
-  // Update effective theme when theme or system preference changes
-  useEffect(() => {
-    const updateEffectiveTheme = () => {
-      const newEffectiveTheme: 'light' | 'blue' | 'dark' = theme === 'system' ? getSystemTheme() : theme as 'light' | 'blue' | 'dark'
-      setEffectiveTheme(newEffectiveTheme)
-
-      // Apply theme to document
-      document.documentElement.classList.remove('light', 'theme-blue', 'dark')
-
-      // Apply theme class (light is default, no class needed)
-      if (newEffectiveTheme === 'blue') {
-        document.documentElement.classList.add('theme-blue')
-      } else if (newEffectiveTheme === 'dark') {
-        document.documentElement.classList.add('dark')
-      }
-    }
-
-    updateEffectiveTheme()
-
-    // Listen for system theme changes
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    mediaQuery.addEventListener('change', updateEffectiveTheme)
-
-    return () => mediaQuery.removeEventListener('change', updateEffectiveTheme)
-  }, [theme])
-
-  const setTheme = (newTheme: ThemeType) => {
-    setThemeState(newTheme)
-    // Save to cookie (expires in 1 year)
-    const expires = new Date()
-    expires.setFullYear(expires.getFullYear() + 1)
-    document.cookie = `theme=${newTheme}; expires=${expires.toUTCString()}; path=/; SameSite=Strict`
-  }
-
-  return (
-    <ThemeContext.Provider value={{ theme, effectiveTheme, setTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  )
-}
-
-// Hook to use theme
-const useTheme = () => {
-  const context = React.useContext(ThemeContext)
-  if (!context) {
-    throw new Error('useTheme must be used within ThemeProvider')
-  }
-  return context
 }
 
 // Secure Crypto Service for E2E Encryption
@@ -340,7 +236,7 @@ class SecureAPI {
 
   constructor(baseURL: string = '/api/v1') {
     this.baseURL = baseURL
-    this.token = localStorage.getItem('secure_token')
+    this.token = getStoredAuthToken()
   }
 
   async request(endpoint: string, options: RequestInit = {}): Promise<any> {
@@ -418,7 +314,7 @@ class SecureAPI {
 
   setToken(token: string): void {
     this.token = token
-    localStorage.setItem('secure_token', token)
+    persistAuthToken(token)
     // Derive and store current_user_id from JWT if possible
     try {
       const payload = JSON.parse(atob(token.split('.')[1] || ''))
@@ -432,7 +328,7 @@ class SecureAPI {
 
   clearToken(): void {
     this.token = null
-    localStorage.removeItem('secure_token')
+    clearStoredAuthToken()
   }
 
   async validateToken(): Promise<boolean> {
@@ -825,7 +721,7 @@ class SecureAPI {
   }
 
   async getTrash(): Promise<Note[]> {
-    const response = await this.request('/trash')
+    const response = await this.request('/notes/trash')
     const trashedNotes = response.notes || response || []
 
     // Decrypt trashed notes
@@ -846,13 +742,13 @@ class SecureAPI {
   }
 
   async restoreNote(noteId: string): Promise<any> {
-    return this.request(`/trash/${noteId}/restore`, {
-      method: 'PUT',
+    return this.request(`/notes/${noteId}/restore`, {
+      method: 'POST',
     })
   }
 
   async permanentlyDeleteNote(noteId: string): Promise<any> {
-    return this.request(`/trash/${noteId}`, {
+    return this.request(`/notes/${noteId}/permanent`, {
       method: 'DELETE',
     })
   }
@@ -877,242 +773,6 @@ const NoteListSkeleton: React.FC = () => (
     ))}
   </div>
 )
-
-const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ message = 'Loading...' }) => (
-  <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
-    <Card className="w-[250px]">
-      <CardContent className="pt-6 flex flex-col items-center space-y-4">
-        <Skeleton className="h-8 w-8 rounded-full" />
-        <div className="text-center space-y-2">
-          <p className="text-lg font-medium">{message}</p>
-          <p className="text-sm text-muted-foreground">Initializing secure encryption...</p>
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-)
-
-const ErrorBoundary: React.FC<ErrorBoundaryProps> = ({
-  error,
-  onRetry,
-  onDismiss,
-  className = '',
-}) => {
-  const getErrorMessage = (error: string | Error): string => {
-    if (typeof error === 'string') return error
-    if (error?.message) return error.message
-    return 'An unexpected error occurred'
-  }
-
-  const getErrorSuggestions = (error: string | Error): string => {
-    const message = getErrorMessage(error).toLowerCase()
-
-    if (message.includes('network') || message.includes('fetch')) {
-      return 'Check your internet connection and try again.'
-    }
-    if (message.includes('unauthorized') || message.includes('401')) {
-      return 'Your session may have expired. Please sign in again.'
-    }
-    if (message.includes('decrypt') || message.includes('encryption')) {
-      return 'There was an issue with encryption. Try refreshing the page.'
-    }
-    return 'Please try again or refresh the page if the problem persists.'
-  }
-
-  return (
-    <div className={`bg-red-900/50 border border-red-600 rounded-lg p-4 ${className}`} role="alert">
-      <div className="flex items-start">
-        <svg
-          className="w-5 h-5 text-red-400 mr-3 mt-0.5"
-          fill="currentColor"
-          viewBox="0 0 20 20"
-          aria-hidden="true"
-        >
-          <path
-            fillRule="evenodd"
-            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-            clipRule="evenodd"
-          />
-        </svg>
-        <div className="flex-1">
-          <h3 className="text-red-200 font-medium mb-1">Something went wrong</h3>
-          <p className="text-red-300 text-sm mb-2">{getErrorMessage(error)}</p>
-          <p className="text-red-400 text-xs mb-4">{getErrorSuggestions(error)}</p>
-
-          <div className="flex space-x-3">
-            {onRetry && (
-              <button
-                onClick={onRetry}
-                className="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1.5 rounded transition focus:outline-none focus:ring-2 focus:ring-red-500/50"
-              >
-                Try Again
-              </button>
-            )}
-            {onDismiss && (
-              <button
-                onClick={onDismiss}
-                className="text-red-300 hover:text-white text-sm px-3 py-1.5 rounded transition focus:outline-none focus:ring-2 focus:ring-red-500/50"
-              >
-                Dismiss
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-      <div className="text-center py-4 text-xs text-muted-foreground">
-        <a
-          href="https://github.com/RelativeSure/notes/discussions"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1 hover:underline"
-        >
-          <MessageSquare className="w-3 h-3" /> Join GitHub Discussions
-        </a>
-      </div>
-    </div>
-  )
-}
-
-// Onboarding Component
-const OnboardingOverlay: React.FC<OnboardingOverlayProps> = ({
-  step,
-  onNext,
-  onPrev,
-  onSkip,
-  onComplete,
-}) => {
-  const onboardingSteps = [
-    {
-      title: 'Welcome to LeafLock!',
-      content:
-        "Your notes are protected with end-to-end encryption. Only you can read your content, even we can't see it.",
-      icon: (
-        <svg
-          className="w-12 h-12 text-blue-500 mb-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-          />
-        </svg>
-      ),
-    },
-    {
-      title: 'Create Your First Note',
-      content:
-        "Click 'New Encrypted Note' to start writing. Your notes are automatically saved and encrypted as you type.",
-      icon: (
-        <svg
-          className="w-12 h-12 text-green-500 mb-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
-        </svg>
-      ),
-    },
-    {
-      title: 'Search and Organize',
-      content:
-        'Use the search bar to quickly find your notes. All searching happens locally - your data never leaves your device unencrypted.',
-      icon: (
-        <svg
-          className="w-12 h-12 text-purple-500 mb-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
-      ),
-    },
-    {
-      title: 'Stay Secure',
-      content:
-        "Always log out when you're done, especially on shared computers. Your encryption keys are tied to your session.",
-      icon: (
-        <svg
-          className="w-12 h-12 text-red-500 mb-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-      ),
-    },
-  ]
-
-  const currentStep = onboardingSteps[step] || onboardingSteps[0]
-  const isLastStep = step === onboardingSteps.length - 1
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-lg shadow-xl p-8 max-w-md w-full">
-        <div className="text-center">
-          {currentStep.icon}
-          <h2 className="text-2xl font-bold text-white mb-4">{currentStep.title}</h2>
-          <p className="text-gray-300 mb-6 leading-relaxed">{currentStep.content}</p>
-
-          <div className="flex justify-center mb-6">
-            <div className="flex space-x-2">
-              {onboardingSteps.map((_, index) => (
-                <div
-                  key={index}
-                  className={`w-2 h-2 rounded-full ${
-                    index === step ? 'bg-blue-500' : 'bg-gray-600'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="flex justify-between">
-            <button
-              onClick={onSkip}
-              className="text-gray-400 hover:text-white transition focus:outline-none focus:underline"
-            >
-              Skip Tour
-            </button>
-
-            <div className="flex space-x-3">
-              {step > 0 && (
-                <button
-                  onClick={onPrev}
-                  className="px-4 py-2 text-gray-300 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-gray-500/50 rounded"
-                >
-                  Back
-                </button>
-              )}
-              <button
-                onClick={isLastStep ? onComplete : onNext}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-              >
-                {isLastStep ? 'Get Started' : 'Next'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 
 // Utility function for debouncing with cancel support
@@ -1275,602 +935,6 @@ const ThemeToggle: React.FC = () => {
   )
 }
 
-type SecuritySettingsViewProps = {
-  api: SecureAPI
-  onBack: () => void
-}
-
-/* eslint-disable react-hooks/rules-of-hooks */
-const _SecuritySettingsView: React.FC<SecuritySettingsViewProps> = ({ api, onBack }) => {
-  const [status, setStatus] = useState<MfaStatus | null>(null)
-  const [setup, setSetup] = useState<MfaSetup | null>(null)
-  const [code, setCode] = useState('')
-  const [disableCode, setDisableCode] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  const refreshStatus = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await api.getMfaStatus()
-      setStatus(data)
-      if (!data.enabled) {
-        // Clear disable code when MFA is off
-        setDisableCode('')
-      }
-    } catch (err) {
-      setError((err as Error).message || 'Failed to load MFA status')
-    } finally {
-      setLoading(false)
-    }
-  }, [api])
-
-  useEffect(() => {
-    void refreshStatus()
-  }, [refreshStatus])
-
-  const handleStartSetup = async () => {
-    setBusy(true)
-    setError(null)
-    setMessage(null)
-    try {
-      const data = await api.startMfaSetup()
-      setSetup(data)
-      setCode('')
-      setStatus({ enabled: false, has_secret: true })
-      setMessage('Scan the code with your authenticator app, then enter the generated code to enable MFA.')
-    } catch (err) {
-      setError((err as Error).message || 'Failed to generate MFA secret')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const handleEnable = async (event: React.FormEvent) => {
-    event.preventDefault()
-    if (!code.trim()) {
-      setError('Enter the 6-digit code from your authenticator')
-      return
-    }
-    setBusy(true)
-    setError(null)
-    setMessage(null)
-    try {
-      await api.enableMfa(code.trim())
-      setCode('')
-      setSetup(null)
-      await refreshStatus()
-      setMessage('Two-factor authentication enabled.')
-    } catch (err) {
-      setError((err as Error).message || 'Failed to enable MFA')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const handleDisable = async (event: React.FormEvent) => {
-    event.preventDefault()
-    if (!disableCode.trim()) {
-      setError('Enter a valid MFA code to disable')
-      return
-    }
-    setBusy(true)
-    setError(null)
-    setMessage(null)
-    try {
-      await api.disableMfa(disableCode.trim())
-      setDisableCode('')
-      setSetup(null)
-      await refreshStatus()
-      setMessage('Two-factor authentication disabled.')
-    } catch (err) {
-      setError((err as Error).message || 'Failed to disable MFA')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const handleCopySecret = async () => {
-    if (!setup) return
-    try {
-      await navigator.clipboard.writeText(setup.secret)
-      setMessage('Secret copied to clipboard.')
-    } catch (err) {
-      console.error('Copy failed', err)
-      setError('Unable to copy secret to clipboard')
-    }
-  }
-
-  return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-6">
-      <div className="w-full max-w-2xl space-y-6">
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={onBack}>
-            ← Back to notes
-          </Button>
-          <ThemeToggle />
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Account Security</CardTitle>
-            <CardDescription>Protect your account with time-based one-time passwords.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {loading ? (
-              <p className="text-sm text-muted-foreground">Loading MFA status…</p>
-            ) : (
-              <>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">
-                    Two-factor authentication is currently{' '}
-                    <span className={status?.enabled ? 'text-green-500' : 'text-red-400'}>
-                      {status?.enabled ? 'enabled' : 'disabled'}
-                    </span>
-                    .
-                  </p>
-                  {!status?.enabled && status?.has_secret && !setup && (
-                    <p className="text-sm text-muted-foreground">
-                      A setup secret is pending. Generate a new code if you no longer have access to the previous
-                      one.
-                    </p>
-                  )}
-                </div>
-
-                {message && (
-                  <Alert className="border-green-500/40 bg-green-500/10">
-                    <AlertDescription>{message}</AlertDescription>
-                  </Alert>
-                )}
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
-                {!status?.enabled ? (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">
-                        Use an authenticator app (like 1Password, Authy, or Google Authenticator) to scan a setup code,
-                        then confirm with the generated passcode.
-                      </p>
-                      <Button onClick={handleStartSetup} disabled={busy}>
-                        {setup ? 'Regenerate setup code' : 'Generate setup code'}
-                      </Button>
-                    </div>
-
-                    {setup && (
-                      <div className="space-y-3 border rounded-lg p-4 bg-muted/40">
-                        <div className="space-y-1">
-                          <Label htmlFor="mfa-secret">Authenticator secret</Label>
-                          <div className="flex gap-2">
-                            <Input id="mfa-secret" value={setup.secret} readOnly className="font-mono" />
-                            <Button type="button" variant="outline" onClick={handleCopySecret}>
-                              Copy
-                            </Button>
-                          </div>
-                          {setup.otpauth_url && (
-                            <a
-                              href={setup.otpauth_url}
-                              className="text-sm text-primary underline"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              Open in authenticator app
-                            </a>
-                          )}
-                        </div>
-
-                        <form className="space-y-3" onSubmit={handleEnable}>
-                          <div className="space-y-1">
-                            <Label htmlFor="mfa-code">Enter code from your authenticator</Label>
-                            <Input
-                              id="mfa-code"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              maxLength={10}
-                              value={code}
-                              onChange={(event) => setCode(event.target.value)}
-                              placeholder="123456"
-                              autoComplete="one-time-code"
-                            />
-                          </div>
-                          <div className="flex gap-2">
-                            <Button type="submit" disabled={busy}>
-                              Enable MFA
-                            </Button>
-                            <Button type="button" variant="outline" onClick={() => setSetup(null)} disabled={busy}>
-                              Cancel
-                            </Button>
-                          </div>
-                        </form>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <form className="space-y-3" onSubmit={handleDisable}>
-                    <div className="space-y-1">
-                      <Label htmlFor="disable-code">Enter a current MFA code to disable</Label>
-                      <Input
-                        id="disable-code"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        maxLength={10}
-                        value={disableCode}
-                        onChange={(event) => setDisableCode(event.target.value)}
-                        placeholder="123456"
-                        autoComplete="one-time-code"
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button type="submit" variant="destructive" disabled={busy}>
-                        Disable MFA
-                      </Button>
-                      <Button type="button" variant="outline" disabled={busy} onClick={() => void refreshStatus()}>
-                        Refresh status
-                      </Button>
-                    </div>
-                  </form>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      <Footer />
-    </div>
-  )
-}
-
-// Login Component with shadcn/ui
-interface LoginViewProps {
-  onAuthenticated?: () => void
-}
-
-const LoginView: React.FC<LoginViewProps & { announcements?: Announcement[] }> = ({
-  onAuthenticated,
-  announcements = []
-}) => {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [mfaCode, setMfaCode] = useState('')
-  const [mfaRequired, setMfaRequired] = useState(false)
-  const [isRegistering, setIsRegistering] = useState(false)
-  const [registrationEnabled, setRegistrationEnabled] = useState(true)
-  const [passwordStrength, setPasswordStrength] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let isActive = true
-
-    if (typeof window !== 'undefined' && (window as any).__LEAFLOCK_REGISTRATION__ !== undefined) {
-      const enabled = Boolean((window as any).__LEAFLOCK_REGISTRATION__)
-      setRegistrationEnabled(enabled)
-      if (!enabled) {
-        setIsRegistering(false)
-      }
-      return
-    }
-
-    ;(async () => {
-      try {
-        const status = await api.getRegistrationStatus()
-        if (!isActive) return
-        if (typeof status?.enabled === 'boolean') {
-          setRegistrationEnabled(status.enabled)
-          if (!status.enabled) {
-            setIsRegistering(false)
-          }
-        }
-      } catch (err) {
-        console.warn('⚠️ Failed to load registration status', err)
-      }
-    })()
-
-    return () => {
-      isActive = false
-    }
-  }, [])
-
-  const calculatePasswordStrength = (pwd: string): number => {
-    let strength = 0
-    if (pwd.length >= 12) strength++
-    if (pwd.length >= 16) strength++
-    if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) strength++
-    if (/[0-9]/.test(pwd)) strength++
-    if (/[^A-Za-z0-9]/.test(pwd)) strength++
-    return strength
-  }
-
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const pwd = e.target.value
-    setPassword(pwd)
-    setPasswordStrength(calculatePasswordStrength(pwd))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setLoading(true)
-
-    try {
-      console.log('🔐 Starting authentication...', {
-        mode: isRegistering ? 'REGISTRATION' : 'LOGIN',
-        isRegistering,
-        email,
-        hasPassword: !!password,
-        passwordLength: password?.length,
-      })
-
-      // Ensure sodium is ready
-      await cryptoService.initSodium()
-      console.log('✅ Sodium initialized')
-
-      if (isRegistering) {
-        if (!registrationEnabled) {
-          setError('Registration is currently disabled')
-          return
-        }
-        console.log('🔄 REGISTRATION MODE - Validating inputs...')
-        if (password.length < 12) {
-          setError('Password must be at least 12 characters for registration')
-          return
-        }
-
-        console.log('📝 Attempting registration with email:', email)
-        const response = await api.register(email, password)
-        console.log('✅ Registration successful:', {
-          userId: response.user_id,
-          hasToken: !!response.token,
-        })
-
-        // For registration, generate a salt and store it
-        const salt = await cryptoService.generateSalt()
-        const saltBase64 = btoa(String.fromCharCode(...salt))
-        localStorage.setItem('user_salt', saltBase64)
-        console.log('🧂 Generated and stored salt for new user')
-
-        const key = await cryptoService.deriveKeyFromPassword(password, salt)
-        await cryptoService.setMasterKey(key)
-        console.log('🔑 Master key derived and set')
-
-        // Notify parent we're authenticated without hard reload
-        onAuthenticated?.()
-      } else {
-        console.log('🔑 LOGIN MODE - Attempting login with email:', email)
-        const response = await api.login(email, password, mfaCode)
-        console.log('✅ Login API successful:', { hasToken: !!response.token })
-
-        if (response.mfa_required) {
-          console.log('🔒 MFA required')
-          setMfaRequired(true)
-          return
-        }
-
-        // For login, try to get stored salt or generate a new one
-        let salt: Uint8Array
-        const storedSalt = localStorage.getItem('user_salt')
-        if (storedSalt) {
-          const saltString = atob(storedSalt)
-          salt = new Uint8Array(saltString.split('').map((char) => char.charCodeAt(0)))
-          console.log('🧂 Using stored salt')
-        } else {
-          salt = await cryptoService.generateSalt()
-          const saltBase64 = btoa(String.fromCharCode(...salt))
-          localStorage.setItem('user_salt', saltBase64)
-          console.log('🧂 Generated new salt (no stored salt found)')
-        }
-
-        const key = await cryptoService.deriveKeyFromPassword(password, salt)
-        await cryptoService.setMasterKey(key)
-        console.log('🔑 Master key derived and set')
-
-        // Notify parent we're authenticated without hard reload
-        onAuthenticated?.()
-      }
-    } catch (err) {
-      console.error('💥 Authentication failed:', {
-        mode: isRegistering ? 'REGISTRATION' : 'LOGIN',
-        error: (err as Error).message,
-        fullError: err,
-      })
-
-      // Provide context-aware error messages
-      let errorMessage = (err as Error).message
-      if (!errorMessage) {
-        errorMessage = isRegistering
-          ? 'Registration failed. Please check your email and password.'
-          : 'Login failed. Please check your credentials.'
-      }
-
-      // Special handling for common errors
-      if (errorMessage.includes('Invalid credentials') && isRegistering) {
-        errorMessage = 'Registration failed. Please try a different email address.'
-      }
-
-      setError(errorMessage)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Filter announcements for public visibility (login/register page)
-  const publicAnnouncements = announcements.filter(a => a.visibility === 'all')
-
-  return (
-    <div className="h-screen overflow-y-auto bg-background flex flex-col items-center justify-center p-4">
-      {/* Announcements */}
-      {publicAnnouncements.length > 0 && (
-        <div className="w-full max-w-md mb-4">
-          <AnnouncementBanner announcements={publicAnnouncements} />
-        </div>
-      )}
-
-      {/* Documentation Info Alert */}
-      <Alert className="w-full max-w-md mb-3 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
-        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-        <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
-          <a
-            href="https://docs.leaflock.app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 underline hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
-          >
-            <Book className="h-3 w-3" />
-            Documentation
-          </a>{' '}
-          • Setup guides & security features
-        </AlertDescription>
-      </Alert>
-
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            <div className="flex items-center space-x-2">
-              <Lock className="h-8 w-8 text-primary" />
-              <CardTitle className="text-2xl">LeafLock</CardTitle>
-            </div>
-          </div>
-          <CardDescription className="text-center">
-            Your secure note-taking application
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="username email"
-                autoCapitalize="none"
-                autoCorrect="off"
-                inputMode="email"
-                placeholder="Enter your email"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                value={password}
-                onChange={handlePasswordChange}
-                required
-                minLength={12}
-                autoComplete={isRegistering ? 'new-password' : 'current-password'}
-                placeholder="Enter your password"
-              />
-              {isRegistering && (
-                <div className="space-y-2">
-                  <div
-                    className="flex space-x-1"
-                    role="progressbar"
-                    aria-valuenow={passwordStrength}
-                    aria-valuemax={5}
-                  >
-                    {[...Array(5)].map((_, i) => (
-                      <div
-                        key={i}
-                        className={`h-2 flex-1 rounded ${
-                          i < passwordStrength
-                            ? passwordStrength <= 2
-                              ? 'bg-destructive'
-                              : passwordStrength <= 3
-                                ? 'bg-yellow-500'
-                                : 'bg-green-500'
-                            : 'bg-muted'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Use 12+ characters with mixed case, numbers & symbols
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {mfaRequired && (
-              <div className="space-y-2">
-                <Label htmlFor="mfa">2FA Code</Label>
-                <Input
-                  id="mfa"
-                  name="code"
-                  type="text"
-                  value={mfaCode}
-                  onChange={(e) => setMfaCode(e.target.value)}
-                  placeholder="000000"
-                  maxLength={6}
-                  required={mfaRequired}
-                  autoComplete="one-time-code"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Enter the 6-digit code from your authenticator app
-                </p>
-              </div>
-            )}
-
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Processing...' : isRegistering ? 'Create Account' : 'Login'}
-            </Button>
-
-            {registrationEnabled ? (
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full"
-                onClick={() => {
-                  setIsRegistering(!isRegistering)
-                  setError(null)
-                  setMfaRequired(false)
-                }}
-              >
-                {isRegistering ? 'Already have an account? Login' : 'Need an account? Register'}
-              </Button>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center">
-                Registration is currently disabled
-              </p>
-            )}
-          </form>
-        </CardContent>
-      </Card>
-      <div className="mt-4 text-center text-sm text-muted-foreground">
-        <a
-          href="https://github.com/RelativeSure/notes/discussions"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1 hover:underline"
-        >
-          <MessageSquare className="w-4 h-4" /> Join GitHub Discussions
-        </a>
-      </div>
-
-      <Footer variant="minimal" />
-    </div>
-  )
-}
-
 // Main App Component
 function SecureNotesApp() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -1923,244 +987,6 @@ function SecureNotesApp() {
     console.log('✅ Complete logout finished')
   }, [])
 
-  // Template handlers
-  const handleTemplateSelect = useCallback(async (template: Template) => {
-    try {
-      // Use the templatesService to create a note from the template
-      const response = await api.request('/templates/' + template.id + '/use', {
-        method: 'POST',
-        body: JSON.stringify({
-          title: `${template.name} - ${new Date().toLocaleDateString()}`,
-        }),
-      })
-
-      console.log('✅ Note created from template:', response)
-
-      // Close the template selector
-      setShowTemplateSelector(false)
-
-      // Reload notes to show the new note
-      await loadNotes()
-
-      // Find and select the new note
-      const newNote = notes.find(n => n.id === response.id)
-      if (newNote) {
-        setSelectedNote(newNote)
-        setCurrentView('editor')
-      }
-    } catch (err) {
-      console.error('Failed to create note from template:', err)
-      setError(err instanceof Error ? err.message : 'Failed to create note from template')
-    }
-  }, [api, notes])
-
-  // Set up API unauthorized callback
-  useEffect(() => {
-    api.setUnauthorizedCallback(handleLogout)
-  }, [handleLogout])
-
-  // Periodic admin re-check while authenticated
-  useEffect(() => {
-    if (!isAuthenticated) return
-    let mounted = true
-    const tick = async () => {
-      try {
-        const ok = await api.adminHealth()
-        if (!mounted) return
-        if (ok !== isAdmin) {
-          setIsAdmin(!!ok)
-          if (!ok && currentView === 'admin') {
-            setCurrentView('notes')
-          }
-        }
-      } catch {
-        if (isAdmin && currentView === 'admin') {
-          setCurrentView('notes')
-        }
-        setIsAdmin(false)
-      }
-    }
-    const id = setInterval(tick, 15000)
-    tick()
-    return () => {
-      mounted = false
-      clearInterval(id)
-    }
-  }, [isAuthenticated, isAdmin, currentView])
-
-  useEffect(() => {
-    // Check if user has a valid session
-    const initializeApp = async () => {
-      try {
-        console.log('🚀 Starting app initialization...')
-        const token = localStorage.getItem('secure_token')
-        // Backfill current_user_id from JWT if missing
-        if (token && !localStorage.getItem('current_user_id')) {
-          try {
-            const payload = JSON.parse(atob(token.split('.')[1] || ''))
-            if (payload && typeof payload.user_id === 'string') {
-              localStorage.setItem('current_user_id', payload.user_id)
-            }
-          } catch (err) {
-            // ignore payload parsing failures; setup continues without cached id
-          }
-        }
-        if (token) {
-          console.log('🔐 Found stored token, validating...')
-
-          // Validate token with backend before trusting it (with timeout)
-          let isValid = false
-          try {
-            console.log('🔍 Validating token with 3-second timeout...')
-            const timeoutPromise = new Promise<boolean>((_, reject) =>
-              setTimeout(() => reject(new Error('Validation timeout')), 3000)
-            )
-            isValid = await Promise.race([api.validateToken(), timeoutPromise])
-          } catch (err) {
-            console.warn('⚠️ Token validation failed:', err)
-            // If validation fails (network error, timeout, etc.), treat as invalid
-            isValid = false
-          }
-
-          if (isValid) {
-            console.log('✅ Token valid, checking encryption key...')
-            // Probe admin status via admin health endpoint (403 for non-admins)
-            try {
-              const adminOk = await api.adminHealth()
-              setIsAdmin(!!adminOk)
-            } catch {
-              setIsAdmin(false)
-            }
-
-            // Check if we have the master key - if not, user needs to re-enter password
-            if (!cryptoService.masterKey) {
-              console.log('🔐 No master key - user needs to re-enter password')
-              setIsAuthenticated(true)
-              setCurrentView('unlock') // New view for password re-entry
-              setEncryptionStatus('locked')
-            } else {
-              console.log('🔑 Master key found, initializing app...')
-              setIsAuthenticated(true)
-              setCurrentView('notes')
-              setEncryptionStatus('unlocked')
-
-              // Load notes but don't wait for it to avoid hanging
-              loadNotes().catch((err) => {
-                console.error('Failed to load notes during init:', err)
-              })
-
-              // Check if user needs onboarding
-              const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding')
-              if (!hasSeenOnboarding) {
-                setShowOnboarding(true)
-              }
-            }
-          } else {
-            console.log('❌ Token invalid, clearing and redirecting to login')
-            // Don't call handleLogout here as it might cause loops
-            api.clearToken()
-            localStorage.removeItem('user_salt')
-            cryptoService.masterKey = null
-            setIsAuthenticated(false)
-            setCurrentView('login')
-            setEncryptionStatus('locked')
-          }
-        } else {
-          console.log('ℹ️ No stored token found - showing login')
-          setIsAuthenticated(false)
-          setCurrentView('login')
-          setEncryptionStatus('locked')
-        }
-      } catch (err) {
-        console.error('💥 Failed to initialize app:', err)
-        setError('Failed to initialize application')
-        // Clear state without calling handleLogout
-        setIsAuthenticated(false)
-        setCurrentView('login')
-        setEncryptionStatus('locked')
-      } finally {
-        console.log('🏁 App initialization complete, setting initializing = false')
-        setInitializing(false)
-        console.log('✅ setInitializing(false) called')
-      }
-    }
-
-    initializeApp()
-  }, []) // Remove handleLogout dependency to prevent loops
-
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle shortcuts when authenticated and not in onboarding
-      if (!isAuthenticated || showOnboarding) return
-
-      // Cmd/Ctrl + N: New note
-      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
-        e.preventDefault()
-        setSelectedNote({
-          id: '',
-          title: '',
-          content: '',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        setCurrentView('editor')
-      }
-
-      // Cmd/Ctrl + K: Search notes (focus search)
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        const searchInput = document.getElementById('search-notes')
-        if (searchInput) {
-          searchInput.focus()
-        }
-      }
-
-      // Escape: Close current view/go back
-      if (e.key === 'Escape') {
-        if (selectedNote || currentView === 'editor') {
-          setSelectedNote(null)
-          setCurrentView('notes')
-        }
-      }
-
-      // Cmd/Ctrl + S: Manual save (if in editor)
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-        e.preventDefault()
-        if (selectedNote || currentView === 'editor') {
-          // Trigger save if we're in the editor
-          const saveButton = document.querySelector('[data-save-action]') as HTMLButtonElement
-          if (saveButton) {
-            saveButton.click()
-          }
-        }
-      }
-
-      // Arrow navigation in notes list
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        const noteButtons = document.querySelectorAll(
-          '[data-note-button]'
-        ) as NodeListOf<HTMLElement>
-        const currentIndex = Array.from(noteButtons).findIndex(
-          (btn) => btn === document.activeElement
-        )
-
-        if (currentIndex !== -1) {
-          e.preventDefault()
-          let nextIndex
-          if (e.key === 'ArrowDown') {
-            nextIndex = Math.min(currentIndex + 1, noteButtons.length - 1)
-          } else {
-            nextIndex = Math.max(currentIndex - 1, 0)
-          }
-          noteButtons[nextIndex]?.focus()
-        }
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isAuthenticated, showOnboarding, selectedNote, currentView])
 
   const loadNotes = async () => {
     try {
@@ -2216,6 +1042,34 @@ function SecureNotesApp() {
     }
   }
 
+  const handleUnlockWithPassword = useCallback(
+    async (password: string) => {
+      const trimmed = password.trim()
+      if (!trimmed) {
+        throw new Error('Password is required')
+      }
+
+      const storedSalt = localStorage.getItem('user_salt')
+      if (!storedSalt) {
+        throw new Error('No stored salt found - please log in again')
+      }
+
+      try {
+        const salt = new Uint8Array(Array.from(atob(storedSalt), (c) => c.charCodeAt(0)))
+        const key = await cryptoService.deriveKeyFromPassword(trimmed, salt)
+        await cryptoService.setMasterKey(key)
+
+        setCurrentView('notes')
+        setEncryptionStatus('unlocked')
+        await loadNotes()
+      } catch (error) {
+        console.error('💥 Failed to unlock with provided password:', error)
+        throw (error instanceof Error ? error : new Error('Failed to unlock notes'))
+      }
+    },
+    [loadNotes]
+  )
+
   const handleRestoreNote = async (noteId: string) => {
     try {
       console.log('♻️ Restoring note:', noteId)
@@ -2253,6 +1107,122 @@ function SecureNotesApp() {
       setNotesError((err as Error).message || 'Failed to permanently delete note')
     }
   }
+
+  const handleTemplateSelect = useCallback(
+    async (template: Template) => {
+      try {
+        const response = await api.request('/templates/' + template.id + '/use', {
+          method: 'POST',
+          body: JSON.stringify({
+            title: `${template.name} - ${new Date().toLocaleDateString()}`,
+          }),
+        })
+
+        console.log('✅ Note created from template:', response)
+
+        setShowTemplateSelector(false)
+        await loadNotes()
+
+        const newNote = notes.find((note) => note.id === response.id)
+        if (newNote) {
+          setSelectedNote(newNote)
+          setCurrentView('editor')
+        }
+      } catch (err) {
+        console.error('Failed to create note from template:', err)
+        setError(err instanceof Error ? err.message : 'Failed to create note from template')
+      }
+    },
+    [api, loadNotes, notes]
+  )
+
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        console.log('🚀 Starting app initialization...')
+        const token = getStoredAuthToken()
+        if (token && !localStorage.getItem('current_user_id')) {
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1] || ''))
+            if (payload && typeof payload.user_id === 'string') {
+              localStorage.setItem('current_user_id', payload.user_id)
+            }
+          } catch (err) {
+            // ignore payload parsing failures; setup continues without cached id
+          }
+        }
+        if (token) {
+          console.log('🔐 Found stored token, validating...')
+
+          let isValid = false
+          try {
+            console.log('🔍 Validating token with 3-second timeout...')
+            const timeoutPromise = new Promise<boolean>((_, reject) =>
+              setTimeout(() => reject(new Error('Validation timeout')), 3000)
+            )
+            isValid = await Promise.race([api.validateToken(), timeoutPromise])
+          } catch (err) {
+            console.warn('⚠️ Token validation failed:', err)
+            isValid = false
+          }
+
+          if (isValid) {
+            console.log('✅ Token valid, checking encryption key...')
+            try {
+              const adminOk = await api.adminHealth()
+              setIsAdmin(!!adminOk)
+            } catch {
+              setIsAdmin(false)
+            }
+
+            if (!cryptoService.masterKey) {
+              console.log('🔐 No master key - user needs to re-enter password')
+              setIsAuthenticated(true)
+              setCurrentView('unlock')
+              setEncryptionStatus('locked')
+            } else {
+              console.log('🔑 Master key found, initializing app...')
+              setIsAuthenticated(true)
+              setCurrentView('notes')
+              setEncryptionStatus('unlocked')
+              loadNotes().catch((err) => {
+                console.error('Failed to load notes during init:', err)
+              })
+              const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding')
+              if (!hasSeenOnboarding) {
+                setShowOnboarding(true)
+              }
+            }
+          } else {
+            console.log('❌ Token invalid, clearing and redirecting to login')
+            api.clearToken()
+            localStorage.removeItem('user_salt')
+            cryptoService.masterKey = null
+            setIsAuthenticated(false)
+            setCurrentView('login')
+            setEncryptionStatus('locked')
+          }
+        } else {
+          console.log('ℹ️ No stored token found - showing login')
+          setIsAuthenticated(false)
+          setCurrentView('login')
+          setEncryptionStatus('locked')
+        }
+      } catch (err) {
+        console.error('💥 Failed to initialize app:', err)
+        setError('Failed to initialize application')
+        setIsAuthenticated(false)
+        setCurrentView('login')
+        setEncryptionStatus('locked')
+      } finally {
+        console.log('🏁 App initialization complete, setting initializing = false')
+        setInitializing(false)
+        console.log('✅ setInitializing(false) called')
+      }
+    }
+
+    void initializeApp()
+  }, [])
 
   const handleOnboardingNext = () => {
     setOnboardingStep((prev) => prev + 1)
@@ -2453,22 +1423,7 @@ function SecureNotesApp() {
             <div className="flex items-center">
               {saving && (
                 <span className="flex items-center">
-                  <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
+                  <Spinner className="mr-2 h-4 w-4" aria-hidden="true" />
                   <span>Saving...</span>
                   <span className="sr-only">Your note is being saved</span>
                 </span>
@@ -2521,7 +1476,7 @@ function SecureNotesApp() {
 
         {saveError && (
           <div className="px-6 py-2">
-            <ErrorBoundary
+            <ErrorNotice
               error={saveError}
               onRetry={handleSave}
               onDismiss={() => setSaveError(null)}
@@ -2662,7 +1617,7 @@ function SecureNotesApp() {
         <div className="flex-1 overflow-y-auto" role="list" aria-label="Notes">
           {notesError ? (
             <div className="p-4">
-              <ErrorBoundary
+              <ErrorNotice
                 error={notesError}
                 onRetry={() => loadNotes()}
                 onDismiss={() => setNotesError(null)}
@@ -3132,123 +2087,7 @@ function SecureNotesApp() {
     return <LoadingOverlay message="Starting LeafLock" />
   }
 
-  // Unlock View - for when user is authenticated but master key is missing
-  const UnlockView: React.FC = () => {
-    const [password, setPassword] = useState('')
-    const [unlocking, setUnlocking] = useState(false)
-    const [unlockError, setUnlockError] = useState<string | null>(null)
-
-    const handleUnlock = async (e: React.FormEvent) => {
-      e.preventDefault()
-      if (!password.trim()) return
-
-      setUnlocking(true)
-      setUnlockError(null)
-
-      try {
-        console.log('🔓 Attempting to unlock with re-entered password...')
-
-        // Get the stored salt
-        const storedSalt = localStorage.getItem('user_salt')
-        if (!storedSalt) {
-          throw new Error('No stored salt found - please log in again')
-        }
-
-        const salt = new Uint8Array(Array.from(atob(storedSalt), (c) => c.charCodeAt(0)))
-        const key = await cryptoService.deriveKeyFromPassword(password, salt)
-        await cryptoService.setMasterKey(key)
-
-        console.log('🔑 Master key restored successfully')
-        setCurrentView('notes')
-        setEncryptionStatus('unlocked')
-        await loadNotes()
-      } catch (err) {
-        console.error('💥 Failed to unlock:', err)
-        setUnlockError((err as Error).message || 'Invalid password')
-      } finally {
-        setUnlocking(false)
-      }
-    }
-
     return (
-      <div className="min-h-screen bg-gray-900 flex flex-col">
-        <div className="flex-1 flex items-center justify-center px-4">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <svg
-              className="mx-auto h-12 w-12 text-red-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
-            </svg>
-            <h2 className="mt-6 text-3xl font-bold text-white">Locked</h2>
-            <p className="mt-2 text-sm text-gray-400">
-              Your session is valid but your notes are locked. Enter your password to decrypt your
-              notes.
-            </p>
-          </div>
-
-          <form className="mt-8 space-y-6" onSubmit={handleUnlock}>
-            <div>
-              <label
-                htmlFor="unlock-password"
-                className="block text-sm font-medium text-gray-300 mb-2"
-              >
-                Password
-              </label>
-              <input
-                id="unlock-password"
-                name="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors"
-                placeholder="Enter your password"
-                required
-                autoComplete="current-password"
-                autoFocus
-              />
-            </div>
-
-            {unlockError && (
-              <div className="bg-red-900/50 border border-red-600 rounded-lg p-3" role="alert">
-                <p className="text-red-200 text-sm">{unlockError}</p>
-              </div>
-            )}
-
-            <div className="flex space-x-4">
-              <button
-                type="submit"
-                disabled={unlocking || !password.trim()}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg transition duration-200"
-              >
-                {unlocking ? 'Unlocking...' : 'Unlock Notes'}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="px-4 py-2 text-gray-400 hover:text-white text-sm transition-colors"
-              >
-                Logout
-              </button>
-            </div>
-          </form>
-        </div>
-        </div>
-        <Footer />
-      </div>
-    )
-  }
-
-  return (
     <>
       {isAuthenticated && encryptionStatus === 'unlocked' && currentView === 'settings' ? (
         <SettingsPage api={api} onBack={() => setCurrentView('notes')} onLogout={handleLogout} />
@@ -3279,9 +2118,11 @@ function SecureNotesApp() {
           <AppLayout />
         </>
       ) : isAuthenticated && currentView === 'unlock' ? (
-        <UnlockView />
+        <UnlockView onUnlock={handleUnlockWithPassword} onLogout={handleLogout} />
       ) : (
         <LoginView
+          api={api}
+          cryptoService={cryptoService}
           announcements={announcements}
           onAuthenticated={async () => {
             // User has a valid token and master key; transition to notes

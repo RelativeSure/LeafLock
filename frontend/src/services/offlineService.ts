@@ -1,3 +1,5 @@
+import { getStoredAuthToken } from '@/utils/auth'
+
 /**
  * Offline service for managing PWA functionality and offline data
  */
@@ -308,13 +310,18 @@ class OfflineService {
       for (const note of offlineNotes) {
         try {
           // Attempt to sync note
+          const token = getStoredAuthToken()
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': localStorage.getItem('csrf_token') || ''
+          }
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`
+          }
+
           const response = await fetch(`/api/v1/notes/${note.id}`, {
             method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-              'X-CSRF-Token': localStorage.getItem('csrf_token') || ''
-            },
+            headers,
             body: JSON.stringify({
               title_encrypted: note.title,
               content_encrypted: note.content

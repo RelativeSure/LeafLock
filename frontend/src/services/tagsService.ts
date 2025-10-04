@@ -1,4 +1,5 @@
 import { resolveApiBaseUrl } from '@/utils/network'
+import { getStoredAuthToken } from '@/utils/auth'
 
 /**
  * Tags service for managing note tags
@@ -43,7 +44,7 @@ class TagsService {
   }
 
   private getAuthHeaders(): Record<string, string> {
-    const token = localStorage.getItem('auth_token')
+    const token = getStoredAuthToken()
     const csrfToken = localStorage.getItem('csrf_token')
 
     const headers: Record<string, string> = {

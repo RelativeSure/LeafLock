@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { getStoredAuthToken, persistAuthToken, clearStoredAuthToken } from './utils/auth'
 
 // Mock fetch globally
 global.fetch = vi.fn()
@@ -22,7 +23,7 @@ global.cryptoService = mockCryptoService
 class SecureAPI {
   constructor(baseURL = '/api/v1') {
     this.baseURL = baseURL
-    this.token = localStorage.getItem('secure_token')
+    this.token = getStoredAuthToken()
     this.onUnauthorized = null
   }
 
@@ -77,12 +78,12 @@ class SecureAPI {
 
   setToken(token) {
     this.token = token
-    localStorage.setItem('secure_token', token)
+    persistAuthToken(token)
   }
 
   clearToken() {
     this.token = null
-    localStorage.removeItem('secure_token')
+    clearStoredAuthToken()
   }
 
   async register(email, password) {
@@ -163,7 +164,7 @@ class SecureAPI {
   }
 
   async getTrash() {
-    const response = await this.request('/trash')
+    const response = await this.request('/notes/trash')
     const trashedNotes = response.notes || response || []
 
     const decryptedNotes = await Promise.all(
@@ -182,13 +183,13 @@ class SecureAPI {
   }
 
   async restoreNote(noteId) {
-    return this.request(`/trash/${noteId}/restore`, {
-      method: 'PUT',
+    return this.request(`/notes/${noteId}/restore`, {
+      method: 'POST',
     })
   }
 
   async permanentlyDeleteNote(noteId) {
-    return this.request(`/trash/${noteId}`, {
+    return this.request(`/notes/${noteId}/permanent`, {
       method: 'DELETE',
     })
   }
@@ -199,7 +200,7 @@ describe('SecureAPI', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    localStorageMock.getItem.mockReturnValue(null)
+    localStorageMock.getItem.mockImplementation(() => null)
     api = new SecureAPI()
   })
 
@@ -223,6 +224,18 @@ describe('SecureAPI', () => {
       expect(tokenAPI.token).toBe('test-token')
       expect(localStorageMock.getItem).toHaveBeenCalledWith('secure_token')
     })
+
+    it('should migrate legacy auth_token storage', () => {
+      localStorageMock.getItem.mockImplementation((key) =>
+        key === 'auth_token' ? 'legacy-token' : null
+      )
+
+      const tokenAPI = new SecureAPI()
+
+      expect(tokenAPI.token).toBe('legacy-token')
+      expect(localStorageMock.setItem).toHaveBeenCalledWith('secure_token', 'legacy-token')
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token')
+    })
   })
 
   describe('Token Management', () => {
@@ -232,6 +245,7 @@ describe('SecureAPI', () => {
 
       expect(api.token).toBe(token)
       expect(localStorageMock.setItem).toHaveBeenCalledWith('secure_token', token)
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token')
     })
 
     it('should clear token and remove from localStorage', () => {
@@ -240,6 +254,7 @@ describe('SecureAPI', () => {
 
       expect(api.token).toBeNull()
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('secure_token')
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token')
     })
   })
 
@@ -307,6 +322,7 @@ describe('SecureAPI', () => {
       expect(api.token).toBeNull()
       expect(unauthorizedCallback).toHaveBeenCalled()
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('secure_token')
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token')
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('user_salt')
     })
   })
@@ -538,7 +554,7 @@ describe('SecureAPI', () => {
 
       const result = await api.getTrash()
 
-      expect(fetch).toHaveBeenCalledWith('/api/v1/trash', expect.any(Object))
+      expect(fetch).toHaveBeenCalledWith('/api/v1/notes/trash', expect.any(Object))
       expect(result).toHaveLength(1)
       expect(result[0]).toEqual({
         id: 'trash-1',
@@ -559,8 +575,8 @@ describe('SecureAPI', () => {
 
       const result = await api.restoreNote('note-123')
 
-      expect(fetch).toHaveBeenCalledWith('/api/v1/trash/note-123/restore', {
-        method: 'PUT',
+      expect(fetch).toHaveBeenCalledWith('/api/v1/notes/note-123/restore', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: 'Bearer test-token',
@@ -580,7 +596,7 @@ describe('SecureAPI', () => {
 
       const result = await api.permanentlyDeleteNote('note-123')
 
-      expect(fetch).toHaveBeenCalledWith('/api/v1/trash/note-123', {
+      expect(fetch).toHaveBeenCalledWith('/api/v1/notes/note-123/permanent', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

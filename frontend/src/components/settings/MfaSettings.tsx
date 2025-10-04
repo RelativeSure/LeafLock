@@ -16,18 +16,13 @@ import { MfaSetupDialog } from '../auth/MfaSetupDialog'
 import { TotpInput } from '../auth/TotpInput'
 import { MfaBackupCodes } from '../auth/MfaBackupCodes'
 import { Shield, ShieldCheck, ShieldAlert, Key, RefreshCw, Loader2 } from 'lucide-react'
+import type { MfaSetup, MfaStatus } from '@/lib/schemas'
 
 interface MfaSettingsProps {
-  // API methods - implement these in your ApiClient
-  onGetMfaStatus: () => Promise<{ enabled: boolean; has_secret: boolean }>
-  onBeginMfaSetup: () => Promise<{
-    secret: string
-    otpauth_url: string
-    issuer?: string
-    account?: string
-  }>
-  onEnableMfa: (code: string) => Promise<{ backup_codes?: string[] }>
-  onDisableMfa: (code: string) => Promise<{ enabled: boolean }>
+  onGetMfaStatus: () => Promise<MfaStatus>
+  onBeginMfaSetup: () => Promise<MfaSetup>
+  onEnableMfa: (code: string) => Promise<MfaStatus & { backup_codes?: string[] }>
+  onDisableMfa: (code: string) => Promise<MfaStatus>
   onGetBackupCodes: () => Promise<{ total: number; remaining: number }>
   onRegenerateBackupCodes: (password: string) => Promise<{ codes: string[] }>
 }
@@ -46,7 +41,7 @@ export function MfaSettings({
 
   // Setup dialog state
   const [setupDialogOpen, setSetupDialogOpen] = useState(false)
-  const [setupData, setSetupData] = useState<any>(null)
+  const [setupData, setSetupData] = useState<MfaSetup | null>(null)
 
   // Disable MFA dialog state
   const [disableDialogOpen, setDisableDialogOpen] = useState(false)

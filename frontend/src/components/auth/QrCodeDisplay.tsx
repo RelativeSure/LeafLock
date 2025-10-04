@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { QRCodeSVG } from 'qrcode.react'
+import { useMemo, useState } from 'react'
+import QRCode from 'react-qr-code'
 import { Copy, Check } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Card, CardContent } from '../ui/card'
@@ -20,6 +20,15 @@ export function QrCodeDisplay({
 }: QrCodeDisplayProps) {
   const [copied, setCopied] = useState(false)
 
+  const qrSize = 200
+  const qrStyle = useMemo(
+    () => ({
+      height: `${qrSize}px`,
+      width: `${qrSize}px`,
+    }),
+    [qrSize]
+  )
+
   const copySecret = async () => {
     try {
       await navigator.clipboard.writeText(secret)
@@ -35,13 +44,14 @@ export function QrCodeDisplay({
       <Card className="border-2">
         <CardContent className="pt-6">
           <div className="flex justify-center p-4">
-            <QRCodeSVG
-              value={otpauthUrl}
-              size={200}
-              level="H"
-              includeMargin={true}
-              className="border-4 border-background rounded"
-            />
+            <div className="border-4 border-background rounded bg-background p-2">
+              <QRCode
+                value={otpauthUrl}
+                size={qrSize}
+                level="H"
+                style={qrStyle}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

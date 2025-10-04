@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Badge } from './ui/badge'
 import { Label } from './ui/label'
 import { tagsService, Tag, CreateTagRequest } from '../services/tagsService'
+import { Spinner } from '@/components/ui/spinner'
 
 interface TagsManagerProps {
   onClose?: () => void
@@ -98,7 +99,7 @@ export const TagsManager: React.FC<TagsManagerProps> = ({ onClose, onTagsChange 
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            <Spinner className="h-6 w-6 text-primary" />
           </div>
         </CardContent>
       </Card>
@@ -179,7 +180,7 @@ export const TagsManager: React.FC<TagsManagerProps> = ({ onClose, onTagsChange 
           >
             {isCreating ? (
               <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <Spinner className="h-4 w-4 text-white" aria-hidden="true" />
                 Creating...
               </div>
             ) : (
