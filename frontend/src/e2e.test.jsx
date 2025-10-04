@@ -16,7 +16,7 @@ vi.mock('libsodium-wrappers', () => mockSodium)
 
 // Import React and the component AFTER setting up the mock
 import React from 'react'
-import SecureNotesApp from './App.jsx'
+import LeafLockApp from './App.jsx'
 
 // Mock fetch globally
 global.fetch = mockFetch
@@ -73,7 +73,7 @@ describe('End-to-End User Flows', () => {
         })
       )
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Step 1: Register a new account
       expect(screen.getByText('LeafLock')).toBeInTheDocument()
@@ -134,7 +134,7 @@ describe('End-to-End User Flows', () => {
       // Mock registration failure
       mockFetch.mockResolvedValueOnce(mockApiError(409, 'Email already registered'))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       await user.click(screen.getByText(/need an account\? register/i))
       await user.type(screen.getByLabelText(/email/i), 'existing@example.com')
@@ -207,7 +207,7 @@ describe('End-to-End User Flows', () => {
         })
       )
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Step 1: Login
       await user.type(screen.getByLabelText(/email/i), 'user@example.com')
@@ -294,7 +294,7 @@ describe('End-to-End User Flows', () => {
       // Mock notes load
       mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: [] }))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Step 1: Initial login attempt
       await user.type(screen.getByLabelText(/email/i), 'mfauser@example.com')
@@ -337,7 +337,7 @@ describe('End-to-End User Flows', () => {
         })
       )
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Should skip login and go directly to notes view
       await waitFor(() => {
@@ -368,7 +368,7 @@ describe('End-to-End User Flows', () => {
       // Mock expired token response
       mockFetch.mockResolvedValueOnce(mockApiError(401, 'Token expired'))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Should detect expired token and redirect to login
       await waitFor(() => {
@@ -386,7 +386,7 @@ describe('End-to-End User Flows', () => {
       mockLocalStorage.getItem.mockReturnValue('user-token')
       mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: [] }))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       await waitFor(() => {
         expect(screen.getByText(/encryption active/i)).toBeInTheDocument()
@@ -412,7 +412,7 @@ describe('End-to-End User Flows', () => {
       // Mock network error
       mockFetch.mockRejectedValueOnce(new Error('Failed to fetch'))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       await user.type(screen.getByLabelText(/email/i), 'user@example.com')
       await user.type(screen.getByLabelText(/password/i), 'Password123!')
@@ -435,7 +435,7 @@ describe('End-to-End User Flows', () => {
       // Mock server error when loading notes
       mockFetch.mockResolvedValueOnce(mockApiError(500, 'Internal server error'))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       await waitFor(() => {
         expect(screen.getByText(/failed to load notes/i)).toBeInTheDocument()
@@ -456,7 +456,7 @@ describe('End-to-End User Flows', () => {
         .mockResolvedValueOnce(mockApiError(500, 'Server error'))
         .mockResolvedValueOnce(mockApiResponse({ notes: [] }))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Should show error initially
       await waitFor(() => {
@@ -490,7 +490,7 @@ describe('End-to-End User Flows', () => {
       // Mock note creation
       mockFetch.mockResolvedValueOnce(mockApiResponse({ id: 'note-1' }))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Login
       await user.type(screen.getByLabelText(/email/i), 'user@example.com')
@@ -552,7 +552,7 @@ describe('End-to-End User Flows', () => {
         throw new Error('Encryption failed')
       })
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       await waitFor(() => {
         expect(screen.getByText(/encryption active/i)).toBeInTheDocument()
@@ -583,7 +583,7 @@ describe('End-to-End User Flows', () => {
       })
       mockFetch.mockReturnValueOnce(slowLogin)
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       await user.type(screen.getByLabelText(/email/i), 'user@example.com')
       await user.type(screen.getByLabelText(/password/i), 'Password123!')
@@ -606,7 +606,7 @@ describe('End-to-End User Flows', () => {
       mockLocalStorage.getItem.mockReturnValue('user-token')
       mockFetch.mockResolvedValue(mockApiResponse({ notes: [] }))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       await waitFor(() => {
         expect(screen.getByText(/encryption active/i)).toBeInTheDocument()
@@ -644,7 +644,7 @@ describe('End-to-End User Flows', () => {
         })
       )
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       await waitFor(() => {
         expect(screen.getByText('Note 1')).toBeInTheDocument()

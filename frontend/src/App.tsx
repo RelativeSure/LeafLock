@@ -936,7 +936,7 @@ const ThemeToggle: React.FC = () => {
 }
 
 // Main App Component
-function SecureNotesApp() {
+function LeafLockApp() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [currentView, setCurrentView] = useState<ViewType>('login')
   const [notes, setNotes] = useState<Note[]>([])
@@ -957,7 +957,7 @@ function SecureNotesApp() {
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
 
   console.log(
-    '🔄 SecureNotesApp render - initializing:',
+    '🔄 LeafLockApp render - initializing:',
     initializing,
     'isAuthenticated:',
     isAuthenticated,
@@ -2179,7 +2179,7 @@ function SecureNotesApp() {
 const App: React.FC = () => {
   return (
     <ThemeProvider>
-      <SecureNotesApp />
+      <LeafLockApp />
       <Toaster />
     </ThemeProvider>
   )
