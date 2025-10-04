@@ -1436,7 +1436,20 @@ function LeafLockApp() {
             </div>
 
             <ButtonGroup>
-              {/* Manual Save Button */}
+              {/* Tags Selector - Left side */}
+              {selectedNote && selectedNote.id && (
+                <>
+                  <Suspense fallback={<div className="h-8 w-20 bg-muted rounded animate-pulse"></div>}>
+                    <TagSelector
+                      noteId={selectedNote.id}
+                      size="sm"
+                    />
+                  </Suspense>
+                  <ButtonGroupSeparator />
+                </>
+              )}
+
+              {/* Manual Save Button - Right side */}
               <Button
                 data-save-action
                 onClick={handleSave}
@@ -1455,26 +1468,6 @@ function LeafLockApp() {
                 </svg>
                 Save
               </Button>
-
-              <ButtonGroupSeparator />
-
-              {/* Tags Selector */}
-              {selectedNote && selectedNote.id && (
-                <>
-                  <Suspense fallback={<div className="h-8 w-20 bg-muted rounded animate-pulse"></div>}>
-                    <TagSelector
-                      noteId={selectedNote.id}
-                      size="sm"
-                    />
-                  </Suspense>
-                  <ButtonGroupSeparator />
-                </>
-              )}
-
-              {/* Encryption Status Badge */}
-              <Badge variant="secondary" className="text-xs">
-                🔒 E2E
-              </Badge>
             </ButtonGroup>
           </div>
         </header>

@@ -70,8 +70,12 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
   title,
 }) => (
   <button
+    onMouseDown={(e) => {
+      e.preventDefault() // Prevent editor from losing focus
+    }}
     onClick={(e) => {
       e.preventDefault()
+      e.stopPropagation()
       onClick()
     }}
     disabled={disabled}
@@ -114,13 +118,16 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none
           min-h-[200px] p-4 border-0 rounded-lg
           prose-headings:text-foreground prose-p:text-foreground
-          prose-a:text-primary prose-strong:text-foreground
-          prose-code:text-primary prose-code:bg-muted prose-code:px-1 prose-code:rounded
-          prose-pre:bg-muted-foreground prose-pre:text-muted
-          prose-blockquote:border-l-primary prose-blockquote:bg-muted
+          prose-a:text-primary prose-a:hover:text-primary/80
+          prose-strong:text-foreground prose-em:text-foreground
+          prose-code:text-primary prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
+          prose-pre:bg-muted prose-pre:text-foreground prose-pre:border prose-pre:border-border
+          prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:text-muted-foreground
           prose-table:border prose-table:border-border
-          prose-th:border prose-th:border-border prose-th:bg-muted
-          prose-td:border prose-td:border-border
+          prose-th:border prose-th:border-border prose-th:bg-muted prose-th:text-foreground
+          prose-td:border prose-td:border-border prose-td:text-foreground
+          prose-ul:text-foreground prose-ol:text-foreground
+          prose-li:text-foreground
         `
     return raw
       .split(/\s+/)
@@ -139,7 +146,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: 'text-blue-500 underline cursor-pointer',
+          class: 'text-primary hover:text-primary/80 underline cursor-pointer transition-colors',
         },
       }),
       Typography,
@@ -403,7 +410,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
               {/* Headings */}
               <ToolbarButton
-                onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+                onClick={() => {
+                  if (editor.isActive('heading', { level: 1 })) {
+                    editor.chain().focus().setParagraph().run()
+                  } else {
+                    editor.chain().focus().setHeading({ level: 1 }).run()
+                  }
+                }}
                 isActive={editor.isActive('heading', { level: 1 })}
                 title="Heading 1"
               >
@@ -411,7 +424,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
               </ToolbarButton>
 
               <ToolbarButton
-                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                onClick={() => {
+                  if (editor.isActive('heading', { level: 2 })) {
+                    editor.chain().focus().setParagraph().run()
+                  } else {
+                    editor.chain().focus().setHeading({ level: 2 }).run()
+                  }
+                }}
                 isActive={editor.isActive('heading', { level: 2 })}
                 title="Heading 2"
               >
@@ -419,7 +438,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
               </ToolbarButton>
 
               <ToolbarButton
-                onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+                onClick={() => {
+                  if (editor.isActive('heading', { level: 3 })) {
+                    editor.chain().focus().setParagraph().run()
+                  } else {
+                    editor.chain().focus().setHeading({ level: 3 }).run()
+                  }
+                }}
                 isActive={editor.isActive('heading', { level: 3 })}
                 title="Heading 3"
               >
@@ -457,7 +482,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
               </ToolbarButton>
 
               <ToolbarButton
-                onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+                onClick={() => {
+                  if (editor.isActive('codeBlock')) {
+                    editor.chain().focus().setParagraph().run()
+                  } else {
+                    editor.chain().focus().setCodeBlock().run()
+                  }
+                }}
                 isActive={editor.isActive('codeBlock')}
                 title="Code Block"
               >
