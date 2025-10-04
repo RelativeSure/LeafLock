@@ -58,9 +58,10 @@ const applyThemeClasses = (theme: EffectiveTheme) => {
 
 export const ThemeProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<ThemeType>(() => readStoredTheme())
-  const [effectiveTheme, setEffectiveTheme] = useState<EffectiveTheme>(() =>
-    theme === 'system' ? getSystemTheme() : theme
-  )
+  const [effectiveTheme, setEffectiveTheme] = useState<EffectiveTheme>(() => {
+    const storedTheme = readStoredTheme()
+    return storedTheme === 'system' ? getSystemTheme() : storedTheme
+  })
 
   useEffect(() => {
     const handleSystemChange = () => {
@@ -77,7 +78,7 @@ export const ThemeProvider: FC<{ children: ReactNode }> = ({ children }) => {
       return () => mediaQuery.removeEventListener('change', handleSystemChange)
     }
 
-    return () => {}
+    return undefined
   }, [theme])
 
   useEffect(() => {
