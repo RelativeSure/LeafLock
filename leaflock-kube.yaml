@@ -8,7 +8,7 @@ spec:
   containers:
   - name: postgres
     # Use fully qualified image reference to avoid unqualified registry resolution issues
-    image: docker.io/library/postgres:18-alpine@sha256:9636ae7feacd8d630303eede7f95cd0f472d514e7864422c6aa8ea07b2171df8
+    image: docker.io/library/postgres:18-alpine@sha256:70b32afe0c274b4d93098fd724fcdaab3aba47270a4f1e63cbf9cc69d7bf1be4
     env:
     - name: POSTGRES_PASSWORD
       value: "ChangeThisSecurePassword123!"
