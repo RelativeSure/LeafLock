@@ -70,18 +70,22 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
   title,
 }) => (
   <button
-    onClick={onClick}
+    onClick={(e) => {
+      e.preventDefault()
+      onClick()
+    }}
     disabled={disabled}
     title={title}
+    type="button"
     className={`
       p-2 rounded border transition-colors duration-200
       ${isActive
-        ? 'bg-blue-500 text-white border-blue-500'
-        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+        ? 'bg-primary text-primary-foreground border-primary'
+        : 'bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground'
       }
       ${disabled
         ? 'opacity-50 cursor-not-allowed'
-        : 'hover:border-gray-400'
+        : 'hover:border-muted-foreground/50'
       }
     `}
   >
@@ -90,7 +94,7 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
 )
 
 const ToolbarSeparator: React.FC = () => (
-  <div className="w-px h-6 bg-gray-300 mx-1" />
+  <div className="w-px h-6 bg-border mx-1" />
 )
 
 export const RichTextEditor: React.FC<RichTextEditorProps> = ({
@@ -108,15 +112,15 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const editorClassTokens = useMemo(() => {
     const raw = `
           prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none
-          min-h-[200px] p-4 border border-gray-300 rounded-lg
-          prose-headings:text-gray-900 prose-p:text-gray-700
-          prose-a:text-blue-500 prose-strong:text-gray-900
-          prose-code:text-blue-600 prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded
-          prose-pre:bg-gray-900 prose-pre:text-white
-          prose-blockquote:border-l-blue-500 prose-blockquote:bg-gray-50
-          prose-table:border prose-table:border-gray-300
-          prose-th:border prose-th:border-gray-300 prose-th:bg-gray-50
-          prose-td:border prose-td:border-gray-300
+          min-h-[200px] p-4 border-0 rounded-lg
+          prose-headings:text-foreground prose-p:text-foreground
+          prose-a:text-primary prose-strong:text-foreground
+          prose-code:text-primary prose-code:bg-muted prose-code:px-1 prose-code:rounded
+          prose-pre:bg-muted-foreground prose-pre:text-muted
+          prose-blockquote:border-l-primary prose-blockquote:bg-muted
+          prose-table:border prose-table:border-border
+          prose-th:border prose-th:border-border prose-th:bg-muted
+          prose-td:border prose-td:border-border
         `
     return raw
       .split(/\s+/)
@@ -338,7 +342,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     <div className={`w-full ${className}`}>
       {/* Mode Toggle and Toolbar */}
       {editable && (
-        <div className="flex flex-wrap items-center justify-between gap-2 p-3 border border-gray-300 border-b-0 rounded-t-lg bg-gray-50">
+        <div className="flex flex-wrap items-center justify-between gap-2 p-3 border border-border border-b-0 rounded-t-lg bg-muted">
           {/* Mode Toggle */}
           {showModeToggle && (
             <div className="flex items-center gap-1 mr-4">
@@ -536,7 +540,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
       {/* Editor Content */}
       <div
-        className={editable ? 'border border-gray-300 border-t-0 rounded-b-lg' : ''}
+        className={editable ? 'border border-border border-t-0 rounded-b-lg bg-background' : ''}
         onDragOver={editable ? handleDragOver : undefined}
         onDrop={editable ? handleDrop : undefined}
       >
@@ -544,8 +548,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           <div className="relative">
             <EditorContent editor={editor} />
             {/* Drag overlay for visual feedback */}
-            <div className="absolute inset-0 pointer-events-none opacity-0 bg-blue-50 border-2 border-dashed border-blue-300 flex items-center justify-center transition-opacity duration-200 [.drag-over_&]:opacity-100">
-              <div className="text-blue-600 font-medium">Drop files here to upload</div>
+            <div className="absolute inset-0 pointer-events-none opacity-0 bg-primary/10 border-2 border-dashed border-primary flex items-center justify-center transition-opacity duration-200 [.drag-over_&]:opacity-100">
+              <div className="text-primary font-medium">Drop files here to upload</div>
             </div>
           </div>
         ) : (
@@ -558,13 +562,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
               className="
                 w-full min-h-[200px] p-4 border-0 resize-none focus:outline-none
                 font-mono text-sm leading-relaxed
-                bg-white text-gray-900
+                bg-background text-foreground
               "
               disabled={!editable}
             />
             {/* Drag overlay for markdown mode */}
-            <div className="absolute inset-0 pointer-events-none opacity-0 bg-blue-50 border-2 border-dashed border-blue-300 flex items-center justify-center transition-opacity duration-200 [.drag-over_&]:opacity-100">
-              <div className="text-blue-600 font-medium">Drop files here to upload</div>
+            <div className="absolute inset-0 pointer-events-none opacity-0 bg-primary/10 border-2 border-dashed border-primary flex items-center justify-center transition-opacity duration-200 [.drag-over_&]:opacity-100">
+              <div className="text-primary font-medium">Drop files here to upload</div>
             </div>
           </div>
         )}
