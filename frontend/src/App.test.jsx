@@ -21,9 +21,9 @@ vi.mock('libsodium-wrappers', () => mockSodium)
 
 // Import React and the component AFTER setting up the mock
 import React from 'react'
-import SecureNotesApp from './App.jsx'
+import LeafLockApp from './App.jsx'
 
-describe('SecureNotesApp', () => {
+describe('LeafLockApp', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockLocalStorage.clear()
@@ -37,7 +37,7 @@ describe('SecureNotesApp', () => {
 
   describe('Authentication Flow', () => {
     it('renders login form by default', () => {
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       expect(screen.getByText('LeafLock')).toBeInTheDocument()
       expect(screen.getByText(/End-to-end encrypted/)).toBeInTheDocument()
@@ -48,7 +48,7 @@ describe('SecureNotesApp', () => {
 
     it('switches between login and register modes', async () => {
       const user = userEvent.setup()
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Initially shows login
       expect(screen.getByRole('button', { name: /login securely/i })).toBeInTheDocument()
@@ -65,7 +65,7 @@ describe('SecureNotesApp', () => {
 
     it('hides registration toggle when registration is disabled', () => {
       global.__LEAFLOCK_REGISTRATION__ = false
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       expect(screen.queryByText(/need an account\? register/i)).not.toBeInTheDocument()
       expect(screen.getByText(/registration is currently disabled/i)).toBeInTheDocument()
@@ -73,7 +73,7 @@ describe('SecureNotesApp', () => {
 
     it('shows password strength indicator during registration', async () => {
       const user = userEvent.setup()
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Switch to register mode
       await user.click(screen.getByText(/need an account\? register/i))
@@ -112,7 +112,7 @@ describe('SecureNotesApp', () => {
         })
       )
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Switch to register
       await user.click(screen.getByText(/need an account\? register/i))
@@ -142,7 +142,7 @@ describe('SecureNotesApp', () => {
 
     it('handles registration with weak password', async () => {
       const user = userEvent.setup()
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Switch to register
       await user.click(screen.getByText(/need an account\? register/i))
@@ -175,7 +175,7 @@ describe('SecureNotesApp', () => {
         })
       )
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Fill login form
       await user.type(screen.getByLabelText(/email/i), 'test@example.com')
@@ -202,7 +202,7 @@ describe('SecureNotesApp', () => {
         })
       )
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Fill and submit login form
       await user.type(screen.getByLabelText(/email/i), 'test@example.com')
@@ -232,7 +232,7 @@ describe('SecureNotesApp', () => {
 
       mockFetch.mockResolvedValue(mockApiError(401, 'Invalid credentials'))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Fill and submit login form
       await user.type(screen.getByLabelText(/email/i), 'test@example.com')
@@ -250,7 +250,7 @@ describe('SecureNotesApp', () => {
 
       mockFetch.mockResolvedValue(mockApiError(403, 'Account locked. Try again later.'))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Fill and submit login form
       await user.type(screen.getByLabelText(/email/i), 'locked@example.com')
@@ -267,7 +267,7 @@ describe('SecureNotesApp', () => {
       mockLocalStorage.getItem.mockReturnValue('existing-token')
       mockFetch.mockResolvedValue(mockApiResponse({ notes: [] }))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Should skip login screen and load notes
       expect(screen.queryByText(/secure notes/i)).not.toBeInTheDocument()
@@ -283,7 +283,7 @@ describe('SecureNotesApp', () => {
     it('displays empty state when no notes', () => {
       mockFetch.mockResolvedValue(mockApiResponse({ notes: [] }))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       expect(screen.getByText(/select a note or create a new one/i)).toBeInTheDocument()
       expect(screen.getByText(/new encrypted note/i)).toBeInTheDocument()
@@ -297,7 +297,7 @@ describe('SecureNotesApp', () => {
 
       mockFetch.mockResolvedValue(mockApiResponse({ notes: mockNotes }))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       await waitFor(() => {
         expect(screen.getByText('Note 1')).toBeInTheDocument()
@@ -308,7 +308,7 @@ describe('SecureNotesApp', () => {
     it('handles notes loading error', async () => {
       mockFetch.mockResolvedValue(mockApiError(500, 'Server error'))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       await waitFor(() => {
         expect(screen.getByText(/failed to load notes/i)).toBeInTheDocument()
@@ -325,7 +325,7 @@ describe('SecureNotesApp', () => {
         ) // Create
         .mockResolvedValueOnce(mockApiResponse({ notes: [createMockNote({ id: 'new-note-id' })] })) // Reload
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Click new note button
       await user.click(screen.getByText(/new encrypted note/i))
@@ -344,7 +344,7 @@ describe('SecureNotesApp', () => {
 
       mockFetch.mockResolvedValue(mockApiResponse({ notes: mockNotes }))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       await waitFor(() => {
         expect(screen.getByText('JavaScript Notes')).toBeInTheDocument()
@@ -368,7 +368,7 @@ describe('SecureNotesApp', () => {
 
       mockFetch.mockResolvedValue(mockApiResponse({ notes: mockNotes }))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       await waitFor(() => {
         expect(screen.getByText('Test Note')).toBeInTheDocument()
@@ -390,7 +390,7 @@ describe('SecureNotesApp', () => {
         .mockResolvedValueOnce(mockApiResponse({ id: 'test-note', message: 'Note created' }))
         .mockResolvedValueOnce(mockApiResponse({ notes: [] }))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Create new note
       await user.click(screen.getByText(/new encrypted note/i))
@@ -421,7 +421,7 @@ describe('SecureNotesApp', () => {
     })
 
     it('shows encryption status indicator', () => {
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Should show encryption active indicator
       expect(screen.getByText(/encryption active/i)).toBeInTheDocument()
@@ -430,7 +430,7 @@ describe('SecureNotesApp', () => {
     it('shows encrypted indicator in note editor', async () => {
       const user = userEvent.setup()
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Create new note
       await user.click(screen.getByText(/new encrypted note/i))
@@ -449,7 +449,7 @@ describe('SecureNotesApp', () => {
     it('logs out user', async () => {
       const user = userEvent.setup()
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Click logout button
       const logoutButton = screen.getByRole('button')
@@ -471,7 +471,7 @@ describe('SecureNotesApp', () => {
       })
       mockFetch.mockReturnValue(slowPromise)
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Fill and submit login form
       await user.type(screen.getByLabelText(/email/i), 'test@example.com')
@@ -496,7 +496,7 @@ describe('SecureNotesApp', () => {
 
       mockFetch.mockResolvedValueOnce(mockApiResponse({ notes: [] })).mockReturnValueOnce(slowSave)
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Create new note
       await user.click(screen.getByText(/new encrypted note/i))
@@ -521,7 +521,7 @@ describe('SecureNotesApp', () => {
       mockLocalStorage.getItem.mockReturnValue('test-token')
       mockFetch.mockResolvedValue(mockApiResponse({ notes: mockNotes }))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Verify no script tags in DOM
       expect(document.body.innerHTML).not.toContain('<script>')
@@ -534,7 +534,7 @@ describe('SecureNotesApp', () => {
       mockLocalStorage.getItem.mockReturnValue('test-token')
       mockFetch.mockResolvedValue(mockApiResponse({ notes: [] }))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       const searchField = screen.getByPlaceholderText(/search notes/i)
       await user.type(searchField, '<img src=x onerror=alert("xss")>')
@@ -548,7 +548,7 @@ describe('SecureNotesApp', () => {
 
       mockFetch.mockResolvedValue(mockApiResponse({ token: 'test-token' }))
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Fill and submit login form
       await user.type(screen.getByLabelText(/email/i), 'test@example.com')
@@ -571,7 +571,7 @@ describe('SecureNotesApp', () => {
 
   describe('Accessibility', () => {
     it('has proper ARIA labels', () => {
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       const emailField = screen.getByLabelText(/email/i)
       const passwordField = screen.getByLabelText(/password/i)
@@ -581,7 +581,7 @@ describe('SecureNotesApp', () => {
     })
 
     it('has proper button types', () => {
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       const submitButton = screen.getByRole('button', { name: /login securely/i })
       expect(submitButton).toHaveAttribute('type', 'submit')
@@ -589,7 +589,7 @@ describe('SecureNotesApp', () => {
 
     it('provides keyboard navigation', async () => {
       const user = userEvent.setup()
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       // Should be able to tab through form fields
       await user.tab()
@@ -614,7 +614,7 @@ describe('SecureNotesApp', () => {
         })
       )
 
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       const searchField = await screen.findByPlaceholderText(/search notes/i)
 
@@ -634,7 +634,7 @@ describe('SecureNotesApp', () => {
       mockFetch.mockResolvedValue(mockApiResponse({ notes: largeNotesList }))
 
       const startTime = performance.now()
-      render(<SecureNotesApp />)
+      render(<LeafLockApp />)
 
       await waitFor(() => {
         expect(screen.getByText('Note 0')).toBeInTheDocument()
@@ -661,7 +661,7 @@ describe('SecureNotesApp', () => {
       const AppWithError = () => (
         <div>
           <ThrowingComponent />
-          <SecureNotesApp />
+          <LeafLockApp />
         </div>
       )
 

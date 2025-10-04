@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -105,10 +105,29 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 }) => {
   const [editorMode, setEditorMode] = useState<EditorMode>(defaultMode)
   const [markdownContent, setMarkdownContent] = useState('')
+  const editorClassTokens = useMemo(() => {
+    const raw = `
+          prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none
+          min-h-[200px] p-4 border border-gray-300 rounded-lg
+          prose-headings:text-gray-900 prose-p:text-gray-700
+          prose-a:text-blue-500 prose-strong:text-gray-900
+          prose-code:text-blue-600 prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded
+          prose-pre:bg-gray-900 prose-pre:text-white
+          prose-blockquote:border-l-blue-500 prose-blockquote:bg-gray-50
+          prose-table:border prose-table:border-gray-300
+          prose-th:border prose-th:border-gray-300 prose-th:bg-gray-50
+          prose-td:border prose-td:border-gray-300
+        `
+    return raw
+      .split(/\s+/)
+      .filter(Boolean)
+      .join(' ')
+  }, [])
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         codeBlock: false, // We'll use CodeBlockLowlight instead
+        link: false,
       }),
       Placeholder.configure({
         placeholder,
@@ -157,18 +176,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     },
     editorProps: {
       attributes: {
-        class: `
-          prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none
-          min-h-[200px] p-4 border border-gray-300 rounded-lg
-          prose-headings:text-gray-900 prose-p:text-gray-700
-          prose-a:text-blue-500 prose-strong:text-gray-900
-          prose-code:text-blue-600 prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded
-          prose-pre:bg-gray-900 prose-pre:text-white
-          prose-blockquote:border-l-blue-500 prose-blockquote:bg-gray-50
-          prose-table:border prose-table:border-gray-300
-          prose-th:border prose-th:border-gray-300 prose-th:bg-gray-50
-          prose-td:border prose-td:border-gray-300
-        `,
+        class: editorClassTokens,
       },
     },
   })
