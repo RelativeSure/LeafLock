@@ -10,7 +10,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/csrf"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
-	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -21,7 +20,6 @@ import (
 	"leaflock/metrics"
 	"leaflock/middleware"
 	appserver "leaflock/server"
-	"leaflock/utils"
 	websocketpkg "leaflock/websocket"
 )
 
@@ -91,14 +89,8 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 		app.Use(metrics.PrometheusMiddleware())
 	}
 
-	// Rate limiting
-	app.Use(limiter.New(limiter.Config{
-		Max:        100,
-		Expiration: time.Minute,
-		KeyGenerator: func(c *fiber.Ctx) string {
-			return utils.ClientIP(c)
-		},
-	}))
+	// Initialize rate limiters
+	rateLimits := middleware.NewRateLimitConfig(rdb)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(db, rdb, crypto, config)
@@ -112,6 +104,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	attachmentsHandler := handlers.NewAttachmentsHandler(db, crypto)
 	searchHandler := handlers.NewSearchHandler(db, crypto)
 	importExportHandler := handlers.NewImportExportHandler(db, crypto)
+	shareLinksHandler := handlers.NewShareLinksHandler(db, crypto, rdb)
 
 	// API group
 	api := app.Group("/api/v1")
@@ -206,22 +199,10 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	app.Get("/swagger", swaggerUIHandler)
 	app.Get("/swagger/openapi.json", swaggerJSONHandler)
 
-	// Authentication routes (public)
-	if env := strings.ToLower(strings.TrimSpace(config.Environment)); env != "development" && env != "local" {
-		regLimiter := limiter.New(limiter.Config{
-			Max:        5,
-			Expiration: time.Minute,
-			KeyGenerator: func(c *fiber.Ctx) string {
-				return utils.ClientIP(c)
-			},
-		})
-		api.Post("/auth/register", regLimiter, authHandler.Register)
-	} else {
-		api.Post("/auth/register", authHandler.Register)
-	}
-
-	api.Post("/auth/login", authHandler.Login)
-	api.Post("/auth/admin-recovery", authHandler.AdminRecovery)
+	// Authentication routes (public) - Tier 1: Strictest rate limiting
+	api.Post("/auth/register", rateLimits.RegisterLimiter, authHandler.Register)
+	api.Post("/auth/login", rateLimits.AuthLimiter, authHandler.Login)
+	api.Post("/auth/admin-recovery", rateLimits.AdminRecoveryLimiter, authHandler.AdminRecovery)
 	api.Get("/auth/registration", func(c *fiber.Ctx) error {
 		var dbVal string
 		if err := db.QueryRow(c.Context(), `SELECT value FROM app_settings WHERE key='registration_enabled'`).Scan(&dbVal); err == nil {
@@ -237,75 +218,85 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	// Protected routes (require JWT)
 	protected := api.Group("", middleware.JWTMiddleware(config.JWTSecret, rdb, crypto))
 
-	// MFA routes
-	protected.Get("/auth/mfa/status", authHandler.GetMFAStatus)
-	protected.Post("/auth/mfa/begin", authHandler.BeginMFASetup)
-	protected.Post("/auth/mfa/enable", authHandler.EnableMFA)
-	protected.Post("/auth/mfa/disable", authHandler.DisableMFA)
-	protected.Get("/auth/mfa/backup-codes", authHandler.GetBackupCodes)
-	protected.Post("/auth/mfa/backup-codes/regenerate", authHandler.RegenerateBackupCodes)
-	api.Post("/auth/mfa/verify", authHandler.VerifyMFACode) // Public endpoint
+	// MFA routes - Tier 5: Lightweight for status checks, Tier 1 for verification
+	protected.Get("/auth/mfa/status", rateLimits.LightweightLimiter, authHandler.GetMFAStatus)
+	protected.Post("/auth/mfa/begin", rateLimits.AuthLimiter, authHandler.BeginMFASetup)
+	protected.Post("/auth/mfa/enable", rateLimits.AuthLimiter, authHandler.EnableMFA)
+	protected.Post("/auth/mfa/disable", rateLimits.AuthLimiter, authHandler.DisableMFA)
+	protected.Get("/auth/mfa/backup-codes", rateLimits.LightweightLimiter, authHandler.GetBackupCodes)
+	protected.Post("/auth/mfa/backup-codes/regenerate", rateLimits.AuthLimiter, authHandler.RegenerateBackupCodes)
+	api.Post("/auth/mfa/verify", rateLimits.MFAVerifyLimiter, authHandler.VerifyMFACode) // Public endpoint
 
-	// Notes routes
-	protected.Get("/notes", notesHandler.GetNotes)
-	protected.Get("/notes/:id", notesHandler.GetNote)
-	protected.Post("/notes", notesHandler.CreateNote)
-	protected.Put("/notes/:id", notesHandler.UpdateNote)
-	protected.Delete("/notes/:id", notesHandler.DeleteNote)
-	protected.Get("/notes/trash", notesHandler.GetTrash)
-	protected.Post("/notes/:id/restore", notesHandler.RestoreNote)
-	protected.Get("/notes/:id/versions", notesHandler.GetNoteVersions)
-	protected.Post("/notes/:id/versions/:version", notesHandler.RestoreNoteVersion)
-	protected.Delete("/notes/:id/permanent", notesHandler.PermanentlyDeleteNote)
+	// Notes routes - Tier 4: Standard CRUD
+	protected.Get("/notes", rateLimits.StandardCRUDLimiter, notesHandler.GetNotes)
+	protected.Get("/notes/:id", rateLimits.StandardCRUDLimiter, notesHandler.GetNote)
+	protected.Post("/notes", rateLimits.StandardCRUDLimiter, notesHandler.CreateNote)
+	protected.Put("/notes/:id", rateLimits.StandardCRUDLimiter, notesHandler.UpdateNote)
+	protected.Delete("/notes/:id", rateLimits.StandardCRUDLimiter, notesHandler.DeleteNote)
+	protected.Get("/notes/trash", rateLimits.StandardCRUDLimiter, notesHandler.GetTrash)
+	protected.Post("/notes/:id/restore", rateLimits.StandardCRUDLimiter, notesHandler.RestoreNote)
+	protected.Get("/notes/:id/versions", rateLimits.StandardCRUDLimiter, notesHandler.GetNoteVersions)
+	protected.Post("/notes/:id/versions/:version", rateLimits.StandardCRUDLimiter, notesHandler.RestoreNoteVersion)
+	protected.Delete("/notes/:id/permanent", rateLimits.StandardCRUDLimiter, notesHandler.PermanentlyDeleteNote)
 
-	// Tags routes
-	protected.Get("/tags", tagsHandler.GetTags)
-	protected.Post("/tags", tagsHandler.CreateTag)
-	protected.Delete("/tags/:id", tagsHandler.DeleteTag)
-	protected.Post("/notes/:id/tags", tagsHandler.AssignTagToNote)
-	protected.Delete("/notes/:id/tags/:tag_id", tagsHandler.RemoveTagFromNote)
-	protected.Get("/tags/:id/notes", tagsHandler.GetNotesByTag)
+	// Tags routes - Tier 4: Standard CRUD
+	protected.Get("/tags", rateLimits.StandardCRUDLimiter, tagsHandler.GetTags)
+	protected.Post("/tags", rateLimits.StandardCRUDLimiter, tagsHandler.CreateTag)
+	protected.Delete("/tags/:id", rateLimits.StandardCRUDLimiter, tagsHandler.DeleteTag)
+	protected.Post("/notes/:id/tags", rateLimits.StandardCRUDLimiter, tagsHandler.AssignTagToNote)
+	protected.Delete("/notes/:id/tags/:tag_id", rateLimits.StandardCRUDLimiter, tagsHandler.RemoveTagFromNote)
+	protected.Get("/tags/:id/notes", rateLimits.StandardCRUDLimiter, tagsHandler.GetNotesByTag)
 
-	// Folders routes
-	protected.Get("/folders", foldersHandler.GetFolders)
-	protected.Post("/folders", foldersHandler.CreateFolder)
-	protected.Delete("/folders/:id", foldersHandler.DeleteFolder)
-	protected.Post("/notes/:id/folder", foldersHandler.MoveNoteToFolder)
+	// Folders routes - Tier 4: Standard CRUD
+	protected.Get("/folders", rateLimits.StandardCRUDLimiter, foldersHandler.GetFolders)
+	protected.Post("/folders", rateLimits.StandardCRUDLimiter, foldersHandler.CreateFolder)
+	protected.Delete("/folders/:id", rateLimits.StandardCRUDLimiter, foldersHandler.DeleteFolder)
+	protected.Post("/notes/:id/folder", rateLimits.StandardCRUDLimiter, foldersHandler.MoveNoteToFolder)
 
-	// Templates routes
-	protected.Get("/templates", templatesHandler.GetTemplates)
-	protected.Get("/templates/:id", templatesHandler.GetTemplate)
-	protected.Post("/templates", templatesHandler.CreateTemplate)
-	protected.Put("/templates/:id", templatesHandler.UpdateTemplate)
-	protected.Delete("/templates/:id", templatesHandler.DeleteTemplate)
-	protected.Post("/templates/:id/use", templatesHandler.UseTemplate)
+	// Templates routes - Tier 4: Standard CRUD
+	protected.Get("/templates", rateLimits.StandardCRUDLimiter, templatesHandler.GetTemplates)
+	protected.Get("/templates/:id", rateLimits.StandardCRUDLimiter, templatesHandler.GetTemplate)
+	protected.Post("/templates", rateLimits.StandardCRUDLimiter, templatesHandler.CreateTemplate)
+	protected.Put("/templates/:id", rateLimits.StandardCRUDLimiter, templatesHandler.UpdateTemplate)
+	protected.Delete("/templates/:id", rateLimits.StandardCRUDLimiter, templatesHandler.DeleteTemplate)
+	protected.Post("/templates/:id/use", rateLimits.StandardCRUDLimiter, templatesHandler.UseTemplate)
 
-	// Collaboration routes
-	protected.Post("/notes/:id/share", collabHandler.ShareNote)
-	protected.Get("/notes/:id/collaborators", collabHandler.GetCollaborators)
-	protected.Delete("/notes/:id/collaborators/:userId", collabHandler.RemoveCollaborator)
-	protected.Get("/collaborations", collabHandler.GetSharedNotes)
+	// Collaboration routes - Tier 4: Collaboration limits
+	protected.Post("/notes/:id/share", rateLimits.CollaborationLimiter, collabHandler.ShareNote)
+	protected.Get("/notes/:id/collaborators", rateLimits.CollaborationLimiter, collabHandler.GetCollaborators)
+	protected.Delete("/notes/:id/collaborators/:userId", rateLimits.CollaborationLimiter, collabHandler.RemoveCollaborator)
+	protected.Get("/collaborations", rateLimits.CollaborationLimiter, collabHandler.GetSharedNotes)
 
-	// Attachments routes
-	protected.Post("/notes/:noteId/attachments", attachmentsHandler.UploadAttachment)
-	protected.Get("/notes/:noteId/attachments", attachmentsHandler.GetAttachments)
-	protected.Get("/notes/:noteId/attachments/:attachmentId", attachmentsHandler.DownloadAttachment)
-	protected.Delete("/notes/:noteId/attachments/:attachmentId", attachmentsHandler.DeleteAttachment)
+	// Share link routes (protected) - Tier 2: Aggressive limiting for share link creation
+	protected.Post("/notes/:id/share-links", rateLimits.ShareLinkCreateLimiter, shareLinksHandler.CreateShareLink)
+	protected.Get("/notes/:id/share-links", rateLimits.StandardCRUDLimiter, shareLinksHandler.GetNoteShareLinks)
+	protected.Get("/share-links", rateLimits.StandardCRUDLimiter, shareLinksHandler.GetAllUserShareLinks)
+	protected.Delete("/share-links/:token", rateLimits.StandardCRUDLimiter, shareLinksHandler.RevokeShareLink)
+	protected.Put("/share-links/:token", rateLimits.StandardCRUDLimiter, shareLinksHandler.UpdateShareLink)
 
-	// Search and Import/Export routes
-	protected.Post("/search", searchHandler.SearchNotes)
-	protected.Get("/storage", importExportHandler.GetStorageInfo)
-	protected.Post("/notes/import", importExportHandler.ImportNote)
-	protected.Post("/notes/:id/export", importExportHandler.ExportNote)
-	protected.Post("/notes/bulk-import", importExportHandler.BulkImport)
+	// Public share link route (no authentication required) - Tier 2: Aggressive limiting
+	api.Get("/share/:token", rateLimits.ShareLinkPublicLimiter, middleware.ShareLinkMiddleware(db, crypto, rdb), shareLinksHandler.GetSharedNote)
 
-	// Settings routes
-	protected.Get("/settings", settingsHandler.GetSettings)
-	protected.Put("/settings", settingsHandler.UpdateSettings)
+	// Attachments routes - Tier 3: Heavy operations
+	protected.Post("/notes/:noteId/attachments", rateLimits.AttachmentUploadLimiter, attachmentsHandler.UploadAttachment)
+	protected.Get("/notes/:noteId/attachments", rateLimits.StandardCRUDLimiter, attachmentsHandler.GetAttachments)
+	protected.Get("/notes/:noteId/attachments/:attachmentId", rateLimits.StandardCRUDLimiter, attachmentsHandler.DownloadAttachment)
+	protected.Delete("/notes/:noteId/attachments/:attachmentId", rateLimits.StandardCRUDLimiter, attachmentsHandler.DeleteAttachment)
 
-	// Account management routes
-	protected.Delete("/account", accountHandler.DeleteAccount)
-	protected.Get("/account/export", accountHandler.ExportData)
+	// Search and Import/Export routes - Tier 3: Heavy operations
+	protected.Post("/search", rateLimits.SearchLimiter, searchHandler.SearchNotes)
+	protected.Get("/storage", rateLimits.LightweightLimiter, importExportHandler.GetStorageInfo)
+	protected.Post("/notes/import", rateLimits.ImportExportLimiter, importExportHandler.ImportNote)
+	protected.Post("/notes/:id/export", rateLimits.ImportExportLimiter, importExportHandler.ExportNote)
+	protected.Post("/notes/bulk-import", rateLimits.BulkImportLimiter, importExportHandler.BulkImport)
+
+	// Settings routes - Tier 5: Lightweight
+	protected.Get("/settings", rateLimits.LightweightLimiter, settingsHandler.GetSettings)
+	protected.Put("/settings", rateLimits.StandardCRUDLimiter, settingsHandler.UpdateSettings)
+
+	// Account management routes - Tier 3: Heavy operations
+	protected.Delete("/account", rateLimits.ImportExportLimiter, accountHandler.DeleteAccount)
+	protected.Get("/account/export", rateLimits.ImportExportLimiter, accountHandler.ExportData)
 
 	// WebSocket setup
 	hub := websocketpkg.NewHub()

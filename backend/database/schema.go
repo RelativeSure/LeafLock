@@ -357,5 +357,28 @@ CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(parent_id);
 CREATE INDEX IF NOT EXISTS idx_folders_position ON folders(user_id, position);
 CREATE INDEX IF NOT EXISTS idx_notes_folder ON notes(folder_id);
 
+-- Share links table for shareable note links (RO/RW)
+CREATE TABLE IF NOT EXISTS share_links (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE NOT NULL,
+    token TEXT UNIQUE NOT NULL, -- URL-safe random token
+    permission TEXT CHECK (permission IN ('read', 'write')) NOT NULL,
+    password_hash TEXT, -- Optional password protection (Argon2id)
+    expires_at TIMESTAMPTZ, -- NULL for never expires
+    max_uses INT, -- NULL for unlimited
+    use_count INT DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    created_by UUID REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    last_accessed_at TIMESTAMPTZ,
+    last_accessed_ip BYTEA -- Encrypted IP address
+);
+
+-- Share links indexes for fast lookups
+CREATE INDEX IF NOT EXISTS idx_share_links_token ON share_links(token) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_share_links_note ON share_links(note_id);
+CREATE INDEX IF NOT EXISTS idx_share_links_created_by ON share_links(created_by);
+CREATE INDEX IF NOT EXISTS idx_share_links_expires ON share_links(expires_at) WHERE expires_at IS NOT NULL AND is_active = true;
+
 -- Note: Cleanup jobs run automatically via background service every 24 hours
 `
