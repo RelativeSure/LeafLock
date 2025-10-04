@@ -213,13 +213,13 @@ func (m *MockRedisClient) Del(ctx context.Context, keys ...string) *redis.IntCmd
 
 type AuthHandlerTestSuite struct {
 	suite.Suite
-	handler      *AuthHandler
-	mockDB       *MockDB
-	mockRedis    *MockRedisClient
-	cryptoSvc    *crypto.CryptoService
-	cfg          *config.Config
-	userID       uuid.UUID
-	workspaceID  uuid.UUID
+	handler     *AuthHandler
+	mockDB      *MockDB
+	mockRedis   *MockRedisClient
+	cryptoSvc   *crypto.CryptoService
+	cfg         *config.Config
+	userID      uuid.UUID
+	workspaceID uuid.UUID
 }
 
 func (suite *AuthHandlerTestSuite) SetupTest() {
@@ -760,7 +760,7 @@ func (suite *TagsHandlerTestSuite) TestCreateTagSuccess() {
 
 	suite.mockDB.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
 		return contains(sql, "INSERT INTO tags")
-	}), suite.userID, mock.Anything, mock.Anything).Return(mockRow)
+	}), suite.userID, mock.Anything, mock.Anything, mock.Anything).Return(mockRow)
 
 	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
 		if tid, ok := args[0].(*uuid.UUID); ok {

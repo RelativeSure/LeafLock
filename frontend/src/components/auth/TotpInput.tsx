@@ -4,7 +4,7 @@ import { Input } from '../ui/input'
 interface TotpInputProps {
   value: string
   onChange: (value: string) => void
-  onComplete?: (value: string) => void
+  onComplete?: (value: string) => void | Promise<void>
   disabled?: boolean
   error?: boolean
   length?: number
@@ -28,7 +28,7 @@ export function TotpInput({
   useEffect(() => {
     // Call onComplete when all digits are entered
     if (value.length === length && onComplete) {
-      onComplete(value)
+      void onComplete(value)
     }
   }, [value, length, onComplete])
 
@@ -87,7 +87,9 @@ export function TotpInput({
       {Array.from({ length }, (_, index) => (
         <Input
           key={index}
-          ref={(el) => (inputRefs.current[index] = el)}
+          ref={(el) => {
+            inputRefs.current[index] = el
+          }}
           type="text"
           inputMode="numeric"
           maxLength={1}

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"strings"
 	"time"
@@ -94,20 +95,29 @@ func (h *TagsHandler) CreateTag(c *fiber.Ctx) error {
 		req.Color = "#3b82f6"
 	}
 
-	encryptedName, err := h.crypto.Encrypt([]byte(req.Name))
+	normalizedName := strings.TrimSpace(req.Name)
+	if normalizedName == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Tag name cannot be empty"})
+	}
+
+	encryptedName, err := h.crypto.Encrypt([]byte(normalizedName))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt tag name"})
 	}
 
+	lowerName := strings.ToLower(normalizedName)
+	hashInput := userID.String() + ":" + lowerName
+	nameHash := sha256.Sum256([]byte(hashInput))
+
 	ctx := context.Background()
 	var tagID uuid.UUID
 	err = h.db.QueryRow(ctx, `
-        INSERT INTO tags (user_id, name_encrypted, color)
-        VALUES ($1, $2, $3)
-        RETURNING id`,
-		userID, encryptedName, req.Color).Scan(&tagID)
+	        INSERT INTO tags (user_id, name_encrypted, name_hash, color)
+	        VALUES ($1, $2, $3, $4)
+	        RETURNING id`,
+		userID, encryptedName, nameHash[:], req.Color).Scan(&tagID)
 	if err != nil {
-		if strings.Contains(err.Error(), "duplicate") {
+		if strings.Contains(err.Error(), "idx_tags_name_hash_unique") || strings.Contains(err.Error(), "duplicate") {
 			return c.Status(409).JSON(fiber.Map{"error": "Tag with this name already exists"})
 		}
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create tag"})

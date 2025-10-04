@@ -5,6 +5,7 @@ import { Input } from './ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Label } from './ui/label'
 import { foldersService, Folder as FolderType, FolderTreeNode, CreateFolderRequest } from '../services/foldersService'
+import { Spinner } from '@/components/ui/spinner'
 
 interface FoldersManagerProps {
   onClose?: () => void
@@ -30,7 +31,6 @@ export const FoldersManager: React.FC<FoldersManagerProps> = ({ onClose, onFolde
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
-  const [_editingId, _setEditingId] = useState<string | null>(null)
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const [newFolder, setNewFolder] = useState<CreateFolderRequest>({
     name: '',
@@ -100,6 +100,27 @@ export const FoldersManager: React.FC<FoldersManagerProps> = ({ onClose, onFolde
     setExpandedFolders(newExpanded)
   }
 
+  const handleRenameFolder = async (node: FolderTreeNode) => {
+    const newName = window.prompt('Rename folder', node.name)
+    if (!newName || !newName.trim() || newName.trim() === node.name) {
+      return
+    }
+
+    try {
+      setError(null)
+      await foldersService.updateFolder(node.id, {
+        name: newName.trim(),
+        color: node.color,
+        parent_id: node.parent_id || undefined,
+        position: node.position,
+      })
+      await loadFolders()
+    } catch (err) {
+      console.error('Failed to rename folder:', err)
+      setError(err instanceof Error ? err.message : 'Failed to rename folder')
+    }
+  }
+
   const renderFolderNode = (node: FolderTreeNode, depth = 0) => {
     const isExpanded = expandedFolders.has(node.id)
     const hasChildren = node.children.length > 0
@@ -147,9 +168,9 @@ export const FoldersManager: React.FC<FoldersManagerProps> = ({ onClose, onFolde
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setEditingId(node.id)}
+              onClick={() => handleRenameFolder(node)}
               className="h-6 w-6 p-0"
-              title="Edit folder"
+              title="Rename folder"
             >
               <Edit3 className="w-3 h-3" />
             </Button>
@@ -185,7 +206,7 @@ export const FoldersManager: React.FC<FoldersManagerProps> = ({ onClose, onFolde
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            <Spinner className="h-6 w-6 text-primary" />
           </div>
         </CardContent>
       </Card>
@@ -268,7 +289,7 @@ export const FoldersManager: React.FC<FoldersManagerProps> = ({ onClose, onFolde
           >
             {isCreating ? (
               <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <Spinner className="h-4 w-4 text-white" aria-hidden="true" />
                 Creating...
               </div>
             ) : (

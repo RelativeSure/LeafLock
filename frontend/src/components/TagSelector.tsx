@@ -115,6 +115,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
   const iconSize = size === 'sm' ? 'w-3 h-3' : 'w-4 h-4'
   const textSize = size === 'sm' ? 'text-xs' : 'text-sm'
   const badgeSize = size === 'sm' ? 'text-xs px-1.5 py-0.5' : ''
+  const buttonSize: 'default' | 'sm' | 'lg' | 'icon' = size === 'sm' ? 'sm' : 'default'
 
   return (
     <div className={`relative ${className}`}>
@@ -141,7 +142,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
       {/* Add Tags Button */}
       <Button
         variant="outline"
-        size={size}
+        size={buttonSize}
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2"
       >

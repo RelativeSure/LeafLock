@@ -7,6 +7,7 @@ import {
   createMockNote,
   MockSecureAPI,
 } from './test-utils.jsx'
+import { getStoredAuthToken, persistAuthToken, clearStoredAuthToken } from './utils/auth'
 
 // Mock environment
 global.fetch = mockFetch
@@ -16,7 +17,7 @@ global.localStorage = mockLocalStorage
 class TestSecureAPI {
   constructor(baseURL = '/api/v1') {
     this.baseURL = baseURL
-    this.token = localStorage.getItem('secure_token')
+    this.token = getStoredAuthToken()
   }
 
   async request(endpoint, options = {}) {
@@ -49,19 +50,18 @@ class TestSecureAPI {
   }
 
   handleUnauthorized() {
-    localStorage.removeItem('secure_token')
+    this.clearToken()
     // In real app, would redirect to login
-    this.token = null
   }
 
   setToken(token) {
     this.token = token
-    localStorage.setItem('secure_token', token)
+    persistAuthToken(token)
   }
 
   clearToken() {
     this.token = null
-    localStorage.removeItem('secure_token')
+    clearStoredAuthToken()
   }
 
   async register(email, password) {
@@ -142,6 +142,7 @@ describe('SecureAPI', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockLocalStorage.clear()
+    mockLocalStorage.getItem.mockImplementation(() => null)
     mockFetch.mockClear()
     api = new TestSecureAPI()
   })
@@ -171,6 +172,18 @@ describe('SecureAPI', () => {
       mockLocalStorage.getItem.mockReturnValue(null)
       const apiWithoutToken = new TestSecureAPI()
       expect(apiWithoutToken.token).toBeNull()
+    })
+
+    it('migrates legacy auth_token to secure storage', () => {
+      mockLocalStorage.getItem.mockImplementation((key) =>
+        key === 'auth_token' ? 'legacy-token' : null
+      )
+
+      const migratedApi = new TestSecureAPI()
+
+      expect(migratedApi.token).toBe('legacy-token')
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('secure_token', 'legacy-token')
+      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('auth_token')
     })
   })
 
@@ -241,6 +254,7 @@ describe('SecureAPI', () => {
 
       await expect(api.request('/protected')).rejects.toThrow('Unauthorized')
       expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('secure_token')
+      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('auth_token')
       expect(api.token).toBeNull()
     })
 
@@ -294,6 +308,7 @@ describe('SecureAPI', () => {
 
       expect(api.token).toBe(token)
       expect(mockLocalStorage.setItem).toHaveBeenCalledWith('secure_token', token)
+      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('auth_token')
     })
 
     it('clears token from memory and localStorage', () => {
@@ -302,6 +317,7 @@ describe('SecureAPI', () => {
 
       expect(api.token).toBeNull()
       expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('secure_token')
+      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('auth_token')
     })
 
     it('handles unauthorized by clearing token', () => {
@@ -310,6 +326,7 @@ describe('SecureAPI', () => {
 
       expect(api.token).toBeNull()
       expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('secure_token')
+      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('auth_token')
     })
   })
 
@@ -339,6 +356,7 @@ describe('SecureAPI', () => {
         expect(result).toEqual(responseData)
         expect(api.token).toBe('new-token')
         expect(mockLocalStorage.setItem).toHaveBeenCalledWith('secure_token', 'new-token')
+        expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('auth_token')
       })
 
       it('handles registration failure', async () => {
@@ -382,6 +400,8 @@ describe('SecureAPI', () => {
         )
         expect(result).toEqual(responseData)
         expect(api.token).toBe('login-token')
+        expect(mockLocalStorage.setItem).toHaveBeenCalledWith('secure_token', 'login-token')
+        expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('auth_token')
       })
 
       it('handles login with MFA code', async () => {
@@ -715,6 +735,7 @@ describe('SecureAPI', () => {
       await expect(api.request('/protected')).rejects.toThrow('Token expired')
       expect(api.token).toBeNull()
       expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('secure_token')
+      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('auth_token')
     })
 
     it('prevents token leakage in error messages', async () => {

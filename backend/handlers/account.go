@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"time"
 
@@ -110,42 +109,53 @@ func (h *AccountHandler) DeleteAccount(c *fiber.Ctx) error {
 		_ = tx.Rollback(ctx)
 	}()
 
-	// Delete all user data in proper order (to respect foreign key constraints)
-	tables := []string{
-		"note_tags",
-		"shared_notes",
-		"attachments",
-		"notes",
-		"tags",
-		"folders",
-		"templates",
-		"user_sessions",
-		"audit_log",
-		"password_reset_tokens",
-		"user_roles",
+	cleanupStatements := []struct {
+		query string
+		args  []interface{}
+	}{
+		{"DELETE FROM collaborations WHERE user_id = $1", []interface{}{userID}},
+		{"DELETE FROM share_links WHERE created_by = $1", []interface{}{userID}},
+		{"DELETE FROM tags WHERE user_id = $1", []interface{}{userID}},
+		{"DELETE FROM folders WHERE user_id = $1", []interface{}{userID}},
+		{"DELETE FROM templates WHERE user_id = $1", []interface{}{userID}},
+		{"DELETE FROM user_sessions WHERE user_id = $1", []interface{}{userID}},
+		{"DELETE FROM audit_log WHERE user_id = $1", []interface{}{userID}},
+		{"DELETE FROM password_reset_tokens WHERE user_id = $1", []interface{}{userID}},
+		{"DELETE FROM user_roles WHERE user_id = $1", []interface{}{userID}},
 	}
 
-	for _, table := range tables {
-		_, err := tx.Exec(ctx, fmt.Sprintf("DELETE FROM %s WHERE user_id = $1", table), userID)
-		if err != nil {
-			log.Printf("Error deleting from %s: %v", table, err)
-			// Continue deletion even if some tables fail
+	for _, stmt := range cleanupStatements {
+		if _, err := tx.Exec(ctx, stmt.query, stmt.args...); err != nil {
+			log.Printf("Error executing cleanup statement (%s): %v", stmt.query, err)
 		}
 	}
 
-	// Delete workspaces owned by the user
+	// Remove any shared content owned by the user
+	_, err = tx.Exec(ctx, `DELETE FROM collaborations WHERE note_id IN (
+		SELECT n.id
+		FROM notes n
+		JOIN workspaces w ON n.workspace_id = w.id
+		WHERE w.owner_id = $1
+	)`, userID)
+	if err != nil {
+		log.Printf("Error deleting note collaborations: %v", err)
+	}
+
+	// Delete workspaces owned by the user (cascades to notes, note_versions, attachments, share links, etc.)
 	_, err = tx.Exec(ctx, "DELETE FROM workspaces WHERE owner_id = $1", userID)
 	if err != nil {
 		log.Printf("Error deleting workspaces: %v", err)
 	}
 
-	// Delete GDPR keys
+	// Delete personal tags/folders/templates that may not be owned by cascade (already handled above)
+
+	// Delete GDPR keys for this email hash
 	_, err = tx.Exec(ctx, "DELETE FROM gdpr_keys WHERE email_hash = $1", emailHash)
 	if err != nil {
 		log.Printf("Error deleting GDPR keys: %v", err)
 	}
 
-	// Finally, delete the user
+	// Finally, delete the user record
 	_, err = tx.Exec(ctx, "DELETE FROM users WHERE id = $1", userID)
 	if err != nil {
 		log.Printf("Error deleting user: %v", err)
@@ -215,12 +225,14 @@ func (h *AccountHandler) ExportData(c *fiber.Ctx) error {
 
 	ctx := context.Background()
 
-	// Fetch all notes
+	// Fetch all notes owned by the user
 	notes := []map[string]interface{}{}
 	notesRows, err := h.db.Query(ctx, `
-		SELECT id, title_encrypted, content_encrypted, folder_id, created_at, updated_at
-		FROM notes WHERE user_id = $1 AND deleted_at IS NULL
-		ORDER BY created_at DESC
+		SELECT n.id, n.title_encrypted, n.content_encrypted, n.folder_id, n.created_at, n.updated_at
+		FROM notes n
+		JOIN workspaces w ON n.workspace_id = w.id
+		WHERE w.owner_id = $1 AND n.deleted_at IS NULL
+		ORDER BY n.created_at DESC
 	`, userID)
 	if err != nil {
 		log.Printf("Failed to fetch notes for export: %v", err)
@@ -239,11 +251,11 @@ func (h *AccountHandler) ExportData(c *fiber.Ctx) error {
 		}
 
 		note := map[string]interface{}{
-			"id":               id.String(),
-			"title_encrypted":  titleEnc,
+			"id":                id.String(),
+			"title_encrypted":   titleEnc,
 			"content_encrypted": contentEnc,
-			"created_at":       createdAt.Format(time.RFC3339),
-			"updated_at":       updatedAt.Format(time.RFC3339),
+			"created_at":        createdAt.Format(time.RFC3339),
+			"updated_at":        updatedAt.Format(time.RFC3339),
 		}
 		if folderID != nil {
 			note["folder_id"] = folderID.String()
@@ -335,10 +347,10 @@ func (h *AccountHandler) ExportData(c *fiber.Ctx) error {
 			}
 
 			templates = append(templates, map[string]interface{}{
-				"id":               id.String(),
-				"name_encrypted":   nameEnc,
+				"id":                id.String(),
+				"name_encrypted":    nameEnc,
 				"content_encrypted": contentEnc,
-				"created_at":       createdAt.Format(time.RFC3339),
+				"created_at":        createdAt.Format(time.RFC3339),
 			})
 		}
 	}

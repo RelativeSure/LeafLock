@@ -263,7 +263,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
         <Label htmlFor="template-tags">Tags (comma-separated)</Label>
         <Input
           id="template-tags"
-          value={formData.tags.join(', ')}
+          value={(formData.tags ?? []).join(', ')}
           onChange={(e) => handleTagInput(e.target.value)}
           placeholder="meeting, project, daily, etc."
         />

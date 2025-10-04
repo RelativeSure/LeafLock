@@ -1,4 +1,5 @@
 import { resolveApiBaseUrl } from '@/utils/network'
+import { getStoredAuthToken } from '@/utils/auth'
 
 /**
  * Search service for finding notes
@@ -32,7 +33,7 @@ class SearchService {
   }
 
   private getAuthHeaders(): Record<string, string> {
-    const token = localStorage.getItem('auth_token')
+    const token = getStoredAuthToken()
     const csrfToken = localStorage.getItem('csrf_token')
 
     const headers: Record<string, string> = {

@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS notes (
     title_encrypted BYTEA NOT NULL, -- Encrypted title
     content_encrypted BYTEA NOT NULL, -- Encrypted content
     content_hash BYTEA NOT NULL, -- For integrity verification
-    parent_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    parent_id UUID REFERENCES notes(id) ON DELETE SET NULL,
     position INT DEFAULT 0,
     created_by UUID REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -201,7 +201,7 @@ CREATE TABLE IF NOT EXISTS key_rotations (
 CREATE TABLE IF NOT EXISTS folders (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    parent_id UUID REFERENCES folders(id) ON DELETE CASCADE, -- NULL for root folders
+    parent_id UUID REFERENCES folders(id) ON DELETE SET NULL, -- NULL for root folders
     name_encrypted BYTEA NOT NULL, -- Encrypted folder name
     color VARCHAR(7) DEFAULT '#3b82f6', -- Hex color code
     position INT DEFAULT 0, -- For custom ordering
@@ -212,6 +212,13 @@ CREATE TABLE IF NOT EXISTS folders (
 -- Add folder_id to notes table for folder organization
 ALTER TABLE notes ADD COLUMN IF NOT EXISTS folder_id UUID REFERENCES folders(id) ON DELETE SET NULL;
 
+-- Ensure self-referential relationships do not cascade delete unintended records
+ALTER TABLE notes DROP CONSTRAINT IF EXISTS notes_parent_id_fkey;
+ALTER TABLE notes ADD CONSTRAINT notes_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES notes(id) ON DELETE SET NULL;
+
+ALTER TABLE folders DROP CONSTRAINT IF EXISTS folders_parent_id_fkey;
+ALTER TABLE folders ADD CONSTRAINT folders_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES folders(id) ON DELETE SET NULL;
+
 
 
 -- Tags table for organizing notes
@@ -219,11 +226,20 @@ CREATE TABLE IF NOT EXISTS tags (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     name_encrypted BYTEA NOT NULL, -- Encrypted tag name
+    name_hash BYTEA,
     color VARCHAR(7) DEFAULT '#3b82f6', -- Hex color code
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(user_id, name_encrypted) -- Prevent duplicate tag names per user
+    UNIQUE(user_id, name_encrypted) -- Legacy constraint retained for backward compatibility
 );
+
+ALTER TABLE tags ADD COLUMN IF NOT EXISTS name_hash BYTEA;
+ALTER TABLE tags DROP CONSTRAINT IF EXISTS tags_user_id_name_encrypted_key;
+
+-- Enforce uniqueness on deterministic tag hashes when available
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tags_name_hash_unique
+    ON tags(user_id, name_hash)
+    WHERE name_hash IS NOT NULL;
 
 -- Junction table for note-tag relationships
 CREATE TABLE IF NOT EXISTS note_tags (
@@ -319,6 +335,9 @@ CREATE INDEX IF NOT EXISTS idx_users_email_hash ON users(email_hash) WHERE email
 
 -- Search index optimization
 CREATE INDEX IF NOT EXISTS idx_search_keyword ON search_index(keyword_hash);
+CREATE INDEX IF NOT EXISTS idx_note_versions_note ON note_versions(note_id);
+CREATE INDEX IF NOT EXISTS idx_attachments_note ON attachments(note_id);
+CREATE INDEX IF NOT EXISTS idx_templates_user ON templates(user_id);
 
 -- Migration tracking index for fast version checks
 CREATE INDEX IF NOT EXISTS idx_migrations_version ON _migrations(version, applied_at DESC);

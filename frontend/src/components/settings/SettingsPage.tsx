@@ -8,7 +8,8 @@ import { ShareLinksTab } from './ShareLinksTab'
 import { Shield, Eye, User, ArrowLeft, Link as LinkIcon } from 'lucide-react'
 // ThemeToggle component (inline to match App.tsx pattern)
 import { useState } from 'react'
-import { useTheme, type ThemeType } from '../../ThemeContext'
+import { useTheme, type ThemeType } from '@/ThemeContext'
+import type { MfaSetup, MfaStatus } from '@/lib/schemas'
 
 const ThemeToggle: React.FC = () => {
   const { theme, setTheme } = useTheme()
@@ -125,15 +126,10 @@ const ThemeToggle: React.FC = () => {
 
 // SecureAPI interface (for type checking)
 interface SecureAPI {
-  getMfaStatus: () => Promise<{ enabled: boolean; has_secret: boolean }>
-  startMfaSetup: () => Promise<{
-    secret: string
-    otpauth_url: string
-    issuer?: string
-    account?: string
-  }>
-  enableMfa: (code: string) => Promise<{ backup_codes?: string[] }>
-  disableMfa: (code: string) => Promise<{ enabled: boolean }>
+  getMfaStatus: () => Promise<MfaStatus>
+  startMfaSetup: () => Promise<MfaSetup>
+  enableMfa: (code: string) => Promise<MfaStatus>
+  disableMfa: (code: string) => Promise<MfaStatus>
   deleteAccount: (password: string) => Promise<{ success: boolean; message: string }>
   exportAccountData: () => Promise<any>
   // TODO: Implement these methods in SecureAPI
@@ -214,10 +210,13 @@ export function SettingsPage({ api, onBack, onLogout }: SettingsPageProps) {
           {/* Security Tab */}
           <TabsContent value="security" className="mt-6">
             <MfaSettings
-              onGetMfaStatus={api.getMfaStatus.bind(api)}
-              onBeginMfaSetup={api.startMfaSetup.bind(api)}
-              onEnableMfa={api.enableMfa.bind(api)}
-              onDisableMfa={api.disableMfa.bind(api)}
+              onGetMfaStatus={() => api.getMfaStatus()}
+              onBeginMfaSetup={() => api.startMfaSetup()}
+              onEnableMfa={async (code): Promise<MfaStatus & { backup_codes?: string[] }> => {
+                const status = await api.enableMfa(code)
+                return { ...status }
+              }}
+              onDisableMfa={(code): Promise<MfaStatus> => api.disableMfa(code)}
               onGetBackupCodes={handleGetBackupCodes}
               onRegenerateBackupCodes={handleRegenerateBackupCodes}
             />

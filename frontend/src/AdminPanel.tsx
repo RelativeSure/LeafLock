@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Shield, Loader2, Mail, Crown } from 'lucide-react'
+import { Shield, Mail, Crown } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/command'
 import type { AdminUser } from '@/lib/schemas'
 import AnnouncementManager from '@/components/AnnouncementManager'
+import { Spinner } from '@/components/ui/spinner'
 
 const roles = ['admin', 'moderator', 'auditor']
 
@@ -281,7 +282,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
 
         <div className="flex flex-wrap gap-2">
           <Button onClick={handleLoadRoles} disabled={loading || !userId.trim()}>
-            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {loading ? <Spinner className="mr-2 h-4 w-4" /> : null}
             Load Roles
           </Button>
           <Button
@@ -372,7 +373,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
           {quickLoading && (
             <CommandGroup heading="Searching">
               <CommandItem disabled>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Spinner className="mr-2 h-4 w-4" />
                 Looking up users…
               </CommandItem>
             </CommandGroup>

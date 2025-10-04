@@ -11,9 +11,11 @@ import DOMPurify from 'dompurify'
 marked.setOptions({
   gfm: true, // GitHub Flavored Markdown
   breaks: true, // Convert line breaks to <br>
-  headerIds: false, // Don't add IDs to headers
-  mangle: false, // Don't mangle email addresses
 })
+
+const renderer = new marked.Renderer()
+renderer.heading = ({ tokens, depth }) => `<h${depth}>${renderer.parser.parseInline(tokens)}</h${depth}>`
+marked.use({ renderer })
 
 // Configure turndown for HTML to markdown conversion
 const turndownService = new TurndownService({
@@ -34,7 +36,11 @@ turndownService.use(gfm)
 // Custom rules for better conversion
 turndownService.addRule('codeBlock', {
   filter: function (node) {
-    return node.nodeName === 'PRE' && node.firstChild && node.firstChild.nodeName === 'CODE'
+    return (
+      node.nodeName === 'PRE' &&
+      node.firstChild !== null &&
+      (node.firstChild as HTMLElement).nodeName === 'CODE'
+    )
   },
   replacement: function (content, node) {
     const codeElement = node.firstChild as HTMLElement
@@ -50,7 +56,12 @@ export const markdownToHtml = (markdown: string): string => {
   if (!markdown.trim()) return ''
 
   try {
-    const html = marked(markdown)
+    const parsed = marked.parse(markdown)
+    if (typeof parsed !== 'string') {
+      console.error('Async markdown parsing is not supported in this context')
+      return markdown
+    }
+    const html = parsed
     // Security: Sanitize the generated HTML to prevent XSS
     return DOMPurify.sanitize(html, {
       ALLOWED_TAGS: [
@@ -62,8 +73,7 @@ export const markdownToHtml = (markdown: string): string => {
       ALLOWED_ATTR: [
         'href', 'title', 'alt', 'src', 'class',
         'target', 'rel', 'colspan', 'rowspan'
-      ],
-      ALLOWED_PROTOCOLS: ['http', 'https', 'mailto']
+      ]
     })
   } catch (error) {
     console.error('Error converting markdown to HTML:', error)
@@ -114,8 +124,7 @@ export const convertContentForEditor = (content: string): string => {
       ALLOWED_ATTR: [
         'href', 'title', 'alt', 'src', 'class',
         'target', 'rel', 'colspan', 'rowspan'
-      ],
-      ALLOWED_PROTOCOLS: ['http', 'https', 'mailto']
+      ]
     })
   }
 
