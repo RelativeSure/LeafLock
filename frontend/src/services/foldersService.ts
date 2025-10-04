@@ -67,7 +67,7 @@ class FoldersService {
    * Get all folders for the current user
    */
   async getFolders(): Promise<Folder[]> {
-    const response = await fetch(`${this.baseUrl}/api/v1/folders`, {
+    const response = await fetch(`${this.baseUrl}/folders`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     })
@@ -85,7 +85,7 @@ class FoldersService {
    * Create a new folder
    */
   async createFolder(folder: CreateFolderRequest): Promise<Folder> {
-    const response = await fetch(`${this.baseUrl}/api/v1/folders`, {
+    const response = await fetch(`${this.baseUrl}/folders`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(folder),
@@ -103,7 +103,7 @@ class FoldersService {
    * Update a folder
    */
   async updateFolder(folderId: string, folder: UpdateFolderRequest): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/v1/folders/${folderId}`, {
+    const response = await fetch(`${this.baseUrl}/folders/${folderId}`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(folder),
@@ -119,7 +119,7 @@ class FoldersService {
    * Delete a folder
    */
   async deleteFolder(folderId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/v1/folders/${folderId}`, {
+    const response = await fetch(`${this.baseUrl}/folders/${folderId}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     })
@@ -134,7 +134,7 @@ class FoldersService {
    * Move a note to a different folder
    */
   async moveNoteToFolder(noteId: string, folderId?: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/v1/notes/${noteId}/folder`, {
+    const response = await fetch(`${this.baseUrl}/notes/${noteId}/folder`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
       body: JSON.stringify({ folder_id: folderId }),

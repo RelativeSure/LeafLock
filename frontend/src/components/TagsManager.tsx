@@ -94,7 +94,7 @@ export const TagsManager: React.FC<TagsManagerProps> = ({ onClose, onTagsChange 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Hash className="w-5 h-5" />
-            Tags Manager
+            Tags
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -111,7 +111,7 @@ export const TagsManager: React.FC<TagsManagerProps> = ({ onClose, onTagsChange 
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="flex items-center gap-2">
           <Hash className="w-5 h-5" />
-          Tags Manager
+          Tags
         </CardTitle>
         {onClose && (
           <Button variant="ghost" size="sm" onClick={onClose}>

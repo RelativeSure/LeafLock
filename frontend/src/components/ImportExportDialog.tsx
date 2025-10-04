@@ -57,7 +57,7 @@ export function ImportExportDialog({
     if (!token) return
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/user/storage`, {
+      const response = await fetch(`${API_BASE_URL}/user/storage`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -229,7 +229,7 @@ export function ImportExportDialog({
         const formData = new FormData()
         formData.append('file', selectedFiles[0])
 
-        const response = await fetch(`${API_BASE_URL}/api/v1/notes/import`, {
+        const response = await fetch(`${API_BASE_URL}/notes/import`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -253,7 +253,7 @@ export function ImportExportDialog({
           formData.append('files', file)
         })
 
-        const response = await fetch(`${API_BASE_URL}/api/v1/notes/bulk-import`, {
+        const response = await fetch(`${API_BASE_URL}/notes/bulk-import`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -295,7 +295,7 @@ export function ImportExportDialog({
     const token = localStorage.getItem('token')
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/notes/${noteId}/export`, {
+      const response = await fetch(`${API_BASE_URL}/notes/${noteId}/export`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
