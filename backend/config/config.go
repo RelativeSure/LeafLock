@@ -28,6 +28,7 @@ type Config struct {
 	Environment        string
 	TrustProxyHeaders  bool
 	RateLimitMode      string
+	LogLevel           string
 	// Default admin settings
 	DefaultAdminEnabled  bool
 	DefaultAdminEmail    string
@@ -40,6 +41,24 @@ var TrustProxyHeadersFlag atomic.Bool
 
 // LoadConfig loads configuration from environment variables
 func LoadConfig() *Config {
+	logLevelRaw := strings.TrimSpace(os.Getenv("LOG_LEVEL"))
+	if logLevelRaw == "" {
+		logLevelRaw = strings.TrimSpace(os.Getenv("LOGLEVEL"))
+	}
+	logLevel := normalizeLogLevel(logLevelRaw)
+	if logLevel != "info" && logLevelRaw != "" && logLevelRaw != logLevel {
+		log.Printf("⚠️  [WARNING] Normalizing LOG_LEVEL value '%s' to '%s'", logLevelRaw, logLevel)
+	}
+	if logLevelRaw == "" {
+		logLevel = "info"
+	}
+	if !isSupportedLogLevel(logLevel) {
+		if logLevelRaw != "" {
+			log.Printf("⚠️  [WARNING] Unrecognized LOG_LEVEL '%s'; defaulting to 'info'", logLevelRaw)
+		}
+		logLevel = "info"
+	}
+
 	// Generate secure random keys if not provided
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
@@ -142,10 +161,37 @@ func LoadConfig() *Config {
 		Environment:        GetEnvOrDefault("APP_ENV", "development"),
 		TrustProxyHeaders:  GetEnvAsBool("TRUST_PROXY_HEADERS", false),
 		RateLimitMode:      GetEnvOrDefault("RATE_LIMIT_MODE", "progressive"),
+		LogLevel:           logLevel,
 		// Default admin configuration
 		DefaultAdminEnabled:  GetEnvAsBool("ENABLE_DEFAULT_ADMIN", true),
 		DefaultAdminEmail:    GetEnvOrDefault("DEFAULT_ADMIN_EMAIL", "admin@leaflock.app"),
 		DefaultAdminPassword: adminPassword,
+	}
+}
+
+func normalizeLogLevel(value string) string {
+	switch strings.ToLower(value) {
+	case "", "info":
+		return "info"
+	case "debug", "trace":
+		return "debug"
+	case "warn", "warning":
+		return "warn"
+	case "error", "err":
+		return "error"
+	case "fatal", "critical", "panic":
+		return "fatal"
+	default:
+		return strings.ToLower(value)
+	}
+}
+
+func isSupportedLogLevel(value string) bool {
+	switch value {
+	case "debug", "info", "warn", "error", "fatal":
+		return true
+	default:
+		return false
 	}
 }
 
