@@ -54,6 +54,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['buffer', 'crypto-browserify', 'process'],
+    exclude: ['libsodium-wrappers', 'react-quill', 'quill', 'quill-better-table'],
     // Force optimization of frequently used dependencies
     force: process.env.NODE_ENV === 'development',
   },
@@ -66,12 +67,34 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // Enable code splitting for better caching
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          crypto: ['libsodium-wrappers', 'crypto-browserify'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-label', '@radix-ui/react-select'],
-          editor: ['@tiptap/react', '@tiptap/starter-kit', '@tiptap/extension-table'],
-          utils: ['zustand', '@tanstack/react-query', 'clsx', 'tailwind-merge'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('libsodium-wrappers')) {
+              return 'crypto-core'
+            }
+
+            if (id.includes('react-quill') || id.includes('/quill')) {
+              return 'editor-core'
+            }
+
+            if (id.includes('@radix-ui')) {
+              return 'radix-ui'
+            }
+
+            if (id.includes('@tanstack') || id.includes('zustand')) {
+              return 'data-layer'
+            }
+
+            if (id.includes('lucide-react')) {
+              return 'icons'
+            }
+
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'vendor'
+            }
+          }
+
+          return undefined
         },
         // Optimize chunk loading
         chunkFileNames: 'assets/js/[name]-[hash].js',
@@ -79,8 +102,8 @@ export default defineConfig({
         assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
       },
     },
-    // Increase chunk size warning threshold
-    chunkSizeWarningLimit: 1000,
+    // Increase chunk size warning threshold to account for the sodium WASM wrapper
+    chunkSizeWarningLimit: 1600,
     // ESBuild options for production optimization
     esbuild: {
       drop: ['console', 'debugger'],

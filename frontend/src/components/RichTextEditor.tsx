@@ -23,6 +23,8 @@ import {
 import { markdownToHtml, htmlToMarkdown, isHtmlContent } from '../utils/markdownConverter'
 import DOMPurify from 'dompurify'
 import { attachmentService } from '../services/attachmentService'
+import { useTheme } from '@/ThemeContext'
+import { cn } from '@/lib/utils'
 
 // Register Quill modules
 Quill.register('modules/better-table', QuillBetterTable)
@@ -101,6 +103,18 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const [markdownContent, setMarkdownContent] = useState('')
   const [htmlContent, setHtmlContent] = useState('')
   const quillRef = useRef<ReactQuill>(null)
+  const { effectiveTheme } = useTheme()
+
+  const quillThemeClass = useMemo(() => {
+    switch (effectiveTheme) {
+      case 'dark':
+        return 'quill-theme-dark'
+      case 'blue':
+        return 'quill-theme-blue'
+      default:
+        return 'quill-theme-light'
+    }
+  }, [effectiveTheme])
 
   // Quill modules configuration
   const modules = useMemo(() => ({
@@ -336,7 +350,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   }, [handleFileUpload])
 
   return (
-    <div className={`w-full ${className}`}>
+    <div className={cn('w-full', className)}>
       {/* Mode Toggle and Toolbar */}
       {editable && (
         <div className="flex flex-wrap items-center justify-between gap-2 p-3 border border-border border-b-0 rounded-t-lg bg-muted">
@@ -523,7 +537,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             formats={formats}
             readOnly={!editable}
             placeholder={placeholder}
-            className="quill-custom"
+            className={cn('quill-custom', quillThemeClass)}
+            data-theme={effectiveTheme}
           />
         ) : (
           /* Markdown Textarea with drag-and-drop */
