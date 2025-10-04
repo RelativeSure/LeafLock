@@ -26,7 +26,7 @@ interface ExportDataProps {
   onExport: () => Promise<ExportData>
 }
 
-export function ExportData({ onExport }: ExportDataProps) {
+export function ExportDataComponent({ onExport }: ExportDataProps) {
   const [isExporting, setIsExporting] = useState(false)
   const [error, setError] = useState('')
 

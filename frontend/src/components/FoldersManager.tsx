@@ -30,7 +30,7 @@ export const FoldersManager: React.FC<FoldersManagerProps> = ({ onClose, onFolde
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const [_editingId, _setEditingId] = useState<string | null>(null)
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const [newFolder, setNewFolder] = useState<CreateFolderRequest>({
     name: '',
