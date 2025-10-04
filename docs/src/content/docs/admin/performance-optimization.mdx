@@ -44,6 +44,8 @@ Only disable the async flags when you need deterministic ordering for benchmarks
 
 ## Observability Checklist
 - Enable structured logs with `LOG_LEVEL=info` (switch to `debug` during incident response only).
+  - Accepted values: `debug`, `info`, `warn`, `error`, `fatal` (default: `info`).
+  - Deployments that already export `LOGLEVEL` without the underscore continue to work.
 - Feed the Prometheus metrics described in `/admin/monitoring-and-backups` into alert rules for:
   - Startup latency (`time_to_ready` log field) > 30 seconds.
   - Error rate > 5% for `/api/v1/notes/*` endpoints.
