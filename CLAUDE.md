@@ -6,7 +6,7 @@ This file provides guidance to Claude Code when working with this repository.
 
 Secure notes application with end-to-end encryption:
 - **Backend**: Go 1.23+ with Fiber v2, PostgreSQL (pgx), Redis, JWT auth
-- **Frontend**: React 18, TypeScript, Vite 5, Zustand, TipTap editor
+- **Frontend**: React 18, TypeScript, Vite 5, Zustand, Quill 2.0 editor
 - **Encryption**: XChaCha20-Poly1305 (client-side), Argon2id (passwords)
 - **Infrastructure**: Podman/Docker, PostgreSQL 15, Redis 7
 - **Architecture**: Zero-knowledge - server never sees plaintext data
@@ -78,6 +78,14 @@ When modifying `docker-compose.yml`, remember to sync:
 - `frontendDockerfile` and entrypoint scripts if affected
 
 ## Key Features & Architecture
+
+### Rich Text Editor
+- **Editor**: Quill 2.0 (battle-tested, used by Slack/LinkedIn/Figma)
+- **Features**: WYSIWYG/Markdown modes, tables, code blocks, file uploads
+- **Implementation**: `frontend/src/components/RichTextEditor.tsx`
+- **Markdown**: Bidirectional conversion via `marked` and `turndown`
+- **Security**: DOMPurify sanitization on all HTML content
+- **Styling**: Custom CSS in `frontend/src/index.css` (Quill section)
 
 ### E2E Encryption
 - Client-side encryption: XChaCha20-Poly1305 via libsodium-wrappers

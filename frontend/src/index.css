@@ -287,3 +287,130 @@ code {
 .animate-slide-in {
   animation: slideIn 0.4s ease-out;
 }
+
+/* Quill Editor Custom Styles */
+.quill-custom .ql-toolbar {
+  display: none !important; /* Hide Quill's default toolbar since we use custom */
+}
+
+.quill-custom .ql-container {
+  border: none !important;
+  font-size: 1rem;
+  min-height: 200px;
+}
+
+.quill-custom .ql-editor {
+  padding: 1rem;
+  min-height: 200px;
+}
+
+.quill-custom .ql-editor.ql-blank::before {
+  color: hsl(var(--muted-foreground));
+  font-style: normal;
+  left: 1rem;
+}
+
+/* Quill content styling */
+.quill-custom .ql-editor h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin-top: 0.67em;
+  margin-bottom: 0.67em;
+  color: hsl(var(--foreground));
+}
+
+.quill-custom .ql-editor h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin-top: 0.83em;
+  margin-bottom: 0.83em;
+  color: hsl(var(--foreground));
+}
+
+.quill-custom .ql-editor h3 {
+  font-size: 1.17em;
+  font-weight: 600;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  color: hsl(var(--foreground));
+}
+
+.quill-custom .ql-editor p {
+  color: hsl(var(--foreground));
+  margin-bottom: 0.5em;
+}
+
+.quill-custom .ql-editor a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+}
+
+.quill-custom .ql-editor a:hover {
+  opacity: 0.8;
+}
+
+.quill-custom .ql-editor code {
+  background-color: hsl(var(--muted) / 0.5);
+  color: hsl(var(--primary));
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-family: 'Courier New', monospace;
+}
+
+.quill-custom .ql-editor pre {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.quill-custom .ql-editor blockquote {
+  border-left: 4px solid hsl(var(--primary));
+  background-color: hsl(var(--muted) / 0.3);
+  color: hsl(var(--muted-foreground));
+  padding: 0.5rem 1rem;
+  margin: 1rem 0;
+}
+
+.quill-custom .ql-editor ul,
+.quill-custom .ql-editor ol {
+  color: hsl(var(--foreground));
+  padding-left: 1.5rem;
+}
+
+.quill-custom .ql-editor li {
+  color: hsl(var(--foreground));
+  margin-bottom: 0.25rem;
+}
+
+.quill-custom .ql-editor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+}
+
+.quill-custom .ql-editor table {
+  border-collapse: collapse;
+  border: 1px solid hsl(var(--border));
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.quill-custom .ql-editor table th,
+.quill-custom .ql-editor table td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.5rem;
+  color: hsl(var(--foreground));
+}
+
+.quill-custom .ql-editor table th {
+  background-color: hsl(var(--muted));
+  font-weight: 600;
+}
+
+/* Dark theme overrides for Quill */
+.dark .quill-custom .ql-editor.ql-blank::before {
+  color: hsl(var(--muted-foreground));
+}
