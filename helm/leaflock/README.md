@@ -366,7 +366,8 @@ Enable debug logging:
 ```yaml
 backend:
   env:
-    LOG_LEVEL: debug
+    LOG_LEVEL: debug  # Accepted: debug | info | warn | error | fatal (default info)
+    # LOGLEVEL (without the underscore) is also recognized for existing setups
 
 postgresql:
   primary:
