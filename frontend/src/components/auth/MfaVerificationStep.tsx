@@ -12,7 +12,7 @@ interface MfaVerificationStepProps {
 }
 
 export function MfaVerificationStep({
-  sessionToken,
+  sessionToken: _sessionToken,
   onVerify,
   onCancel,
 }: MfaVerificationStepProps) {

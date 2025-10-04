@@ -24,7 +24,6 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Separator } from '@/components/ui/separator'
 import { Toaster } from '@/components/ui/sonner'
 import Footer from '@/components/Footer'
 import AnnouncementBanner, { Announcement } from '@/components/AnnouncementBanner'
@@ -1281,7 +1280,8 @@ type SecuritySettingsViewProps = {
   onBack: () => void
 }
 
-const SecuritySettingsView: React.FC<SecuritySettingsViewProps> = ({ api, onBack }) => {
+/* eslint-disable react-hooks/rules-of-hooks */
+const _SecuritySettingsView: React.FC<SecuritySettingsViewProps> = ({ api, onBack }) => {
   const [status, setStatus] = useState<MfaStatus | null>(null)
   const [setup, setSetup] = useState<MfaSetup | null>(null)
   const [code, setCode] = useState('')
@@ -1889,7 +1889,7 @@ function SecureNotesApp() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [_announcementsLoading, setAnnouncementsLoading] = useState(false)
-  const [showTemplatesManager, setShowTemplatesManager] = useState(false)
+  const [_showTemplatesManager, _setShowTemplatesManager] = useState(false)
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
 
   console.log(

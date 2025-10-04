@@ -3,14 +3,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
 import { Button } from '../ui/button'
 import { MfaSettings } from './MfaSettings'
 import { DeleteAccount } from './DeleteAccount'
-import { ExportData } from './ExportData'
-import { Shield, Eye, User, ArrowLeft } from 'lucide-react'
-import { Alert, AlertDescription } from '../ui/alert'
-
+import { ExportDataComponent } from './ExportData'
+import { ShareLinksTab } from './ShareLinksTab'
+import { Shield, Eye, User, ArrowLeft, Link as LinkIcon } from 'lucide-react'
 // ThemeToggle component (inline to match App.tsx pattern)
 import { useState } from 'react'
-import { useTheme } from '../../ThemeContext'
-import type { ThemeType } from '../../ThemeContext'
+import { useTheme, type ThemeType } from '../../ThemeContext'
 
 const ThemeToggle: React.FC = () => {
   const { theme, setTheme } = useTheme()
@@ -157,7 +155,7 @@ export function SettingsPage({ api, onBack, onLogout }: SettingsPageProps) {
     return { total: 10, remaining: 10 }
   }
 
-  const handleRegenerateBackupCodes = async (password: string) => {
+  const handleRegenerateBackupCodes = async (_password: string) => {
     // TODO: Implement in SecureAPI
     console.warn('regenerateBackupCodes not yet implemented')
     return { codes: [] }
@@ -194,10 +192,14 @@ export function SettingsPage({ api, onBack, onLogout }: SettingsPageProps) {
 
         {/* Tabbed content */}
         <Tabs defaultValue="security" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="security" className="gap-2">
               <Shield className="h-4 w-4" />
               Security
+            </TabsTrigger>
+            <TabsTrigger value="sharing" className="gap-2">
+              <LinkIcon className="h-4 w-4" />
+              Sharing
             </TabsTrigger>
             <TabsTrigger value="privacy" className="gap-2">
               <Eye className="h-4 w-4" />
@@ -219,6 +221,11 @@ export function SettingsPage({ api, onBack, onLogout }: SettingsPageProps) {
               onGetBackupCodes={handleGetBackupCodes}
               onRegenerateBackupCodes={handleRegenerateBackupCodes}
             />
+          </TabsContent>
+
+          {/* Sharing Tab */}
+          <TabsContent value="sharing" className="mt-6">
+            <ShareLinksTab />
           </TabsContent>
 
           {/* Privacy Tab */}
@@ -243,7 +250,7 @@ export function SettingsPage({ api, onBack, onLogout }: SettingsPageProps) {
           {/* Account Tab */}
           <TabsContent value="account" className="mt-6 space-y-6">
             {/* Export Data Section */}
-            <ExportData onExport={handleExportData} />
+            <ExportDataComponent onExport={handleExportData} />
 
             {/* Delete Account Section */}
             <DeleteAccount onDelete={handleDeleteAccount} />
