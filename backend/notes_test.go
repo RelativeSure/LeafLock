@@ -293,10 +293,44 @@ func (suite *NotesHandlerTestSuite) TestUpdateNoteSuccess() {
 
 	noteID := uuid.New()
 
+	mockTx := &MockTx{}
+	suite.mockDB.On("Begin", mock.Anything).Return(mockTx, nil)
+
+	mockTx.On("Rollback", mock.Anything).Return(nil)
+	mockTx.On("Commit", mock.Anything).Return(nil)
+
+	mockRow := &MockRow{}
+	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), noteID, suite.userID).Return(mockRow)
+
+	currentVersion := 1
+	currentTitle := []byte("current-title")
+	currentContent := []byte("current-content")
+	currentHash := []byte("current-hash")
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		if version, ok := args[0].(*int); ok {
+			*version = currentVersion
+		}
+		if title, ok := args[1].(*[]byte); ok {
+			*title = currentTitle
+		}
+		if content, ok := args[2].(*[]byte); ok {
+			*content = currentContent
+		}
+		if hash, ok := args[3].(*[]byte); ok {
+			*hash = currentHash
+		}
+	}).Return(nil)
+
+	mockHistoryResult := &MockResult{tag: "INSERT 1"}
+	mockTx.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(mockHistoryResult, nil).Once()
+
 	// Mock successful update
 	mockResult := &MockResult{}
 	mockResult.On("RowsAffected").Return(int64(1))
-	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockResult, nil)
+	mockResult.tag = "UPDATE 1"
+	mockTx.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(mockResult, nil).Once()
 
 	req := UpdateNoteRequest{
 		TitleEncrypted:   "VXBkYXRlZCBUaXRsZQ==",
@@ -323,10 +357,44 @@ func (suite *NotesHandlerTestSuite) TestUpdateNoteNotFound() {
 
 	noteID := uuid.New()
 
+	mockTx := &MockTx{}
+	suite.mockDB.On("Begin", mock.Anything).Return(mockTx, nil)
+
+	mockTx.On("Rollback", mock.Anything).Return(nil)
+	mockTx.On("Commit", mock.Anything).Return(nil).Maybe()
+
+	mockRow := &MockRow{}
+	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), noteID, suite.userID).Return(mockRow)
+
+	currentVersion := 2
+	currentTitle := []byte("existing-title")
+	currentContent := []byte("existing-content")
+	currentHash := []byte("existing-hash")
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		if version, ok := args[0].(*int); ok {
+			*version = currentVersion
+		}
+		if title, ok := args[1].(*[]byte); ok {
+			*title = currentTitle
+		}
+		if content, ok := args[2].(*[]byte); ok {
+			*content = currentContent
+		}
+		if hash, ok := args[3].(*[]byte); ok {
+			*hash = currentHash
+		}
+	}).Return(nil)
+
+	mockHistoryResult := &MockResult{tag: "INSERT 1"}
+	mockTx.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(mockHistoryResult, nil).Once()
+
 	// Mock no rows affected (note not found or not owned by user)
 	mockResult := &MockResult{}
 	mockResult.On("RowsAffected").Return(int64(0))
-	suite.mockDB.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockResult, nil)
+	mockResult.tag = "UPDATE 0"
+	mockTx.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(mockResult, nil).Once()
 
 	req := UpdateNoteRequest{
 		TitleEncrypted:   "VXBkYXRlZCBUaXRsZQ==",

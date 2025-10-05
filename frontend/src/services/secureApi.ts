@@ -4,13 +4,11 @@ import {
   adminUserRolesResponseSchema,
   mfaSetupSchema,
   mfaStatusSchema,
-  registrationStatusSchema,
   type AdminListUsersResponse,
   type AdminActionResponse,
   type AdminUserRolesResponse,
   type MfaSetup,
   type MfaStatus,
-  type RegistrationStatus,
 } from '@/lib/schemas'
 import type { AuthResponse } from '@/types/auth'
 import { getStoredAuthToken, persistAuthToken, clearStoredAuthToken } from '@/utils/auth'
