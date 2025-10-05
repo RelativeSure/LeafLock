@@ -1,0 +1,35 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "packageRules": [
+    {
+      "description": "Group all React ecosystem updates together",
+      "matchPackagePatterns": [
+        "^react",
+        "^@radix-ui/",
+        "^@types/react"
+      ],
+      "groupName": "React ecosystem"
+    },
+    {
+      "description": "Group Vite and build tools together",
+      "matchPackagePatterns": [
+        "^vite",
+        "^@vitejs/",
+        "^eslint",
+        "^@typescript-eslint/"
+      ],
+      "groupName": "Build tools"
+    },
+    {
+      "description": "Group testing libraries together",
+      "matchPackagePatterns": [
+        "^@testing-library/",
+        "^@vitest/",
+        "^vitest",
+        "^@playwright/"
+      ],
+      "groupName": "Testing libraries"
+    }
+  ]
+}
