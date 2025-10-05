@@ -41,7 +41,7 @@ jobs:
           corepack prepare "$PNPM_VERSION" --activate
 
       - name: 🔧 Setup Node.js
-        uses: actions/setup-node@0a20b76f41fa7482e88e00bc90058e9f094f62f7 # v5
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'pnpm'
