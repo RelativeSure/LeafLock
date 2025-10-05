@@ -502,13 +502,7 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
   return (
     <div className={cn('w-full', className)}>
       <LexicalComposer initialConfig={initialConfig}>
-        {editable && (
-          <ToolbarPlugin
-            onModeSwitch={handleModeSwitch}
-            editorMode={editorMode}
-            showModeToggle={showModeToggle}
-          />
-        )}
+        {editable && <ToolbarPlugin />}
 
         <div
           className={cn(
