@@ -11,6 +11,8 @@ Secure notes application with end-to-end encryption:
 - **Infrastructure**: Podman/Docker, PostgreSQL 15, Redis 7
 - **Architecture**: Zero-knowledge - server never sees plaintext data
 
+**⚠️ CRITICAL**: Frontend is 100% TypeScript - **NEVER create `.jsx` files**. All React files must use `.tsx` extension. This is enforced by `scripts/check-no-jsx.sh` which runs on build and lint.
+
 ## Essential Commands
 
 ### Backend

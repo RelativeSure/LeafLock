@@ -7,10 +7,10 @@
   "license": "PolyForm-Noncommercial-1.0.0",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "bash scripts/check-no-jsx.sh && vite build",
     "preview": "vite preview",
-    "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
-    "lint:fix": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
+    "lint": "bash scripts/check-no-jsx.sh && eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
     "format": "prettier --write src/**/*.{js,jsx,ts,tsx,css}",
     "format:check": "prettier --check src/**/*.{js,jsx,ts,tsx,css}",
     "typecheck": "tsc --noEmit",
