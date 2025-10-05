@@ -119,7 +119,7 @@ When modifying `docker-compose.yml`, remember to sync:
 
 ### Admin System
 - Auto-creates default admin if no users exist
-- Email: `DEFAULT_ADMIN_EMAIL` (default: admin@leaflock.app)
+- Email: `DEFAULT_ADMIN_EMAIL` (default: <admin@leaflock.app>)
 - Password: `DEFAULT_ADMIN_PASSWORD` (supports all special chars)
 - Implementation: `backend/services/admin.go`
 
@@ -181,9 +181,9 @@ Copy `.env.example` to `.env` and configure:
 - `CORS_ORIGINS` - Allowed frontend origins
 
 **Service Ports**:
-- Frontend: http://localhost:3000
-- Backend: http://localhost:8080
-- Health: http://localhost:8080/api/v1/health
+- Frontend: <http://localhost:3000>
+- Backend: <http://localhost:8080>
+- Health: <http://localhost:8080/api/v1/health>
 
 ## Testing
 
