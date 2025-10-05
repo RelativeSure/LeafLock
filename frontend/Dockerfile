@@ -1,15 +1,15 @@
 FROM node:22-alpine AS builder
 
+# Build cache invalidation - update timestamp to force complete rebuild
+ARG CACHE_BUST=2025-10-05-143000
+RUN echo "Build timestamp: $CACHE_BUST"
+
 RUN apk --no-cache add git
 
 WORKDIR /app
 
 ARG VITE_API_URL=http://localhost:8080
 ENV VITE_API_URL=$VITE_API_URL
-
-# Build cache invalidation argument - update to force rebuild
-ARG CACHE_BUST=2025-10-05-141732
-RUN echo "Build cache bust: $CACHE_BUST"
 
 RUN npm install -g pnpm@10.17.1
 
