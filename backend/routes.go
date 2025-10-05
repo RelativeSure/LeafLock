@@ -38,7 +38,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 		}(),
 		HSTSPreloadEnabled: appconfig.GetEnvOrDefault("APP_ENV", "development") == "production",
 		ContentSecurityPolicy: "default-src 'self'; " +
-			"script-src 'self' 'strict-dynamic' 'nonce-{random}'; " +
+			"script-src 'self'; " +
 			"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
 			"font-src 'self' https://fonts.gstatic.com data:; " +
 			"img-src 'self' data: https: blob:; " +
