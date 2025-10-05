@@ -32,6 +32,10 @@ docs/dist/
 # generated types
 docs/.astro/
 
+# environment
+docs/.env
+docs/.env.production
+
 # dependencies
 docs/node_modules/
 
@@ -39,3 +43,4 @@ docs/node_modules/
 
 
 megalinter-reports/
+frontend/src/components/__tests__/

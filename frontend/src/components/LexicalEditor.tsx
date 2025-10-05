@@ -21,6 +21,7 @@ import {
   LexicalEditor as LexicalEditorType,
   FORMAT_TEXT_COMMAND,
   FORMAT_ELEMENT_COMMAND,
+  DROP_COMMAND,
 } from 'lexical'
 import {
   Bold,
@@ -249,22 +250,34 @@ function HtmlConverterPlugin({
   noteId?: string
 }) {
   const [editor] = useLexicalComposerContext()
-  const isFirstRender = useRef(true)
+  const lastImportedContent = useRef<{ content: string; noteId?: string } | null>(null)
+  const lastEmittedContent = useRef<string | null>(null)
 
-  // Load initial content
+  // Load or refresh content when parent prop changes
   useEffect(() => {
-    if (isFirstRender.current && content) {
-      editor.update(() => {
-        const parser = new DOMParser()
-        const dom = parser.parseFromString(content, 'text/html')
-        const nodes = $generateNodesFromDOM(editor, dom)
-        const root = $getRoot()
-        root.clear()
-        root.append(...nodes)
-      })
-      isFirstRender.current = false
+    const importedKey = lastImportedContent.current
+
+    const alreadyImported =
+      importedKey?.content === content && importedKey?.noteId === noteId
+    const justEmitted =
+      lastEmittedContent.current === content && importedKey?.noteId === noteId
+
+    if (alreadyImported || justEmitted) {
+      lastImportedContent.current = { content, noteId }
+      return
     }
-  }, [editor, content])
+
+    editor.update(() => {
+      const parser = new DOMParser()
+      const dom = parser.parseFromString(content || '', 'text/html')
+      const nodes = $generateNodesFromDOM(editor, dom)
+      const root = $getRoot()
+      root.clear()
+      root.append(...nodes)
+    })
+
+    lastImportedContent.current = { content, noteId }
+  }, [editor, content, noteId])
 
   // Export HTML on change
   const handleChange = useCallback(
@@ -314,6 +327,7 @@ function HtmlConverterPlugin({
             'rowspan',
           ],
         })
+        lastEmittedContent.current = sanitizedHtml
         onChange(sanitizedHtml)
       })
     },
@@ -323,7 +337,7 @@ function HtmlConverterPlugin({
   // Drag and drop file upload
   useEffect(() => {
     return editor.registerCommand(
-      'DROP',
+      DROP_COMMAND,
       (event: DragEvent) => {
         event.preventDefault()
         event.stopPropagation()
