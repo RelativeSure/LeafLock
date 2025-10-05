@@ -51,9 +51,8 @@ SHOW_ELAPSED_TIME: true
 
 # Linter-specific configurations
 
-# Go - Run from backend subdirectory using wrapper script
-GO_GOLANGCI_LINT_CLI_EXECUTABLE: ["bash", "/tmp/lint/scripts/golangci-lint-wrapper.sh"]
-GO_GOLANGCI_LINT_ARGUMENTS: "--timeout=5m -c /tmp/lint/.github/linters/.golangci.yml ./..."
+# Go - Invoke golangci-lint directly from the repo root
+GO_GOLANGCI_LINT_ARGUMENTS: "--timeout=5m -c .github/linters/.golangci.yml ./..."
 GO_GOLANGCI_LINT_CONFIG_FILE: ".github/linters/.golangci.yml"
 GO_GOLANGCI_LINT_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
 GO_GOLANGCI_LINT_CLI_LINT_MODE: "project"
@@ -77,7 +76,6 @@ YAML_YAMLLINT_FILTER_REGEX_EXCLUDE: "(node_modules|\\.gomod|vendor)"
 JSON_JSONLINT_FILTER_REGEX_EXCLUDE: "(node_modules|\\.gomod|vendor|package-lock.json|pnpm-lock.yaml|tsconfig.*\\.json)"
 
 # Bash - Exclude vendor scripts
-BASH_SHELLCHECK_CONFIG_FILE: ".github/linters/.shellcheckrc"
 BASH_SHELLCHECK_FILTER_REGEX_EXCLUDE: "(node_modules|\\.gomod|vendor)"
 
 # Dockerfile - Ignore Alpine package pinning warnings
