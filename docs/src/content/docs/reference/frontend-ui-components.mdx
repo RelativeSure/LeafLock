@@ -123,6 +123,27 @@ Components automatically adapt to light/dark theme via CSS custom properties.
 
 ## Usage Examples
 
+### Rich Text Editor (Lexical)
+
+A secure, WYSIWYG-only editor used in Notes.
+
+- Features: bold, italic, strikethrough, inline code, H1–H3 headings, bulleted/numbered lists, quote, links, images (URL), code block, horizontal rule, drag-and-drop attachments, history.
+- Security: output HTML is sanitized; data is encrypted before API send.
+
+```tsx
+import { RichTextEditor } from '@/components/RichTextEditor'
+
+<RichTextEditor
+  content={content}
+  onChange={setContent}
+  noteId={note?.id}
+  placeholder="Start writing..."
+  editable
+  className="h-full"
+/>
+```
+
+
 ### Skeleton Loading States
 
 Replace custom spinners with semantic skeleton components:
