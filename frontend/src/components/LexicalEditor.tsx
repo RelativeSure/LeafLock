@@ -22,21 +22,12 @@ import {
   FORMAT_TEXT_COMMAND,
   DROP_COMMAND,
 } from 'lexical'
-import {
-  Bold,
-  Italic,
-  Strikethrough,
-  Code,
-  Link as LinkIcon,
-  Image as ImageIcon,
-  Edit3,
-  FileText,
-} from 'lucide-react'
+import { Bold, Italic, Strikethrough, Code, Link as LinkIcon, Image as ImageIcon, List, ListOrdered, Quote, Heading1, Heading2, Heading3, Undo2, Redo2, Minus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/ThemeContext'
 import DOMPurify from 'dompurify'
 import { attachmentService } from '../services/attachmentService'
-import { markdownToHtml, htmlToMarkdown, isHtmlContent } from '../utils/markdownConverter'
+// Markdown helpers are no longer used; editor runs WYSIWYG-only
 
 interface LexicalEditorProps {
   content: string
@@ -45,11 +36,10 @@ interface LexicalEditorProps {
   placeholder?: string
   editable?: boolean
   className?: string
-  defaultMode?: 'wysiwyg' | 'markdown'
-  showModeToggle?: boolean
+  // WYSIWYG only
 }
 
-type EditorMode = 'wysiwyg' | 'markdown'
+type EditorMode = 'wysiwyg'
 
 interface ToolbarButtonProps {
   onClick: () => void
@@ -95,15 +85,7 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
 const ToolbarSeparator: React.FC = () => <div className="w-px h-6 bg-border mx-1" />
 
 // Toolbar Plugin
-function ToolbarPlugin({
-  onModeSwitch,
-  editorMode,
-  showModeToggle,
-}: {
-  onModeSwitch: (mode: EditorMode) => void
-  editorMode: EditorMode
-  showModeToggle: boolean
-}) {
+function ToolbarPlugin() {
   const [editor] = useLexicalComposerContext()
   const [isBold, setIsBold] = useState(false)
   const [isItalic, setIsItalic] = useState(false)
@@ -150,6 +132,15 @@ function ToolbarPlugin({
     editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'code')
   }
 
+  const insertCodeBlock = () => {
+    editor.update(() => {
+      const root = $getRoot()
+      const paragraph = $createParagraphNode()
+      paragraph.append($createTextNode('```\n// code\n```'))
+      root.append(paragraph)
+    })
+  }
+
   const insertLink = () => {
     const url = window.prompt('Enter URL:')
     if (url) {
@@ -183,29 +174,44 @@ function ToolbarPlugin({
     }
   }
 
-  if (editorMode === 'markdown') return null
+  const formatHeading = (level: 1 | 2 | 3) => {
+    editor.update(() => {
+      const root = $getRoot()
+      const paragraph = $createParagraphNode()
+      paragraph.append($createTextNode(level === 1 ? '# ' : level === 2 ? '## ' : '### '))
+      root.append(paragraph)
+    })
+  }
+
+  const insertList = (ordered: boolean) => {
+    editor.update(() => {
+      const root = $getRoot()
+      const paragraph = $createParagraphNode()
+      paragraph.append($createTextNode(ordered ? '1. ' : '- '))
+      root.append(paragraph)
+    })
+  }
+
+  const insertQuote = () => {
+    editor.update(() => {
+      const root = $getRoot()
+      const paragraph = $createParagraphNode()
+      paragraph.append($createTextNode('> '))
+      root.append(paragraph)
+    })
+  }
+
+  const insertHr = () => {
+    editor.update(() => {
+      const root = $getRoot()
+      const paragraph = $createParagraphNode()
+      paragraph.append($createTextNode('\n---\n'))
+      root.append(paragraph)
+    })
+  }
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 p-3 border border-border border-b-0 rounded-t-lg bg-muted">
-      {showModeToggle && (
-        <div className="flex items-center gap-1 mr-4">
-          <ToolbarButton
-            onClick={() => onModeSwitch('wysiwyg')}
-            isActive={editorMode === 'wysiwyg'}
-            title="WYSIWYG Editor"
-          >
-            <Edit3 className="w-4 h-4" />
-          </ToolbarButton>
-          <ToolbarButton
-            onClick={() => onModeSwitch('markdown')}
-            isActive={editorMode === 'markdown'}
-            title="Markdown Editor"
-          >
-            <FileText className="w-4 h-4" />
-          </ToolbarButton>
-        </div>
-      )}
-
       <div className="flex flex-wrap items-center gap-1">
         <ToolbarButton onClick={formatBold} isActive={isBold} title="Bold (Ctrl+B)">
           <Bold className="w-4 h-4" />
@@ -229,12 +235,45 @@ function ToolbarPlugin({
 
         <ToolbarSeparator />
 
+        <ToolbarButton onClick={() => formatHeading(1)} title="Heading 1">
+          <Heading1 className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton onClick={() => formatHeading(2)} title="Heading 2">
+          <Heading2 className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton onClick={() => formatHeading(3)} title="Heading 3">
+          <Heading3 className="w-4 h-4" />
+        </ToolbarButton>
+
+        <ToolbarSeparator />
+
+        <ToolbarButton onClick={() => insertList(false)} title="Bulleted List">
+          <List className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton onClick={() => insertList(true)} title="Numbered List">
+          <ListOrdered className="w-4 h-4" />
+        </ToolbarButton>
+
+        <ToolbarButton onClick={insertQuote} title="Blockquote">
+          <Quote className="w-4 h-4" />
+        </ToolbarButton>
+
         <ToolbarButton onClick={insertLink} title="Add Link">
           <LinkIcon className="w-4 h-4" />
         </ToolbarButton>
 
         <ToolbarButton onClick={insertImage} title="Add Image (URL)">
           <ImageIcon className="w-4 h-4" />
+        </ToolbarButton>
+
+      <ToolbarSeparator />
+
+      <ToolbarButton onClick={insertCodeBlock} title="Insert Code Block">
+        <Code className="w-4 h-4" />
+      </ToolbarButton>
+
+        <ToolbarButton onClick={insertHr} title="Horizontal Rule">
+          <Minus className="w-4 h-4" />
         </ToolbarButton>
       </div>
     </div>
@@ -417,11 +456,7 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
   placeholder = 'Start writing your note...',
   editable = true,
   className = '',
-  defaultMode = 'wysiwyg',
-  showModeToggle = true,
 }) => {
-  const [editorMode, setEditorMode] = useState<EditorMode>(defaultMode)
-  const [markdownContent, setMarkdownContent] = useState('')
   const { effectiveTheme } = useTheme()
 
   const initialConfig = {
@@ -462,83 +497,7 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
     },
   }
 
-  // Initialize markdown content from HTML content
-  useEffect(() => {
-    if (editorMode === 'markdown' && content) {
-      const markdown = isHtmlContent(content) ? htmlToMarkdown(content) : content
-      setMarkdownContent(markdown)
-    }
-  }, [editorMode, content])
-
-  const handleModeSwitch = useCallback(
-    (newMode: EditorMode) => {
-      if (newMode === editorMode) return
-
-      if (newMode === 'markdown') {
-        // Convert HTML to markdown
-        const markdown = htmlToMarkdown(content)
-        setMarkdownContent(markdown)
-      } else {
-        // Convert markdown to HTML
-        const html = markdownToHtml(markdownContent)
-        onChange(html)
-      }
-
-      setEditorMode(newMode)
-    },
-    [editorMode, content, markdownContent, onChange]
-  )
-
-  const handleMarkdownChange = useCallback(
-    (value: string) => {
-      setMarkdownContent(value)
-      // Convert to HTML and notify parent
-      const html = markdownToHtml(value)
-      onChange(html)
-    },
-    [onChange]
-  )
-
-  if (editorMode === 'markdown') {
-    return (
-      <div className={cn('w-full', className)}>
-        {showModeToggle && (
-          <div className="flex flex-wrap items-center justify-between gap-2 p-3 border border-border border-b-0 rounded-t-lg bg-muted">
-            <div className="flex items-center gap-1">
-              <ToolbarButton
-                onClick={() => handleModeSwitch('wysiwyg')}
-                isActive={false}
-                title="WYSIWYG Editor"
-              >
-                <Edit3 className="w-4 h-4" />
-              </ToolbarButton>
-              <ToolbarButton
-                onClick={() => handleModeSwitch('markdown')}
-                isActive={true}
-                title="Markdown Editor"
-              >
-                <FileText className="w-4 h-4" />
-              </ToolbarButton>
-            </div>
-          </div>
-        )}
-
-        <div className="border border-border border-t-0 rounded-b-lg bg-background">
-          <textarea
-            value={markdownContent}
-            onChange={(e) => handleMarkdownChange(e.target.value)}
-            placeholder={placeholder}
-            className="
-              w-full min-h-[200px] p-4 border-0 resize-none focus:outline-none
-              font-mono text-sm leading-relaxed
-              bg-background text-foreground
-            "
-            disabled={!editable}
-          />
-        </div>
-      </div>
-    )
-  }
+  // WYSIWYG-only: no markdown mode
 
   return (
     <div className={cn('w-full', className)}>

@@ -237,8 +237,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
             noteId={selectedNote?.id}
             placeholder="Start writing your secure note... You can use rich text formatting or Markdown!"
             className="h-full"
-            defaultMode="wysiwyg"
-            showModeToggle
+            editable
           />
         </Suspense>
         <p id="editor-help" className="sr-only">

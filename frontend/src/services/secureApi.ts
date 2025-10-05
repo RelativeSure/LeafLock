@@ -34,6 +34,11 @@ export class SecureAPI {
     if (this.token) {
       headers['Authorization'] = `Bearer ${this.token}`
     }
+    // Include CSRF token when available (server sets cookie `csrf_token`)
+    const csrfToken = localStorage.getItem('csrf_token')
+    if (csrfToken && !headers['X-CSRF-Token']) {
+      headers['X-CSRF-Token'] = csrfToken
+    }
 
     console.log('🔗 API Request:', {
       url,

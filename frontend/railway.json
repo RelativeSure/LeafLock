@@ -13,6 +13,7 @@
     "restartPolicyMaxRetries": 10,
     "healthcheckPath": "/health",
     "env": {
+      "VITE_LOG_LEVEL": "warn",
       "RAILWAY_BACKEND_KEYWORDS": "LEAFLOCK_BACKEND|BACKEND|API|SERVER|APP|SERVICE",
       "RAILWAY_BACKEND_PORT": "8080"
     }
