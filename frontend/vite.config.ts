@@ -54,7 +54,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['buffer', 'crypto-browserify', 'process'],
-    exclude: ['libsodium-wrappers', 'react-quill', 'quill', 'quill-better-table'],
+    exclude: ['libsodium-wrappers'],
     // Force optimization of frequently used dependencies
     force: process.env.NODE_ENV === 'development',
   },
@@ -73,7 +73,7 @@ export default defineConfig({
               return 'crypto-core'
             }
 
-            if (id.includes('react-quill') || id.includes('/quill')) {
+            if (id.includes('lexical') || id.includes('@lexical')) {
               return 'editor-core'
             }
 
