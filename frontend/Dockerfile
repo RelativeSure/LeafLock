@@ -1,8 +1,7 @@
 FROM node:22-alpine AS builder
 
-# Build cache invalidation - update timestamp to force complete rebuild
-ARG CACHE_BUST=2025-10-05-173000
-RUN echo "Build timestamp: $CACHE_BUST"
+# CRITICAL: Railway cache buster - change this line to force rebuild
+RUN echo "Force rebuild: 2025-10-05-18-00-REBUILD-ALL"
 
 RUN apk --no-cache add git
 
