@@ -58,25 +58,6 @@ jobs:
           # improve performance
           #fetch-depth: 0
 
-      - name: Enable pnpm
-        run: |
-          corepack enable
-          PNPM_VERSION=$(jq -r '.packageManager' frontend/package.json)
-          corepack prepare "$PNPM_VERSION" --activate
-          echo "PNPM_HOME=$HOME/.local/share/pnpm" >> "$GITHUB_ENV"
-          echo "$HOME/.local/share/pnpm" >> "$GITHUB_PATH"
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-          cache-dependency-path: frontend/pnpm-lock.yaml
-
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: pnpm install --frozen-lockfile
-
       # MegaLinter
       - name: MegaLinter
 

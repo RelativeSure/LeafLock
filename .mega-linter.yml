@@ -8,11 +8,8 @@ ENABLE_LINTERS:
   # Go (Backend) - Non-blocking in MegaLinter, runs properly in .github/workflows/golangci-lint.yml
   - GO_GOLANGCI_LINT          # Separate workflow with Go 1.25 handles actual linting
 
-  # JavaScript/TypeScript (Frontend)
-  - TYPESCRIPT_ES              # ESLint for TypeScript/React
-  - TYPESCRIPT_PRETTIER        # Code formatting for TS/JS
-  - JAVASCRIPT_ES              # ESLint for plain JavaScript
-  - JAVASCRIPT_PRETTIER        # Code formatting for JS
+  # Frontend linting (ESLint/Prettier) handled by dedicated .github/workflows/frontend-lint.yml
+  # MegaLinter uses ESLint 8.57.1, incompatible with our ESLint 9.36.0 flat config
 
   # Configuration Files
   - YAML_YAMLLINT              # YAML linting (docker-compose, k8s, CI/CD)
@@ -56,17 +53,6 @@ GO_GOLANGCI_LINT_ARGUMENTS: "--timeout=5m -c .github/linters/.golangci.yml ./...
 GO_GOLANGCI_LINT_CONFIG_FILE: ".github/linters/.golangci.yml"
 GO_GOLANGCI_LINT_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
 GO_GOLANGCI_LINT_CLI_LINT_MODE: "project"
-
-# JavaScript/TypeScript - Exclude generated and dependency code
-JAVASCRIPT_ES_CONFIG_FILE: "frontend/eslint.config.js"
-JAVASCRIPT_ES_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
-JAVASCRIPT_PRETTIER_CONFIG_FILE: "frontend/.prettierrc"
-JAVASCRIPT_PRETTIER_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
-TYPESCRIPT_ES_FILE_EXTENSIONS: [".ts", ".tsx"]
-TYPESCRIPT_ES_CONFIG_FILE: "frontend/eslint.config.js"
-TYPESCRIPT_ES_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
-TYPESCRIPT_PRETTIER_CONFIG_FILE: "frontend/.prettierrc"
-TYPESCRIPT_PRETTIER_FILTER_REGEX_EXCLUDE: "(node_modules|dist|build|\\.gomod|vendor)"
 
 # YAML - Exclude vendor code and use project config
 YAML_YAMLLINT_ARGUMENTS: "-c .yamllint"
