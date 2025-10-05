@@ -7,8 +7,10 @@ WORKDIR /app
 ARG VITE_API_URL=http://localhost:8080
 ENV VITE_API_URL=$VITE_API_URL
 
-# Cache-busting: Update this date to force clean rebuild
-# Last updated: 2025-10-05 (React 19.2 compatibility fix)
+# Build cache invalidation argument - update to force rebuild
+ARG CACHE_BUST=2025-10-05-141732
+RUN echo "Build cache bust: $CACHE_BUST"
+
 RUN npm install -g pnpm@10.17.1
 
 COPY package.json pnpm-lock.yaml ./
