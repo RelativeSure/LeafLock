@@ -5,6 +5,8 @@ schema = "https://railway.app/railway.schema.json"
 builder = "DOCKERFILE"
 dockerfilePath = "frontend/Dockerfile"
 watchPatterns = ["frontend/**"]
+# Force rebuild without cache (updated 2025-10-05 for React 19.2 fix)
+buildCommand = "docker build --no-cache ."
 
 [deploy]
 numReplicas = 1

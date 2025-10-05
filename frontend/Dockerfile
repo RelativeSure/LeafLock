@@ -7,14 +7,19 @@ WORKDIR /app
 ARG VITE_API_URL=http://localhost:8080
 ENV VITE_API_URL=$VITE_API_URL
 
+# Cache-busting: Update this date to force clean rebuild
+# Last updated: 2025-10-05 (React 19.2 compatibility fix)
 RUN npm install -g pnpm@10.17.1
 
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+
+# Clean install to avoid stale dependencies
+RUN rm -rf node_modules .pnpm-store && pnpm install --frozen-lockfile
 
 COPY . .
 
-RUN pnpm run build
+# Clean build to avoid stale artifacts
+RUN rm -rf dist && pnpm run build
 
 FROM caddy:2.10-alpine@sha256:a4180db0805b3725ddf936d2e6290553745c7339c003565da717ee612fd8a888
 
