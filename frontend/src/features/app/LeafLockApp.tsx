@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react'
 import { Shield, Settings, Hash, Folder, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { LoadingOverlay } from '@/features/common/LoadingOverlay'
 import { OnboardingOverlay } from '@/features/onboarding/OnboardingOverlay'
 import { LoginView } from '@/features/auth/LoginView'
 import { UnlockView } from '@/features/auth/UnlockView'
@@ -387,9 +386,7 @@ export const LeafLockApp: React.FC = () => {
     }
   }, [encryptionStatus, isAuthenticated, initializing, currentView])
 
-  if (initializing) {
-    return <LoadingOverlay message="Starting LeafLock" />
-  }
+  // Removed loading overlay - app initializes in background
 
   const AppLayout: React.FC = () => {
     const loggedInAnnouncements = announcements.filter(
