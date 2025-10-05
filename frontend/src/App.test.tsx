@@ -14,14 +14,14 @@ import {
   waitForLoading,
   MockCryptoService,
   checkForXSS,
-} from './test-utils.jsx'
+} from './test-utils'
 
 // Mock libsodium-wrappers BEFORE importing any components
 vi.mock('libsodium-wrappers', () => mockSodium)
 
 // Import React and the component AFTER setting up the mock
 import React from 'react'
-import LeafLockApp from './App.jsx'
+import LeafLockApp from './App'
 
 describe('LeafLockApp', () => {
   beforeEach(() => {
