@@ -1,7 +1,7 @@
 FROM node:22-alpine AS builder
 
 # Build cache invalidation - update timestamp to force complete rebuild
-ARG CACHE_BUST=2025-10-05-160000
+ARG CACHE_BUST=2025-10-05-173000
 RUN echo "Build timestamp: $CACHE_BUST"
 
 RUN apk --no-cache add git
