@@ -15,12 +15,11 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import {
   $getRoot,
   $getSelection,
+  $isRangeSelection,
   $createParagraphNode,
   $createTextNode,
   EditorState,
-  LexicalEditor as LexicalEditorType,
   FORMAT_TEXT_COMMAND,
-  FORMAT_ELEMENT_COMMAND,
   DROP_COMMAND,
 } from 'lexical'
 import {
@@ -29,17 +28,9 @@ import {
   Strikethrough,
   Code,
   Link as LinkIcon,
-  List,
-  ListOrdered,
-  Quote,
-  Table as TableIcon,
   Image as ImageIcon,
-  Heading1,
-  Heading2,
-  Heading3,
   Edit3,
   FileText,
-  Upload,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/ThemeContext'
@@ -121,8 +112,19 @@ function ToolbarPlugin({
 
   const updateToolbar = useCallback(() => {
     const selection = $getSelection()
-    // Update toolbar state based on selection
-  }, [])
+
+    if ($isRangeSelection(selection)) {
+      setIsBold(selection.hasFormat('bold'))
+      setIsItalic(selection.hasFormat('italic'))
+      setIsStrikethrough(selection.hasFormat('strikethrough'))
+      setIsCode(selection.hasFormat('code'))
+    } else {
+      setIsBold(false)
+      setIsItalic(false)
+      setIsStrikethrough(false)
+      setIsCode(false)
+    }
+  }, [setIsBold, setIsItalic, setIsStrikethrough, setIsCode])
 
   useEffect(() => {
     return editor.registerUpdateListener(({ editorState }) => {

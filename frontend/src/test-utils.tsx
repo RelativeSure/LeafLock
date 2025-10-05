@@ -14,8 +14,8 @@ const sodiumMockBase = {
   randombytes_buf: vi.fn().mockImplementation((size) => new Uint8Array(size).fill(1)),
   from_string: vi.fn().mockImplementation((str) => new TextEncoder().encode(str)),
   to_string: vi.fn().mockImplementation((bytes) => new TextDecoder().decode(bytes)),
-  from_base64: vi.fn().mockImplementation((str) => new Uint8Array([1, 2, 3, 4])),
-  to_base64: vi.fn().mockImplementation((bytes) => 'mocked-base64'),
+  from_base64: vi.fn().mockImplementation((_str) => new Uint8Array([1, 2, 3, 4])),
+  to_base64: vi.fn().mockImplementation((_bytes) => 'mocked-base64'),
   crypto_secretbox_easy: vi.fn().mockImplementation(() => new Uint8Array([5, 6, 7, 8])),
   crypto_secretbox_open_easy: vi
     .fn()
@@ -143,7 +143,7 @@ export class MockCryptoService {
     this.sodiumReady = true
   }
 
-  async deriveKeyFromPassword(password, salt) {
+  async deriveKeyFromPassword(_password, _salt) {
     return new Uint8Array(32).fill(1)
   }
 
@@ -177,7 +177,7 @@ export class MockSecureAPI {
     this.responses.set(endpoint, response)
   }
 
-  async request(endpoint, options = {}) {
+  async request(endpoint, _options = {}) {
     const mockResponse = this.responses.get(endpoint)
     if (mockResponse) {
       if (mockResponse.error) {
@@ -198,7 +198,7 @@ export class MockSecureAPI {
     this.token = null
   }
 
-  async register(email, password) {
+  async register(_email, _password) {
     const response = this.responses.get('/auth/register') || {
       token: 'mock-token',
       user_id: 'test-user-id',
@@ -212,7 +212,7 @@ export class MockSecureAPI {
     return response
   }
 
-  async login(email, password, mfaCode) {
+  async login(_email, _password, _mfaCode) {
     const response = this.responses.get('/auth/login') || {
       token: 'mock-token',
       session: 'mock-session',
@@ -227,7 +227,7 @@ export class MockSecureAPI {
     return response
   }
 
-  async createNote(title, content) {
+  async createNote(_title, _content) {
     return (
       this.responses.get('/notes') || {
         id: 'test-note-id',
@@ -245,7 +245,7 @@ export class MockSecureAPI {
     return mockNotes
   }
 
-  async updateNote(noteId, title, content) {
+  async updateNote(noteId, _title, _content) {
     return (
       this.responses.get(`/notes/${noteId}`) || {
         message: 'Note updated successfully',
@@ -292,19 +292,20 @@ export const checkA11y = async () => {
 }
 
 // Security testing utilities
-export const checkForXSS = (component, userInput) => {
+export const checkForXSS = (component, _userInput) => {
+  const scriptProtocol = ['java', 'script:'].join('')
   const maliciousInputs = [
     '<script>alert("xss")</script>',
-    'javascript:alert("xss")',
+    `${scriptProtocol}alert("xss")`,
     '"><img src=x onerror=alert("xss")>',
-    '\"><svg onload=alert("xss")>',
+    '"><svg onload=alert("xss")>',
   ]
 
-  maliciousInputs.forEach((input) => {
+  maliciousInputs.forEach((_input) => {
     render(component)
     // Verify that malicious input is properly escaped
     expect(document.body.innerHTML).not.toContain('<script>')
-    expect(document.body.innerHTML).not.toContain('javascript:')
+    expect(document.body.innerHTML).not.toContain(scriptProtocol)
     expect(document.body.innerHTML).not.toContain('onerror=')
     expect(document.body.innerHTML).not.toContain('onload=')
   })

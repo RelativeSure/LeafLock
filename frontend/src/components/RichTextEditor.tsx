@@ -1,6 +1,5 @@
 import React from 'react'
 import { LexicalEditor } from './LexicalEditor'
-import { cn } from '@/lib/utils'
 
 interface RichTextEditorProps {
   content: string
