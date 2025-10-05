@@ -9,14 +9,14 @@ import {
   mockApiError,
   createMockNote,
   createMockEncryptedNote,
-} from './test-utils.jsx'
+} from './test-utils'
 
 // Mock libsodium for E2E tests BEFORE importing any components
 vi.mock('libsodium-wrappers', () => mockSodium)
 
 // Import React and the component AFTER setting up the mock
 import React from 'react'
-import LeafLockApp from './App.jsx'
+import LeafLockApp from './App'
 
 // Mock fetch globally
 global.fetch = mockFetch
