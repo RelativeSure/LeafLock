@@ -115,7 +115,7 @@ func (suite *TagsHandlerTestSuite) TestCreateTagSuccess() {
 	mockRow := &MockRow{}
 	tagID := uuid.New()
 
-	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), suite.userID, mock.Anything, "#3b82f6").Return(mockRow)
+	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), suite.userID, mock.Anything, mock.Anything, "#3b82f6").Return(mockRow)
 	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
 		*args[0].(*uuid.UUID) = tagID
 	}).Return(nil)
@@ -146,7 +146,7 @@ func (suite *TagsHandlerTestSuite) TestCreateTagDefaultColor() {
 	tagID := uuid.New()
 
 	// Should use default color when none provided
-	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), suite.userID, mock.Anything, "#3b82f6").Return(mockRow)
+	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), suite.userID, mock.Anything, mock.Anything, "#3b82f6").Return(mockRow)
 	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
 		*args[0].(*uuid.UUID) = tagID
 	}).Return(nil)
@@ -185,7 +185,7 @@ func (suite *TagsHandlerTestSuite) TestCreateTagInvalidColor() {
 func (suite *TagsHandlerTestSuite) TestCreateTagDuplicate() {
 	mockRow := &MockRow{}
 
-	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), suite.userID, mock.Anything, "#3b82f6").Return(mockRow)
+	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), suite.userID, mock.Anything, mock.Anything, "#3b82f6").Return(mockRow)
 	mockRow.On("Scan", mock.Anything).Return(errors.New("duplicate key value violates unique constraint"))
 
 	req := CreateTagRequest{
@@ -240,20 +240,11 @@ func (suite *TagsHandlerTestSuite) TestAssignTagToNoteSuccess() {
 	noteID := uuid.New()
 	tagID := uuid.New()
 
-	// Mock note existence check
-	mockRow1 := &MockRow{}
-	suite.mockDB.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
-		return strings.Contains(sql, "SELECT true FROM notes")
-	}), noteID, suite.userID).Return(mockRow1)
-	mockRow1.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
-		*args[0].(*bool) = true
-	}).Return(nil)
-
 	// Mock tag existence check
 	mockRow2 := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
 		return strings.Contains(sql, "SELECT true FROM tags")
-	}), tagID, suite.userID).Return(mockRow2)
+	}), mock.Anything, suite.userID).Return(mockRow2)
 	mockRow2.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
 		*args[0].(*bool) = true
 	}).Return(nil)
@@ -284,16 +275,16 @@ func (suite *TagsHandlerTestSuite) TestAssignTagToNoteSuccess() {
 	suite.Equal("Tag assigned successfully", response["message"])
 }
 
-func (suite *TagsHandlerTestSuite) TestAssignTagNoteNotFound() {
+func (suite *TagsHandlerTestSuite) TestAssignTagTagNotFound() {
 	noteID := uuid.New()
 	tagID := uuid.New()
 
-	// Mock note not found
-	mockRow1 := &MockRow{}
+	// Mock tag missing
+	mockRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
-		return strings.Contains(sql, "SELECT true FROM notes")
-	}), noteID, suite.userID).Return(mockRow1)
-	mockRow1.On("Scan", mock.Anything).Return(errors.New("no rows in result set"))
+		return strings.Contains(sql, "SELECT true FROM tags")
+	}), mock.Anything, suite.userID).Return(mockRow)
+	mockRow.On("Scan", mock.Anything).Return(errors.New("no rows in result set"))
 
 	req := AssignTagRequest{
 		TagID: tagID.String(),

@@ -1,9 +1,9 @@
 FROM node:22-alpine AS builder
 
 # CRITICAL: Railway cache buster - change this line to force rebuild
-RUN echo "Force rebuild: 2025-10-05-18-00-REBUILD-ALL"
-
-RUN apk --no-cache add git
+RUN set -eux \
+  && echo "Force rebuild: 2025-10-05-18-00-REBUILD-ALL" \
+  && apk --no-cache add git
 
 WORKDIR /app
 

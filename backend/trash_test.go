@@ -237,7 +237,9 @@ func TestCleanupOldDeletedNotes(t *testing.T) {
 	mockResult2.On("RowsAffected").Return(int64(0))
 
 	ctx := context.Background()
-	// Session cleanup removed - now handled by Redis TTL
+	mockDB.On("Exec", ctx, mock.MatchedBy(func(sql string) bool {
+		return strings.Contains(sql, "UPDATE users")
+	})).Return(mockResult1, nil)
 	mockDB.On("Exec", ctx, "SELECT cleanup_old_deleted_notes()").Return(mockResult2, nil)
 
 	// Mock the count query for deleted notes
@@ -265,7 +267,9 @@ func TestBackgroundCleanupService(t *testing.T) {
 	mockResult2 := &MockResult{}
 	mockResult2.On("RowsAffected").Return(int64(0))
 
-	// Session cleanup removed - now handled by Redis TTL
+	mockDB.On("Exec", mock.Anything, mock.MatchedBy(func(sql string) bool {
+		return strings.Contains(sql, "UPDATE users")
+	})).Return(mockResult1, nil)
 	mockDB.On("Exec", mock.Anything, "SELECT cleanup_old_deleted_notes()").Return(mockResult2, nil)
 
 	// Mock count query for deleted notes
