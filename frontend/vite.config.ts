@@ -77,8 +77,10 @@ export default defineConfig({
               return 'editor-core'
             }
 
-            if (id.includes('@radix-ui')) {
-              return 'radix-ui'
+            // Bundle Radix UI with vendor to ensure React loads first
+            // This fixes the forwardRef error caused by chunk loading order
+            if (id.includes('@radix-ui') || id.includes('react') || id.includes('react-dom')) {
+              return 'vendor'
             }
 
             if (id.includes('@tanstack') || id.includes('zustand')) {
@@ -87,10 +89,6 @@ export default defineConfig({
 
             if (id.includes('lucide-react')) {
               return 'icons'
-            }
-
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'vendor'
             }
           }
 
