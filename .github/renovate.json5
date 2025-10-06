@@ -79,13 +79,13 @@
     },
     {
       description: 'Group React ecosystem updates into a single PR',
-      matchPackagePatterns: [
-        '^react',
-        '^@types/react',
-        '^@testing-library/react',
-      ],
       groupName: 'React components',
       groupSlug: 'react-components',
+      matchPackageNames: [
+        '/^react/',
+        '/^@types/react/',
+        '/^@testing-library/react/',
+      ],
     },
   ],
 }
