@@ -80,7 +80,7 @@ class TemplatesService {
    * Get all templates for the current user (including public templates)
    */
   async getTemplates(): Promise<Template[]> {
-    const response = await fetch(`${this.baseUrl}/api/v1/templates`, {
+    const response = await fetch(`${this.baseUrl}/templates`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     })
@@ -98,7 +98,7 @@ class TemplatesService {
    * Get a specific template with full content
    */
   async getTemplate(templateId: string): Promise<Template> {
-    const response = await fetch(`${this.baseUrl}/api/v1/templates/${templateId}`, {
+    const response = await fetch(`${this.baseUrl}/templates/${templateId}`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     })
@@ -115,7 +115,7 @@ class TemplatesService {
    * Create a new template
    */
   async createTemplate(template: CreateTemplateRequest): Promise<{ id: string; message: string }> {
-    const response = await fetch(`${this.baseUrl}/api/v1/templates`, {
+    const response = await fetch(`${this.baseUrl}/templates`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(template),
@@ -133,7 +133,7 @@ class TemplatesService {
    * Update an existing template
    */
   async updateTemplate(templateId: string, template: UpdateTemplateRequest): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/v1/templates/${templateId}`, {
+    const response = await fetch(`${this.baseUrl}/templates/${templateId}`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(template),
@@ -149,7 +149,7 @@ class TemplatesService {
    * Delete a template
    */
   async deleteTemplate(templateId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/v1/templates/${templateId}`, {
+    const response = await fetch(`${this.baseUrl}/templates/${templateId}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     })
@@ -164,7 +164,7 @@ class TemplatesService {
    * Create a note from a template
    */
   async useTemplate(templateId: string, options: UseTemplateRequest = {}): Promise<UseTemplateResponse> {
-    const response = await fetch(`${this.baseUrl}/api/v1/templates/${templateId}/use`, {
+    const response = await fetch(`${this.baseUrl}/templates/${templateId}/use`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(options),

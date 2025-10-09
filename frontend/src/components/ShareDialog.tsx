@@ -176,7 +176,7 @@ export function ShareDialog({ noteId, isOwner, children }: ShareDialogProps) {
       case 'admin':
         return 'bg-red-100 text-red-800 border-red-200'
       case 'write':
-        return 'bg-blue-100 text-blue-800 border-blue-200'
+        return 'bg-blue-900 text-blue-100 border-blue-700 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-800'
       case 'read':
         return 'bg-green-100 text-green-800 border-green-200'
       default:
@@ -470,7 +470,7 @@ export function ShareDialog({ noteId, isOwner, children }: ShareDialogProps) {
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className={
                               link.permission === 'write'
-                                ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                ? 'bg-blue-900 text-blue-100 border-blue-700 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-800'
                                 : 'bg-green-100 text-green-800 border-green-200'
                             }>
                               {link.permission === 'write' ? <Edit className="h-3 w-3 mr-1" /> : <Eye className="h-3 w-3 mr-1" />}

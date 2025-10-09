@@ -22,7 +22,7 @@ import {
   FORMAT_TEXT_COMMAND,
   DROP_COMMAND,
 } from 'lexical'
-import { Bold, Italic, Strikethrough, Code, Link as LinkIcon, Image as ImageIcon, List, ListOrdered, Quote, Heading1, Heading2, Heading3, Undo2, Redo2, Minus } from 'lucide-react'
+import { Bold, Italic, Strikethrough, Code, Link as LinkIcon, Image as ImageIcon, List, ListOrdered, Quote, Heading1, Heading2, Heading3, Minus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/ThemeContext'
 import DOMPurify from 'dompurify'
@@ -38,8 +38,6 @@ interface LexicalEditorProps {
   className?: string
   // WYSIWYG only
 }
-
-type EditorMode = 'wysiwyg'
 
 interface ToolbarButtonProps {
   onClick: () => void

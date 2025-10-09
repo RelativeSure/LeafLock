@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select'
-import { Link as LinkIcon, Copy, Trash2, Clock, Eye, Edit, Shield, Search } from 'lucide-react'
+import * as LucideIcons from 'lucide-react'
 import { useShareLinksStore, ShareLink } from '../../stores/shareLinksStore'
 import { toast } from 'sonner'
 
@@ -98,15 +98,15 @@ export function ShareLinksTab() {
   const getPermissionBadge = (permission: string) => {
     if (permission === 'write') {
       return (
-        <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
-          <Edit className="h-3 w-3 mr-1" />
+        <Badge variant="outline" className="bg-blue-900 text-blue-100 border-blue-700 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-800">
+          <LucideIcons.Edit className="h-3 w-3 mr-1" />
           Write
         </Badge>
       )
     }
     return (
       <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
-        <Eye className="h-3 w-3 mr-1" />
+        <LucideIcons.Eye className="h-3 w-3 mr-1" />
         Read
       </Badge>
     )
@@ -152,7 +152,7 @@ export function ShareLinksTab() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-blue-600">{stats.totalAccesses}</div>
+            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.totalAccesses}</div>
             <div className="text-sm text-muted-foreground">Total Accesses</div>
           </CardContent>
         </Card>
@@ -162,7 +162,7 @@ export function ShareLinksTab() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <LinkIcon className="h-5 w-5" />
+            <LucideIcons.Link className="h-5 w-5" />
             Share Links
           </CardTitle>
           <CardDescription>
@@ -173,7 +173,7 @@ export function ShareLinksTab() {
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <LucideIcons.Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by note title..."
                   value={searchQuery}
@@ -237,7 +237,7 @@ export function ShareLinksTab() {
                       <TableCell className="font-medium max-w-[200px] truncate">
                         {link.note_title || 'Untitled Note'}
                         {link.has_password && (
-                          <Shield
+                          <LucideIcons.Shield
                             className="inline h-3 w-3 ml-2 text-yellow-600"
                             aria-label="Password protected"
                             role="img"
@@ -252,7 +252,7 @@ export function ShareLinksTab() {
                       <TableCell className="text-sm text-muted-foreground">
                         {link.expires_at ? (
                           <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
+                            <LucideIcons.Clock className="h-3 w-3" />
                             {new Date(link.expires_at).toLocaleDateString()}
                           </div>
                         ) : (
@@ -271,7 +271,7 @@ export function ShareLinksTab() {
                             onClick={() => handleCopyLink(link.share_url)}
                             title="Copy link"
                           >
-                            <Copy className="h-4 w-4" />
+                            <LucideIcons.Copy className="h-4 w-4" />
                           </Button>
                           {link.is_active && (
                             <Button
@@ -281,7 +281,7 @@ export function ShareLinksTab() {
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                               title="Revoke link"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <LucideIcons.Trash2 className="h-4 w-4" />
                             </Button>
                           )}
                         </div>

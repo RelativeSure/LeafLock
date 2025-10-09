@@ -502,10 +502,18 @@ export const LeafLockApp: React.FC = () => {
                 </button>
 
                 <button
-                  onClick={() => {
-                    setViewingTrash(!viewingTrash)
-                    if (!viewingTrash) {
-                      void loadTrash()
+                  onClick={async () => {
+                    try {
+                      const newViewingTrash = !viewingTrash
+                      setViewingTrash(newViewingTrash)
+                      setNotesError(null) // Clear any existing errors
+                      if (newViewingTrash) {
+                        await loadTrash()
+                      }
+                    } catch (err) {
+                      console.error('Failed to toggle trash view:', err)
+                      setNotesError('Failed to toggle trash view')
+                      setViewingTrash(false) // Reset to safe state
                     }
                   }}
                   className={`flex items-center px-3 py-1 text-sm rounded transition focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${

@@ -68,7 +68,7 @@ class SearchService {
       limit,
     }
 
-    const response = await fetch(`${this.baseUrl}/api/v1/search/notes`, {
+    const response = await fetch(`${this.baseUrl}/search/notes`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(searchRequest),

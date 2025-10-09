@@ -178,14 +178,14 @@ export const LoginView: FC<LoginViewProps> = ({ api, cryptoService, announcement
         </div>
       )}
 
-      <Alert className="w-full max-w-md mb-3 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
-        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-        <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
+      <Alert className="w-full max-w-md mb-3 border-blue-700 bg-blue-900/10 dark:border-blue-800 dark:bg-blue-950/30">
+        <Info className="h-4 w-4 text-blue-900 dark:text-blue-200" />
+        <AlertDescription className="text-blue-950 dark:text-blue-100 text-sm">
           <a
             href="https://docs.leaflock.app"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 underline hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
+            className="inline-flex items-center gap-1 underline hover:text-blue-900 dark:hover:text-blue-200 transition-colors"
           >
             <Book className="h-3 w-3" />
             Documentation
