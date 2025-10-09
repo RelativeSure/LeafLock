@@ -1660,20 +1660,57 @@ func (h *AuthHandler) ConfirmPasswordReset(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to update password"})
 	}
 
-	// Mark reset token as used
+	// Mark ALL reset tokens for this user as used (invalidate all outstanding tokens)
 	_, err = tx.Exec(ctx, `
 		UPDATE password_reset_tokens
 		SET used = true
-		WHERE token_hash = $1`,
-		tokenHash[:],
+		WHERE user_id = $1 AND used = false`,
+		userID,
 	)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to mark token as used"})
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to invalidate reset tokens"})
 	}
 
 	// Commit transaction
 	if err = tx.Commit(ctx); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to complete password reset"})
+	}
+
+	// Invalidate all active sessions for this user (force re-login after password change)
+	// Find and delete all session keys for this user from Redis
+	pattern := fmt.Sprintf("session:*")
+	iter := h.redis.Scan(ctx, 0, pattern, 100).Iterator()
+	for iter.Next(ctx) {
+		key := iter.Val()
+		// Get session data to check if it belongs to this user
+		encryptedSession, err := h.redis.Get(ctx, key).Bytes()
+		if err != nil {
+			continue // Skip if we can't read the session
+		}
+
+		// Decrypt session data
+		sessionJSON, err := h.crypto.Decrypt(encryptedSession)
+		if err != nil {
+			continue // Skip malformed sessions
+		}
+
+		var sessionData SessionData
+		if err := json.Unmarshal(sessionJSON, &sessionData); err != nil {
+			continue // Skip malformed sessions
+		}
+
+		// Delete session if it belongs to this user
+		if sessionData.UserID == userID.String() {
+			if err := h.redis.Del(ctx, key).Err(); err != nil {
+				log.Printf("Failed to delete session %s: %v", key, err)
+			} else {
+				log.Printf("Invalidated session for user %s after password reset", userID)
+			}
+		}
+	}
+	if err := iter.Err(); err != nil {
+		log.Printf("Error iterating sessions during password reset: %v", err)
+		// Don't fail the password reset if session cleanup fails
 	}
 
 	// Get GDPR key to decrypt email for sending confirmation
