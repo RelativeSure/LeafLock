@@ -327,6 +327,14 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	// Log audit event
 	h.logAudit(ctx, userID, "user.registered", "user", userID, c)
 
+	// Send welcome email (non-blocking - don't fail registration if email fails)
+	emailService := services.NewEmailService(h.config)
+	err = emailService.SendWelcomeEmail(req.Email, req.Email)
+	if err != nil {
+		log.Printf("Failed to send welcome email to %s: %v", req.Email, err)
+		// Don't return error - registration was successful
+	}
+
 	// Generate session token
 	token, err := h.generateToken(userID)
 	if err != nil {
@@ -1395,6 +1403,299 @@ func (h *AuthHandler) VerifyMFACode(c *fiber.Ctx) error {
 		"workspace_id": workspaceID,
 		"backup_code_used": isBackupCodeUsed,
 	})
+}
+
+// RequestPasswordReset godoc
+// @Summary Request password reset
+// @Description Request a password reset link via email
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body object{email=string} true "Email address"
+// @Success 200 {object} map[string]interface{} "Reset email sent"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 500 {object} map[string]interface{} "Server error"
+// @Router /auth/password/reset-request [post]
+func (h *AuthHandler) RequestPasswordReset(c *fiber.Ctx) error {
+	var req struct {
+		Email string `json:"email" validate:"required,email"`
+	}
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	ctx := context.Background()
+
+	// Create deterministic hash for secure email lookup
+	emailSearchHash, err := h.crypto.EncryptDeterministic([]byte(strings.ToLower(req.Email)), "email_search")
+	if err != nil {
+		// Return success to prevent email enumeration
+		return c.JSON(fiber.Map{"message": "If an account with that email exists, a password reset link has been sent"})
+	}
+
+	// Get user by email
+	var userID uuid.UUID
+	err = h.db.QueryRow(ctx, `SELECT id FROM users WHERE email_search_hash = $1`, emailSearchHash).Scan(&userID)
+	if err != nil {
+		// Return success even if user not found to prevent email enumeration
+		return c.JSON(fiber.Map{"message": "If an account with that email exists, a password reset link has been sent"})
+	}
+
+	// Generate secure random token (32 bytes = 256 bits)
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate reset token"})
+	}
+	resetToken := hex.EncodeToString(tokenBytes)
+
+	// Hash token for database storage
+	tokenHash := sha256.Sum256(tokenBytes)
+
+	// Encrypt IP address
+	ipEncrypted, err := h.crypto.Encrypt([]byte(utils.ClientIP(c)))
+	if err != nil {
+		log.Printf("Failed to encrypt IP address: %v", err)
+		ipEncrypted = nil
+	}
+
+	// Encrypt user agent
+	uaEncrypted, err := h.crypto.Encrypt([]byte(c.Get("User-Agent")))
+	if err != nil {
+		log.Printf("Failed to encrypt user agent: %v", err)
+		uaEncrypted = nil
+	}
+
+	// Store reset token in database (expires in 1 hour)
+	expiresAt := time.Now().Add(1 * time.Hour)
+	_, err = h.db.Exec(ctx, `
+		INSERT INTO password_reset_tokens (user_id, token_hash, expires_at, ip_address_encrypted, user_agent_encrypted)
+		VALUES ($1, $2, $3, $4, $5)`,
+		userID, tokenHash[:], expiresAt, ipEncrypted, uaEncrypted,
+	)
+	if err != nil {
+		log.Printf("Failed to store password reset token: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to initiate password reset"})
+	}
+
+	// Send password reset email
+	emailService := services.NewEmailService(h.config)
+	err = emailService.SendPasswordResetEmail(req.Email, resetToken, utils.ClientIP(c))
+	if err != nil {
+		log.Printf("Failed to send password reset email: %v", err)
+		// Don't return error to user - they'll get generic success message
+	}
+
+	// Log audit event
+	h.logAudit(ctx, userID, "password.reset_requested", "user", userID, c)
+
+	return c.JSON(fiber.Map{"message": "If an account with that email exists, a password reset link has been sent"})
+}
+
+// VerifyResetToken godoc
+// @Summary Verify password reset token
+// @Description Verify that a password reset token is valid and not expired
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param token query string true "Reset token"
+// @Success 200 {object} map[string]interface{} "Token is valid"
+// @Failure 400 {object} map[string]interface{} "Invalid or expired token"
+// @Router /auth/password/reset-verify [get]
+func (h *AuthHandler) VerifyResetToken(c *fiber.Ctx) error {
+	token := c.Query("token")
+	if token == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Reset token is required"})
+	}
+
+	ctx := context.Background()
+
+	// Decode hex token
+	tokenBytes, err := hex.DecodeString(token)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid reset token format"})
+	}
+
+	// Hash token to look up in database
+	tokenHash := sha256.Sum256(tokenBytes)
+
+	// Check if token exists and is valid
+	var expiresAt time.Time
+	var used bool
+	err = h.db.QueryRow(ctx, `
+		SELECT expires_at, used
+		FROM password_reset_tokens
+		WHERE token_hash = $1`,
+		tokenHash[:],
+	).Scan(&expiresAt, &used)
+
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid or expired reset token"})
+	}
+
+	// Check if token has been used
+	if used {
+		return c.Status(400).JSON(fiber.Map{"error": "This reset token has already been used"})
+	}
+
+	// Check if token has expired
+	if time.Now().After(expiresAt) {
+		return c.Status(400).JSON(fiber.Map{"error": "Reset token has expired"})
+	}
+
+	return c.JSON(fiber.Map{"valid": true})
+}
+
+// ConfirmPasswordReset godoc
+// @Summary Confirm password reset
+// @Description Reset password using a valid reset token
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body object{token=string,new_password=string} true "Reset data"
+// @Success 200 {object} map[string]interface{} "Password reset successful"
+// @Failure 400 {object} map[string]interface{} "Invalid request or token"
+// @Failure 500 {object} map[string]interface{} "Server error"
+// @Router /auth/password/reset-confirm [post]
+func (h *AuthHandler) ConfirmPasswordReset(c *fiber.Ctx) error {
+	var req struct {
+		Token       string `json:"token" validate:"required"`
+		NewPassword string `json:"new_password" validate:"required,min=12"`
+	}
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	// Validate password requirements
+	if len(req.NewPassword) < 12 {
+		return c.Status(400).JSON(fiber.Map{"error": "Password must be at least 12 characters long"})
+	}
+
+	ctx := context.Background()
+
+	// Decode hex token
+	tokenBytes, err := hex.DecodeString(req.Token)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid reset token format"})
+	}
+
+	// Hash token to look up in database
+	tokenHash := sha256.Sum256(tokenBytes)
+
+	// Get reset token details
+	var userID uuid.UUID
+	var expiresAt time.Time
+	var used bool
+	err = h.db.QueryRow(ctx, `
+		SELECT user_id, expires_at, used
+		FROM password_reset_tokens
+		WHERE token_hash = $1`,
+		tokenHash[:],
+	).Scan(&userID, &expiresAt, &used)
+
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid or expired reset token"})
+	}
+
+	// Check if token has been used
+	if used {
+		return c.Status(400).JSON(fiber.Map{"error": "This reset token has already been used"})
+	}
+
+	// Check if token has expired
+	if time.Now().After(expiresAt) {
+		return c.Status(400).JSON(fiber.Map{"error": "Reset token has expired"})
+	}
+
+	// Get user's salt for password hashing
+	var salt []byte
+	var emailEncrypted []byte
+	var emailHash []byte
+	err = h.db.QueryRow(ctx, `SELECT salt, email_encrypted, email_hash FROM users WHERE id = $1`, userID).Scan(&salt, &emailEncrypted, &emailHash)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to retrieve user data"})
+	}
+
+	// Hash new password
+	passwordHash := crypto.HashPassword(req.NewPassword, salt)
+
+	// Generate new master encryption key
+	masterKey := make([]byte, 32)
+	if _, err := rand.Read(masterKey); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate encryption key"})
+	}
+
+	// Derive key from new password to encrypt master key
+	userKey := argon2.IDKey([]byte(req.NewPassword), salt, 1, 64*1024, 4, 32)
+
+	// Encrypt master key with user's derived key
+	aead, err := chacha20poly1305.NewX(userKey)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to initialize encryption"})
+	}
+	nonce := make([]byte, aead.NonceSize())
+	if _, err := rand.Read(nonce); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to initialize encryption"})
+	}
+	encryptedMasterKey := aead.Seal(nonce, nonce, masterKey, nil)
+
+	// Start transaction
+	tx, err := h.db.Begin(ctx)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Database error"})
+	}
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	// Update user's password and master key
+	_, err = tx.Exec(ctx, `
+		UPDATE users
+		SET password_hash = $1, master_key_encrypted = $2, updated_at = NOW()
+		WHERE id = $3`,
+		passwordHash, encryptedMasterKey, userID,
+	)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to update password"})
+	}
+
+	// Mark reset token as used
+	_, err = tx.Exec(ctx, `
+		UPDATE password_reset_tokens
+		SET used = true
+		WHERE token_hash = $1`,
+		tokenHash[:],
+	)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to mark token as used"})
+	}
+
+	// Commit transaction
+	if err = tx.Commit(ctx); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to complete password reset"})
+	}
+
+	// Get GDPR key to decrypt email for sending confirmation
+	var deletionKey []byte
+	err = h.db.QueryRow(ctx, `SELECT deletion_key FROM gdpr_keys WHERE email_hash = $1`, emailHash).Scan(&deletionKey)
+	if err == nil {
+		// Decrypt email
+		emailBytes, err := h.crypto.DecryptWithGDPRKey(emailEncrypted, deletionKey)
+		if err == nil {
+			// Send password changed confirmation email
+			emailService := services.NewEmailService(h.config)
+			err = emailService.SendPasswordChangedEmail(string(emailBytes), utils.ClientIP(c))
+			if err != nil {
+				log.Printf("Failed to send password changed email: %v", err)
+			}
+		}
+	}
+
+	// Log audit event
+	h.logAudit(ctx, userID, "password.reset_completed", "user", userID, c)
+
+	return c.JSON(fiber.Map{"message": "Password has been reset successfully"})
 }
 
 func (h *AuthHandler) generateToken(userID uuid.UUID) (string, error) {

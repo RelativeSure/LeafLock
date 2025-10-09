@@ -205,6 +205,24 @@ export class SecureAPI {
     return this.request('/auth/registration')
   }
 
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    return this.request('/auth/password/reset-request', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    })
+  }
+
+  async verifyResetToken(token: string): Promise<{ valid: boolean }> {
+    return this.request(`/auth/password/reset-verify?token=${encodeURIComponent(token)}`)
+  }
+
+  async confirmPasswordReset(token: string, newPassword: string): Promise<{ message: string }> {
+    return this.request('/auth/password/reset-confirm', {
+      method: 'POST',
+      body: JSON.stringify({ token, new_password: newPassword }),
+    })
+  }
+
   async getMfaStatus(): Promise<MfaStatus> {
     const raw = await this.request('/auth/mfa/status')
     const parsed = mfaStatusSchema.safeParse(raw)
