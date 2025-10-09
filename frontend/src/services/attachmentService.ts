@@ -56,7 +56,7 @@ class AttachmentService {
     const formData = new FormData()
     formData.append('file', file)
 
-    const response = await fetch(`${this.baseUrl}/api/v1/notes/${noteId}/attachments`, {
+    const response = await fetch(`${this.baseUrl}/notes/${noteId}/attachments`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: formData,
@@ -74,7 +74,7 @@ class AttachmentService {
    * Get all attachments for a note
    */
   async getAttachments(noteId: string): Promise<Attachment[]> {
-    const response = await fetch(`${this.baseUrl}/api/v1/notes/${noteId}/attachments`, {
+    const response = await fetch(`${this.baseUrl}/notes/${noteId}/attachments`, {
       headers: this.getAuthHeaders(),
     })
 
@@ -90,7 +90,7 @@ class AttachmentService {
    * Download an attachment
    */
   async downloadAttachment(noteId: string, attachmentId: string): Promise<Blob> {
-    const response = await fetch(`${this.baseUrl}/api/v1/notes/${noteId}/attachments/${attachmentId}`, {
+    const response = await fetch(`${this.baseUrl}/notes/${noteId}/attachments/${attachmentId}`, {
       headers: this.getAuthHeaders(),
     })
 
@@ -106,7 +106,7 @@ class AttachmentService {
    * Delete an attachment
    */
   async deleteAttachment(noteId: string, attachmentId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/v1/notes/${noteId}/attachments/${attachmentId}`, {
+    const response = await fetch(`${this.baseUrl}/notes/${noteId}/attachments/${attachmentId}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     })
@@ -128,7 +128,7 @@ class AttachmentService {
     if (token) params.append('token', token)
     if (csrfToken) params.append('csrf', csrfToken)
 
-    return `${this.baseUrl}/api/v1/notes/${noteId}/attachments/${attachmentId}?${params.toString()}`
+    return `${this.baseUrl}/notes/${noteId}/attachments/${attachmentId}?${params.toString()}`
   }
 }
 

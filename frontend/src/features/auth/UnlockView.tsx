@@ -80,7 +80,7 @@ export const UnlockView: FC<UnlockViewProps> = ({ onUnlock, onLogout }) => {
               <Button
                 type="submit"
                 className={cn(
-                  'flex-1 bg-blue-600 hover:bg-blue-700 text-white',
+                  'flex-1 bg-blue-900 hover:bg-blue-950 text-white dark:bg-blue-900 dark:hover:bg-blue-800',
                   unlocking && 'cursor-not-allowed opacity-80'
                 )}
                 disabled={unlocking || !password.trim()}
