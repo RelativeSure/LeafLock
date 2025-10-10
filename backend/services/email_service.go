@@ -173,8 +173,7 @@ func (s *EmailService) SendWelcomeEmail(toEmail string, userName string) error {
 
 // SendPasswordResetEmail sends password reset email
 func (s *EmailService) SendPasswordResetEmail(toEmail string, resetToken string, ipAddress string) error {
-	// TODO: Update with your actual frontend URL
-	resetURL := fmt.Sprintf("https://yourapp.com/reset-password?token=%s", resetToken)
+	resetURL := fmt.Sprintf("%s/reset-password?token=%s", s.config.FrontendURL, resetToken)
 
 	data := EmailData{
 		Subject: "LeafLock Password Reset Request",

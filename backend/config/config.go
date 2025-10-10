@@ -42,6 +42,7 @@ type Config struct {
 	SMTPFrom     string
 	SMTPUseTLS   bool
 	SMTPInsecure bool // Skip TLS verification (dev only)
+	FrontendURL  string // Frontend URL for password reset links
 }
 
 // Runtime feature toggles (in-memory; initialized from env at startup)
@@ -184,6 +185,7 @@ func LoadConfig() *Config {
 		SMTPFrom:     GetEnvOrDefault("SMTP_FROM", "LeafLock <noreply@leaflock.app>"),
 		SMTPUseTLS:   GetEnvAsBool("SMTP_USE_TLS", true),
 		SMTPInsecure: GetEnvAsBool("SMTP_INSECURE", false),
+		FrontendURL:  GetEnvOrDefault("FRONTEND_URL", "https://leaflock.app"),
 	}
 }
 
