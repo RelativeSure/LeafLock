@@ -18,7 +18,7 @@ import (
 )
 
 // MigrationSchemaVersion tracks the current schema version
-const MigrationSchemaVersion = "2025.10.04.001" // Updated for share_links table
+const MigrationSchemaVersion = "2025.10.09.001" // Updated for password_reset_tokens table
 
 // Database interface for dependency injection and testing
 type Database interface {

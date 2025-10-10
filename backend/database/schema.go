@@ -48,6 +48,22 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 -- Add theme preference column for user customization
 ALTER TABLE users ADD COLUMN IF NOT EXISTS theme_preference VARCHAR(20) DEFAULT 'system';
 
+-- Password reset tokens table for secure password recovery
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+    token_hash BYTEA NOT NULL UNIQUE, -- SHA-256 hash of the reset token
+    expires_at TIMESTAMPTZ NOT NULL,
+    used BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    ip_address_encrypted BYTEA, -- IP address where reset was requested
+    user_agent_encrypted BYTEA -- User agent of the requester
+);
+
+-- Index for fast token lookups and cleanup
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_hash ON password_reset_tokens(token_hash) WHERE used = false;
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON password_reset_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires ON password_reset_tokens(expires_at) WHERE used = false;
 
 -- GDPR compliance: Add table to store GDPR deletion keys for email recovery
 CREATE TABLE IF NOT EXISTS gdpr_keys (

@@ -33,6 +33,15 @@ type Config struct {
 	DefaultAdminEnabled  bool
 	DefaultAdminEmail    string
 	DefaultAdminPassword string
+	// Email/SMTP configuration
+	SMTPEnabled  bool
+	SMTPHost     string
+	SMTPPort     int
+	SMTPUser     string
+	SMTPPassword string
+	SMTPFrom     string
+	SMTPUseTLS   bool
+	SMTPInsecure bool // Skip TLS verification (dev only)
 }
 
 // Runtime feature toggles (in-memory; initialized from env at startup)
@@ -166,6 +175,15 @@ func LoadConfig() *Config {
 		DefaultAdminEnabled:  GetEnvAsBool("ENABLE_DEFAULT_ADMIN", true),
 		DefaultAdminEmail:    GetEnvOrDefault("DEFAULT_ADMIN_EMAIL", "admin@leaflock.app"),
 		DefaultAdminPassword: adminPassword,
+		// SMTP configuration
+		SMTPEnabled:  GetEnvAsBool("SMTP_ENABLED", false),
+		SMTPHost:     GetEnvOrDefault("SMTP_HOST", "localhost"),
+		SMTPPort:     GetEnvAsInt("SMTP_PORT", 587),
+		SMTPUser:     GetEnvOrDefault("SMTP_USER", ""),
+		SMTPPassword: GetEnvOrDefault("SMTP_PASSWORD", ""),
+		SMTPFrom:     GetEnvOrDefault("SMTP_FROM", "LeafLock <noreply@leaflock.app>"),
+		SMTPUseTLS:   GetEnvAsBool("SMTP_USE_TLS", true),
+		SMTPInsecure: GetEnvAsBool("SMTP_INSECURE", false),
 	}
 }
 
