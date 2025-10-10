@@ -30,10 +30,7 @@
         'alpine',
       ],
       enabled: true,
-      automerge: false,
-      reviewers: [
-        'team:maintainers',
-      ],
+      automerge: true,
     },
     {
       description: 'Go language version and modules',
@@ -42,7 +39,7 @@
         'backend/go.sum',
       ],
       enabled: true,
-      automerge: false,
+      automerge: true,
     },
     {
       description: 'Node.js and pnpm versions',
@@ -57,7 +54,7 @@
         '@pnpm/exe',
       ],
       enabled: true,
-      automerge: false,
+      automerge: true,
     },
     {
       description: 'Security updates - auto-merge patch and minor versions',
@@ -78,6 +75,8 @@
       description: 'Group React ecosystem updates into a single PR',
       groupName: 'React components',
       groupSlug: 'react-components',
+      enabled: true,
+      automerge: true,
       matchPackageNames: [
         '/^react/',
         '/^@types/react/',
