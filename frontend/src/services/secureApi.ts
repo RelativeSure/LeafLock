@@ -269,6 +269,17 @@ export class SecureAPI {
     return parsed.data
   }
 
+  async getBackupCodes(): Promise<{ total: number; remaining: number }> {
+    return this.request('/auth/mfa/backup-codes')
+  }
+
+  async regenerateBackupCodes(password: string): Promise<{ codes: string[] }> {
+    return this.request('/auth/mfa/backup-codes/regenerate', {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    })
+  }
+
   async deleteAccount(password: string): Promise<{ success: boolean; message: string }> {
     return this.request('/account', {
       method: 'DELETE',

@@ -133,6 +133,7 @@ config:
     lockoutDuration: "30m"
     sessionDuration: "12h"
     corsOrigins: "https://leaflock.app"
+    frontendUrl: "https://leaflock.app"
 
 # Enable strict network policies in production
 networkPolicy:

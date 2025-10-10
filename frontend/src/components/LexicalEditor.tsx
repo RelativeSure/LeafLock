@@ -66,21 +66,34 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
     disabled={disabled}
     title={title}
     type="button"
-    className={`
-      p-2 rounded border transition-colors duration-200
-      ${
-        isActive
-          ? 'bg-primary text-primary-foreground border-primary'
-          : 'bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground'
-      }
-      ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-muted-foreground/50'}
-    `}
+    className={cn(
+      // Base styles - larger padding on mobile for 44px touch targets
+      'relative p-2.5 md:p-2 rounded-md border transition-all duration-200',
+      'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
+
+      // Active state - more prominent with shadow and indicator
+      isActive && [
+        'bg-primary text-primary-foreground border-primary shadow-sm',
+        'after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2',
+        'after:w-4 after:h-0.5 after:bg-primary-foreground after:rounded-full'
+      ],
+
+      // Inactive state
+      !isActive && [
+        'bg-background text-foreground border-border',
+        'hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20',
+        'hover:shadow-sm active:scale-95'
+      ],
+
+      // Disabled state - improved contrast
+      disabled && 'opacity-40 cursor-not-allowed hover:bg-background hover:border-border'
+    )}
   >
     {children}
   </button>
 )
 
-const ToolbarSeparator: React.FC = () => <div className="w-px h-6 bg-border mx-1" />
+const ToolbarSeparator: React.FC = () => <div className="w-px h-6 bg-border mx-2" />
 
 // Toolbar Plugin
 function ToolbarPlugin() {
@@ -209,14 +222,38 @@ function ToolbarPlugin() {
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 p-3 border border-border border-b-0 rounded-t-lg bg-muted">
-      <div className="flex flex-wrap items-center gap-1">
+    <div className="flex flex-wrap items-center justify-between gap-2 p-2 md:p-3 border border-border border-b-0 rounded-t-lg bg-muted">
+      {/* Mobile toolbar - essential tools with larger touch targets */}
+      <div className="flex md:hidden flex-wrap items-center gap-2 w-full">
         <ToolbarButton onClick={formatBold} isActive={isBold} title="Bold (Ctrl+B)">
-          <Bold className="w-4 h-4" />
+          <Bold className="w-5 h-5" />
         </ToolbarButton>
 
         <ToolbarButton onClick={formatItalic} isActive={isItalic} title="Italic (Ctrl+I)">
-          <Italic className="w-4 h-4" />
+          <Italic className="w-5 h-5" />
+        </ToolbarButton>
+
+        <ToolbarButton onClick={() => formatHeading(1)} title="Heading 1">
+          <Heading1 className="w-5 h-5" />
+        </ToolbarButton>
+
+        <ToolbarButton onClick={() => insertList(false)} title="Bulleted List">
+          <List className="w-5 h-5" />
+        </ToolbarButton>
+
+        <ToolbarButton onClick={insertLink} title="Add Link">
+          <LinkIcon className="w-5 h-5" />
+        </ToolbarButton>
+      </div>
+
+      {/* Desktop toolbar - full feature set */}
+      <div className="hidden md:flex flex-wrap items-center gap-1">
+        <ToolbarButton onClick={formatBold} isActive={isBold} title="Bold (Ctrl+B)">
+          <Bold className="w-[18px] h-[18px]" />
+        </ToolbarButton>
+
+        <ToolbarButton onClick={formatItalic} isActive={isItalic} title="Italic (Ctrl+I)">
+          <Italic className="w-[18px] h-[18px]" />
         </ToolbarButton>
 
         <ToolbarButton
@@ -224,11 +261,11 @@ function ToolbarPlugin() {
           isActive={isStrikethrough}
           title="Strikethrough"
         >
-          <Strikethrough className="w-4 h-4" />
+          <Strikethrough className="w-[18px] h-[18px]" />
         </ToolbarButton>
 
         <ToolbarButton onClick={formatCode} isActive={isCode} title="Inline Code">
-          <Code className="w-4 h-4" />
+          <Code className="w-[18px] h-[18px]" />
         </ToolbarButton>
 
         <ToolbarSeparator />
@@ -504,19 +541,30 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
 
         <div
           className={cn(
-            'relative',
-            editable ? 'border border-border border-t-0 rounded-b-lg bg-background' : ''
+            'relative flex flex-col',
+            editable ? 'border border-border border-t-0 rounded-b-lg bg-background' : '',
+            'h-full'
           )}
         >
           <RichTextPlugin
             contentEditable={
               <ContentEditable
-                className="min-h-[200px] p-4 focus:outline-none"
+                className={cn(
+                  'flex-1 p-4 focus:outline-none overflow-y-auto',
+                  'min-h-[300px] max-h-[calc(100vh-300px)]',
+                  'focus:ring-2 focus:ring-ring focus:ring-offset-1 rounded-b-lg'
+                )}
                 data-theme={effectiveTheme}
               />
             }
             placeholder={
-              <div className="absolute top-4 left-4 text-muted-foreground pointer-events-none">
+              <div className={cn(
+                'absolute top-4 left-4 text-muted-foreground',
+                'pointer-events-none select-none',
+                'transition-opacity duration-200',
+                content && content.length > 0 ? 'opacity-0' : 'opacity-100'
+              )}
+              aria-hidden="true">
                 {placeholder}
               </div>
             }
