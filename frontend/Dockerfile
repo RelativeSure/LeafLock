@@ -22,7 +22,7 @@ COPY . .
 # Clean build to avoid stale artifacts
 RUN rm -rf dist && pnpm run build
 
-FROM caddy:2.10-alpine@sha256:a4180db0805b3725ddf936d2e6290553745c7339c003565da717ee612fd8a888
+FROM caddy:2.10-alpine@sha256:7d75b1294f73048155757377c38f05621a65c8df4f261077aa3091c9168ea53a
 
 RUN apk --no-cache add ca-certificates curl gettext bind-tools
 
