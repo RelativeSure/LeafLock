@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button'
 import { OnboardingOverlay } from '@/features/onboarding/OnboardingOverlay'
 import { LoginView } from '@/features/auth/LoginView'
 import { UnlockView } from '@/features/auth/UnlockView'
+import { ForgotPasswordView } from '@/features/auth/ForgotPasswordView'
+import { ResetPasswordView } from '@/features/auth/ResetPasswordView'
 import Footer from '@/components/Footer'
 import AnnouncementBanner, { Announcement } from '@/components/AnnouncementBanner'
 import { getStoredAuthToken } from '@/utils/auth'
@@ -45,6 +47,8 @@ export const LeafLockApp: React.FC = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [_announcementsLoading, setAnnouncementsLoading] = useState(false)
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [resetToken, setResetToken] = useState<string | null>(null)
 
   console.log(
     '🔄 LeafLockApp render - initializing:',
@@ -270,6 +274,18 @@ export const LeafLockApp: React.FC = () => {
     setShowOnboarding(false)
     setOnboardingStep(0)
   }
+
+  useEffect(() => {
+    // Check for password reset token in URL
+    const urlParams = new URLSearchParams(window.location.search)
+    const token = urlParams.get('token')
+    if (token) {
+      console.log('🔑 Password reset token found in URL')
+      setResetToken(token)
+      // Clear the token from URL for security
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, [])
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -663,12 +679,36 @@ export const LeafLockApp: React.FC = () => {
     return <UnlockView onUnlock={handleUnlockWithPassword} onLogout={handleLogout} />
   }
 
+  // Password reset flow
+  if (resetToken) {
+    return (
+      <ResetPasswordView
+        api={api}
+        token={resetToken}
+        onResetComplete={() => {
+          setResetToken(null)
+          setShowForgotPassword(false)
+        }}
+      />
+    )
+  }
+
+  if (showForgotPassword) {
+    return (
+      <ForgotPasswordView
+        api={api}
+        onBackToLogin={() => setShowForgotPassword(false)}
+      />
+    )
+  }
+
   return (
     <>
       <LoginView
         api={api}
         cryptoService={cryptoService}
         announcements={announcements}
+        onForgotPassword={() => setShowForgotPassword(true)}
         onAuthenticated={async () => {
           setIsAuthenticated(true)
           setCurrentView('notes')

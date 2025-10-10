@@ -215,6 +215,11 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 		return c.JSON(fiber.Map{"enabled": appconfig.RegEnabled.Load() == 1})
 	})
 
+	// Password reset routes (public) - Tier 1: Strictest rate limiting
+	api.Post("/auth/password/reset-request", rateLimits.AuthLimiter, authHandler.RequestPasswordReset)
+	api.Get("/auth/password/reset-verify", rateLimits.AuthLimiter, authHandler.VerifyResetToken)
+	api.Post("/auth/password/reset-confirm", rateLimits.AuthLimiter, authHandler.ConfirmPasswordReset)
+
 	// Protected routes (require JWT)
 	protected := api.Group("", middleware.JWTMiddleware(config.JWTSecret, rdb, crypto))
 

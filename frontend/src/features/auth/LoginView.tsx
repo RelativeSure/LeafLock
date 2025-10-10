@@ -30,9 +30,10 @@ export interface LoginViewProps {
   cryptoService: CryptoServiceLike
   announcements?: Announcement[]
   onAuthenticated?: () => Promise<void> | void
+  onForgotPassword?: () => void
 }
 
-export const LoginView: FC<LoginViewProps> = ({ api, cryptoService, announcements = [], onAuthenticated }) => {
+export const LoginView: FC<LoginViewProps> = ({ api, cryptoService, announcements = [], onAuthenticated, onForgotPassword }) => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [mfaCode, setMfaCode] = useState('')
@@ -274,6 +275,18 @@ export const LoginView: FC<LoginViewProps> = ({ api, cryptoService, announcement
                 </div>
               )}
             </div>
+
+            {!isRegistering && onForgotPassword && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={onForgotPassword}
+                  className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
 
             {mfaRequired && (
               <div className="space-y-2">
