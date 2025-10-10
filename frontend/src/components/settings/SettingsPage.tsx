@@ -5,8 +5,11 @@ import { MfaSettings } from './MfaSettings'
 import { DeleteAccount } from './DeleteAccount'
 import { ExportDataComponent } from './ExportData'
 import { ShareLinksTab } from './ShareLinksTab'
-import { Shield, Eye, User, ArrowLeft, Link as LinkIcon } from 'lucide-react'
+import { AdminSettingsTab } from './AdminSettingsTab'
+import { PrivacySettingsTab } from './PrivacySettingsTab'
+import { Shield, Eye, User, ArrowLeft, Link as LinkIcon, Settings } from 'lucide-react'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { useAuthStore } from '@/stores/authStore'
 import type { MfaSetup, MfaStatus } from '@/lib/schemas'
 
 // SecureAPI interface (for type checking)
@@ -17,9 +20,8 @@ interface SecureAPI {
   disableMfa: (code: string) => Promise<MfaStatus>
   deleteAccount: (password: string) => Promise<{ success: boolean; message: string }>
   exportAccountData: () => Promise<any>
-  // TODO: Implement these methods in SecureAPI
-  // getBackupCodes: () => Promise<{ total: number; remaining: number }>
-  // regenerateBackupCodes: (password: string) => Promise<{ codes: string[] }>
+  getBackupCodes: () => Promise<{ total: number; remaining: number }>
+  regenerateBackupCodes: (password: string) => Promise<{ codes: string[] }>
 }
 
 interface SettingsPageProps {
@@ -29,17 +31,14 @@ interface SettingsPageProps {
 }
 
 export function SettingsPage({ api, onBack, onLogout }: SettingsPageProps) {
-  // Placeholder functions for backup codes (to be implemented in SecureAPI)
+  const isAdmin = useAuthStore((state) => state.isAdmin)
+
   const handleGetBackupCodes = async () => {
-    // TODO: Implement in SecureAPI
-    console.warn('getBackupCodes not yet implemented')
-    return { total: 10, remaining: 10 }
+    return await api.getBackupCodes()
   }
 
-  const handleRegenerateBackupCodes = async (_password: string) => {
-    // TODO: Implement in SecureAPI
-    console.warn('regenerateBackupCodes not yet implemented')
-    return { codes: [] }
+  const handleRegenerateBackupCodes = async (password: string) => {
+    return await api.regenerateBackupCodes(password)
   }
 
   const handleDeleteAccount = async (password: string) => {
@@ -73,7 +72,7 @@ export function SettingsPage({ api, onBack, onLogout }: SettingsPageProps) {
 
         {/* Tabbed content */}
         <Tabs defaultValue="security" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
             <TabsTrigger value="security" className="gap-2">
               <Shield className="h-4 w-4" />
               Security
@@ -90,6 +89,12 @@ export function SettingsPage({ api, onBack, onLogout }: SettingsPageProps) {
               <User className="h-4 w-4" />
               Account
             </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="admin" className="gap-2">
+                <Settings className="h-4 w-4" />
+                Admin
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Security Tab */}
@@ -114,21 +119,7 @@ export function SettingsPage({ api, onBack, onLogout }: SettingsPageProps) {
 
           {/* Privacy Tab */}
           <TabsContent value="privacy" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Privacy Settings</CardTitle>
-                <CardDescription>
-                  Control your data visibility and sharing preferences
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-center py-12">
-                  <p className="text-muted-foreground text-center">
-                    Privacy settings coming soon
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <PrivacySettingsTab />
           </TabsContent>
 
           {/* Account Tab */}
@@ -139,6 +130,13 @@ export function SettingsPage({ api, onBack, onLogout }: SettingsPageProps) {
             {/* Delete Account Section */}
             <DeleteAccount onDelete={handleDeleteAccount} />
           </TabsContent>
+
+          {/* Admin Tab - Only visible to admins */}
+          {isAdmin && (
+            <TabsContent value="admin" className="mt-6">
+              <AdminSettingsTab />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

@@ -306,6 +306,8 @@ Generate backend environment variables
   value: {{ include "leaflock.redisUrl" . | quote }}
 - name: CORS_ORIGINS
   value: {{ .Values.config.backend.corsOrigins | quote }}
+- name: FRONTEND_URL
+  value: {{ .Values.config.backend.frontendUrl | default "https://leaflock.app" | quote }}
 - name: JWT_SECRET
   valueFrom:
     secretKeyRef:

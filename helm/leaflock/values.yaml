@@ -322,6 +322,7 @@ config:
     lockoutDuration: "15m"
     sessionDuration: "24h"
     corsOrigins: "https://leaflock.example.com"
+    frontendUrl: "https://leaflock.app"
 
 #
 # PostgreSQL Subchart Configuration (Bitnami)
