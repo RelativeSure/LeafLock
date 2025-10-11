@@ -14,7 +14,7 @@ ENV VITE_API_URL=$VITE_API_URL
 
 RUN pnpm run build
 
-FROM docker.io/nginxinc/nginx-unprivileged:alpine@sha256:3245911073f8a6f8f5257aa08339096f90ef8d5db70f502f8ffeb2b9ecd5ca18
+FROM docker.io/nginxinc/nginx-unprivileged:alpine@sha256:a9155b22c828f8d76320c778f0d1735440dbdaad545984a6ed7c76614b66ebd9
 
 RUN rm -rf /etc/nginx/conf.d/*
 
