@@ -171,7 +171,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:18-alpine@sha256:9636ae7feacd8d630303eede7f95cd0f472d514e7864422c6aa8ea07b2171df8
+        image: postgres:18-alpine@sha256:f898ac406e1a9e05115cc2efcb3c3abb3a92a4c0263f3b6f6aaae354cbb1953a
         env:
           POSTGRES_PASSWORD: testpass123
           POSTGRES_DB: notes
