@@ -13,19 +13,19 @@ import (
 
 // RateLimitConfig holds all rate limiter instances
 type RateLimitConfig struct {
-	AuthLimiter       fiber.Handler
-	RegisterLimiter   fiber.Handler
-	MFAVerifyLimiter  fiber.Handler
-	AdminRecoveryLimiter fiber.Handler
-	ShareLinkPublicLimiter fiber.Handler
-	ShareLinkCreateLimiter fiber.Handler
-	SearchLimiter     fiber.Handler
-	ImportExportLimiter fiber.Handler
-	BulkImportLimiter fiber.Handler
+	AuthLimiter             fiber.Handler
+	RegisterLimiter         fiber.Handler
+	MFAVerifyLimiter        fiber.Handler
+	AdminRecoveryLimiter    fiber.Handler
+	ShareLinkPublicLimiter  fiber.Handler
+	ShareLinkCreateLimiter  fiber.Handler
+	SearchLimiter           fiber.Handler
+	ImportExportLimiter     fiber.Handler
+	BulkImportLimiter       fiber.Handler
 	AttachmentUploadLimiter fiber.Handler
-	StandardCRUDLimiter fiber.Handler
-	CollaborationLimiter fiber.Handler
-	LightweightLimiter fiber.Handler
+	StandardCRUDLimiter     fiber.Handler
+	CollaborationLimiter    fiber.Handler
+	LightweightLimiter      fiber.Handler
 }
 
 // NewRateLimitConfig creates all rate limiters using Redis storage

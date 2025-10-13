@@ -203,8 +203,8 @@ func TestBuildDatabaseURLFromEnv(t *testing.T) {
 	}()
 
 	t.Run("returns empty when required vars missing", func(t *testing.T) {
-		_ = os.Unsetenv("POSTGRESQL_HOST")   // Test setup
-		_ = os.Unsetenv("POSTGRESQL_USER")   // Test setup
+		_ = os.Unsetenv("POSTGRESQL_HOST")     // Test setup
+		_ = os.Unsetenv("POSTGRESQL_USER")     // Test setup
 		_ = os.Unsetenv("POSTGRESQL_DATABASE") // Test setup
 		result := buildDatabaseURLFromEnv()
 		if result != "" {
@@ -213,11 +213,11 @@ func TestBuildDatabaseURLFromEnv(t *testing.T) {
 	})
 
 	t.Run("builds URL with all vars set", func(t *testing.T) {
-		_ = os.Setenv("POSTGRESQL_HOST", "localhost")     // Test setup
-		_ = os.Setenv("POSTGRESQL_USER", "testuser")      // Test setup
-		_ = os.Setenv("POSTGRESQL_PASSWORD", "testpass")  // Test setup
-		_ = os.Setenv("POSTGRESQL_DATABASE", "testdb")    // Test setup
-		_ = os.Setenv("POSTGRESQL_PORT", "5432")          // Test setup
+		_ = os.Setenv("POSTGRESQL_HOST", "localhost")    // Test setup
+		_ = os.Setenv("POSTGRESQL_USER", "testuser")     // Test setup
+		_ = os.Setenv("POSTGRESQL_PASSWORD", "testpass") // Test setup
+		_ = os.Setenv("POSTGRESQL_DATABASE", "testdb")   // Test setup
+		_ = os.Setenv("POSTGRESQL_PORT", "5432")         // Test setup
 
 		result := buildDatabaseURLFromEnv()
 		if result == "" {

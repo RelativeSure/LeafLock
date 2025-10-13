@@ -9,4 +9,3 @@ directory = "./dist"
 [vars]
 NODE_VERSION = "v24"
 PNPM_VERSION = "10"
-

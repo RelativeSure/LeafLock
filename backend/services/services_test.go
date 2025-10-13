@@ -428,7 +428,7 @@ func TestLoadAllowlistFromSources(t *testing.T) {
 
 		content := "ADMIN_USER_IDS=file_user1\n"
 		_, _ = tmpFile.WriteString(content) // Test setup
-		_ = tmpFile.Close()                  // Test cleanup
+		_ = tmpFile.Close()                 // Test cleanup
 
 		result, _ := LoadAllowlistFromSources("env_user1", tmpFile.Name())
 
@@ -446,7 +446,7 @@ func TestLoadAllowlistFromSources(t *testing.T) {
 
 		content := "# This is a comment\n\nADMIN_USER_IDS=user1\n# Another comment\n"
 		_, _ = tmpFile.WriteString(content) // Test setup
-		_ = tmpFile.Close()                  // Test cleanup
+		_ = tmpFile.Close()                 // Test cleanup
 
 		result, _ := LoadAllowlistFromSources("", tmpFile.Name())
 
@@ -464,7 +464,7 @@ func TestLoadAllowlistFromSources(t *testing.T) {
 
 		content := `ADMIN_USER_IDS="user1,user2"`
 		_, _ = tmpFile.WriteString(content) // Test setup
-		_ = tmpFile.Close()                  // Test cleanup
+		_ = tmpFile.Close()                 // Test cleanup
 
 		result, _ := LoadAllowlistFromSources("", tmpFile.Name())
 

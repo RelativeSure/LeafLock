@@ -40,7 +40,22 @@ docker compose up -d        # Alternative: Docker Compose
 
 ## Critical Development Rules
 
-### 1. DO NOT add verbose test documentation to CLAUDE.md
+### 1. Documentation File Policy
+
+**NEVER create standalone documentation files** (.md, .txt, .rst files) unless explicitly requested by the user.
+
+**Rationale**:
+- Documentation should be added to existing files (CLAUDE.md, README.md, etc.)
+- Standalone docs create clutter and maintenance burden
+- Keep documentation centralized and minimal
+
+**When adding documentation**:
+- Use clear, technical language without emojis or excessive formatting
+- Be concise and easily readable
+- Focus on facts and actionable information
+- Avoid marketing-style language or unnecessary praise
+
+**Test documentation**:
 - Test files are self-documenting
 - Only mention test file paths, not detailed test cases
 - Keep test sections minimal (file locations only)
@@ -78,6 +93,61 @@ When modifying `docker-compose.yml`, remember to sync:
 - Regular `docker-compose.yml`
 - Coolify `docker-compose.yml`
 - `frontendDockerfile` and entrypoint scripts if affected
+
+### 5. Pre-commit Hooks
+
+Pre-commit hooks are configured in `.pre-commit-config.yaml` and automatically run on commit.
+
+**Installation**:
+```bash
+python3 -m pip install --user pre-commit
+~/.local/bin/pre-commit install
+```
+
+**Configured hooks**:
+- General: trailing whitespace, end-of-file, YAML/JSON validation, merge conflicts, large files
+- Security: detect-secrets, private key detection, .env file prevention
+- Go: go-fmt, go-vet, go test, go mod tidy, gosec (optional)
+- Frontend: check-no-jsx, pnpm lint, pnpm test, pnpm audit
+- Docker: hadolint (optional)
+
+**Usage**:
+```bash
+# Automatic on commit
+git commit -m "message"
+
+# Manual run
+~/.local/bin/pre-commit run --all-files
+
+# Skip (not recommended)
+git commit --no-verify -m "message"
+```
+
+**Key files**:
+- `.pre-commit-config.yaml` - Configuration
+- `.secrets.baseline` - Secrets detection baseline
+- `.git/hooks/pre-commit` - Installed hook script
+
+### 6. Scripts Policy
+
+**Keep scripts minimal** - maximum 2-3 in `scripts/` directory. More creates maintenance burden.
+
+**Current scripts**:
+- `scripts/dev-setup.sh` - Developer onboarding (checks versions, installs tools)
+- `scripts/backup.sh` - Manual database backups (for non-Helm deployments)
+- `frontend/scripts/check-no-jsx.sh` - TypeScript .tsx enforcement
+
+**Use instead of scripts**:
+- Docker: `make up`, `make down`, `docker compose` commands
+- Kubernetes: `helm install/upgrade` commands directly
+- Health checks: `curl http://localhost:8080/api/v1/health`
+- Tests: `cd backend && go test -v ./...` or `cd frontend && pnpm test`
+
+**Rules**:
+- Never create wrapper scripts that just call other tools
+- Use Makefile targets for common docker-compose commands
+- Consolidate similar functionality into single script
+- Delete scripts when tools/Makefile can do the job
 
 ## Key Features & Architecture
 

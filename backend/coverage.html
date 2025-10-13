@@ -54,14 +54,14 @@
 		<div id="topbar">
 			<div id="nav">
 				<select id="files">
-				
+
 				<option value="file0">secure-notes/main.go (73.1%)</option>
-				
+
 				</select>
 			</div>
 			<div id="legend">
 				<span>not tracked</span>
-			
+
 				<span class="cov0">no coverage</span>
 				<span class="cov1">low coverage</span>
 				<span class="cov2">*</span>
@@ -73,11 +73,11 @@
 				<span class="cov8">*</span>
 				<span class="cov9">*</span>
 				<span class="cov10">high coverage</span>
-			
+
 			</div>
 		</div>
 		<div id="content">
-		
+
 		<pre class="file" id="file0" style="display: none">// main.go - Complete secure backend with automatic PostgreSQL setup
 package main
 
@@ -262,25 +262,25 @@ END;
 $$ language 'plpgsql';
 
 -- Apply updated_at triggers
-DO $$ 
+DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_users_updated_at') THEN
-        CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users 
+        CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
     END IF;
-    
+
     IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_workspaces_updated_at') THEN
-        CREATE TRIGGER update_workspaces_updated_at BEFORE UPDATE ON workspaces 
+        CREATE TRIGGER update_workspaces_updated_at BEFORE UPDATE ON workspaces
             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
     END IF;
-    
+
     IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_notes_updated_at') THEN
-        CREATE TRIGGER update_notes_updated_at BEFORE UPDATE ON notes 
+        CREATE TRIGGER update_notes_updated_at BEFORE UPDATE ON notes
             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
     END IF;
-    
+
     IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_tags_updated_at') THEN
-        CREATE TRIGGER update_tags_updated_at BEFORE UPDATE ON tags 
+        CREATE TRIGGER update_tags_updated_at BEFORE UPDATE ON tags
             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
     END IF;
 END $$;
@@ -644,7 +644,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error <span class="cov5" title="13">{
                 if failedAttempts &gt;= h.config.MaxLoginAttempts </span><span class="cov0" title="0">{
                         lockUntil := time.Now().Add(h.config.LockoutDuration)
                         h.db.Exec(ctx, `
-                UPDATE users SET failed_attempts = $1, locked_until = $2 
+                UPDATE users SET failed_attempts = $1, locked_until = $2
                 WHERE id = $3`,
                                 failedAttempts, lockUntil, userID,
                         )
@@ -667,7 +667,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error <span class="cov5" title="13">{
 
         // Reset failed attempts and update last login
         <span class="cov1" title="1">h.db.Exec(ctx, `
-        UPDATE users SET failed_attempts = 0, locked_until = NULL, last_login = NOW() 
+        UPDATE users SET failed_attempts = 0, locked_until = NULL, last_login = NOW()
         WHERE id = $1`,
                 userID,
         )
@@ -768,11 +768,11 @@ func (h *NotesHandler) GetNotes(c *fiber.Ctx) error <span class="cov1" title="1"
         // Get notes from workspace
         <span class="cov1" title="1">rows, err := h.db.Query(ctx, `
                 SELECT id, title_encrypted, content_encrypted, created_at, updated_at
-                FROM notes 
+                FROM notes
                 WHERE workspace_id = $1 AND deleted_at IS NULL
                 ORDER BY updated_at DESC`,
                 workspaceID)
-        
+
         if err != nil </span><span class="cov0" title="0">{
                 return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch notes"})
         }</span>
@@ -910,7 +910,7 @@ func (h *NotesHandler) UpdateNote(c *fiber.Ctx) error <span class="cov2" title="
 
         // Update note
         result, err := h.db.Exec(ctx, `
-                UPDATE notes 
+                UPDATE notes
                 SET title_encrypted = $1, content_encrypted = $2, content_hash = $3, updated_at = NOW()
                 FROM workspaces w
                 WHERE notes.id = $4 AND notes.workspace_id = w.id AND w.owner_id = $5 AND notes.deleted_at IS NULL`,
@@ -938,7 +938,7 @@ func (h *NotesHandler) DeleteNote(c *fiber.Ctx) error <span class="cov1" title="
 
         // Soft delete the note
         result, err := h.db.Exec(ctx, `
-                UPDATE notes 
+                UPDATE notes
                 SET deleted_at = NOW()
                 FROM workspaces w
                 WHERE notes.id = $1 AND notes.workspace_id = w.id AND w.owner_id = $2 AND notes.deleted_at IS NULL`,
@@ -969,11 +969,11 @@ func (h *NotesHandler) GetTrash(c *fiber.Ctx) error <span class="cov2" title="2"
         // Get deleted notes from workspace
         <span class="cov1" title="1">rows, err := h.db.Query(ctx, `
                 SELECT id, title_encrypted, content_encrypted, deleted_at, updated_at
-                FROM notes 
+                FROM notes
                 WHERE workspace_id = $1 AND deleted_at IS NOT NULL
                 ORDER BY deleted_at DESC`,
                 workspaceID)
-        
+
         if err != nil </span><span class="cov0" title="0">{
                 return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch trash"})
         }</span>
@@ -1012,7 +1012,7 @@ func (h *NotesHandler) RestoreNote(c *fiber.Ctx) error <span class="cov2" title=
 
         // Restore the note (set deleted_at to NULL)
         result, err := h.db.Exec(ctx, `
-                UPDATE notes 
+                UPDATE notes
                 SET deleted_at = NULL, updated_at = NOW()
                 FROM workspaces w
                 WHERE notes.id = $1 AND notes.workspace_id = w.id AND w.owner_id = $2 AND notes.deleted_at IS NOT NULL`,
@@ -1040,7 +1040,7 @@ func (h *NotesHandler) PermanentlyDeleteNote(c *fiber.Ctx) error <span class="co
 
         // Permanently delete the note
         result, err := h.db.Exec(ctx, `
-                DELETE FROM notes 
+                DELETE FROM notes
                 USING workspaces w
                 WHERE notes.id = $1 AND notes.workspace_id = w.id AND w.owner_id = $2 AND notes.deleted_at IS NOT NULL`,
                 noteID, userID)
@@ -1078,11 +1078,11 @@ func (h *TagsHandler) GetTags(c *fiber.Ctx) error <span class="cov1" title="1">{
         // Get user's tags
         rows, err := h.db.Query(ctx, `
                 SELECT id, name_encrypted, color, created_at, updated_at
-                FROM tags 
+                FROM tags
                 WHERE user_id = $1
                 ORDER BY name_encrypted ASC`,
                 userID)
-        
+
         if err != nil </span><span class="cov0" title="0">{
                 return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch tags"})
         }</span>
@@ -1174,7 +1174,7 @@ func (h *TagsHandler) DeleteTag(c *fiber.Ctx) error <span class="cov2" title="2"
 
         // Delete tag (this will cascade delete note_tags relationships)
         result, err := h.db.Exec(ctx, `
-                DELETE FROM tags 
+                DELETE FROM tags
                 WHERE id = $1 AND user_id = $2`,
                 tagID, userID)
 
@@ -1260,14 +1260,14 @@ func (h *TagsHandler) RemoveTagFromNote(c *fiber.Ctx) error <span class="cov1" t
 
         // Remove tag assignment (with user verification)
         result, err := h.db.Exec(ctx, `
-                DELETE FROM note_tags 
+                DELETE FROM note_tags
                 USING notes n, workspaces w, tags t
-                WHERE note_tags.note_id = n.id 
+                WHERE note_tags.note_id = n.id
                 AND note_tags.tag_id = t.id
                 AND n.workspace_id = w.id
-                AND note_tags.note_id = $1 
+                AND note_tags.note_id = $1
                 AND note_tags.tag_id = $2
-                AND w.owner_id = $3 
+                AND w.owner_id = $3
                 AND t.user_id = $3`,
                 noteID, tagID, userID)
 
@@ -1301,7 +1301,7 @@ func (h *TagsHandler) GetNotesByTag(c *fiber.Ctx) error <span class="cov1" title
                 WHERE t.id = $1 AND w.owner_id = $2 AND n.deleted_at IS NULL
                 ORDER BY n.updated_at DESC`,
                 tagID, userID)
-        
+
         if err != nil </span><span class="cov0" title="0">{
                 return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch notes"})
         }</span>
@@ -1361,23 +1361,23 @@ func JWTMiddleware(secret []byte) fiber.Handler <span class="cov5" title="12">{
                 }</span>
 
                 <span class="cov3" title="4">claims := parsed.Claims.(jwt.MapClaims)
-                
+
                 // Safely extract user_id claim
                 userIDClaim, exists := claims["user_id"]
                 if !exists </span><span class="cov1" title="1">{
                         return c.Status(401).JSON(fiber.Map{"error": "Missing user_id claim"})
                 }</span>
-                
+
                 <span class="cov2" title="3">userIDStr, ok := userIDClaim.(string)
                 if !ok </span><span class="cov0" title="0">{
                         return c.Status(401).JSON(fiber.Map{"error": "Invalid user_id claim type"})
                 }</span>
-                
+
                 <span class="cov2" title="3">userID, err := uuid.Parse(userIDStr)
                 if err != nil </span><span class="cov0" title="0">{
                         return c.Status(401).JSON(fiber.Map{"error": "Invalid user_id format"})
                 }</span>
-                
+
                 <span class="cov2" title="3">c.Locals("user_id", userID)
 
                 return c.Next()</span>
@@ -1405,7 +1405,7 @@ func startCleanupService(db Database) <span class="cov0" title="0">{
 
 func runCleanupTasks(ctx context.Context, db Database) <span class="cov2" title="2">{
         log.Println("🧹 Running scheduled cleanup tasks...")
-        
+
         // Clean up expired sessions
         result1, err1 := db.Exec(ctx, "SELECT cleanup_expired_sessions()")
         if err1 != nil </span><span class="cov0" title="0">{
@@ -1425,13 +1425,13 @@ func runCleanupTasks(ctx context.Context, db Database) <span class="cov2" title=
         // Get count of deleted notes
         <span class="cov2" title="2">var deletedCount int
         db.QueryRow(ctx, "SELECT COUNT(*) FROM notes WHERE deleted_at &lt; NOW() - INTERVAL '30 days' AND deleted_at IS NOT NULL").Scan(&amp;deletedCount)
-        
+
         if deletedCount &gt; 0 </span><span class="cov1" title="1">{
                 log.Printf("🗑️ Permanently deleted %d notes older than 30 days", deletedCount)
         }</span>
 
         <span class="cov2" title="2">log.Println("🎯 Cleanup tasks completed successfully")
-        
+
         // Prevent unused variable warnings
         _ = result1
         _ = result2</span>
@@ -1552,25 +1552,25 @@ func main() <span class="cov0" title="0">{
 
         // Protected routes
         protected := api.Group("/", JWTMiddleware(config.JWTSecret))
-        
+
         // Notes endpoints
         protected.Get("/notes", notesHandler.GetNotes)
         protected.Get("/notes/:id", notesHandler.GetNote)
         protected.Post("/notes", notesHandler.CreateNote)
         protected.Put("/notes/:id", notesHandler.UpdateNote)
         protected.Delete("/notes/:id", notesHandler.DeleteNote)
-        
+
         // Trash endpoints
         protected.Get("/trash", notesHandler.GetTrash)
         protected.Put("/trash/:id/restore", notesHandler.RestoreNote)
         protected.Delete("/trash/:id", notesHandler.PermanentlyDeleteNote)
-        
+
         // Tags endpoints
         protected.Get("/tags", tagsHandler.GetTags)
         protected.Post("/tags", tagsHandler.CreateTag)
         protected.Delete("/tags/:id", tagsHandler.DeleteTag)
         protected.Get("/tags/:id/notes", tagsHandler.GetNotesByTag)
-        
+
         // Note-tag assignment endpoints
         protected.Post("/notes/:id/tags", tagsHandler.AssignTagToNote)
         protected.Delete("/notes/:id/tags/:tag_id", tagsHandler.RemoveTagFromNote)
@@ -1583,7 +1583,7 @@ func main() <span class="cov0" title="0">{
         log.Fatal(app.Listen(":" + config.Port))</span>
 }
 </pre>
-		
+
 		</div>
 	</body>
 	<script>

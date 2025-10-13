@@ -47,7 +47,7 @@ class CryptoService {
     await this.initSodium();
     const encoder = new TextEncoder();
     const passwordBytes = encoder.encode(password);
-    
+
     return sodium.crypto_pwhash(
       32,
       passwordBytes,

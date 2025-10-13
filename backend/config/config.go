@@ -41,7 +41,7 @@ type Config struct {
 	SMTPPassword string
 	SMTPFrom     string
 	SMTPUseTLS   bool
-	SMTPInsecure bool // Skip TLS verification (dev only)
+	SMTPInsecure bool   // Skip TLS verification (dev only)
 	FrontendURL  string // Frontend URL for password reset links
 }
 

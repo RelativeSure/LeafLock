@@ -45,18 +45,18 @@ type CreateShareLinkRequest struct {
 
 // ShareLinkResponse represents a share link
 type ShareLinkResponse struct {
-	ID            string    `json:"id"`
-	Token         string    `json:"token"`
-	NoteID        string    `json:"note_id"`
-	Permission    string    `json:"permission"`
-	ExpiresAt     *string   `json:"expires_at,omitempty"`
-	MaxUses       *int      `json:"max_uses,omitempty"`
-	UseCount      int       `json:"use_count"`
-	IsActive      bool      `json:"is_active"`
-	HasPassword   bool      `json:"has_password"`
-	CreatedAt     string    `json:"created_at"`
-	LastAccessedAt *string  `json:"last_accessed_at,omitempty"`
-	ShareURL      string    `json:"share_url"`
+	ID             string  `json:"id"`
+	Token          string  `json:"token"`
+	NoteID         string  `json:"note_id"`
+	Permission     string  `json:"permission"`
+	ExpiresAt      *string `json:"expires_at,omitempty"`
+	MaxUses        *int    `json:"max_uses,omitempty"`
+	UseCount       int     `json:"use_count"`
+	IsActive       bool    `json:"is_active"`
+	HasPassword    bool    `json:"has_password"`
+	CreatedAt      string  `json:"created_at"`
+	LastAccessedAt *string `json:"last_accessed_at,omitempty"`
+	ShareURL       string  `json:"share_url"`
 }
 
 // CreateShareLink godoc
