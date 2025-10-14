@@ -1,5 +1,5 @@
 import { useEffect, useState, type FC } from 'react'
-import { Lock, Info, MessageSquare, Book, Eye, EyeOff } from 'lucide-react'
+import { Lock, Eye, EyeOff } from 'lucide-react'
 
 import AnnouncementBanner, { type Announcement } from '@/components/AnnouncementBanner'
 import Footer from '@/components/Footer'
@@ -179,22 +179,6 @@ export const LoginView: FC<LoginViewProps> = ({ api, cryptoService, announcement
         </div>
       )}
 
-      <Alert className="w-full max-w-md mb-3 border-blue-700 bg-blue-900/10 dark:border-blue-800 dark:bg-blue-950/30">
-        <Info className="h-4 w-4 text-blue-900 dark:text-blue-200" />
-        <AlertDescription className="text-blue-950 dark:text-blue-100 text-sm">
-          <a
-            href="https://docs.leaflock.app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 underline hover:text-blue-900 dark:hover:text-blue-200 transition-colors"
-          >
-            <Book className="h-3 w-3" />
-            Documentation
-          </a>{' '}
-          • Setup guides & security features
-        </AlertDescription>
-      </Alert>
-
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
@@ -342,18 +326,7 @@ export const LoginView: FC<LoginViewProps> = ({ api, cryptoService, announcement
         </CardContent>
       </Card>
 
-      <div className="mt-4 text-center text-sm text-muted-foreground">
-        <a
-          href="https://github.com/RelativeSure/notes/discussions"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1 hover:underline"
-        >
-          <MessageSquare className="w-4 h-4" /> Join GitHub Discussions
-        </a>
-      </div>
-
-      <Footer variant="minimal" />
+      <Footer />
     </div>
   )
 }

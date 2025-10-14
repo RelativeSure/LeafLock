@@ -60,14 +60,14 @@ type SessionData struct {
 
 // MFASessionData structure for temporary MFA sessions
 type MFASessionData struct {
-	UserID         string    `json:"user_id"`
-	Email          string    `json:"email"`
-	IPAddress      string    `json:"ip_address"`
-	UserAgent      string    `json:"user_agent"`
-	CreatedAt      time.Time `json:"created_at"`
-	ExpiresAt      time.Time `json:"expires_at"`
-	MFAEnabled     bool      `json:"mfa_enabled"`
-	PasswordVerified bool    `json:"password_verified"`
+	UserID           string    `json:"user_id"`
+	Email            string    `json:"email"`
+	IPAddress        string    `json:"ip_address"`
+	UserAgent        string    `json:"user_agent"`
+	CreatedAt        time.Time `json:"created_at"`
+	ExpiresAt        time.Time `json:"expires_at"`
+	MFAEnabled       bool      `json:"mfa_enabled"`
+	PasswordVerified bool      `json:"password_verified"`
 }
 
 // RegisterRequest represents a user registration request
@@ -1397,10 +1397,10 @@ func (h *AuthHandler) VerifyMFACode(c *fiber.Ctx) error {
 	_ = h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&workspaceID)
 
 	return c.JSON(fiber.Map{
-		"token":        token,
-		"session":      sessionTokenStr,
-		"user_id":      userID,
-		"workspace_id": workspaceID,
+		"token":            token,
+		"session":          sessionTokenStr,
+		"user_id":          userID,
+		"workspace_id":     workspaceID,
 		"backup_code_used": isBackupCodeUsed,
 	})
 }
@@ -1678,7 +1678,7 @@ func (h *AuthHandler) ConfirmPasswordReset(c *fiber.Ctx) error {
 
 	// Invalidate all active sessions for this user (force re-login after password change)
 	// Find and delete all session keys for this user from Redis
-	pattern := fmt.Sprintf("session:*")
+	pattern := "session:*"
 	iter := h.redis.Scan(ctx, 0, pattern, 100).Iterator()
 	for iter.Next(ctx) {
 		key := iter.Val()

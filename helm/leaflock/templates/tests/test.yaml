@@ -23,11 +23,11 @@ spec:
           echo "Testing backend health endpoint..."
           curl -f http://{{ include "leaflock.backend.serviceName" . }}:{{ .Values.backend.service.port }}/api/v1/health || exit 1
           echo "Backend health check passed!"
-          
+
           echo "Testing backend readiness endpoint..."
           curl -f http://{{ include "leaflock.backend.serviceName" . }}:{{ .Values.backend.service.port }}/api/v1/ready || exit 1
           echo "Backend readiness check passed!"
-          
+
     - name: frontend-test
       image: {{ include "leaflock.tests.image" . }}
       command:
@@ -37,11 +37,11 @@ spec:
           echo "Testing frontend availability..."
           curl -f http://{{ include "leaflock.frontend.serviceName" . }}:{{ .Values.frontend.service.port }}/ || exit 1
           echo "Frontend availability test passed!"
-          
+
           echo "Testing frontend can reach backend through proxy..."
           curl -f http://{{ include "leaflock.frontend.serviceName" . }}:{{ .Values.frontend.service.port }}/api/v1/health || exit 1
           echo "Frontend to backend proxy test passed!"
-          
+
           echo "All tests completed successfully!"
 {{- end }}
 

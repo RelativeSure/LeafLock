@@ -1,159 +1,126 @@
 ---
-title: Railway
-description: Deploy LeafLock on Railway with IPv6 support, private networking, and production-ready configuration.
+title: Railway Deployment
+description: Ship LeafLock on Railway using private IPv6 networking
+sidebar:
+  order: 4
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
-import { Card, CardGrid } from '@astrojs/starlight/components';
-import { Badge } from '@astrojs/starlight/components';
+import { Aside, Card, Code, Tabs, TabItem } from '@astrojs/starlight/components';
 
-Follow these steps to deploy LeafLock on Railway's managed platform with full IPv6 support and private networking.
+## Why Railway Works Well
 
-## Railway Overview
-
-<Card title="🚅 Railway Platform Benefits" icon="rocket">
-**Modern Cloud Infrastructure:**
-- IPv6-first private networking
-- Automatic HTTPS certificates
-- Git-based deployments
-- Built-in service discovery
-- WireGuard-based private mesh network
-
-**Perfect for LeafLock:**
-- Supports multi-service applications
-- Environment variable management
-- Automatic container orchestration
-- Built-in observability
+<Card title="Railway Platform" icon="rocket">
+Railway gives Git-triggered builds, IPv6 private networking, and automatic TLS for public services. LeafLock’s frontend runs publicly while the backend stays private.
 </Card>
 
-## Prerequisites
+**Services created** inside one Railway project:
 
-<CardGrid>
-  <Card title="📊 Railway Account" icon="user">
-    - Active Railway account
-    - GitHub repository access
-    - Payment method (if needed)
-  </Card>
-  <Card title="💾 Repository Access" icon="github">
-    - Fork or access to LeafLock repository
-    - Understand project structure
-    - Environment configuration ready
-  </Card>
-</CardGrid>
+- `leaflock-backend` (private service, no domain)
+- `leaflock-frontend` (public domain)
+- PostgreSQL plugin (managed database)
+- Redis plugin (managed cache + rate limiter)
 
-## IPv6 Network Architecture
+## Step 1 – Provision Secrets
 
-### Railway's Private Network
+Set strong values before first deploy. Railway injects them at build and runtime.
 
-<Card title="🌐 IPv6-First Networking" icon="setting">
-**Railway Implementation:**
-- All services get IPv6 addresses in private mesh
-- WireGuard VPN for secure inter-service communication
-- Public IPv4/IPv6 endpoints for external access
-- Automatic service discovery via internal hostnames
+<Code
+  code={`openssl rand -base64 64  # JWT_SECRET
+openssl rand -base64 32  # SERVER_ENCRYPTION_KEY
+openssl rand -base64 32  # DEFAULT_ADMIN_PASSWORD
 
-**LeafLock Compatibility:**
-- Backend implements IPv6 dual-stack listening
-- Frontend auto-detects Railway service discovery
-- Universal service discovery across deployment platforms
-</Card>
+# Railway UI → Backend → Variables
+JWT_SECRET=<value>
+SERVER_ENCRYPTION_KEY=<value>
+DEFAULT_ADMIN_EMAIL=ops@yourdomain.com
+DEFAULT_ADMIN_PASSWORD=<value>
+ENABLE_REGISTRATION=false`}
+  language="bash"
+/>
 
-### Service Discovery
+<Aside type="caution">
+Do not reuse `.env.example` values—the backend exits immediately if it detects weak secrets.
+</Aside>
 
-Railway provides internal hostnames for service-to-service communication:
+## Step 2 – Configure Backend Service
 
-```bash
-# Public endpoint (frontend only)
-frontend: https://leaflock-frontend-production.up.railway.app
+- Root directory: `/backend`
+- Deployment type: Dockerfile (auto-detected)
+- Disable public domain (private-only)
 
-# Private network (IPv6) - backend is private-only
-frontend: leaflock-frontend.railway.internal
-backend:  motivated-energy.railway.internal  # Railway-generated, internal only
-```
+<Code
+  code={`DATABASE_URL=$RAILWAY_POSTGRES_URL
+POSTGRES_PASSWORD=$RAILWAY_POSTGRES_PASSWORD
+REDIS_URL=$RAILWAY_REDIS_URL
+REDIS_PASSWORD=$RAILWAY_REDIS_PASSWORD
+JWT_SECRET=<from secrets>
+SERVER_ENCRYPTION_KEY=<from secrets>
+APP_ENV=production
+CORS_ORIGINS=https://leaflock-frontend-production.up.railway.app
+ENABLE_METRICS=true
+ENABLE_DEFAULT_ADMIN=true`}
+  language="bash"
+/>
 
-**Security Note:** The backend service should NOT have a public domain configured. All API access goes through the frontend's Caddy reverse proxy.
+The Go server binds to `[::]:8080` (`backend/server/listener.go`) so Railway IPv6 networking works out of the box.
 
-## Deployment Process
+## Step 3 – Configure Frontend Service
 
-### 1. Project Setup
+- Root directory: `/frontend`
+- Port: `80`
+- Assign Railway public domain (e.g., `leaflock-frontend-production.up.railway.app`)
 
 <Tabs>
-  <TabItem label="New Project">
-    1. **Create Railway Project**
-       - Go to [railway.app](https://railway.app)
-       - Click "New Project"
-       - Select "Deploy from GitHub repo"
-       - Choose your LeafLock repository
-
-    2. **Multi-Service Detection**
-       - Railway automatically detects services
-       - Creates separate services for backend/frontend
-       - Configures build contexts correctly
+  <TabItem label="Required">
+<Code
+  code={`BACKEND_INTERNAL_URL=http://leaflock-backend.railway.internal:8080
+VITE_API_URL=/api/v1
+PORT=80
+NODE_ENV=production`}
+  language="bash"
+/>
   </TabItem>
-  <TabItem label="Manual Setup">
-    1. **Add Services Manually**
-       - Click "Add Service" → "GitHub Repo"
-       - Add backend service (root path: `/backend`)
-       - Add frontend service (root path: `/frontend`)
-       - Configure build settings per service
+  <TabItem label="Optional">
+<Code
+  code={`VITE_ENABLE_ADMIN_PANEL=false
+VITE_FEATURE_SHARE_LINKS=true`}
+  language="bash"
+/>
   </TabItem>
 </Tabs>
 
-### 2. Backend Service Configuration
+Caddy (`frontend/docker-entrypoint.sh`) resolves the `.railway.internal` hostname on every request, preventing stale IPv6 records.
 
-<Card title="⚡ Backend Service Setup" icon="rocket">
-**Service Settings:**
-- **Name:** `leaflock-backend`
-- **Root Directory:** `/backend`
-- **Build Command:** (auto-detected from Dockerfile)
-- **Start Command:** (handled by Dockerfile)
-</Card>
+## Step 4 – Deploy
 
-**Environment Variables (Backend):**
-```bash
-# Database Configuration
-POSTGRES_PASSWORD=<64-char-secure-password>
-# Pull the connection string directly from the Railway Postgres plugin
-DATABASE_URL=<RAILWAY_POSTGRES_URL>
-PGHOST=<RAILWAY_POSTGRES_HOST>
-PGUSER=<RAILWAY_POSTGRES_USER>
-PGPASSWORD=<RAILWAY_POSTGRES_PASSWORD>
-PGDATABASE=<RAILWAY_POSTGRES_DATABASE>
+<Code
+  code={`railway init
+railway link
 
-# Redis Configuration
-REDIS_PASSWORD=<32-char-secure-password>
-# Use the value injected by the Redis plugin
-REDIS_URL=<RAILWAY_REDIS_URL>
+# Deploy backend first (runs migrations, seeds admin/templates)
+railway up --service leaflock-backend
 
-# Security Keys (Critical)
-JWT_SECRET=<64-character-base64-secret>
-SERVER_ENCRYPTION_KEY=<32-character-base64-key>
+# Watch logs until "HTTP server starting on [::]:8080"
 
-# Default Admin (set to your own values!)
-ENABLE_DEFAULT_ADMIN=true
-DEFAULT_ADMIN_EMAIL=ops@your-domain.com
-DEFAULT_ADMIN_PASSWORD=<VeryStrongPassword>
+# Then deploy frontend
+railway up --service leaflock-frontend`}
+  language="bash"
+/>
 
-# CORS for Railway (frontend domains only - backend has no public access)
-CORS_ORIGINS=https://leaflock-frontend-production.up.railway.app,https://leaflock-frontend-main.up.railway.app
+Verify health via the public domain:
 
-# Runtime flags
-APP_ENV=production
-PORT=8080
-ENABLE_REGISTRATION=false  # Secure default - must explicitly enable
-ENABLE_METRICS=true
-```
+<Code
+  code={`curl https://leaflock-frontend-production.up.railway.app/health
+curl https://leaflock-frontend-production.up.railway.app/api/v1/health/ready`}
+  language="bash"
+/>
 
-> **Important:** Railway treats service variables as both build-time and runtime values. Set these before the first deploy so that migrations, admin bootstrap, and Vite builds use the correct configuration.
-> Also, **never leave placeholder hosts** like `postgres.railway.internal`—copy the exact values shown in Railway's "Variables" panel (for example `pg-pleasant-haze-12345.up.railway.app`). LeafLock now reads both `DATABASE_URL` and the plugin's `PG*` variables, so attaching the Postgres add-on and using its defaults is enough.
+## Git-Based Automation
 
-<CardGrid>
-  <Card title="📦 IaC Template" icon="layers">
-You can codify the entire stack using Railway's configuration file (`railway.json`). Define both services, attach the Postgres/Redis plugins, and seed mandatory secrets up-front.
+Commit a `railway.json` (optional) to codify services:
 
-```jsonc
-// railway.json (excerpt)
-{
+<Code
+  code={`{
   "$schema": "https://railway.app/config.v2024.05.31.schema.json",
   "project": {
     "name": "leaflock",
@@ -161,23 +128,15 @@ You can codify the entire stack using Railway's configuration file (`railway.jso
       {
         "name": "leaflock-backend",
         "path": "./backend",
-        "dockerfilePath": "backend/Dockerfile",
-        "plugins": [
-          { "name": "postgres" },
-          { "name": "redis" }
-        ],
+        "plugins": [{ "name": "postgres" }, { "name": "redis" }],
         "variables": {
           "APP_ENV": "production",
-          "ENABLE_DEFAULT_ADMIN": "true",
-          "ENABLE_METRICS": "true",
-          "DEFAULT_ADMIN_EMAIL": "ops@your-domain.com",
-          "DEFAULT_ADMIN_PASSWORD": "<change-me>"
+          "ENABLE_METRICS": "true"
         }
       },
       {
         "name": "leaflock-frontend",
         "path": "./frontend",
-        "dockerfilePath": "frontend/Dockerfile",
         "variables": {
           "VITE_API_URL": "/api/v1",
           "BACKEND_INTERNAL_URL": "http://leaflock-backend.railway.internal:8080",
@@ -186,574 +145,35 @@ You can codify the entire stack using Railway's configuration file (`railway.jso
       }
     ]
   }
-}
-```
+}`}
+  language="json"
+/>
 
-Railway resolves plugin connection variables (e.g. `PGHOST`, `PGPASSWORD`, `REDIS_URL`) automatically at deploy time, so once the template is applied those secrets are injected without any imperative steps. Populate real admin credentials and rotate them through version control or your secrets store.
-  </Card>
-</CardGrid>
+Railway applies plugin variables automatically; only set secrets that are not provided by the plugins.
 
-### 3. Frontend Service Configuration
+## Custom Domain Checklist
 
-<Card title="⚛️ Frontend Service Setup" icon="laptop">
-**Service Settings:**
-- **Name:** `leaflock-frontend`
-- **Root Directory:** `/frontend`
-- **Build Command:** (auto-detected)
-- **Port:** 80 (auto-detected)
-</Card>
-
-**Environment Variables (Frontend):**
-```bash
-# Internal proxy target (private mesh) - backend is NOT publicly accessible
-BACKEND_INTERNAL_URL=http://leaflock-backend.railway.internal:8080
-
-# Browser makes requests to frontend, which proxies to backend
-VITE_API_URL=/api/v1
-
-# Optional tuning
-VITE_ENABLE_ADMIN_PANEL=false
-PORT=80
-NODE_ENV=production
-```
-
-The frontend entrypoint now auto-detects Railway's service discovery. Supplying `BACKEND_INTERNAL_URL` and `VITE_API_URL` ensures:
-
-- Caddy proxies `/api` traffic across Railway's private mesh to the backend
-- Browser requests stay within the frontend domain (no direct backend access)
-- Backend remains private-only, reducing attack surface
-- Horizontal scaling works automatically—every replica resolves the latest backend hostname via Caddy's dynamic DNS
-
-### 4. Database Service
-
-<Tabs>
-  <TabItem label="Railway PostgreSQL">
-    1. **Add PostgreSQL Service**
-       - Click "Add Service" → "Database" → "PostgreSQL"
-       - Railway automatically configures connection
-       - Get connection details from service variables
-
-    2. **Configuration**
-       ```bash
-       # Auto-generated by Railway
-       DATABASE_URL=postgresql://postgres:password@host:port/railway
-       POSTGRES_PASSWORD=auto-generated-password
-       ```
-  </TabItem>
-  <TabItem label="External Database">
-    ```bash
-    # For external database (recommended for production)
-    DATABASE_URL=postgresql://user:password@your-db-host:5432/leaflock?sslmode=require
-    POSTGRES_PASSWORD=your-external-db-password
-    ```
-  </TabItem>
-</Tabs>
-
-### 5. Redis Service
-
-<Tabs>
-  <TabItem label="Railway Redis">
-    1. **Add Redis Service**
-       - Click "Add Service" → "Database" → "Redis"
-       - Railway provides connection details
-       - Configure password if needed
-
-    2. **Configuration**
-       ```bash
-       # Railway Redis connection
-       REDIS_URL=redis.railway.internal:6379
-       REDIS_PASSWORD=your-redis-password
-       ```
-  </TabItem>
-  <TabItem label="External Redis">
-    ```bash
-    # External Redis service
-    REDIS_URL=your-redis-host:6379
-    REDIS_PASSWORD=your-external-redis-password
-    ```
-  </TabItem>
-</Tabs>
-
-## IPv6 Service Discovery
-
-### Backend IPv6 Listening
-
-LeafLock's backend automatically detects Railway's IPv6 environment:
-
-```go
-// backend/main.go - IPv6 dual-stack listening
-func listenWithIPv6Fallback(app *fiber.App, port string) error {
-    // Try IPv6 first (Railway's preferred method)
-    ipv6Addr := fmt.Sprintf("[::]:%s", port)
-    if err := app.Listen(ipv6Addr); err != nil {
-        // Fallback to IPv4 if IPv6 fails
-        ipv4Addr := fmt.Sprintf("0.0.0.0:%s", port)
-        return app.Listen(ipv4Addr)
-    }
-    return nil
-}
-```
-
-**Logging Output on Railway:**
-```
-🌐 HTTP server starting on [::]:8080 (IPv6 dual-stack)
-✅ Server binding successful on IPv6
-🔗 Service accessible via Railway private network
-```
-
-### Caddy Reverse Proxy (Critical for Railway)
-
-<Badge text="FIXED" variant="success" />
-
-**LeafLock now uses Caddy instead of NGINX** to avoid 502 Bad Gateway errors on Railway.
-
-<Card title="🔴 Why Not NGINX?" icon="error">
-**The Problem with NGINX on Railway:**
-- NGINX caches DNS lookups at startup
-- Railway's IPv6 private network assigns **dynamic IPs on each deployment**
-- After deploy, NGINX uses stale IP addresses → **502 Bad Gateway errors**
-
-**Caddy Solution:**
-- ✅ Re-resolves DNS on **every request** (no caching)
-- ✅ IPv6 native support
-- ✅ Railway's official recommendation for reverse proxies
-- ✅ Simpler configuration
-- ✅ Automatic X-Forwarded headers
-</Card>
-
-**Caddy Configuration:**
-
-```text
-:{$PORT} {
-    # Health check endpoint
-    handle /health {
-        respond "OK" 200
-    }
-
-    # Proxy API requests to backend
-    # Caddy automatically does dynamic DNS resolution
-    handle /api/* {
-        reverse_proxy {$BACKEND_INTERNAL_URL} {
-            header_up Host {upstream_hostport}
-        }
-    }
-
-    # Serve static files
-    handle {
-        root * /usr/share/caddy
-        try_files {path} {path}/ /index.html
-        file_server
-    }
-
-    # Security headers (automatic)
-    header {
-        -Server
-        X-Content-Type-Options "nosniff"
-        X-Frame-Options "DENY"
-    }
-
-    # Compression and logging
-    encode gzip zstd
-    log { output stdout }
-}
-```
-
-**Key Benefits:**
-- No `resolver` directive needed (Caddy does this automatically)
-- No manual `X-Forwarded-*` headers (Caddy sets these by default)
-- Dynamic DNS resolution on **every request** (fixes 502 issue)
-- Faster than NGINX for proxy workloads
-
-> **Note:** If upgrading from an older LeafLock version with NGINX, just pull the latest code and redeploy. Railway will automatically use Caddy. No configuration changes needed!
-
-For troubleshooting 502 errors, see: [Railway Troubleshooting Guide](/troubleshooting/railway/)
-
-### Frontend Service Discovery
-
-The frontend container automatically discovers the backend service. At startup, Caddy:
-
-- Uses explicit `BACKEND_INTERNAL_URL` or `VITE_API_URL` if provided
-- Scans Railway's injected `RAILWAY_SERVICE_*` variables to locate the backend
-- Falls back to `RAILWAY_PRIVATE_DOMAIN`, then `RAILWAY_PUBLIC_DOMAIN`
-- Normalizes IPv6 addresses for Railway's private mesh
-
-```sh
-# Frontend startup logs
-✅ Railway internal backend detected
-🔗 Using backend: http://motivated-energy.railway.internal:8080
-🚀 Caddy server starting on port 80
-✅ Dynamic DNS resolution enabled
-```
-
-Because Caddy re-resolves DNS on every request, scaling either service just works—no stale IP issues.
-
-> **Custom Admin Credentials:** keeping the defaults will fail on Railway after the first boot (the bootstrap refuses reused credentials). Always set `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD` to fresh values before deploying.
-
-### 6. Deploy & Verify
-
-1. **Deploy backend first**
-   ```bash
-   railway up --service backend --root backend
-   ```
-   Wait for migrations to finish and confirm the logs show `HTTP server starting...`.
-
-2. **Deploy frontend**
-   ```bash
-   railway up --service frontend --root frontend
-   ```
-   The entrypoint log prints the backend URL it detected—verify it matches your private domain.
-
-3. **Smoke-test the stack**
-   ```bash
-   railway logs backend
-   railway logs frontend
-   # Test through frontend proxy (backend is private-only)
-   curl https://leaflock-frontend-production.up.railway.app/api/v1/health
-   ```
-
-4. **Scale if needed**
-   - Backend: enable horizontal auto-scaling in Railway settings or increase `numReplicas`
-   - Frontend: stateless Caddy can scale immediately; every replica auto-discovers the backend via dynamic DNS
-   - Postgres/Redis: consider managed tiers for production workloads
-
-## Environment Variables Reference
-
-### Complete Backend Configuration
-
-<Tabs>
-  <TabItem label="Required Variables">
-    ```bash
-    # Database
-    POSTGRES_PASSWORD=KjRZ9xWxZ8HTYmafctWSe0NjgPGbYS_secure_64char
-    DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres.railway.internal:5432/railway?sslmode=require
-
-    # Redis
-    REDIS_PASSWORD=k1KZ0FNtLc3Fe0b9mYyTCpN2H8vYGJq_secure_32char
-    REDIS_URL=redis.railway.internal:6379
-
-    # Security (Critical!)
-    JWT_SECRET=DF9PX1buVwyK8dl0LNoOmJPQl3TKjQbfCLF6nZGdJSPNKA3FV5OdJKnTczRv9KW6m5N8nZHsGcKtZJDQpYvXog==
-    SERVER_ENCRYPTION_KEY=xzkuu7roGO8zsGtPtuYwpT9wY5L3nDfXGbHJMKs3Zzo=
-
-    # CORS for Railway
-    CORS_ORIGINS=https://leaflock-frontend-production.up.railway.app
-    ```
-  </TabItem>
-  <TabItem label="Optional Variables">
-    ```bash
-    # Application
-    APP_ENV=production
-    PORT=8080
-    ENABLE_REGISTRATION=false  # Now defaults to false for security
-    ENABLE_METRICS=true
-
-    # Admin User
-    ENABLE_DEFAULT_ADMIN=true
-    DEFAULT_ADMIN_EMAIL=admin@leaflock.app
-    DEFAULT_ADMIN_PASSWORD=SecureAdminPassword2024!
-    ```
-  </TabItem>
-</Tabs>
-
-### Complete Frontend Configuration
-
-```bash
-# Backend Communication (private network only)
-BACKEND_INTERNAL_URL=http://motivated-energy.railway.internal:8080
-VITE_API_URL=/api/v1
-
-# Build Configuration
-VITE_ENABLE_ADMIN_PANEL=false
-NODE_ENV=production
-PORT=3000
-```
-
-## Domain Configuration
-
-### Custom Domain Setup
-
-<Card title="🌐 Custom Domain Configuration" icon="globe">
-1. **Add Custom Domain in Railway**
-   - Go to your frontend service
-   - Click "Settings" → "Domains"
-   - Add your custom domain (e.g., `leaflock.yourdomain.com`)
-
-2. **DNS Configuration**
-   ```
-   # DNS Records
-   CNAME leaflock.yourdomain.com -> leaflock-frontend-production.up.railway.app
-   ```
-
-3. **Update Environment Variables**
-   ```bash
-   # Backend CORS (frontend domains only)
-   CORS_ORIGINS=https://leaflock.yourdomain.com,https://leaflock-frontend-production.up.railway.app
-
-   # Frontend API URL (proxied through frontend)
-   VITE_API_URL=/api/v1
-   ```
-</Card>
-
-### SSL Certificate
-
-Railway automatically provides SSL certificates for:
-- ✅ `.up.railway.app` subdomains
-- ✅ Custom domains (free Let's Encrypt certificates)
-- ✅ Automatic renewal
-
-## Deployment Workflow
-
-### 1. Initial Deployment
-
-<Card title="🚀 Deployment Steps" icon="rocket">
-1. **Push to Repository**
-   ```bash
-   git push origin main
-   ```
-
-2. **Railway Auto-Deploy**
-   - Railway detects changes
-   - Builds backend and frontend services
-   - Deploys to production environment
-
-3. **Monitor Deployment**
-   - Check build logs in Railway dashboard
-   - Verify all services are healthy
-   - Test health endpoints
-</Card>
-
-### 2. Health Check Verification
-
-```bash
-# Frontend health check
-curl https://leaflock-frontend-production.up.railway.app/
-
-# Backend health check (through frontend proxy - backend is private-only)
-curl https://leaflock-frontend-production.up.railway.app/api/v1/health
-
-# Expected response
-{
-  "status": "healthy",
-  "database": "connected",
-  "redis": "connected",
-  "version": "1.0.0"
-}
-```
+- Add domain under frontend → Settings → Domains.
+- Point DNS `CNAME` to the Railway hostname.
+- Update backend `CORS_ORIGINS` to include the new domain.
+- Toggle `ENABLE_REGISTRATION` based on whether sign-ups should be public.
 
 ## Troubleshooting
 
-### Common Issues
+- **502 from frontend** → backend domain mismatch. Ensure `BACKEND_INTERNAL_URL` points to `leaflock-backend.railway.internal:8080`.
+- **Backend crash loops** → secrets missing; check Railway logs for `FATAL` messages from `config.LoadConfig`.
+- **WebSocket disconnects** → Railway load balancer requires sticky sessions; enable them in service settings.
+- **Slow first request** → backend warms caches on boot (templates, admin, allowlist). Wait for readiness to report `status=ready`.
 
-<CardGrid>
-  <Card title="🔌 Service Connection Issues" icon="warning">
-    **Symptoms:**
-    - Frontend shows "No available server"
-    - Backend connection timeouts
+<Aside type="caution">
+Never assign a public domain to the backend service—doing so bypasses CSRF protection and exposes raw APIs to the internet.
+</Aside>
 
-    **Solutions:**
-    1. Verify `BACKEND_INTERNAL_URL` uses Railway internal hostname
-    2. Check IPv6 binding logs in backend service
-    3. Ensure services are in same Railway project
-    4. Verify environment variables are set correctly
-  </Card>
-  <Card title="🗄️ Database Connection Errors" icon="error">
-    **Symptoms:**
-    - Backend logs show database connection failures
-    - Authentication errors
+## Final Verification
 
-    **Solutions:**
-    1. Check `DATABASE_URL` format and credentials
-    2. Verify PostgreSQL service is running
-    3. Ensure `sslmode=require` for production
-    4. Check database service logs
-  </Card>
-</CardGrid>
-
-### IPv6 Troubleshooting
-
-<Card title="🌐 IPv6 Network Debugging" icon="setting">
-**Verify IPv6 Connectivity:**
-```bash
-# Check backend logs for IPv6 binding
-Railway logs: "🌐 HTTP server starting on [::]:8080"
-
-# Test internal service discovery
-curl -6 http://[ipv6-address]:8080/api/v1/health
-
-# Verify Railway private network
-ping6 motivated-energy.railway.internal
-```
-
-**Debug Service Discovery:**
-```bash
-# Frontend service discovery logs
-Railway logs: "✅ Railway internal backend detected"
-Railway logs: "🔗 Using backend: http://motivated-energy.railway.internal:8080"
-```
-</Card>
-
-### Environment Variable Issues
-
-```bash
-# Debug environment variables in Railway
-echo $BACKEND_INTERNAL_URL
-echo $VITE_API_URL
-echo $CORS_ORIGINS
-
-# Check for missing variables
-# JWT_SECRET, SERVER_ENCRYPTION_KEY are critical
-# DATABASE_URL, REDIS_URL for data connections
-```
-
-## Performance Optimization
-
-### Railway-Specific Optimizations
-
-<CardGrid>
-  <Card title="🏎️ Build Performance" icon="rocket">
-    - Use Railway's build cache effectively
-    - Optimize Docker image layers
-    - Minimize build context size
-    - Use multi-stage builds
-  </Card>
-  <Card title="🌐 Network Performance" icon="setting">
-    - Leverage Railway's private network
-    - Use IPv6 for inter-service communication
-    - Enable HTTP/2 for public endpoints
-    - Configure proper connection pooling
-  </Card>
-</CardGrid>
-
-### Resource Configuration
-
-```bash
-# Railway service configuration
-# Set appropriate CPU/memory limits
-# Monitor usage in Railway dashboard
-# Scale services based on traffic
-```
-
-## Security Best Practices
-
-### Railway Security Configuration
-
-<Card title="🔒 Security Checklist" icon="lock">
-- [ ] **Secure Environment Variables**
-  - Use Railway's encrypted environment variable storage
-  - Rotate secrets regularly
-  - Never commit secrets to repository
-
-- [ ] **Network Security**
-  - Use private network for inter-service communication
-  - Configure CORS origins properly
-  - Enable HTTPS for all public endpoints
-
-- [ ] **Database Security**
-  - Use strong database passwords
-  - Enable SSL mode for database connections
-  - Regularly backup database
-
-- [ ] **Application Security**
-  - Keep dependencies updated
-  - Monitor for security vulnerabilities
-  - Use Railway's security scanning features
-</Card>
-
-### Secret Management
-
-```bash
-# Generate secure secrets for Railway
-openssl rand -base64 64 | tr -d '\n'  # JWT_SECRET
-openssl rand -base64 32 | tr -d '\n'  # SERVER_ENCRYPTION_KEY
-openssl rand -base64 32 | tr -d '\n'  # POSTGRES_PASSWORD
-openssl rand -base64 32 | tr -d '\n'  # REDIS_PASSWORD
-```
-
-> Store every generated value in your team password manager (or another encrypted vault) so you can restore services after rotation or disaster recovery.
-
-## Monitoring and Maintenance
-
-### Railway Dashboard Monitoring
-
-<Card title="📊 Monitoring Features" icon="list-format">
-**Built-in Monitoring:**
-- Service health and uptime
-- Resource usage (CPU, memory, network)
-- Build and deployment history
-- Real-time logs and metrics
-
-**Custom Monitoring:**
-- Health check endpoints (`/api/v1/health`)
-- Prometheus metrics (if enabled)
-- Application-specific logging
-</Card>
-
-### Maintenance Tasks
-
-```bash
-# Regular maintenance checklist
-1. Monitor service resource usage
-2. Review application logs for errors
-3. Check database performance metrics
-4. Update dependencies regularly
-5. Rotate secrets quarterly
-6. Monitor storage usage
-7. Review and update CORS origins
-```
-
-## Migration from Other Platforms
-
-### From Docker Compose
-
-<Tabs>
-  <TabItem label="Environment Migration">
-    ```bash
-    # Map Docker Compose to Railway
-    # docker-compose.yml services → Railway services
-    # .env variables → Railway environment variables
-    # Volume mounts → Railway persistent storage
-    ```
-  </TabItem>
-  <TabItem label="Database Migration">
-    ```bash
-    # Export from existing database
-    pg_dump old_database > backup.sql
-
-    # Import to Railway PostgreSQL
-    psql $DATABASE_URL < backup.sql
-    ```
-  </TabItem>
-</Tabs>
-
-### From Kubernetes
-
-Railway simplifies the Kubernetes complexity:
-- **Services** → Railway services
-- **ConfigMaps** → Environment variables
-- **Secrets** → Railway encrypted variables
-- **Ingress** → Railway domains and SSL
-
-## Railway-Specific Features
-
-### Unique Railway Benefits
-
-<CardGrid>
-  <Card title="🚅 Git-Based Deployments" icon="github">
-    - Automatic deployments on git push
-    - Branch-based environments
-    - Rollback to previous deployments
-    - Deploy previews for pull requests
-  </Card>
-  <Card title="🔄 Zero-Downtime Deployments" icon="rocket">
-    - Blue-green deployment strategy
-    - Health check-based traffic switching
-    - Automatic rollback on failures
-    - Service dependency management
-  </Card>
-</CardGrid>
-
----
-
-<Badge text="Railway IPv6 Compatible" variant="success" size="large" />
-
-*LeafLock is fully optimized for Railway's modern IPv6 infrastructure with automatic service discovery and zero-configuration networking.*
+- [ ] Secrets generated and stored in Railway variables
+- [ ] Backend service healthy (`railway logs leaflock-backend`)
+- [ ] Frontend health endpoint returns 200
+- [ ] Admin login works with the configured credentials
+- [ ] Metrics available at `/metrics` if enabled
+- [ ] Custom domain (if used) resolves over HTTPS

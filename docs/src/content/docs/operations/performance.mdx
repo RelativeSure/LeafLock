@@ -1,0 +1,67 @@
+---
+title: Performance
+description: Tune LeafLock for low-latency encrypted collaboration
+sidebar:
+  order: 3
+---
+
+import { Aside, Code } from '@astrojs/starlight/components';
+
+## Startup Pipeline
+
+1. Fiber server binds and exposes `/api/v1/health/live`.
+2. Database migrations run while pgx + Redis pools warm (`MaxConns=15`, `MinConns=2`).
+3. Default admin allowlist, templates, and share-link caches load asynchronously.
+4. WebSocket hub spins up Redis pub/sub channels.
+
+Key toggles (defaults shown):
+
+<Code
+  code={`LAZY_INIT_ADMIN=true
+ASYNC_TEMPLATE_SEED=true
+SKIP_MIGRATION_CHECK=false
+REDIS_POOL_SIZE=10`}
+  language="env"
+/>
+
+Disable async flags only when deterministic ordering is required for benchmarking.
+
+## Crypto & Storage Hot Paths
+
+- Client traces handle bulk encryption; the backend’s heavy operations are Argon2id password checks and HMAC keyword search. Reserve at least one full CPU core for the backend or Argon2 throttles.
+- Monitor PostgreSQL with `pg_stat_statements`; `leaflock_notes_total` spikes often indicate imports or key rotation jobs.
+- Maintain healthy indexes—see `/architecture/database-schema` for expected partial indexes.
+
+## WebSocket Throughput
+
+- Collaboration traffic depends on low-latency Redis pub/sub. Keep network RTT < 50 ms.
+- Align load balancer idle timeouts ≥ 120 s; otherwise sockets close and users see cursor drops.
+- Track `leaflock_websocket_connections` vs `leaflock_active_users`; divergence suggests ingress issues.
+
+## Caching & Pools
+
+- Permission lookups batch inside `services/workspace_service.go`. Ensure `CACHE_WORKSPACE_PERMISSIONS=true` in production.
+- Increase `REDIS_POOL_SIZE` gradually and watch `leaflock_redis_connections_active` to avoid hitting ulimit.
+- For high export volume, raise `IMPORT_EXPORT_WORKERS` (backend env) to parallelize encryption tasks.
+
+## Observability Checklist
+
+- Set `LOG_LEVEL=info`. Switch to `debug` only during incident response.
+- Key metrics to watch (see `/operations/monitoring`):
+  - `leaflock_http_request_duration_seconds` p95 < 500 ms.
+  - `leaflock_backup_duration_seconds` within established SLO.
+  - `leaflock_db_connections_active` near `MaxConns` → tune pool or database size.
+- Use `docs/grafana-dashboard.json` as a baseline; add custom panels per deployment.
+
+## Troubleshooting Slow Boots
+
+<Aside type="tip">
+Check `docker compose logs backend` or `kubectl logs deploy/backend` for `time_to_ready` values emitted during startup.
+</Aside>
+
+1. **Long migration window** → run `make migrate` manually before scaling replicas; keep `SKIP_MIGRATION_CHECK=false` in production.
+2. **Redis handshake delays** → observe logs for `pubsub handshake took`; increase `REDIS_DIAL_TIMEOUT` or move Redis closer.
+3. **Aggressive health probes** → liveness should hit `/api/v1/health/live`, readiness `/api/v1/health/ready`; wrong probes churn pods.
+4. **CPU throttling** → on Kubernetes request ≥ `500m` CPU; Argon2id needs consistent CPU access.
+
+LeafLock ships with safe defaults. Use metrics to justify every tuning change and document the outcome for future operators.

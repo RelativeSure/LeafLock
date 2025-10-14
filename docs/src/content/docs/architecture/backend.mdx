@@ -1,0 +1,129 @@
+---
+title: Backend Architecture
+description: Go Fiber services that power LeafLock
+sidebar:
+  order: 2
+---
+
+import { Aside, Card, CardGrid, Code, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Execution Flow
+
+<CardGrid columns={3}>
+  <Card title="Bootstrap" icon="workflow">
+    `backend/main.go` wires config loaders, database pools, Redis, crypto services, and the Fiber app created in `server/app.go`.
+  </Card>
+  <Card title="Routing" icon="terminal">
+    `backend/routes.go` registers middleware, REST handlers, WebSocket hub, and rate-limit tiers.
+  </Card>
+  <Card title="Background Jobs" icon="history">
+    `backend/services/*` schedules admin seeding, template import, key rotation, and cleanup tasks.
+  </Card>
+</CardGrid>
+
+<Code
+  code={`go run ./backend \
+  # Loads config.LoadConfig()
+  # Connects pgxpool + redis
+  # Creates crypto.CryptoService (ChaCha20-Poly1305)
+  # server.CreateFiberApp(...) -> routes.go -> ListenAndServe`}
+  language="bash"
+/>
+
+## Middleware Stack
+
+<Tabs>
+  <TabItem label="server/app.go">
+<Code
+  code={`recover.New(...)           // Panic capture -> utils.LogError
+requestID middleware        // Adds X-Request-ID header
+logger.New(...)             // Structured request logs
+compress.New(...)           // GZip API responses (skips WebSocket)
+Group("/api/v1/health/*")   // Live / Ready probes before auth`}
+  language="go"
+/>
+  </TabItem>
+  <TabItem label="routes.go">
+<Code
+  code={`helmet.New(...)             // Strict CSP & security headers
+csrf.New(...)               // Enforces X-CSRF-Token on mutating verbs
+cors.New(...)               // Dynamically built from AllowedOrigins
+metrics.PrometheusMiddleware() // ENABLE_METRICS=true
+middleware.JWTMiddleware(...)  // Validates JWT + Redis session
+middleware.ShareLinkMiddleware // Loads shared note context`}
+  language="go"
+/>
+  </TabItem>
+</Tabs>
+
+<Aside type="note">
+All middleware relies on `config.Config` values produced by `config.LoadConfig()`. Weak secrets throw fatal errors at startup.
+</Aside>
+
+## ReadyState & Health
+
+`server/health.go` maintains a `ReadyState` guard:
+
+- Flags flip when admin bootstrapping, template seeding, allowlist import, and Redis readiness complete.
+- `/api/v1/health/live`: always available for load balancers.
+- `/api/v1/health/ready`: blocks until `ReadyState.IsFullyReady()` and verifies quick `users` count + Redis ping.
+
+<Code
+  code={`readyState := server.NewReadyState(db, crypto, cfg, redisClient)
+go services.RunBootSequence(..., readyState)
+app := server.CreateFiberApp(startTime, readyState)
+setupRoutes(app, ...)`}
+  language="go"
+/>
+
+## Rate-Limit Tiers
+
+`middleware/rate_limit.go` builds Redis-backed limiters from the shared connection:
+
+- **Tier 1** (`AuthLimiter`, `RegisterLimiter`, `MFAVerifyLimiter`): brute-force protection, 10 or fewer attempts per five minutes.
+- **Tier 2** (`ShareLinkPublicLimiter`, `ShareLinkCreateLimiter`): throttles token enumeration and creation abuse.
+- **Tier 3** (`SearchLimiter`, `ImportExportLimiter`, `AttachmentUploadLimiter`): resource-heavy endpoints.
+- **Tier 4** (`StandardCRUDLimiter`, `CollaborationLimiter`): note CRUD and collaborator management.
+- **Tier 5** (`LightweightLimiter`): profile reads and MFA status checks.
+
+Redis keys use `utils.ClientIP(c)` to hash IPv4/IPv6 uniformly.
+
+## Handler Modules
+
+<CardGrid columns={2}>
+  <Card title="Authentication" icon="lock">
+    `handlers/auth.go` issues JWTs signed with `JWT_SECRET`, coordinates Redis session caches, and delegates MFA to `services/mfa.go`.
+  </Card>
+  <Card title="Notes & Metadata" icon="document">
+    `handlers/notes.go`, `tags.go`, `folders.go`, `templates.go` work with encrypted payloads via `crypto.CryptoService`.
+  </Card>
+  <Card title="Collaboration" icon="users">
+    `handlers/collaboration.go` shares note keys using RSA public keys stored on users; WebSocket events broadcast through `websocket/hub.go`.
+  </Card>
+  <Card title="Share Links" icon="link">
+    `handlers/share_links.go` writes to the `share_links` table, caches tokens in Redis, and enforces password + usage limits.
+  </Card>
+</CardGrid>
+
+All handlers receive pgx pools directly—no ORM—so transactional logic lives in each handler file. Where consistent patterns exist (e.g., backup code generation), shared helpers live under `services/`.
+
+## Background Services
+
+- `services/admin.go`: seeds the default admin account if `ENABLE_DEFAULT_ADMIN=true`.
+- `services/templates.go`: imports bundled templates from `backend/templates/` into the `templates` table.
+- `services/cleanup.go`: runs `cleanup_old_deleted_notes()` nightly and clears expired share links.
+- `services/share_links.go`: rotates tokens beyond `max_uses` and expires stale connections.
+
+All jobs use `context.Context` timeouts and emit structured logs through `utils`.
+
+## WebSocket Collaboration
+
+`websocket/hub.go` orchestrates real-time sessions:
+
+- Fiber upgrades to `/ws`; `websocket.HandleWebSocket` registers clients.
+- Every message includes the collaborator UUID and note ID; authorization is validated via pgx queries.
+- Broadcasts fan out only to users with entries in the `collaborations` table; share-link viewers are excluded deliberately.
+
+<Aside type="caution">
+WebSocket traffic bypasses HTTP CSRF checks—authorization depends entirely on JWT validation and database membership.
+</Aside>

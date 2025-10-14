@@ -60,7 +60,7 @@ func waitForHTTP(t *testing.T, url string, expect int, timeout time.Duration) {
 		resp, err := http.Get(url)
 		if err == nil {
 			_, _ = io.Copy(io.Discard, resp.Body) // Test operation
-			_ = resp.Body.Close()                  // Test cleanup
+			_ = resp.Body.Close()                 // Test cleanup
 			if resp.StatusCode == expect {
 				return
 			}

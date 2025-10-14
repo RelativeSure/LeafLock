@@ -1,0 +1,46 @@
+---
+title: Readiness Checklist
+description: Final validation before promoting LeafLock to production
+sidebar:
+  order: 6
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Walk this list before toggling production traffic. Check items inside your deployment tracker—this page stays short so it never becomes busywork.
+
+## Core Services
+
+- [ ] PostgreSQL, Redis, backend, and frontend containers are healthy (`docker compose ps` or provider UI)
+- [ ] `/api/v1/health` returns `"status": "healthy"`
+- [ ] Admin account exists and you can sign in end to end
+
+## Configuration
+
+- [ ] `JWT_SECRET` and `SERVER_ENCRYPTION_KEY` generated from a secure source (see `/getting-started/environment-variables`)
+- [ ] `CORS_ORIGINS` and `VITE_API_URL` match the public domain(s)
+- [ ] `ENABLE_REGISTRATION` set intentionally (defaults to `false`)
+- [ ] Scheduled backups for PostgreSQL and Redis data
+
+## Security
+
+- [ ] HTTPS enabled end to end (platform certificate or custom TLS)
+- [ ] Security headers validated (`curl -I` or securityheaders.com)
+- [ ] Backend rate limiting active (default Redis rate limiter)
+- [ ] Admin accounts enrolled in MFA
+
+## Monitoring & Logs
+
+- [ ] Logs visible in platform dashboard or external aggregator
+- [ ] Metrics endpoint enabled if Prometheus will scrape (`ENABLE_METRICS=true`)
+- [ ] Alerting configured for downtime or error spikes
+
+## Smoke Test
+
+- [ ] Create, edit, and delete an encrypted note via the UI
+- [ ] Trigger password reset and verify email flow (if applicable)
+- [ ] Redeploy services to confirm environment variables persist
+
+<Aside type="tip">
+If something fails, jump to the relevant deployment page or the `/troubleshooting` docs. Fix the root cause instead of waiving checklist items.
+</Aside>

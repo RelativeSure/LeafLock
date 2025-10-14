@@ -250,12 +250,12 @@ func TestVerifyPasswordTimingAttackResistance(t *testing.T) {
 
 	// These should all fail in constant time
 	testPasswords := []string{
-		"S",                         // Very short
-		"SecurePassword12",          // Almost correct
-		"SecurePassword123!",        // One char extra
-		"WrongPasswordXXX",          // Completely wrong
-		"",                          // Empty
-		strings.Repeat("X", 100),    // Very long wrong password
+		"S",                      // Very short
+		"SecurePassword12",       // Almost correct
+		"SecurePassword123!",     // One char extra
+		"WrongPasswordXXX",       // Completely wrong
+		"",                       // Empty
+		strings.Repeat("X", 100), // Very long wrong password
 	}
 
 	for _, testPwd := range testPasswords {

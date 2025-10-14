@@ -18,19 +18,19 @@ backend:
     tag: "latest"
     pullPolicy: Never
     pullSecrets: []
-  
+
   # Service configuration
   service:
     type: ClusterIP
     port: 8080
     targetPort: 8080
     annotations: {}
-    
+
   # Deployment configuration
   deployment:
     annotations: {}
     labels: {}
-    
+
   # Container configuration
   containerPort: 8080
   resources:
@@ -40,7 +40,7 @@ backend:
     limits:
       cpu: 500m
       memory: 512Mi
-      
+
   # Security context
   podSecurityContext:
     runAsNonRoot: true
@@ -49,7 +49,7 @@ backend:
     fsGroup: 1000
     seccompProfile:
       type: RuntimeDefault
-      
+
   securityContext:
     allowPrivilegeEscalation: false
     readOnlyRootFilesystem: true
@@ -58,7 +58,7 @@ backend:
     capabilities:
       drop:
         - ALL
-        
+
   # Health checks
   livenessProbe:
     enabled: true
@@ -70,7 +70,7 @@ backend:
     timeoutSeconds: 5
     failureThreshold: 3
     successThreshold: 1
-    
+
   readinessProbe:
     enabled: true
     httpGet:
@@ -81,7 +81,7 @@ backend:
     timeoutSeconds: 3
     failureThreshold: 3
     successThreshold: 1
-    
+
   # Startup probe
   startupProbe:
     enabled: true
@@ -93,17 +93,17 @@ backend:
     timeoutSeconds: 3
     failureThreshold: 10
     successThreshold: 1
-    
+
   # Pod disruption budget
   podDisruptionBudget:
     enabled: true
     minAvailable: 1
-    
+
   # Node selection
   nodeSelector: {}
   tolerations: []
   affinity: {}
-  
+
   # Horizontal Pod Autoscaler
   autoscaling:
     enabled: false
@@ -111,19 +111,19 @@ backend:
     maxReplicas: 10
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
-    
+
   # Environment variables (secrets managed separately)
   env:
     PORT: "8080"
     CORS_ORIGINS: "https://localhost:3000"
     ENABLE_METRICS: "true"
-    
+
   # Volume mounts for temporary files
   volumeMounts:
     - name: tmp
       mountPath: /tmp
       readOnly: false
-      
+
   volumes:
     - name: tmp
       emptyDir: {}
@@ -138,19 +138,19 @@ frontend:
     tag: "latest"
     pullPolicy: Never
     pullSecrets: []
-  
+
   # Service configuration
   service:
     type: ClusterIP
     port: 80
     targetPort: 80
     annotations: {}
-    
+
   # Deployment configuration
   deployment:
     annotations: {}
     labels: {}
-    
+
   # Container configuration
   containerPort: 80
   resources:
@@ -160,7 +160,7 @@ frontend:
     limits:
       cpu: 200m
       memory: 256Mi
-      
+
   # Security context
   podSecurityContext:
     runAsNonRoot: true
@@ -169,7 +169,7 @@ frontend:
     fsGroup: 1001
     seccompProfile:
       type: RuntimeDefault
-      
+
   securityContext:
     allowPrivilegeEscalation: false
     readOnlyRootFilesystem: true
@@ -178,7 +178,7 @@ frontend:
     capabilities:
       drop:
         - ALL
-        
+
   # Health checks
   livenessProbe:
     enabled: true
@@ -190,7 +190,7 @@ frontend:
     timeoutSeconds: 5
     failureThreshold: 3
     successThreshold: 1
-    
+
   readinessProbe:
     enabled: true
     httpGet:
@@ -201,17 +201,17 @@ frontend:
     timeoutSeconds: 3
     failureThreshold: 3
     successThreshold: 1
-    
+
   # Pod disruption budget
   podDisruptionBudget:
     enabled: true
     minAvailable: 1
-    
+
   # Node selection
   nodeSelector: {}
   tolerations: []
   affinity: {}
-  
+
   # Horizontal Pod Autoscaler
   autoscaling:
     enabled: false
@@ -219,7 +219,7 @@ frontend:
     maxReplicas: 5
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
-    
+
   # Volume mounts for nginx cache and temp
   volumeMounts:
     - name: nginx-cache
@@ -228,7 +228,7 @@ frontend:
     - name: nginx-run
       mountPath: /var/run
       readOnly: false
-      
+
   volumes:
     - name: nginx-cache
       emptyDir: {}
@@ -312,9 +312,9 @@ networkPolicy:
 secrets:
   # JWT signing secret (base64 encoded)
   jwtSecret: ""
-  # Server encryption key (base64 encoded) 
+  # Server encryption key (base64 encoded)
   serverEncryptionKey: ""
-  
+
 # ConfigMap for application configuration
 config:
   backend:
@@ -339,10 +339,10 @@ postgresql:
     secretKeys:
       adminPasswordKey: "postgres-password"
       userPasswordKey: "password"
-  
+
   # Architecture
   architecture: standalone
-  
+
   # Primary configuration
   primary:
     persistence:
@@ -351,7 +351,7 @@ postgresql:
       storageClass: ""
       accessModes:
         - ReadWriteOnce
-    
+
     # Resources
     resources:
       requests:
@@ -360,14 +360,14 @@ postgresql:
       limits:
         cpu: 1000m
         memory: 1Gi
-    
+
     # Security context
     podSecurityContext:
       enabled: true
       fsGroup: 1001
       runAsUser: 1001
       runAsGroup: 1001
-    
+
     containerSecurityContext:
       enabled: true
       runAsUser: 1001
@@ -377,7 +377,7 @@ postgresql:
       capabilities:
         drop:
           - ALL
-    
+
     # PostgreSQL configuration
     extendedConfiguration: |
       # Connection settings
@@ -386,21 +386,21 @@ postgresql:
       effective_cache_size = 1GB
       work_mem = 4MB
       maintenance_work_mem = 64MB
-      
+
       # SSL settings
       ssl = on
       ssl_ciphers = 'ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256'
       ssl_prefer_server_ciphers = on
-      
+
       # Logging
       log_statement = 'all'
       log_duration = on
       log_connections = on
       log_disconnections = on
-      
+
       # Extensions
       shared_preload_libraries = 'pgcrypto,pg_stat_statements'
-    
+
     # Init DB configuration
     initdb:
       scripts:
@@ -417,7 +417,7 @@ postgresql:
       enabled: false
 
 #
-# Redis Subchart Configuration (Bitnami)  
+# Redis Subchart Configuration (Bitnami)
 #
 redis:
   enabled: true
@@ -426,10 +426,10 @@ redis:
     password: ""  # Set in secrets
     existingSecret: "leaflock-redis"
     existingSecretPasswordKey: "redis-password"
-  
+
   # Architecture
   architecture: standalone
-  
+
   # Master configuration
   master:
     persistence:
@@ -438,7 +438,7 @@ redis:
       storageClass: ""
       accessModes:
         - ReadWriteOnce
-    
+
     # Resources
     resources:
       requests:
@@ -447,13 +447,13 @@ redis:
       limits:
         cpu: 250m
         memory: 256Mi
-    
+
     # Security context
     podSecurityContext:
       enabled: true
       fsGroup: 1001
       runAsUser: 1001
-    
+
     containerSecurityContext:
       enabled: true
       runAsUser: 1001
@@ -463,29 +463,29 @@ redis:
       capabilities:
         drop:
           - ALL
-    
+
     # Redis configuration
     configuration: |
       # Network and connection
       bind 0.0.0.0
       port 6379
-      
+
       # Persistence
       appendonly yes
       appendfsync everysec
-      
+
       # Security
       rename-command FLUSHALL ""
       rename-command FLUSHDB ""
       rename-command DEBUG ""
       rename-command CONFIG ""
-      
+
       # Memory management
       maxmemory-policy allkeys-lru
-      
+
       # Logging
       loglevel notice
-  
+
   # Metrics
   metrics:
     enabled: true

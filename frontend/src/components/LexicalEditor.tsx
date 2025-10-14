@@ -541,7 +541,7 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
 
         <div
           className={cn(
-            'relative flex flex-col',
+            'relative flex flex-col overflow-hidden',
             editable ? 'border border-border border-t-0 rounded-b-lg bg-background' : '',
             'h-full'
           )}
@@ -551,7 +551,7 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
               <ContentEditable
                 className={cn(
                   'flex-1 p-4 focus:outline-none overflow-y-auto',
-                  'min-h-[300px] max-h-[calc(100vh-300px)]',
+                  'min-h-[300px]',
                   'focus:ring-2 focus:ring-ring focus:ring-offset-1 rounded-b-lg'
                 )}
                 data-theme={effectiveTheme}

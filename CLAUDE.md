@@ -21,7 +21,7 @@ cd backend
 go run main.go              # Run dev server
 go test -v ./...            # Run all tests
 golangci-lint run ./...     # Lint (required after complex changes)
-```
+```text
 
 ### Frontend
 ```bash
@@ -29,21 +29,118 @@ cd frontend
 pnpm run dev                # Run dev server
 pnpm test                   # Run tests
 pnpm run lint               # ESLint
-```
+```text
 
 ### Containers
 ```bash
 make up                     # Start all services (Podman)
 make down                   # Stop containers
 docker compose up -d        # Alternative: Docker Compose
-```
+```text
 
 ## Critical Development Rules
 
-### 1. DO NOT add verbose test documentation to CLAUDE.md
+### 1. Documentation File Policy
+
+**NEVER create standalone documentation files** (.md, .txt, .rst files) unless explicitly requested by the user.
+
+**Rationale**:
+- Documentation should be added to existing files (CLAUDE.md, README.md, etc.)
+- Standalone docs create clutter and maintenance burden
+- Keep documentation centralized and minimal
+
+**Exception: AstroJS Documentation**
+When significant architectural changes, new features, or design patterns are introduced that benefit developers and end users, update the AstroJS documentation in `docs/src/content/docs/`.
+
+**AstroJS Documentation Guidelines**:
+- Write for both developers and end users
+- Use clear, technical language without emojis
+- Be concise and easily readable
+- Focus on facts and actionable information
+- Include code examples with proper syntax highlighting
+- Use Astro components (Aside, Code, Tabs, CardGrid) for better readability
+- Document architecture patterns, component structure, and design decisions
+- Keep examples practical and copy-paste ready
+- Use proper MDX frontmatter with title, description, and sidebar order
+
+**When to update AstroJS docs**:
+- Major component refactoring or new component patterns
+- New features that affect user workflow
+- Architectural changes that developers need to understand
+- Design pattern changes or new patterns introduced
+- Breaking changes or migration guides needed
+
+**Test documentation**:
 - Test files are self-documenting
 - Only mention test file paths, not detailed test cases
 - Keep test sections minimal (file locations only)
+
+### 1.1. AstroJS Documentation Content Philosophy
+
+**⚠️ CRITICAL PRINCIPLE**: Documentation must be **LeafLock-specific**, not general technology tutorials.
+
+**DO NOT include**:
+- General technology explanations (how Docker/K8s/React/MFA works)
+- Framework/platform documentation that belongs in official docs
+- Marketing-style "benefits" or "why use X" sections
+- Step-by-step tutorials for standard tools (authenticator apps, Git, etc.)
+- Cryptography theory or algorithm explanations
+- Generic best practices not tied to LeafLock's implementation
+- Emoji-heavy formatting or conversational tone
+
+**DO include**:
+- LeafLock-specific configuration files and values
+- LeafLock-specific commands and file paths with line numbers
+- Unique architectural decisions in LeafLock
+- LeafLock-specific troubleshooting for known issues
+- References to LeafLock source code locations
+- Environment variables and their LeafLock-specific usage
+- Actual deployment commands for LeafLock
+
+**Content Quality Rules**:
+1. **DRY Principle**: Never repeat information across multiple docs
+2. **50% Rule**: If a file could be 50% shorter without losing LeafLock-specific info, it's too verbose
+3. **Reference Test**: Every paragraph must reference LeafLock code, config, or behavior
+4. **Copy-Paste Test**: Code blocks should be immediately usable for LeafLock deployment
+5. **No Fluff**: Remove all introductory "what is X" sections that explain general concepts
+6. **Line Count**: Target maximum line counts per category (see below)
+
+**File Size Targets** (after cleanup):
+- Deployment docs: 200-400 lines max
+- Reference/Architecture docs: 150-300 lines max
+- Feature docs: 50-150 lines max
+- Operations docs: 100-200 lines max
+
+**Examples of BAD vs GOOD content**:
+
+❌ **BAD** (general explanation):
+```text
+Multi-Factor Authentication (MFA) requires two forms of verification to access your account:
+1. Something you know - Your password
+2. Something you have - Your authentication device
+
+This provides an additional layer of security...
+```
+
+✅ **GOOD** (LeafLock-specific):
+```text
+LeafLock MFA: TOTP stored encrypted in `mfa_secret_encrypted` column,
+Argon2id hashed backup codes, rate limit: 5 attempts/15min.
+Implementation: `backend/middleware/rate_limit.go:45`
+```
+
+❌ **BAD** (platform tutorial):
+```text
+Kubernetes uses Pods to run containers. A Pod is the smallest deployable
+unit in Kubernetes. StatefulSets provide stable network identities...
+```
+
+✅ **GOOD** (LeafLock deployment):
+```text
+Backend pod: `resources.requests.memory: 256Mi`, dual-stack IPv6 on `[::]:8080`
+PostgreSQL StatefulSet: 10Gi PVC, connection pool in `backend/database/database.go:89`
+Deploy: `helm install leaflock ./helm -f values-prod.yaml`
+```
 
 ### 2. Database Migration Version - MUST BUMP
 
@@ -78,6 +175,61 @@ When modifying `docker-compose.yml`, remember to sync:
 - Regular `docker-compose.yml`
 - Coolify `docker-compose.yml`
 - `frontendDockerfile` and entrypoint scripts if affected
+
+### 5. Pre-commit Hooks
+
+Pre-commit hooks are configured in `.pre-commit-config.yaml` and automatically run on commit.
+
+**Installation**:
+```bash
+python3 -m pip install --user pre-commit
+~/.local/bin/pre-commit install
+```
+
+**Configured hooks**:
+- General: trailing whitespace, end-of-file, YAML/JSON validation, merge conflicts, large files
+- Security: detect-secrets, private key detection, .env file prevention
+- Go: go-fmt, go-vet, go test, go mod tidy, gosec (optional)
+- Frontend: check-no-jsx, pnpm lint, pnpm test, pnpm audit
+- Docker: hadolint (optional)
+
+**Usage**:
+```bash
+# Automatic on commit
+git commit -m "message"
+
+# Manual run
+~/.local/bin/pre-commit run --all-files
+
+# Skip (not recommended)
+git commit --no-verify -m "message"
+```
+
+**Key files**:
+- `.pre-commit-config.yaml` - Configuration
+- `.secrets.baseline` - Secrets detection baseline
+- `.git/hooks/pre-commit` - Installed hook script
+
+### 6. Scripts Policy
+
+**Keep scripts minimal** - maximum 2-3 in `scripts/` directory. More creates maintenance burden.
+
+**Current scripts**:
+- `scripts/dev-setup.sh` - Developer onboarding (checks versions, installs tools)
+- `scripts/backup.sh` - Manual database backups (for non-Helm deployments)
+- `frontend/scripts/check-no-jsx.sh` - TypeScript .tsx enforcement
+
+**Use instead of scripts**:
+- Docker: `make up`, `make down`, `docker compose` commands
+- Kubernetes: `helm install/upgrade` commands directly
+- Health checks: `curl http://localhost:8080/api/v1/health`
+- Tests: `cd backend && go test -v ./...` or `cd frontend && pnpm test`
+
+**Rules**:
+- Never create wrapper scripts that just call other tools
+- Use Makefile targets for common docker-compose commands
+- Consolidate similar functionality into single script
+- Delete scripts when tools/Makefile can do the job
 
 ## Key Features & Architecture
 

@@ -1,0 +1,92 @@
+---
+title: Rate Limits
+description: Request throttling tiers enforced by the LeafLock backend
+sidebar:
+  order: 3
+---
+
+import { Card, CardGrid, Code, Tabs, TabItem } from '@astrojs/starlight/components';
+
+`middleware/rate_limit.go` wires Fiber limiters backed by Redis. Each limiter uses `utils.ClientIP(c)` as the key so IPv4 and IPv6 clients share the same budgeting behaviour.
+
+## Tiers at a Glance
+
+<CardGrid columns={2}>
+  <Card title="Tier 1 – Critical Auth" icon="lock">
+    `AuthLimiter`, `RegisterLimiter`, `MFAVerifyLimiter`, `AdminRecoveryLimiter` — protects login and MFA endpoints from brute force.
+  </Card>
+  <Card title="Tier 2 – Share Links" icon="link">
+    `ShareLinkPublicLimiter`, `ShareLinkCreateLimiter` — guards anonymous share-link traffic and token creation.
+  </Card>
+  <Card title="Tier 3 – Heavy Ops" icon="database">
+    `SearchLimiter`, `ImportExportLimiter`, `BulkImportLimiter`, `AttachmentUploadLimiter` — expensive operations touching PostgreSQL or large payloads.
+  </Card>
+  <Card title="Tier 4 – CRUD & Collaboration" icon="pencil">
+    `StandardCRUDLimiter`, `CollaborationLimiter` — day-to-day note operations and collaborator management.
+  </Card>
+  <Card title="Tier 5 – Lightweight" icon="pulse">
+    `LightweightLimiter` — status checks such as `GET /auth/mfa/status` or user settings fetches.
+  </Card>
+</CardGrid>
+
+## Default Budgets
+
+<Code
+  code={`Tier 1: 10 requests / 5 minutes (registration 5 / 15 min, admin recovery 3 / 15 min)
+Tier 2: 20 requests / 5 minutes (public share) and 10 / 15 minutes (create)
+Tier 3: 30 requests / minute (search), 10 / 5 minutes (import/export), 5 / 15 minutes (bulk import)
+Tier 4: 100 requests / minute (CRUD), 50 / minute (collaboration)
+Tier 5: 300 requests / minute (status/endpoints)`}
+  language="text"
+/>
+
+Adjust numbers in `middleware/rate_limit.go` if your deployment demands different ceilings. All limiters share the same Redis connection used for sessions.
+
+## Endpoint Mapping
+
+<Tabs>
+  <TabItem label="Authentication">
+    `POST /auth/login`, `POST /auth/password/reset-*`, and `POST /auth/mfa/*` all use Tier 1 limiters.
+  </TabItem>
+  <TabItem label="Notes & Metadata">
+    `GET/POST/PUT/DELETE /notes*`, `tags`, `folders`, `templates` use Tier 4.
+  </TabItem>
+  <TabItem label="Attachments">
+    Upload/download routes (`/notes/:id/attachments`) use the Tier 3 `AttachmentUploadLimiter`.
+  </TabItem>
+  <TabItem label="Search & Exports">
+    `/search`, `/notes/import`, `/notes/:id/export`, `/notes/bulk-import` map to Tier 3 limiters.
+  </TabItem>
+  <TabItem label="Share Links">
+    `POST /notes/:id/share-links` → Tier 2 (create), `GET /share/:token` → Tier 2 (public).
+  </TabItem>
+</Tabs>
+
+## Redis Configuration
+
+Limiters reuse the app Redis client. When Redis is unavailable every limiter returns HTTP 429 with `"error": "Too many requests..."` until the connection stabilizes.
+
+<Code
+  code={`storage := redisstorage.NewFromConnection(rdb)
+limiter.New(limiter.Config{
+  Max:        10,
+  Expiration: 5 * time.Minute,
+  Storage:    storage,
+})`}
+  language="go"
+/>
+
+Deployments with sharded Redis should point `REDIS_URL` at a single node or use a proxy that supports `INCR` across the cluster; the limiter storage expects atomic increments.
+
+## Tweaking Limits
+
+- Increase budgets via environment toggles? Expose new values through config and match them in the limiter constructors.
+- Want adaptive limits per plan? Extend `middleware/rate_limit.go` to consider `user_id` and attach multiple keys (e.g., `ip:user`).
+- For debugging, disable limiters in development by wrapping them in `if config.Environment == "development"`.
+
+<Code
+  code={`if cfg.Environment == "development" {
+  return func(c *fiber.Ctx) error { return c.Next() }
+}`}
+  language="go"
+/>

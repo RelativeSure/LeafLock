@@ -81,32 +81,22 @@ To reduce abuse in non-local environments, the registration endpoint is rate-lim
 
 ## Scripts and Automation
 
-Use `./leaflock.sh` for common tasks:
+The consolidated `leaflock.sh` helper has been retired. Use direct commands for day-to-day tasks:
 
 ```bash
-./leaflock.sh help
-./leaflock.sh icons          # regenerate icons
-./leaflock.sh railway        # bootstrap Railway backend+frontend
-./leaflock.sh docker:up      # compose up -d --build
-./leaflock.sh docker:down
-./leaflock.sh docker:build
-./leaflock.sh k8s:deploy     # wrapper for deploy-k8s.sh
-./leaflock.sh health         # wrapper for health-check.sh
-./leaflock.sh troubleshoot   # wrapper for troubleshoot.sh
-./leaflock.sh test           # wrapper for test-automation.sh
+docker compose up -d --build   # Start local stack
+docker compose down            # Stop local stack
+make -C backend test           # Backend tests
+pnpm -C frontend run lint      # Frontend lint
+pnpm -C frontend run test      # Frontend tests
+./scripts/dev-setup.sh         # One-time developer onboarding helper
 ```
 
-### Specialized Scripts
+### Available Scripts
 
-Advanced scripts for CI or specific workflows:
-- `deploy-k8s.sh`, `deploy.sh`, `deploy-docker.sh`, `deploy-from-ghcr.sh`
-- `setup-docker.sh`, `setup-podman.sh`, `podman-kube-play.sh`
-- `health-check.sh`, `troubleshoot.sh`, `test-automation.sh`
-- `env-setup.sh`, `dev-setup.sh`, `dev-watch.sh`, `init-ssl*.sh`
-
-<Aside type="note">
-  **Recommendation**: Start with `leaflock.sh`. Use specialized scripts for fine-grained control or CI integration.
-</Aside>
+- `scripts/dev-setup.sh` — Developer onboarding (env scaffolding, tooling checks)
+- `scripts/backup.sh` — Manual PostgreSQL backup helper for ops teams
+- `frontend/scripts/check-no-jsx.sh` — Blocks accidental JSX in plain `.ts` files
 
 ## Icons and Assets
 
@@ -166,7 +156,7 @@ LeafLock includes built-in startup performance optimizations for containerized d
 ```bash
 # These are enabled by default - no configuration needed
 LAZY_INIT_ADMIN=true          # Admin user creation runs in background
-ASYNC_TEMPLATE_SEED=true      # Template seeding runs in background  
+ASYNC_TEMPLATE_SEED=true      # Template seeding runs in background
 SKIP_MIGRATION_CHECK=false    # Always run database migrations
 ```
 
@@ -178,7 +168,7 @@ SKIP_MIGRATION_CHECK=false    # Always run database migrations
 - **Optimized connection pools**: Faster database and Redis connections
 
 <Aside type="tip">
-See the [Performance Optimization](/admin/performance-optimization) guide for detailed configuration and monitoring information.
+See the [Performance guide](/operations/performance) for detailed configuration and monitoring information.
 </Aside>
 
 ## Development Setup

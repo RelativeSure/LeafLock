@@ -13,12 +13,12 @@ import (
 
 // ShareLinkCache represents cached share link data in Redis
 type ShareLinkCache struct {
-	NoteID     string    `json:"note_id"`
-	Permission string    `json:"permission"` // "read" or "write"
-	ExpiresAt  time.Time `json:"expires_at,omitempty"`
-	MaxUses    int       `json:"max_uses,omitempty"`
-	UseCount   int       `json:"use_count"`
-	HasPassword bool     `json:"has_password"`
+	NoteID      string    `json:"note_id"`
+	Permission  string    `json:"permission"` // "read" or "write"
+	ExpiresAt   time.Time `json:"expires_at,omitempty"`
+	MaxUses     int       `json:"max_uses,omitempty"`
+	UseCount    int       `json:"use_count"`
+	HasPassword bool      `json:"has_password"`
 }
 
 // ShareLinkService handles Redis caching for share links

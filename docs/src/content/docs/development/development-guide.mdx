@@ -42,7 +42,7 @@ Shut everything down with `<Code code={`make down`} language="bash" />` or `dock
     Go 1.23 service listening on <Code code={`http://localhost:8080`} language="text" /> with liveness at `/api/v1/health/live` and readiness at `/api/v1/health/ready`.
   </Card>
   <Card title="PostgreSQL" icon="database">
-    Provisioned via container `postgres` with data volume `leaflock_postgres_data`. Schema is auto-created on boot; see `/reference/database-schema` for table definitions.
+    Provisioned via container `postgres` with data volume `leaflock_postgres_data`. Schema is auto-created on boot; see `/architecture/database-schema` for table definitions.
   </Card>
   <Card title="Redis" icon="cloud">
     Session cache and WebSocket coordination channel. Default URL is `redis://redis:6379/0` with password pulled from `.env`.
@@ -83,7 +83,7 @@ Production bundles emit to `frontend/dist` and are consumed by the Caddy image d
 
 ## Local Configuration
 
-All environment variables are documented in `/reference/environment-variables`. For day-to-day work ensure the following are set:
+All environment variables are documented in `/getting-started/environment-variables`. For day-to-day work ensure the following are set:
 
 <Code
   code={`POSTGRES_PASSWORD=<local-password>
@@ -120,6 +120,6 @@ CI executes the same targets inside `.github/workflows/e2e-verify.yml` before pu
 
 ## Further Reading
 
-- `/reference/api-reference` for endpoint semantics and request schemas
-- `/reference/encryption-technical` for client cryptography internals
+- `/api/rest-api` for endpoint semantics and request schemas
+- `/architecture/encryption` for client cryptography internals
 - `/deployment/` for platform-specific compose, Helm, and Railway recipes

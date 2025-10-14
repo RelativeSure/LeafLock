@@ -158,7 +158,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
   }, [title, content, debouncedSave, selectedNote])
 
   return (
-    <div className="flex-1 flex flex-col" role="main" aria-label="Note editor">
+    <div className="flex-1 flex flex-col overflow-hidden" role="main" aria-label="Note editor">
       <header className="bg-card border-b border-border px-6 py-4">
         <label htmlFor="note-title" className="sr-only">
           Note title
@@ -229,17 +229,19 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
         </div>
       )}
 
-      <div className="flex-1 p-6">
-        <Suspense fallback={<ComponentLoader />}>
-          <RichTextEditor
-            content={content}
-            onChange={setContent}
-            noteId={selectedNote?.id}
-            placeholder="Start writing your secure note... You can use rich text formatting or Markdown!"
-            className="h-full"
-            editable
-          />
-        </Suspense>
+      <div className="flex-1 overflow-auto">
+        <div className="p-6 h-full">
+          <Suspense fallback={<ComponentLoader />}>
+            <RichTextEditor
+              content={content}
+              onChange={setContent}
+              noteId={selectedNote?.id}
+              placeholder="Start writing your secure note... You can use rich text formatting or Markdown!"
+              className="h-full"
+              editable
+            />
+          </Suspense>
+        </div>
         <p id="editor-help" className="sr-only">
           This note is automatically encrypted and saved as you type. Supports rich text and Markdown formatting.
         </p>
