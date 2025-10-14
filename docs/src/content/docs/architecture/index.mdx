@@ -1,0 +1,58 @@
+---
+title: Architecture Overview
+description: How LeafLock’s systems fit together
+sidebar:
+  order: 1
+---
+
+import { Aside, Card, CardGrid, Code } from '@astrojs/starlight/components';
+
+## Platform Summary
+
+- LeafLock ships as a React SPA (`frontend/`) talking to a Go Fiber API (`backend/`).
+- PostgreSQL 15+ stores encrypted content; Redis 7+ handles sessions, rate limits, and share state.
+- Only the frontend is internet-facing—API and databases stay on the private network.
+
+<Aside type="tip">
+Use these guides whenever you need source file references or want to validate a deployment matches the canonical architecture.
+</Aside>
+
+## Core Systems
+
+<CardGrid columns={2}>
+  <Card title="Frontend" icon="laptop" link="/architecture/frontend">
+    React 18 + Vite SPA under <code>frontend/</code> manages note editing, client-side crypto, and collaboration UI.
+  </Card>
+  <Card title="Backend" icon="terminal" link="/architecture/backend">
+    Go Fiber API under <code>backend/</code> exposes REST, WebSocket, rate limits, and background jobs.
+  </Card>
+  <Card title="Encryption" icon="lock" link="/architecture/encryption">
+    Client libsodium + server ChaCha20-Poly1305 enforce zero-knowledge storage for every note.
+  </Card>
+  <Card title="Database" icon="database" link="/architecture/database-schema">
+    PostgreSQL schema lives in <code>backend/database/schema.go</code> with encrypted columns throughout.
+  </Card>
+</CardGrid>
+
+## Runtime Flow
+
+- Vite builds the SPA entry point at `frontend/src/main.tsx`; it loads per-user keys via `cryptoService`.
+- Authenticated calls go through `SecureAPI` (JWT + CSRF token handling) to `/api/v1/*`.
+- `backend/server/app.go` wires Fiber middleware (recover, logging, compression) before `routes.go` adds security controls.
+- PostgreSQL queries run through pgx pools; Redis maintains session state, rate limit buckets, and share-link cache entries.
+- Background services under `backend/services/` seed the default admin, rotate encryption keys, and purge trashed notes daily.
+
+<Code
+  code={`frontend/src/         React UI & encryption helpers
+backend/server/     Fiber bootstrap + health handlers
+backend/routes.go   Middleware stack + REST routing
+backend/services/   Background jobs & schedulers
+backend/websocket/  Collaboration hub and message types`}
+  language="text"
+/>
+
+## Deployment Footprint
+
+- Default compose stack: frontend, backend, PostgreSQL, Redis (`docker-compose.yml`).
+- Health: `/api/v1/health/live` (liveness) and `/api/v1/health/ready` (gated by `server/ReadyState` flags).
+- Metrics: set `ENABLE_METRICS=true` to mount Prometheus middleware from `backend/metrics/prometheus.go`.

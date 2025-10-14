@@ -112,7 +112,7 @@ export const ResetPasswordView: FC<ResetPasswordViewProps> = ({ api, token, onRe
             <p className="text-muted-foreground">Verifying reset link...</p>
           </CardContent>
         </Card>
-        <Footer variant="minimal" />
+        <Footer />
       </div>
     )
   }
@@ -144,7 +144,7 @@ export const ResetPasswordView: FC<ResetPasswordViewProps> = ({ api, token, onRe
             </Button>
           </CardContent>
         </Card>
-        <Footer variant="minimal" />
+        <Footer />
       </div>
     )
   }
@@ -177,7 +177,7 @@ export const ResetPasswordView: FC<ResetPasswordViewProps> = ({ api, token, onRe
             </Button>
           </CardContent>
         </Card>
-        <Footer variant="minimal" />
+        <Footer />
       </div>
     )
   }
@@ -285,7 +285,7 @@ export const ResetPasswordView: FC<ResetPasswordViewProps> = ({ api, token, onRe
         </CardContent>
       </Card>
 
-      <Footer variant="minimal" />
+      <Footer />
     </div>
   )
 }

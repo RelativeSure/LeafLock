@@ -6,7 +6,7 @@ hero:
   tagline: End-to-end encrypted notes with zero-knowledge architecture. Technical documentation for developers and operators.
   actions:
     - text: Technical Reference
-      link: /reference/encryption-technical/
+      link: /architecture/encryption/
       icon: right-arrow
       variant: primary
     - text: View on GitHub
@@ -29,19 +29,19 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 <CardGrid stagger>
   <Card title="Encryption Architecture" icon="approve-check">
     XChaCha20-Poly1305 implementation, key derivation, zero-knowledge architecture details
-    [Read more →](/reference/encryption-technical/)
+    [Read more →](/architecture/encryption/)
   </Card>
   <Card title="API Reference" icon="open-book">
     REST API endpoints, WebSocket protocol, request/response schemas, authentication flow
-    [Read more →](/reference/api-reference/)
+    [Read more →](/api/rest-api/)
   </Card>
   <Card title="Database Schema" icon="setting">
     PostgreSQL tables, indexes, triggers, encryption columns, relationships
-    [Read more →](/reference/database-schema/)
+    [Read more →](/architecture/database-schema/)
   </Card>
   <Card title="Environment Variables" icon="puzzle">
     Complete configuration reference, security settings, deployment parameters
-    [Read more →](/reference/environment-variables/)
+    [Read more →](/getting-started/environment-variables/)
   </Card>
 </CardGrid>
 
@@ -118,8 +118,8 @@ open http://localhost:3000
 
 ## Links
 
-- [Encryption Technical Details](/reference/encryption-technical/)
-- [API Reference](/reference/api-reference/)
-- [Database Schema](/reference/database-schema/)
-- [Environment Variables](/reference/environment-variables/)
+- [Encryption Technical Details](/architecture/encryption/)
+- [API Reference](/api/rest-api/)
+- [Database Schema](/architecture/database-schema/)
+- [Environment Variables](/getting-started/environment-variables/)
 - [GitHub Repository](https://github.com/RelativeSure/LeafLock)

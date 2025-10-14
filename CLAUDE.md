@@ -49,16 +49,98 @@ docker compose up -d        # Alternative: Docker Compose
 - Standalone docs create clutter and maintenance burden
 - Keep documentation centralized and minimal
 
-**When adding documentation**:
-- Use clear, technical language without emojis or excessive formatting
+**Exception: AstroJS Documentation**
+When significant architectural changes, new features, or design patterns are introduced that benefit developers and end users, update the AstroJS documentation in `docs/src/content/docs/`.
+
+**AstroJS Documentation Guidelines**:
+- Write for both developers and end users
+- Use clear, technical language without emojis
 - Be concise and easily readable
 - Focus on facts and actionable information
-- Avoid marketing-style language or unnecessary praise
+- Include code examples with proper syntax highlighting
+- Use Astro components (Aside, Code, Tabs, CardGrid) for better readability
+- Document architecture patterns, component structure, and design decisions
+- Keep examples practical and copy-paste ready
+- Use proper MDX frontmatter with title, description, and sidebar order
+
+**When to update AstroJS docs**:
+- Major component refactoring or new component patterns
+- New features that affect user workflow
+- Architectural changes that developers need to understand
+- Design pattern changes or new patterns introduced
+- Breaking changes or migration guides needed
 
 **Test documentation**:
 - Test files are self-documenting
 - Only mention test file paths, not detailed test cases
 - Keep test sections minimal (file locations only)
+
+### 1.1. AstroJS Documentation Content Philosophy
+
+**⚠️ CRITICAL PRINCIPLE**: Documentation must be **LeafLock-specific**, not general technology tutorials.
+
+**DO NOT include**:
+- General technology explanations (how Docker/K8s/React/MFA works)
+- Framework/platform documentation that belongs in official docs
+- Marketing-style "benefits" or "why use X" sections
+- Step-by-step tutorials for standard tools (authenticator apps, Git, etc.)
+- Cryptography theory or algorithm explanations
+- Generic best practices not tied to LeafLock's implementation
+- Emoji-heavy formatting or conversational tone
+
+**DO include**:
+- LeafLock-specific configuration files and values
+- LeafLock-specific commands and file paths with line numbers
+- Unique architectural decisions in LeafLock
+- LeafLock-specific troubleshooting for known issues
+- References to LeafLock source code locations
+- Environment variables and their LeafLock-specific usage
+- Actual deployment commands for LeafLock
+
+**Content Quality Rules**:
+1. **DRY Principle**: Never repeat information across multiple docs
+2. **50% Rule**: If a file could be 50% shorter without losing LeafLock-specific info, it's too verbose
+3. **Reference Test**: Every paragraph must reference LeafLock code, config, or behavior
+4. **Copy-Paste Test**: Code blocks should be immediately usable for LeafLock deployment
+5. **No Fluff**: Remove all introductory "what is X" sections that explain general concepts
+6. **Line Count**: Target maximum line counts per category (see below)
+
+**File Size Targets** (after cleanup):
+- Deployment docs: 200-400 lines max
+- Reference/Architecture docs: 150-300 lines max
+- Feature docs: 50-150 lines max
+- Operations docs: 100-200 lines max
+
+**Examples of BAD vs GOOD content**:
+
+❌ **BAD** (general explanation):
+```
+Multi-Factor Authentication (MFA) requires two forms of verification to access your account:
+1. Something you know - Your password
+2. Something you have - Your authentication device
+
+This provides an additional layer of security...
+```
+
+✅ **GOOD** (LeafLock-specific):
+```
+LeafLock MFA: TOTP stored encrypted in `mfa_secret_encrypted` column,
+Argon2id hashed backup codes, rate limit: 5 attempts/15min.
+Implementation: `backend/middleware/rate_limit.go:45`
+```
+
+❌ **BAD** (platform tutorial):
+```
+Kubernetes uses Pods to run containers. A Pod is the smallest deployable
+unit in Kubernetes. StatefulSets provide stable network identities...
+```
+
+✅ **GOOD** (LeafLock deployment):
+```
+Backend pod: `resources.requests.memory: 256Mi`, dual-stack IPv6 on `[::]:8080`
+PostgreSQL StatefulSet: 10Gi PVC, connection pool in `backend/database/database.go:89`
+Deploy: `helm install leaflock ./helm -f values-prod.yaml`
+```
 
 ### 2. Database Migration Version - MUST BUMP
 

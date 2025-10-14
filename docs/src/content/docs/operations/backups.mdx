@@ -1,0 +1,72 @@
+---
+title: Backups
+description: Configure and verify encrypted backups for LeafLock data
+sidebar:
+  order: 2
+---
+
+import { Aside, Code } from '@astrojs/starlight/components';
+
+## What Gets Backed Up
+
+- PostgreSQL (notes, templates, collaboration metadata)
+- Redis keyspace (sessions, rate-limiter buckets, share-link cache)
+- Generated archives are encrypted and streamed to the configured S3-compatible bucket.
+
+The backup runner is controlled by environment variables outlined in `/getting-started/environment-variables`.
+
+## Configuration
+
+Set these variables before launching the backup service:
+
+<Code
+  code={`ENABLE_BACKUPS=true
+BACKUP_S3_ENDPOINT=https://s3.your-cloud.com
+BACKUP_S3_BUCKET=leaflock-backups
+BACKUP_S3_ACCESS_KEY=...
+BACKUP_S3_SECRET_KEY=...
+BACKUP_SCHEDULE="0 */6 * * *"   # every six hours
+BACKUP_ENCRYPTION_KEY=<32-byte base64>`}
+  language="env"
+/>
+
+The schedule uses cron syntax. Choose a frequency that matches your RPO/RTO requirements.
+
+## Observability
+
+Metrics exposed at `/metrics`:
+
+- `leaflock_backups_total{status="success|failed"}` – run outcomes.
+- `leaflock_backup_duration_seconds` – histogram of runtime.
+- `leaflock_backup_size_bytes` – last archive size (compressed).
+
+<Aside type="tip">
+Add alerts for “no successful backup in 24h” and “backup duration p95 > 10 minutes.” See `/operations/monitoring` for example PromQL.
+</Aside>
+
+## Restore Test (Docker Example)
+
+<Code
+  code={`# Stop write traffic
+docker compose stop backend frontend
+
+# Restore PostgreSQL
+aws s3 cp s3://leaflock-backups/latest.sql.gz - | \\
+  gunzip | docker compose exec -T postgres psql -U postgres notes
+
+# Restore Redis (if snapshotted)
+aws s3 cp s3://leaflock-backups/latest.rdb ./dump.rdb
+docker compose cp dump.rdb redis:/data/dump.rdb
+docker compose start backend frontend`}
+  language="bash"
+/>
+
+Adapt commands for Kubernetes by using `kubectl exec` or job-based restores.
+
+## Failure Modes
+
+- **No archives uploading**: check runner logs for S3 credential errors. Ensure network access to the endpoint.
+- **Backups completing but too large**: verify garbage collection of deleted notes; run `cleanup_old_deleted_notes()` via `services/cleanup.go`.
+- **Restore missing templates**: include the template seed files (`backend/templates/`) in source control; backups capture database rows, not local seed files.
+
+Document each successful restore drill to satisfy compliance and keep muscle memory fresh.

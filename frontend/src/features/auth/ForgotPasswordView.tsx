@@ -114,7 +114,7 @@ export const ForgotPasswordView: FC<ForgotPasswordViewProps> = ({ api, onBackToL
         </CardContent>
       </Card>
 
-      <Footer variant="minimal" />
+      <Footer />
     </div>
   )
 }

@@ -1,0 +1,220 @@
+---
+title: REST API
+description: LeafLock REST endpoints served by the Go backend
+sidebar:
+  order: 1
+---
+
+import { Aside, Card, CardGrid, Code, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Overview
+
+<CardGrid columns={2}>
+  <Card title="Swagger UI" icon="open-book" link="/swagger/">
+    Interactive docs exposed at <code>/swagger</code> or <code>/api/v1/docs</code>. Generated from <code>backend/swagger.go</code>.
+  </Card>
+  <Card title="Handlers" icon="terminal">
+    All routes defined in <code>backend/routes.go</code> and implemented under <code>backend/handlers/</code>.
+  </Card>
+</CardGrid>
+
+Base URL: `/api/v1`. All mutating endpoints require a bearer JWT issued by `POST /auth/login` and a valid CSRF token.
+
+## Authentication
+
+<Tabs>
+  <TabItem label="Login">
+<Code
+  code={`POST /api/v1/auth/login
+Content-Type: application/json
+{
+  "email": "alice@example.com",
+  "password": "correct horse battery staple"
+}`}
+  language="http"
+/>
+<Aside type="tip">
+Handler: `handlers/auth.go:Login`. If MFA is enabled the response includes `{ "mfa_required": true, "session": "temp_id" }`.
+</Aside>
+  </TabItem>
+  <TabItem label="Verify MFA">
+<Code
+  code={`POST /api/v1/auth/mfa/verify
+{
+  "session": "temp_id",
+  "code": "123456"
+}`}
+  language="http"
+/>
+<Aside type="note">
+Handler: `handlers/auth.go:VerifyMFACode`. Rate limited by `middleware.rateLimits.MFAVerifyLimiter`.
+</Aside>
+  </TabItem>
+  <TabItem label="Backup Codes">
+<Code
+  code={`GET /api/v1/auth/mfa/backup-codes  # Requires JWT
+Authorization: Bearer <jwt>`}
+  language="http"
+/>
+<Aside type="note">
+Handler: `handlers/auth.go:GetBackupCodes`. Response returns hashed codes encrypted in PostgreSQL (`users.mfa_backup_codes`).
+</Aside>
+  </TabItem>
+</Tabs>
+
+## Notes & Versions
+
+- `GET /notes` → list decrypted note metadata (handler: `handlers/notes.go:GetNotes`)
+- `POST /notes` → create note; payload must include encrypted title/content strings
+- `GET /notes/:id/versions` → fetch version history, stored in `note_versions`
+- `POST /notes/:id/versions/:version` → restore a historic version
+
+<Code
+  code={`POST /api/v1/notes
+Authorization: Bearer <jwt>
+Content-Type: application/json
+{
+  "workspace_id": "c76c0c3d-0c2d-4ac3-a71c-1b1837a8cb6d",
+  "title_encrypted": "BASE64...",
+  "content_encrypted": "BASE64...",
+  "content_hash": "BASE64..."
+}`}
+  language="http"
+/>
+
+## Tags, Folders, Templates
+
+<CardGrid columns={3}>
+  <Card title="Tags" icon="tag">
+    CRUD handlers in <code>handlers/tags.go</code>. Deterministic hashes stored in <code>tags.name_hash</code>.
+  </Card>
+  <Card title="Folders" icon="folder">
+    Endpoints live in <code>handlers/folders.go</code>. Moving a note triggers a `folder_id` update with auditing.
+  </Card>
+  <Card title="Templates" icon="book">
+    Handled by <code>handlers/templates.go</code>. `POST /templates/:id/use` increments <code>usage_count</code>.
+  </Card>
+</CardGrid>
+
+Example assign tag request:
+
+<Code
+  code={`POST /api/v1/notes/b9fa1ed4-9d03-4d56-94f1-8b2b50f5b9de/tags
+{
+  "tag_id": "11c8a517-11e2-43dd-96df-49ca8e5d0080"
+}`}
+  language="http"
+/>
+
+## Collaboration & Share Links
+
+- Collaborator management resides in `handlers/collaboration.go`.
+- Share links served by `handlers/share_links.go` with Redis caching.
+
+<Tabs>
+  <TabItem label="Invite Collaborator">
+<Code
+  code={`POST /api/v1/notes/:id/share
+{
+  "email": "teammate@example.com",
+  "permission": "write"
+}`}
+  language="http"
+/>
+  </TabItem>
+  <TabItem label="Create Share Link">
+<Code
+  code={`POST /api/v1/notes/:id/share-links
+{
+  "permission": "read",
+  "expires_at": "2024-12-31T23:59:00Z"
+}`}
+  language="http"
+/>
+<Aside type="note">
+Public access uses <code>GET /api/v1/share/:token</code> without authentication. Middleware hydrates note metadata via PostgreSQL + Redis.
+</Aside>
+  </TabItem>
+</Tabs>
+
+## Attachments
+
+Attachments are stored encrypted in PostgreSQL (`attachments.content_encrypted`). Uploads stream via multipart/form-data.
+
+<Code
+  code={`POST /api/v1/notes/:noteId/attachments
+Authorization: Bearer <jwt>
+Content-Type: multipart/form-data
+
+file=@contract.pdf
+name=Encrypted title`}
+  language="http"
+/>
+
+Handler: `handlers/attachments.go:UploadAttachment` enforces size limits and updates `users.storage_used`.
+
+## Import, Export & Search
+
+- `POST /notes/import` and `POST /notes/bulk-import` accept encrypted JSON exports produced by the frontend.
+- `POST /notes/:id/export` returns decrypted data for the caller.
+- `POST /search` queries the encrypted keyword index (see `/architecture/database-schema`).
+
+All above implemented in `handlers/import_export.go` and `handlers/search.go`. Rate limiting tier: `ImportExportLimiter` or `SearchLimiter`.
+
+## Health & Diagnostics
+
+- `GET /health/live` → confirms process running
+- `GET /health/ready` → verifies database, Redis, and template/admin readiness
+- `GET /health` → returns service status plus user counts
+
+Handlers live directly in `backend/routes.go`. These endpoints are unauthenticated and safe for platform probes.
+
+## Responses & Errors
+
+Standard error envelope:
+
+<Code
+  code={`HTTP/1.1 429 Too Many Requests
+Content-Type: application/json
+
+{ "error": "Too many requests. Please try again later." }`}
+  language="http"
+/>
+
+- JSON validation errors include `fields` array from `utils.ValidationError`.
+- Authorization failures return `401` with `"error": "Unauthorized"`.
+- CSRF violations surface as `403` with `"error": "invalid csrf token"`.
+
+<Aside type="tip">
+Enable debug logging (`LOG_LEVEL=debug`) to include `request_id` and stack traces in responses for local development only.
+</Aside>
+
+## CORS & CSRF
+
+`middleware.JWTMiddleware` and the global CORS middleware guard every route:
+
+- Allowed origins derived from `config.AllowedOrigins` (`CORS_ORIGINS` env).
+- `AllowHeaders` includes `X-CSRF-Token`.
+- CSRF middleware stores a cookie `csrf_token`; send it back as the `X-CSRF-Token` header on mutating requests.
+
+Implementation references:
+
+- `backend/routes.go` → CORS + CSRF setup
+- `frontend/src/services/SecureAPI.ts` → automatically forwards JWT + CSRF headers
+
+## Implementation Map
+
+<CardGrid columns={2}>
+  <Card title="Auth" icon="lock">
+    `backend/handlers/auth.go`, `middleware/jwt.go`, `services/mfa.go`
+  </Card>
+  <Card title="Notes" icon="document">
+    `backend/handlers/notes.go`, `handlers/templates.go`, `handlers/attachments.go`
+  </Card>
+  <Card title="Collaboration" icon="users">
+    `handlers/collaboration.go`, `websocket/hub.go`
+  </Card>
+  <Card title="Search & Export" icon="search">
+    `handlers/search.go`, `handlers/import_export.go`
+  </Card>
+</CardGrid>

@@ -1678,7 +1678,7 @@ func (h *AuthHandler) ConfirmPasswordReset(c *fiber.Ctx) error {
 
 	// Invalidate all active sessions for this user (force re-login after password change)
 	// Find and delete all session keys for this user from Redis
-	pattern := fmt.Sprintf("session:*")
+	pattern := "session:*"
 	iter := h.redis.Scan(ctx, 0, pattern, 100).Iterator()
 	for iter.Next(ctx) {
 		key := iter.Val()

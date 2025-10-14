@@ -1,0 +1,109 @@
+---
+title: Frontend Architecture
+description: How the LeafLock SPA handles encryption, state, and UI flows
+sidebar:
+  order: 3
+---
+
+import { Aside, Card, CardGrid, Code, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Stack Snapshot
+
+- React 18 + TypeScript, bundled with Vite (`frontend/vite.config.ts`).
+- Zustand stores keep decrypted note state in memory only.
+- shadcn/ui components provide accessible primitives with Tailwind styling.
+- Auth + crypto live entirely inside the browser; the API never sees plaintext note content.
+
+<CardGrid columns={3}>
+  <Card title="Entry Point" icon="rocket">
+    `frontend/src/main.tsx` mounts `<App />`, loads global styles, and registers the Theme context.
+  </Card>
+  <Card title="Layout" icon="layout">
+    `features/app/components/AppLayout.tsx` wraps the workspace, routing, and announcement banner.
+  </Card>
+  <Card title="Routing" icon="workflow">
+    `App.tsx` renders authenticated vs unauthenticated routes; React Router handles page shells.
+  </Card>
+</CardGrid>
+
+## Client Encryption Pipeline
+
+<Tabs>
+  <TabItem label="Key Management">
+<Code
+  code={`// Login success -> SecureAPI.setToken(token)
+// 1. Fetch salt -> /api/v1/auth/login
+// 2. cryptoService.deriveKeyFromPassword(password, salt)
+// 3. Master key decrypted and cached in cryptoService.masterKey
+// 4. Note payloads encrypted via cryptoService.encryptData`}
+  language="ts"
+/>
+  </TabItem>
+  <TabItem label="Services">
+<Code
+  code={`SecureAPI (services/secureApi.ts)
+  ├── Adds JWT + CSRF headers
+  ├── Handles 401 -> logout
+  └── Wraps fetch with logging
+
+CryptoService (services/cryptoService.ts)
+  ├── Lazy-loads libsodium
+  ├── Derives PBKDF2 keys (600k iterations)
+  └── Performs XChaCha20-Poly1305 encrypt/decrypt`}
+  language="text"
+/>
+  </TabItem>
+</Tabs>
+
+<Aside type="note">
+`cryptoService.masterKey` never leaves memory; refreshing the page forces the user to re-authenticate so the backend can reissue encrypted workspace keys.
+</Aside>
+
+## Feature Modules
+
+<CardGrid columns={2}>
+  <Card title="Workspace Shell" icon="layout-grid">
+    `features/app/components/NotesWorkspace.tsx` arranges the note list, editor, and responsive mobile toggles. State derives from `stores/authStore.ts` and `stores/shareLinksStore.ts`.
+  </Card>
+  <Card title="Editors" icon="pencil">
+    `components/RichTextEditor.tsx` wraps Lexical with Markdown + attachment support. `features/app/components/TemplateSelectorModal.tsx` lazy-loads templates to keep initial bundle small.
+  </Card>
+  <Card title="Collaboration" icon="users">
+    `features/common/collaboration` hooks maintain WebSocket connections via `websocketService`. Incoming payloads trigger optimistic UI updates in `collaborationStore.ts`.
+  </Card>
+  <Card title="Authentication UI" icon="lock">
+    `features/auth` screens coordinate MFA prompts, backup code entry, and password resets through `SecureAPI`.
+  </Card>
+</CardGrid>
+
+## State Stores
+
+- `stores/authStore.ts`: tracks JWT token state, current user metadata, and theme preference persisted in `localStorage`.
+- `stores/collaborationStore.ts`: manages active collaborators per note, dispatched by WebSocket events.
+- `stores/shareLinksStore.ts`: caches share-link metadata to avoid redundant API calls when toggling visibility.
+- `stores/templatesStore.ts` (within templates feature): keeps decrypted templates after first load.
+
+All stores enforce **decrypted data stays in memory**; only identifiers or encrypted payloads persist to storage.
+
+## API Access Patterns
+
+- Each feature module calls `SecureAPI` service methods (e.g., `services/templatesService.ts`) that return typed responses validated by Zod schemas under `lib/schemas`.
+- On 401 responses, `SecureAPI.handleUnauthorized()` clears keys, tokens, and salts, then redirects to `/login`.
+- File uploads stream through `attachmentService.ts`, which includes the decrypted note ID and uses `FormData` to avoid JSON encoding large payloads.
+
+<Code
+  code={`const api = new SecureAPI(cryptoService, '/api/v1')
+const templates = await templatesService.listTemplates(api)
+// templates arrive encrypted -> decrypt client-side before rendering`}
+  language="ts"
+/>
+
+## Testing Strategy
+
+- Component tests (`*.test.tsx`) render against mocked Zustand stores for deterministic behavior.
+- `CryptoService.test.js` uses the real libsodium WASM bundle to guarantee encryption compatibility.
+- `e2e.test.tsx` exercises the full login + note flow with MSW mocks for backend endpoints.
+
+<Aside type="tip">
+When adding new UI flows, keep API shims inside `services/*` so mocks remain centralized.
+</Aside>

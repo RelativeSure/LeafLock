@@ -1,0 +1,64 @@
+---
+title: Monitoring
+description: Observe LeafLock health with Prometheus metrics and structured logs
+sidebar:
+  order: 1
+---
+
+import { Aside, Card, CardGrid, Code } from '@astrojs/starlight/components';
+
+## Enable Metrics
+
+- Set `ENABLE_METRICS=true` (default) so `backend/routes.go` mounts `/metrics`.
+- Restrict access via private network, sidecar auth proxy, or scrape from inside the cluster.
+
+<Code
+  code={`curl -s http://localhost:8080/metrics | grep leaflock_`}
+  language="bash"
+/>
+
+## Metric Families
+
+<CardGrid columns={2}>
+  <Card title="Encryption & Collaboration" icon="lock">
+    `leaflock_active_users`, `leaflock_collaborations_active`, `leaflock_websocket_connections`, `leaflock_notes_total`.
+  </Card>
+  <Card title="HTTP Surface" icon="cloud">
+    `leaflock_http_requests_total`, `leaflock_http_request_duration_seconds`, `leaflock_errors_total`.
+  </Card>
+  <Card title="Persistence" icon="database">
+    `leaflock_db_connections_active`, `leaflock_db_queries_total`, `leaflock_redis_operations_total`.
+  </Card>
+  <Card title="Backup Runner" icon="history">
+    `leaflock_backups_total`, `leaflock_backup_duration_seconds`, `leaflock_backup_size_bytes`.
+  </Card>
+</CardGrid>
+
+Use these names directly in Prometheus alert rules or Grafana dashboards.
+
+## Alert Baselines
+
+- `rate(leaflock_http_errors_total{component="api"}[10m]) > 5` → elevated error rate.
+- `leaflock_websocket_connections == 0` while `leaflock_active_users > 0` → collaboration outage.
+- `histogram_quantile(0.95, rate(leaflock_backup_duration_seconds_bucket[24h])) > 600` → slow backups.
+- `max_over_time(leaflock_backups_total{status="success"}[24h]) == 0` → missed backup window.
+
+Tune thresholds to match your user volume, but keep the dynamics—each rule maps to a real failure mode observed during ops testing.
+
+## Dashboards
+
+- Import `docs/grafana-dashboard.json` as a starter panel set.
+- Wire Prometheus datasource to the backend service scrapable URL.
+- Add log panels using the structured JSON output from `utils.InfoLogger` (fields: `component`, `request_id`, `latency`).
+
+<Aside type="tip">
+Set `LOG_LEVEL=info` in production. Raise to `debug` only during incident response; secrets are never logged but verbose logs increase storage.
+</Aside>
+
+## Troubleshooting
+
+- **Empty `/metrics` response** → ensure `ENABLE_METRICS=true` and that your reverse proxy forwards the path without stripping headers.
+- **Missing WebSocket gauges** → confirm the load balancer keeps sticky sessions; otherwise connections flip pods and counters reset.
+- **Redis metrics absent** → backend failed to connect to Redis. Check startup logs for `redis` errors and verify `REDIS_URL`.
+
+For backup-specific alerts and restore drills, see `/operations/backups`.
