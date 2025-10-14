@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { type Note } from '../types'
 import { type SecureAPI } from '@/services/secureApi'
 
@@ -8,6 +8,11 @@ export const useNotes = (api: SecureAPI, onLogout: () => void) => {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null)
   const [loading, setLoading] = useState(false)
   const [notesError, setNotesError] = useState<string | null>(null)
+  const logoutRef = useRef(onLogout)
+
+  useEffect(() => {
+    logoutRef.current = onLogout
+  }, [onLogout])
 
   const loadNotes = useCallback(async () => {
     try {
@@ -23,7 +28,7 @@ export const useNotes = (api: SecureAPI, onLogout: () => void) => {
 
       if (message.includes('401') || message.includes('Unauthorized')) {
         console.log('🚨 Authentication error while loading notes - logging out')
-        onLogout()
+        logoutRef.current()
         return
       }
 
@@ -31,7 +36,7 @@ export const useNotes = (api: SecureAPI, onLogout: () => void) => {
     } finally {
       setLoading(false)
     }
-  }, [api, onLogout])
+  }, [api])
 
   const loadTrash = useCallback(async () => {
     try {
@@ -47,7 +52,7 @@ export const useNotes = (api: SecureAPI, onLogout: () => void) => {
 
       if (message.includes('401') || message.includes('Unauthorized')) {
         console.log('🚨 Authentication error while loading trash - logging out')
-        onLogout()
+        logoutRef.current()
         return
       }
 
@@ -55,7 +60,7 @@ export const useNotes = (api: SecureAPI, onLogout: () => void) => {
     } finally {
       setLoading(false)
     }
-  }, [api, onLogout])
+  }, [api])
 
   const handleRestoreNote = useCallback(
     async (noteId: string) => {
