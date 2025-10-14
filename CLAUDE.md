@@ -21,7 +21,7 @@ cd backend
 go run main.go              # Run dev server
 go test -v ./...            # Run all tests
 golangci-lint run ./...     # Lint (required after complex changes)
-```
+```text
 
 ### Frontend
 ```bash
@@ -29,14 +29,14 @@ cd frontend
 pnpm run dev                # Run dev server
 pnpm test                   # Run tests
 pnpm run lint               # ESLint
-```
+```text
 
 ### Containers
 ```bash
 make up                     # Start all services (Podman)
 make down                   # Stop containers
 docker compose up -d        # Alternative: Docker Compose
-```
+```text
 
 ## Critical Development Rules
 
@@ -114,7 +114,7 @@ When significant architectural changes, new features, or design patterns are int
 **Examples of BAD vs GOOD content**:
 
 ❌ **BAD** (general explanation):
-```
+```text
 Multi-Factor Authentication (MFA) requires two forms of verification to access your account:
 1. Something you know - Your password
 2. Something you have - Your authentication device
@@ -123,20 +123,20 @@ This provides an additional layer of security...
 ```
 
 ✅ **GOOD** (LeafLock-specific):
-```
+```text
 LeafLock MFA: TOTP stored encrypted in `mfa_secret_encrypted` column,
 Argon2id hashed backup codes, rate limit: 5 attempts/15min.
 Implementation: `backend/middleware/rate_limit.go:45`
 ```
 
 ❌ **BAD** (platform tutorial):
-```
+```text
 Kubernetes uses Pods to run containers. A Pod is the smallest deployable
 unit in Kubernetes. StatefulSets provide stable network identities...
 ```
 
 ✅ **GOOD** (LeafLock deployment):
-```
+```text
 Backend pod: `resources.requests.memory: 256Mi`, dual-stack IPv6 on `[::]:8080`
 PostgreSQL StatefulSet: 10Gi PVC, connection pool in `backend/database/database.go:89`
 Deploy: `helm install leaflock ./helm -f values-prod.yaml`

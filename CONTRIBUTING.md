@@ -12,9 +12,9 @@ Thanks for your interest in improving LeafLock! We welcome bug fixes, new featur
 
 - Backend: `make -C backend test` (see backend/Makefile). Coverage gate: 72%.
 - Frontend: `cd frontend && pnpm install && pnpm test`
-- Local stack: `docker compose up -d` or `./scripts/leaflock.sh docker:up`
-- Icons: `./scripts/leaflock.sh icons`
-- Railway: `./scripts/leaflock.sh railway`
+- Local stack: `docker compose up -d --build` (stop with `docker compose down`)
+- Developer setup helper: `./scripts/dev-setup.sh`
+- Railway deployment: see `docs/src/content/docs/deployment/railway.mdx`
 
 ## Style & Quality
 
@@ -38,4 +38,3 @@ For significant changes, open a Discussion to align on approach before implement
 ## Code of Conduct
 
 We follow the Contributor Covenant. See `CODE_OF_CONDUCT.md`.
-
