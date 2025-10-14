@@ -1,0 +1,207 @@
+---
+title: Encryption Architecture
+description: LeafLock's end-to-end encryption implementation
+sidebar:
+  order: 3
+---
+
+import { Code, Aside, Card, CardGrid } from '@astrojs/starlight/components';
+
+## Zero-Knowledge Architecture
+
+<Card title="Core Principle" icon="lock">
+LeafLock implements zero-knowledge end-to-end encryption. All note content is encrypted client-side before transmission. The server never has access to plaintext data or encryption keys.
+</Card>
+
+## Encryption Algorithms
+
+<CardGrid>
+  <Card title="Client-Side" icon="shield">
+    **XChaCha20-Poly1305**
+    - Via libsodium-wrappers
+    - 32-byte key (256-bit)
+    - 24-byte nonce (192-bit)
+    - AEAD with Poly1305 MAC
+  </Card>
+  <Card title="Passwords" icon="key">
+    **Argon2id**
+    - Memory: 64MB
+    - Iterations: 3
+    - Parallelism: 4
+    - Salt: 16 bytes
+    - Output: 32 bytes
+  </Card>
+  <Card title="Server-Side" icon="server">
+    **ChaCha20-Poly1305**
+    - Via `golang.org/x/crypto`
+    - Encrypts metadata only
+    - Uses `SERVER_ENCRYPTION_KEY`
+    - Not zero-knowledge
+  </Card>
+</CardGrid>
+
+## Client-Side Encryption
+
+**Implementation**: `frontend/src/App.tsx` - `CryptoService` class
+
+### Encryption Flow
+
+<Code code={`// Generate nonce (24 bytes for XChaCha20)
+const nonce = new Uint8Array(sodium.crypto_secretbox_NONCEBYTES)  // 24 bytes
+crypto.getRandomValues(nonce)  // Web Crypto API (not libsodium)
+
+// Encrypt with XChaCha20-Poly1305
+const messageBytes = sodium.from_string(plaintext)
+const ciphertext = sodium.crypto_secretbox_easy(messageBytes, nonce, masterKey)
+
+// Combine nonce + ciphertext
+const combined = new Uint8Array(nonce.length + ciphertext.length)
+combined.set(nonce)
+combined.set(ciphertext, nonce.length)
+
+// Base64 encode for transmission
+const encryptedData = sodium.to_base64(combined, sodium.base64_variants.ORIGINAL)`} language="typescript" />
+
+### Decryption Flow
+
+<Code code={`// Decode base64
+const combined = sodium.from_base64(encryptedData, sodium.base64_variants.ORIGINAL)
+
+// Extract nonce (first 24 bytes) and ciphertext
+const nonce = combined.slice(0, sodium.crypto_secretbox_NONCEBYTES)
+const ciphertext = combined.slice(sodium.crypto_secretbox_NONCEBYTES)
+
+// Decrypt with XChaCha20-Poly1305
+const decrypted = sodium.crypto_secretbox_open_easy(ciphertext, nonce, masterKey)
+
+// Convert bytes to string
+return sodium.to_string(decrypted)`} language="typescript" />
+
+<Aside type="note">
+**Nonce Generation**: Uses Web Crypto API (`crypto.getRandomValues`) instead of libsodium's `randombytes_buf()` to avoid timing issues during concurrent operations.
+</Aside>
+
+## Password Hashing
+
+**Backend Implementation**: `backend/crypto/password.go`
+
+<Code code={`// Hash password with Argon2id
+hash := argon2.IDKey(
+    []byte(password),
+    salt,              // 16 bytes
+    3,                 // iterations (time cost)
+    64*1024,           // memory cost (64MB = 65536 KB)
+    4,                 // parallelism (4 threads)
+    32,                // hash length (32 bytes)
+)
+
+// Encoded format
+// $argon2id$v=19$m=65536,t=3,p=4$<base64-salt>$<base64-hash>
+
+// Verification uses crypto/subtle.ConstantTimeCompare (timing attack prevention)`} language="go" />
+
+## Data Encryption Boundaries
+
+| Data Type | Encrypted Where | Key Used | Algorithm |
+|-----------|----------------|----------|-----------|
+| Note title | Client | Master key | XChaCha20-Poly1305 |
+| Note content | Client | Master key | XChaCha20-Poly1305 |
+| Folder names | Client | Master key | XChaCha20-Poly1305 |
+| Tag names | Client | Master key | XChaCha20-Poly1305 |
+| Attachments | Client | Master key | XChaCha20-Poly1305 |
+| Email address | Server | Server key | ChaCha20-Poly1305 |
+| Session data | Server | Server key | ChaCha20-Poly1305 |
+| Audit log IPs | Server | Server key | ChaCha20-Poly1305 |
+
+<Aside>
+**Master Key**: Derived from user password using Argon2id. Exists only in browser memory during session. Never transmitted to server.
+</Aside>
+
+## Database Storage
+
+### Users Table Encryption
+
+<Code code={`CREATE TABLE users (
+    id UUID PRIMARY KEY,
+    email_hash BYTEA UNIQUE NOT NULL,              -- SHA-256 hash
+    email_encrypted BYTEA NOT NULL,                -- ChaCha20-Poly1305
+    email_search_hash BYTEA UNIQUE,                -- For login lookups
+    password_hash TEXT NOT NULL,                   -- Argon2id
+    salt BYTEA NOT NULL,                           -- 16 bytes
+    mfa_secret_encrypted BYTEA,                    -- TOTP secret
+    ...
+);`} language="sql" />
+
+### Notes Table Encryption
+
+<Code code={`CREATE TABLE notes (
+    id UUID PRIMARY KEY,
+    workspace_id UUID,
+    title_encrypted BYTEA NOT NULL,                -- XChaCha20-Poly1305 (client)
+    content_encrypted BYTEA NOT NULL,              -- XChaCha20-Poly1305 (client)
+    content_hash BYTEA NOT NULL,                   -- Integrity verification
+    ...
+);`} language="sql" />
+
+See [Database Schema](/architecture/database-schema) for complete schema.
+
+## JWT Security
+
+<CardGrid>
+  <Card title="Token Storage" icon="seti:json">
+    - **Access Token**: Memory only (React state)
+    - **Refresh Token**: Not yet implemented
+    - Never stored in localStorage
+  </Card>
+  <Card title="Validation" icon="approve-check">
+    1. JWT signature verified with `JWT_SECRET`
+    2. Redis session checked for existence
+    3. Session data validated (encrypted IP/user agent)
+    4. Expiration checked (default: 24 hours)
+  </Card>
+</CardGrid>
+
+**Session Key Format**: `session:<sha256-token-hash>`
+
+**Implementation**: `backend/middleware/jwt.go`
+
+## Security Properties
+
+### What This Prevents
+
+- **Server compromise**: Attacker can't read notes without user passwords
+- **Database dump**: All content encrypted, useless without keys
+- **Man-in-the-middle**: Encryption before TLS (defense in depth)
+- **Timing attacks**: Password verification uses constant-time comparison
+
+### What This Does NOT Prevent
+
+- **Client-side attacks**: XSS, malicious extensions can steal keys from memory
+- **Weak passwords**: Argon2id can't protect simple passwords (12-char minimum enforced)
+- **Phishing**: Users entering passwords on fake sites
+- **Compromised endpoints**: Malicious JavaScript breaks encryption
+
+<Aside type="caution" title="Security Recommendations">
+1. **Use HTTPS**: Required to protect encrypted data in transit
+2. **Strong passwords**: Minimum 12 characters enforced, recommend 20+
+3. **Enable MFA**: Additional layer if password compromised
+4. **Content Security Policy**: Prevent XSS attacks
+</Aside>
+
+## Implementation Files
+
+| Component | File Path | Key Functions |
+|-----------|-----------|---------------|
+| Client encryption | `frontend/src/App.tsx` | `CryptoService.encryptData()`, `CryptoService.decryptData()` |
+| Password hashing | `backend/crypto/password.go` | `HashPassword()`, `VerifyPassword()` |
+| Server encryption | `backend/crypto/crypto.go` | `Encrypt()`, `Decrypt()` (ChaCha20-Poly1305) |
+| Database schema | `backend/database/schema.go` | Encrypted column definitions |
+| Auth handlers | `backend/handlers/auth.go` | JWT generation, session management |
+
+## Environment Variables
+
+<Code code={`# Required for encryption
+SERVER_ENCRYPTION_KEY=<32-character-base64-key>  # openssl rand -base64 32
+JWT_SECRET=<64-character-base64-secret>          # openssl rand -base64 64`} language="bash" />
+
+See [Environment Variables](/getting-started/environment-variables) for complete reference.

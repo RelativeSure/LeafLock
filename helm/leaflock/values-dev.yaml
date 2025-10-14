@@ -10,11 +10,11 @@ backend:
     limits:
       cpu: 200m
       memory: 256Mi
-  
+
   # Disable HPA in development
   autoscaling:
     enabled: false
-  
+
   # Disable PDB in development
   podDisruptionBudget:
     enabled: false
@@ -28,11 +28,11 @@ frontend:
     limits:
       cpu: 100m
       memory: 128Mi
-  
+
   # Disable HPA in development
   autoscaling:
     enabled: false
-  
+
   # Disable PDB in development
   podDisruptionBudget:
     enabled: false
@@ -69,7 +69,7 @@ postgresql:
   auth:
     postgresPassword: "dev-postgres-password"
     password: "dev-notes-password"
-  
+
   primary:
     # Reduce resources for development
     resources:
@@ -79,11 +79,11 @@ postgresql:
       limits:
         cpu: 500m
         memory: 512Mi
-    
+
     # Smaller storage for development
     persistence:
       size: 5Gi
-    
+
     # Development PostgreSQL configuration
     extendedConfiguration: |
       # Connection settings
@@ -92,16 +92,16 @@ postgresql:
       effective_cache_size = 512MB
       work_mem = 2MB
       maintenance_work_mem = 32MB
-      
+
       # Disable SSL in development
       ssl = off
-      
+
       # Reduced logging for development
       log_statement = 'none'
       log_duration = off
       log_connections = off
       log_disconnections = off
-      
+
       # Extensions
       shared_preload_libraries = 'pgcrypto'
 
@@ -109,7 +109,7 @@ postgresql:
 redis:
   auth:
     password: "dev-redis-password"
-  
+
   master:
     # Reduce resources for development
     resources:
@@ -119,26 +119,26 @@ redis:
       limits:
         cpu: 100m
         memory: 128Mi
-    
+
     # Smaller storage for development
     persistence:
       size: 2Gi
-    
+
     # Development Redis configuration
     configuration: |
       # Network and connection
       bind 0.0.0.0
       port 6379
-      
+
       # Disable persistence in development for faster startup
       appendonly no
-      
+
       # Less restrictive security for development
       # (keeping rename commands for debugging)
-      
+
       # Memory management
       maxmemory-policy allkeys-lru
-      
+
       # Reduced logging
       loglevel warning
 

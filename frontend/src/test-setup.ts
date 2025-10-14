@@ -134,7 +134,7 @@ Object.defineProperty(navigator, 'geolocation', {
 global.Notification = class MockNotification {
   static permission = 'granted';
   static requestPermission = vi.fn().mockResolvedValue('granted');
-  
+
   constructor(title, options = {}) {
     this.title = title;
     this.body = options.body;
@@ -189,7 +189,7 @@ global.WebSocket = class MockWebSocket {
     this.onclose = null;
     this.onerror = null;
     this.onmessage = null;
-    
+
     setTimeout(() => {
       this.readyState = MockWebSocket.OPEN;
       this.onopen?.({ type: 'open' });

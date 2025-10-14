@@ -23,12 +23,12 @@ func CreateFiberApp(startTime time.Time, readyState *ReadyState) *fiber.App {
 		ProxyHeader:             fiber.HeaderXForwardedFor,
 		// Trust Railway's IPv6 private network ranges and common proxy IPs
 		TrustedProxies: []string{
-			"10.0.0.0/8",      // Private IPv4
-			"172.16.0.0/12",   // Private IPv4
-			"192.168.0.0/16",  // Private IPv4
-			"fd00::/8",        // Private IPv6 (Railway uses this)
-			"::1",             // IPv6 localhost
-			"127.0.0.1",       // IPv4 localhost
+			"10.0.0.0/8",     // Private IPv4
+			"172.16.0.0/12",  // Private IPv4
+			"192.168.0.0/16", // Private IPv4
+			"fd00::/8",       // Private IPv6 (Railway uses this)
+			"::1",            // IPv6 localhost
+			"127.0.0.1",      // IPv4 localhost
 		},
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError

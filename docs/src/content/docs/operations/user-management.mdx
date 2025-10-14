@@ -1,0 +1,167 @@
+---
+title: User Management
+description: Provision admins and maintain accounts without breaking zero-knowledge guarantees
+sidebar:
+  order: 4
+---
+
+import { Aside, Card, CardGrid, Code } from '@astrojs/starlight/components';
+
+## Bootstrap an Admin
+
+<CardGrid columns={3}>
+  <Card title="Identify User" icon="search">
+    Decode the JWT stored by the frontend to retrieve the user UUID:
+
+    <Code
+      code={`const token = localStorage.getItem('secure_token');
+const payload = JSON.parse(atob(token.split('.')[1]));
+console.log(payload.user_id);`}
+      language="javascript"
+    />
+
+    Alternatively read `current_user_id` from Local Storage.
+  </Card>
+  <Card title="Allowlist UUID" icon="shield">
+    Provide the UUID via environment variable and restart the backend:
+
+    <Code code={`ADMIN_USER_IDS=1c0fe4f0-9d41-41cc-8806-b5e8f6a2ad71`} language="env" />
+
+    Comma-separate multiple bootstrap admins.
+  </Card>
+  <Card title="Persist Role" icon="approve-check">
+    Promote permanently with SQL or the admin API:
+
+    <Code
+      code={`UPDATE users
+SET is_admin = true
+WHERE id = '1c0fe4f0-9d41-41cc-8806-b5e8f6a2ad71';`}
+      language="sql"
+    />
+  </Card>
+</CardGrid>
+
+<Aside type="note">
+Admins never receive decryption keys. They operate on metadata only—note contents remain encrypted end to end.
+</Aside>
+
+## Admin Panel
+
+- Enable UI: set `VITE_ENABLE_ADMIN_PANEL=true` before building the frontend.
+- Actions map directly to backend handlers (`handlers/account.go`, `handlers/settings.go`):
+  - Toggle `is_admin`, assign RBAC roles (`moderator`, `auditor`).
+  - Unlock accounts (`failed_attempts`, `locked_until`).
+  - Adjust registration (`app_settings.registration_enabled`).
+  - Inspect login telemetry and MFA adoption.
+
+JWT + `is_admin` column gate every request—front-end toggles do not bypass auth.
+
+## SQL Reference
+
+<CardGrid>
+  <Card title="Account Inventory" icon="list-format">
+    <Code
+      code={`SELECT
+    id,
+    email,
+    COALESCE(is_admin, false) AS is_admin,
+    mfa_enabled,
+    failed_attempts,
+    locked_until,
+    created_at,
+    last_login
+FROM users
+ORDER BY created_at DESC;`}
+      language="sql"
+    />
+  </Card>
+  <Card title="Admin Audit" icon="user">
+    <Code
+      code={`SELECT id, email, created_at, last_login
+FROM users
+WHERE is_admin = true;`}
+      language="sql"
+    />
+  </Card>
+  <Card title="Lockout Detection" icon="alert-triangle">
+    <Code
+      code={`SELECT id, email, failed_attempts, locked_until
+FROM users
+WHERE failed_attempts > 5;`}
+      language="sql"
+    />
+  </Card>
+</CardGrid>
+
+### Recovery Flows
+
+Reset failed attempts:
+
+<Code
+  code={`UPDATE users
+SET failed_attempts = 0,
+    locked_until = NULL
+WHERE id = 'user-uuid';`}
+  language="sql"
+/>
+
+MFA maintenance:
+
+<Code
+  code={`UPDATE users
+SET mfa_enabled = true
+WHERE id = 'user-uuid';
+
+UPDATE users
+SET mfa_enabled = false,
+    mfa_secret_encrypted = NULL
+WHERE id = 'user-uuid';`}
+  language="sql"
+/>
+
+Storage telemetry:
+
+<Code
+  code={`SELECT
+    id,
+    storage_used,
+    storage_limit,
+    ROUND(storage_used::numeric / storage_limit * 100, 1) AS usage_percent
+FROM users
+WHERE storage_limit > 0
+ORDER BY usage_percent DESC;`}
+  language="sql"
+/>
+
+## Registration Controls
+
+Public registration is disabled by default. Enable it deliberately:
+
+<Code code={`ENABLE_REGISTRATION=true`} language="env" />
+
+The admin panel writes the same value into `app_settings.registration_enabled`. Bootstrapping reads from the environment only when the setting is missing.
+
+## Operational Guardrails
+
+<CardGrid columns={3}>
+  <Card title="Encrypted Payloads" icon="lock">
+    Admins never view decrypted note content—only metadata and audit logs.
+  </Card>
+  <Card title="Reset Workflow" icon="workflow">
+    Use the standard password reset flow to preserve encryption keys; avoid editing hashed columns manually.
+  </Card>
+  <Card title="Backups" icon="database">
+    Snapshot before destructive updates:
+
+    <Code
+      code={`pg_dump -h localhost -U postgres -d notes -t users > users_backup.sql`}
+      language="bash"
+    />
+  </Card>
+</CardGrid>
+
+## Maintenance Shortcuts
+
+- Demote admin: `UPDATE users SET is_admin = false WHERE id = 'user-uuid';`
+- Purge trashed notes after retention: `DELETE FROM notes WHERE deleted_at IS NOT NULL AND deleted_at < NOW() - INTERVAL '30 days';`
+- Audit MFA adoption: `SELECT COUNT(*) FILTER (WHERE mfa_enabled) * 100.0 / COUNT(*) FROM users WHERE deleted_at IS NULL;`

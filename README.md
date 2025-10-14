@@ -133,7 +133,7 @@ Return to the repository root before using make targets again: `cd ..`.
 
 ### Tooling
 
-- Install git hooks once per machine: `bash scripts/setup-git-hooks.sh`
+- Install git hooks once per machine: `pre-commit install`
 - Build container images locally: `make build`
 
 ## Deployment

@@ -41,7 +41,7 @@ jobs:
       current_version: ${{ steps.current.outputs.version }}
       next_version: ${{ steps.next.outputs.version }}
       changelog: ${{ steps.changelog.outputs.changelog }}
-      
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -62,7 +62,7 @@ jobs:
           CURRENT="${{ steps.current.outputs.version }}"
           VERSION_TYPE="${{ github.event.inputs.version_type }}"
           CUSTOM_VERSION="${{ github.event.inputs.custom_version }}"
-          
+
           # Use custom version if provided
           if [ -n "$CUSTOM_VERSION" ]; then
             # Ensure custom version starts with 'v'
@@ -74,15 +74,15 @@ jobs:
           else
             # Remove 'v' prefix for calculation
             CURRENT_CLEAN=${CURRENT#v}
-            
+
             # Split version into components
             IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_CLEAN"
-            
+
             # Default values if empty
             MAJOR=${MAJOR:-0}
             MINOR=${MINOR:-0}
             PATCH=${PATCH:-0}
-            
+
             case "$VERSION_TYPE" in
               "major")
                 MAJOR=$((MAJOR + 1))
@@ -101,14 +101,14 @@ jobs:
                 PRERELEASE="-rc.$(date +%Y%m%d%H%M%S)"
                 ;;
             esac
-            
+
             if [ "$VERSION_TYPE" = "prerelease" ]; then
               NEXT_VERSION="v${MAJOR}.${MINOR}.${PATCH}${PRERELEASE}"
             else
               NEXT_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
             fi
           fi
-          
+
           echo "version=${NEXT_VERSION}" >> $GITHUB_OUTPUT
           echo "Next version: ${NEXT_VERSION}"
 
@@ -117,7 +117,7 @@ jobs:
         run: |
           CURRENT="${{ steps.current.outputs.version }}"
           NEXT="${{ steps.next.outputs.version }}"
-          
+
           # Create changelog between versions
           if [ "$CURRENT" = "v0.0.0" ]; then
             # First release - get all commits
@@ -126,21 +126,21 @@ jobs:
             # Get commits since last tag
             CHANGELOG=$(git log ${CURRENT}..HEAD --pretty=format:"* %s (%h)" --no-merges)
           fi
-          
+
           # If no changes, create default changelog
           if [ -z "$CHANGELOG" ]; then
             CHANGELOG="* Maintenance release"
           fi
-          
+
           # Save changelog to file for multi-line output
           cat > changelog.md << EOF
           ## What's Changed
-          
+
           ${CHANGELOG}
-          
+
           **Full Changelog**: https://github.com/${{ github.repository }}/compare/${CURRENT}...${NEXT}
           EOF
-          
+
           # Set output using heredoc for multi-line
           {
             echo "changelog<<CHANGELOG_EOF"
@@ -152,19 +152,19 @@ jobs:
         run: |
           NEXT="${{ steps.next.outputs.version }}"
           CURRENT="${{ steps.current.outputs.version }}"
-          
+
           # Check if version already exists
           if git rev-parse "$NEXT" >/dev/null 2>&1; then
             echo "❌ Version $NEXT already exists!"
             exit 1
           fi
-          
+
           echo "✅ Version validation passed"
           echo "📈 Version bump: $CURRENT → $NEXT"
 
   # Run tests before release (unless skipped)
   pre-release-tests:
-    name: 🧪 Pre-release Tests  
+    name: 🧪 Pre-release Tests
     runs-on: ubuntu-latest
     needs: version-calculation
     if: github.event.inputs.skip_tests != 'true'
@@ -235,7 +235,7 @@ jobs:
           go build -o app .
           ./app &
           BACKEND_PID=$!
-          
+
           sleep 5
           curl -f http://localhost:8080/api/v1/health || exit 1
           kill $BACKEND_PID
@@ -282,32 +282,32 @@ jobs:
           name: 🚀 Release ${{ needs.version-calculation.outputs.next_version }}
           body: |
             ${{ github.event.inputs.release_notes || needs.version-calculation.outputs.changelog }}
-            
+
             ## 📦 Container Images
-            
+
             Pull the latest images:
             ```bash
             docker pull ghcr.io/${{ github.repository }}/backend:${{ needs.version-calculation.outputs.next_version }}
             docker pull ghcr.io/${{ github.repository }}/frontend:${{ needs.version-calculation.outputs.next_version }}
             ```
-            
+
             ## 🚀 Quick Deploy
-            
+
             ```bash
             # Deploy this specific version
             VERSION=${{ needs.version-calculation.outputs.next_version }} ./deploy-from-ghcr.sh deploy
-            
+
             # Or update your docker-compose
             export VERSION=${{ needs.version-calculation.outputs.next_version }}
             docker-compose -f docker-compose.yml up -d
             ```
-            
+
             ---
-            
+
             🤖 *This release was created automatically by [GitHub Actions](https://github.com/${{ github.repository }}/actions)*
-            
+
             ---
-            
+
             ## 🧑‍💻 Community
             - 🐛 Report bugs: https://github.com/${{ github.repository }}/issues/new?template=bug_report.md
             - 💡 Request features: https://github.com/${{ github.repository }}/issues/new?template=feature_request.md
@@ -327,18 +327,18 @@ jobs:
     name: 🐳 Container Build Info
     runs-on: ubuntu-latest
     needs: create-release
-    
+
     steps:
       - name: Container build notification
         run: |
           echo "📦 Container build workflow will be triggered automatically by the release event"
           echo "🔗 Check build progress: https://github.com/${{ github.repository }}/actions/workflows/build-containers.yml"
-          
+
           VERSION="${{ needs.version-calculation.outputs.next_version }}"
           echo "📦 Containers will be available at:"
           echo "   - ghcr.io/${{ github.repository }}/backend:${VERSION}"
           echo "   - ghcr.io/${{ github.repository }}/frontend:${VERSION}"
-          
+
           echo ""
           echo "The build-containers.yml workflow is configured to trigger on 'release: published' events"
           echo "and will automatically build and push the container images for this release."
@@ -358,13 +358,13 @@ jobs:
         run: |
           VERSION="${{ needs.version-calculation.outputs.next_version }}"
           VERSION_CLEAN=${VERSION#v}
-          
+
           # Update package.json files if they exist
           if [ -f "frontend/package.json" ]; then
             sed -i "s/\"version\": \".*\"/\"version\": \"${VERSION_CLEAN}\"/" frontend/package.json
             echo "Updated frontend/package.json version to ${VERSION_CLEAN}"
           fi
-          
+
           # Update any other version files
           if [ -f "VERSION" ]; then
             echo "${VERSION_CLEAN}" > VERSION
@@ -379,12 +379,12 @@ jobs:
           title: "🔖 Version bump to ${{ needs.version-calculation.outputs.next_version }}"
           body: |
             Automated version bump after release ${{ needs.version-calculation.outputs.next_version }}
-            
+
             This PR updates version numbers in configuration files to match the latest release.
-            
+
             - Updated package.json version
             - Updated VERSION file (if exists)
-            
+
             **This PR can be auto-merged safely.**
           labels: chore, automation
           branch: version-bump-${{ needs.version-calculation.outputs.next_version }}

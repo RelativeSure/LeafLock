@@ -30,11 +30,11 @@ All platforms share the same requirements:
 - Keep `ENABLE_REGISTRATION=false` unless you want public sign-ups on day one
 - Expose `8080` for the backend and `80` (or your chosen ingress) for the frontend
 
-Keep the [Reference page](/reference/) open for variable names, ports, and health endpoints.
+Keep the [Environment variables](/getting-started/environment-variables/) doc handy for required secrets and port mapping.
 
 ## After Deploying
 
-- Walk through the short [Readiness checklist](./deployment-readiness/)
+- Walk through the short [Readiness checklist](./readiness-checklist/)
 - Hit `/api/v1/health` and verify the UI can create an encrypted note
 - Rotate secrets and reboot once to prove everything survives restarts
 

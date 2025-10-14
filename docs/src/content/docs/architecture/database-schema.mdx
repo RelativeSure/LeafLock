@@ -1,0 +1,103 @@
+---
+title: Database Schema
+description: PostgreSQL layout that powers LeafLock’s encrypted storage
+sidebar:
+  order: 4
+---
+
+import { Aside, Card, CardGrid, Code } from '@astrojs/starlight/components';
+
+## Schema Source
+
+- Canonical definition lives in `backend/database/schema.go` as a multi-line SQL string (`DatabaseSchema`).
+- Startup migrations execute this script against PostgreSQL 15+; incremental changes append to the same constant.
+- Every deployment must enable extensions: `uuid-ossp`, `pgcrypto`, and `pg_trgm`.
+
+<Aside type="tip">
+Run `psql -d leaflock -f schema.sql` with the exported `DatabaseSchema` string to diff a live database during troubleshooting.
+</Aside>
+
+## Storage Model
+
+<CardGrid columns={2}>
+  <Card title="users" icon="user">
+    Stores hashed identifiers, encrypted email, Argon2id password hash, MFA secrets, and RSA key pairs. Enforces login throttling (`failed_attempts`, `locked_until`) and storage quotas.
+  </Card>
+  <Card title="workspaces" icon="layout">
+    Each workspace holds an encrypted AES key per owner. Notes inherit workspace membership for key rotation.
+  </Card>
+  <Card title="notes & note_versions" icon="document">
+    Notes keep encrypted title/content + integrity hash. Version table tracks every edit for rollback.
+  </Card>
+  <Card title="search_index" icon="search">
+    Stores HMAC keyword hashes so the backend performs blind search without seeing plaintext.
+  </Card>
+  <Card title="share_links" icon="link">
+    Controls read/write share tokens, optional passwords, usage counters, and expiration metadata.
+  </Card>
+  <Card title="audit_log" icon="shield">
+    Captures administrative actions with encrypted IP/User-Agent fields for compliance.
+  </Card>
+</CardGrid>
+
+## Critical Columns & Indexes
+
+<Code
+  code={`CREATE TABLE users (
+    email_hash BYTEA UNIQUE NOT NULL,
+    email_encrypted BYTEA NOT NULL,
+    master_key_encrypted BYTEA NOT NULL,
+    public_key BYTEA,
+    private_key_encrypted BYTEA,
+    mfa_secret_encrypted BYTEA,
+    storage_used BIGINT DEFAULT 0,
+    storage_limit BIGINT DEFAULT 5242880,
+    is_admin BOOLEAN DEFAULT false,
+    theme_preference VARCHAR(20) DEFAULT 'system'
+);
+
+CREATE INDEX idx_users_email_search_hash
+  ON users(email_search_hash) WHERE email_search_hash IS NOT NULL;`}
+  language="sql"
+/>
+
+- Deterministic `email_search_hash` enables login lookup without exposing email.
+- `storage_used` is updated by attachments service to enforce workspace quotas.
+- Partial indexes (`idx_users_count_fast`, `idx_users_admin_flag`) keep health checks and admin dashboards fast.
+
+## Encrypted Relationships
+
+- `notes.folder_id`, `notes.template_id`, and `notes.parent_id` are nullable but preserve referential integrity with `ON DELETE SET NULL`.
+- `collaborations` stores note keys encrypted with collaborator public keys; this table is the source of truth for WebSocket authorization.
+- `attachments` keeps encrypted binary data in Postgres for simplified backup/restore; checksums ensure tamper detection.
+
+<Code
+  code={`CREATE TABLE collaborations (
+    note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    key_encrypted BYTEA NOT NULL,
+    permission TEXT CHECK (permission IN ('read','write','admin')),
+    UNIQUE (note_id, user_id)
+);`}
+  language="sql"
+/>
+
+## Maintenance Routines
+
+- `update_updated_at_column()` trigger keeps `updated_at` fresh on all mutable tables.
+- `cleanup_old_deleted_notes()` removes trashed notes after 30 days; launched nightly by `services/cleanup.go`.
+- `_migrations` table (managed by boot code) records version history for safe idempotent deployments.
+
+<Aside type="caution">
+Do not remove triggers—background jobs and the readiness probe assume `updated_at` reflects recent activity.
+</Aside>
+
+## Operational Queries
+
+- Monitor MFA adoption: `SELECT COUNT(*) FILTER (WHERE mfa_enabled) * 100.0 / COUNT(*) FROM users WHERE deleted_at IS NULL;`
+- Inspect note search footprint: `SELECT COUNT(*) FROM search_index WHERE created_at > NOW() - INTERVAL '1 day';`
+- Trim expired share links: handled automatically, but manual cleanup uses `UPDATE share_links SET is_active = false WHERE expires_at < NOW();`
+
+<Aside type="note">
+Whenever schema changes, update both `DatabaseSchema` and any docs/examples that reference specific columns or triggers.
+</Aside>

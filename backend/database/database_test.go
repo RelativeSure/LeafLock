@@ -191,7 +191,7 @@ func TestSchemaContainsExtensions(t *testing.T) {
 func containsString(s, substr string) bool {
 	return len(s) > 0 && len(substr) > 0 &&
 		(s == substr || len(s) >= len(substr) &&
-		findSubstring(s, substr))
+			findSubstring(s, substr))
 }
 
 func findSubstring(s, substr string) bool {

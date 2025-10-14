@@ -1,0 +1,99 @@
+---
+title: WebSocket Collaboration
+description: Real-time message protocol served from /ws
+sidebar:
+  order: 2
+---
+
+import { Aside, Card, CardGrid, Code } from '@astrojs/starlight/components';
+
+## Endpoint & Auth
+
+- URL: `wss://<frontend-domain>/ws`
+- Backend upgrades requests in `backend/routes.go`.
+- Clients must include a valid JWT (same token issued by `POST /auth/login`).
+
+<Code
+  code={`const token = localStorage.getItem('leaflock_jwt');
+const ws = new WebSocket(\`wss://app.leaflock.example/ws?token=\${token}\`);
+
+ws.addEventListener('open', () => console.log('collaboration ready'));
+ws.addEventListener('close', () => console.log('disconnected'));
+`}
+  language="ts"
+/>
+
+`middleware.JWTMiddleware` validates the token before the connection reaches the hub.
+
+## Message Envelope
+
+All frames are JSON objects containing a `type` string and a `payload` object.
+
+<Code
+  code={`{
+  "type": "note_update",
+  "payload": {
+    "note_id": "b9fa1ed4-9d03-4d56-94f1-8b2b50f5b9de",
+    "content_encrypted": "BASE64...",
+    "user_id": "user-123",
+    "timestamp": "2025-01-15T10:30:00Z"
+  }
+}`}
+  language="json"
+/>
+
+The payload stays encrypted—clients decrypt with the note key they already hold in memory.
+
+## Message Types
+
+<CardGrid columns={2}>
+  <Card title="note_update" icon="pencil">
+    Server → Client. Fired when collaborators save a new encrypted note payload. Handler: <code>websocket/messages.go:BroadcastNoteUpdate</code>.
+  </Card>
+  <Card title="cursor_position" icon="cursor">
+    Bidirectional. Tracks caret positions for live presence. Stored transiently inside the hub instance.
+  </Card>
+  <Card title="user_joined / user_left" icon="users">
+    Server → Client notifications emitted by <code>websocket/hub.go</code> when peers connect or disconnect.
+  </Card>
+  <Card title="presence" icon="clock">
+    Client → Server heartbeat. Use every 20 seconds to keep the connection alive (`websocket/handlers.go` updates last-seen timestamps).
+  </Card>
+</CardGrid>
+
+## Collaboration Flow
+
+<Code
+  code={`// Broadcast encrypted editor update
+ws.send(JSON.stringify({
+  type: 'note_update',
+  payload: {
+    note_id: noteId,
+    content_encrypted: await cryptoService.encryptData(editorState),
+    version: 12
+  }
+}));
+
+// Receive updates
+ws.addEventListener('message', async (event) => {
+  const message = JSON.parse(event.data);
+  if (message.type === 'note_update') {
+    const decrypted = await cryptoService.decryptData(message.payload.content_encrypted);
+    applyRemoteUpdate(decrypted);
+  }
+});
+`}
+  language="ts"
+/>
+
+Only collaborators listed in the `collaborations` table can join a note channel. Share-link viewers are excluded intentionally.
+
+## Server Components
+
+- `websocket/hub.go` → central fan-out loop that keeps track of rooms and connections.
+- `websocket/client.go` → per-connection goroutine for reading/writing frames with timeouts.
+- `handlers/collaboration.go` → ensures collaborators have RSA keys needed to decrypt shared note content.
+
+<Aside type="note">
+The hub is in-memory. When running multiple backend replicas, ensure sticky sessions (or enable WebSocket-aware load balancing) so clients stay on the same pod.
+</Aside>

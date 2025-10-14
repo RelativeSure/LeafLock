@@ -136,7 +136,7 @@ func ShareLinkMiddleware(db database.Database, crypto *appcrypto.CryptoService, 
 
 			if password == "" {
 				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-					"error":          "This share link is password protected",
+					"error":             "This share link is password protected",
 					"requires_password": true,
 				})
 			}

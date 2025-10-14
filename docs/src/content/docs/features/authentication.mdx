@@ -1,0 +1,173 @@
+---
+title: Authentication & MFA
+description: LeafLock's authentication system with TOTP multi-factor authentication
+sidebar:
+  order: 1
+---
+
+import { Code, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Authentication System
+
+LeafLock uses JWT-based authentication with Argon2id password hashing and optional TOTP MFA.
+
+**Implementation**:
+- Password hashing: `backend/crypto/password.go` (Argon2id, 64MB memory, 3 iterations)
+- JWT middleware: `backend/middleware/jwt.go`
+- Auth handlers: `backend/handlers/auth.go`
+- Session storage: Redis with encrypted metadata
+
+**Endpoints**:
+- `POST /api/v1/auth/register` - Create account
+- `POST /api/v1/auth/login` - Authenticate (returns JWT or MFA challenge)
+- `POST /api/v1/auth/logout` - Invalidate session
+- `POST /api/v1/admin-recovery` - Admin account recovery
+
+## Multi-Factor Authentication (MFA)
+
+LeafLock implements RFC 6238 TOTP MFA with encrypted secret storage.
+
+### Configuration
+
+**TOTP Settings**:
+- Algorithm: SHA-1 (RFC standard)
+- Time step: 30 seconds
+- Code length: 6 digits
+- Secret storage: ChaCha20-Poly1305 encrypted in `mfa_secret_encrypted` column
+
+**Backup Codes**:
+- Count: 10 codes per user
+- Format: 16 characters (XXXX-XXXX-XXXX-XXXX)
+- Storage: Argon2id hashed in `mfa_backup_codes[]` array
+- One-time use, tracked in `mfa_backup_codes_used[]`
+
+**Rate Limits** (`backend/middleware/rate_limit.go`):
+- TOTP verification: 5 attempts per 15 minutes
+- Backup code verification: 3 attempts per 15 minutes
+- MFA setup: 10 attempts per hour
+
+### API Endpoints
+
+<Tabs>
+  <TabItem label="Setup">
+<Code code={`# Get MFA status
+GET /api/v1/auth/mfa/status
+Response: { "enabled": true, "backup_codes_remaining": 8 }
+
+# Begin MFA setup (returns QR code)
+POST /api/v1/auth/mfa/begin
+Response: { "secret": "...", "qr_code": "otpauth://...", "backup_codes": [...] }
+
+# Enable MFA
+POST /api/v1/auth/mfa/enable
+Body: { "code": "123456" }
+
+# Disable MFA
+POST /api/v1/auth/mfa/disable
+Body: { "code": "123456" }`} language="bash" />
+  </TabItem>
+  <TabItem label="Login">
+<Code code={`# Step 1: Login with password
+POST /api/v1/auth/login
+Body: { "email": "user@example.com", "password": "..." }
+Response (MFA enabled): { "mfa_required": true, "session": "temp_id" }
+
+# Step 2: Verify TOTP code
+POST /api/v1/auth/mfa/verify
+Body: { "session": "temp_id", "code": "123456" }
+Response: { "token": "jwt_token", "user_id": "..." }
+
+# Alternative: Use backup code
+POST /api/v1/auth/mfa/verify
+Body: { "session": "temp_id", "backup_code": "XXXX-XXXX-XXXX-XXXX" }`} language="bash" />
+  </TabItem>
+</Tabs>
+
+### User Flow
+
+**Setup**: Settings → Security → Enable MFA → Scan QR → Verify Code → Save Backup Codes
+**Login**: Email/Password → MFA Prompt → Enter TOTP or Backup Code → Authenticated
+**Disable**: Settings → Security → Disable MFA → Enter TOTP Code → Disabled
+
+### Admin Operations
+
+**Reset MFA** (requires database access):
+<Code code={`UPDATE users
+SET mfa_enabled = false,
+    mfa_secret_encrypted = NULL,
+    mfa_backup_codes = NULL,
+    mfa_backup_codes_used = NULL
+WHERE id = 'user_uuid';`} language="sql" />
+
+**Check MFA adoption**:
+<Code code={`SELECT COUNT(*) FILTER (WHERE mfa_enabled = true) * 100.0 / COUNT(*) as percentage
+FROM users
+WHERE deleted_at IS NULL;`} language="sql" />
+
+**Find users without MFA**:
+<Code code={`SELECT id, email_encrypted, last_login
+FROM users
+WHERE mfa_enabled = false AND deleted_at IS NULL
+ORDER BY last_login DESC NULLS LAST;`} language="sql" />
+
+**Admin panel**: Navigate to `/admin/users` for MFA management UI
+
+### Troubleshooting
+
+**"Invalid MFA code"**:
+- Verify device time is synchronized (TOTP requires accurate time)
+- Wait for next 30-second window
+- Check correct account in authenticator app
+- Rate limit: wait 15 minutes after 5 failed attempts
+
+**Lost authenticator device**:
+- Use saved backup code to login
+- Go to Settings → Security → Regenerate Backup Codes
+- Or request admin to reset MFA via SQL
+
+**Backup codes exhausted**:
+- Login with TOTP from authenticator app
+- Navigate to Settings → Security → Regenerate Backup Codes
+- Save new codes immediately
+
+**Redis rate limit check**:
+<Code code={`redis-cli GET "mfa_rate_limit:totp:USER_ID"
+redis-cli DEL "mfa_rate_limit:totp:USER_ID"  # Emergency reset`} language="bash" />
+
+### Database Schema
+
+**Users table MFA columns**:
+- `mfa_enabled` (BOOLEAN) - MFA active flag
+- `mfa_secret_encrypted` (BYTEA) - ChaCha20-Poly1305 encrypted TOTP secret
+- `mfa_backup_codes` (BYTEA[]) - Argon2id hashed backup codes (10 total)
+- `mfa_backup_codes_used` (BYTEA[]) - Hashes of used codes
+
+**Audit log events**:
+- `mfa.enabled`, `mfa.disabled` - MFA state changes
+- `mfa.verification_success`, `mfa.verification_failed` - TOTP attempts
+- `mfa.backup_code_used`, `mfa.backup_code_failed` - Backup code usage
+- `mfa.backup_codes_regenerated` - New codes generated
+
+See `backend/database/schema.go` for complete schema.
+
+## Environment Variables
+
+<Code code={`# Required
+JWT_SECRET=<64-character-base64-secret>
+SERVER_ENCRYPTION_KEY=<32-character-base64-key>
+REDIS_PASSWORD=<redis-password>
+
+# Optional (defaults shown)
+MFA_TOTP_RATE_LIMIT=5
+MFA_BACKUP_RATE_LIMIT=3
+MFA_RATE_WINDOW_MINUTES=15`} language="bash" />
+
+## Security Notes
+
+- MFA secrets encrypted at rest with `SERVER_ENCRYPTION_KEY`
+- Backup codes hashed with Argon2id (irreversible)
+- Session tokens stored in Redis with IP/user agent tracking
+- All MFA events logged to audit table with encrypted metadata
+- Admin MFA reset requires direct database access (no API endpoint for security)
+
+For API details see [REST API](/api/rest-api#authentication-endpoints).

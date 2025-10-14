@@ -1,0 +1,211 @@
+---
+title: Local Development
+description: Setup and run LeafLock locally for development
+sidebar:
+  order: 2
+---
+
+import { Code, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Quick Start
+
+<Tabs>
+  <TabItem label="Podman (Default)">
+<Code code={`git clone https://github.com/RelativeSure/LeafLock.git
+cd LeafLock
+cp .env.example .env
+make up
+make logs`} language="bash" />
+  </TabItem>
+  <TabItem label="Docker Compose">
+<Code code={`git clone https://github.com/RelativeSure/LeafLock.git
+cd LeafLock
+cp .env.example .env
+docker compose up -d
+docker compose logs -f`} language="bash" />
+  </TabItem>
+</Tabs>
+
+**Services**:
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8080`
+- Health: `http://localhost:8080/api/v1/health`
+
+Shutdown: `make down` or `docker compose down`
+
+## Environment Configuration
+
+Required variables in `.env`:
+
+<Code code={`POSTGRES_PASSWORD=<secure-password>
+REDIS_PASSWORD=<secure-password>
+JWT_SECRET=<64-char-base64>          # openssl rand -base64 64
+SERVER_ENCRYPTION_KEY=<32-char>      # openssl rand -base64 32
+CORS_ORIGINS=http://localhost:3000`} language="bash" />
+
+See [Environment Variables](/getting-started/environment-variables) for complete reference.
+
+## Backend Development
+
+**Location**: `backend/`
+
+<Code code={`cd backend
+go run main.go              # Dev server
+go test -v ./...            # All tests
+golangci-lint run ./...     # Lint (required after complex changes)
+
+# Build pipeline
+make -C backend fmt         # Format
+make -C backend vet         # Vet
+make -C backend build       # Compile binary → backend/bin/leaflock
+make -C backend test        # Tests with coverage`} language="bash" />
+
+**Hot reload**: Use `air` (configured in `backend/.air.toml`):
+<Code code={`make dev`} language="bash" />
+
+**Implementation**:
+- Go 1.23+ with Fiber v2
+- PostgreSQL (pgx driver)
+- Redis for sessions/rate limiting
+- JWT auth: `backend/middleware/jwt.go`
+- Handlers: `backend/handlers/`
+
+## Frontend Development
+
+**Location**: `frontend/`
+
+<Code code={`cd frontend
+pnpm install
+pnpm run dev                # Vite dev server (HMR enabled)
+pnpm run build              # Production build → frontend/dist
+pnpm test                   # Tests
+pnpm run lint               # ESLint
+pnpm run type-check         # TypeScript check`} language="bash" />
+
+**Implementation**:
+- React 18 + TypeScript (100% `.tsx`, enforced by `scripts/check-no-jsx.sh`)
+- Vite 5 for build tooling
+- Zustand for state management
+- shadcn/ui components
+- Quill 2.0 + Lexical for rich text editing
+
+**⚠️ CRITICAL**: Never create `.jsx` files. All React files must use `.tsx` extension.
+
+## Database Migrations
+
+Auto-run on backend startup. **MUST bump version** when modifying schema:
+
+**File**: `backend/database/database.go:21`
+<Code code={`const MigrationSchemaVersion = "2024.12.25.003"  // Increment last number`} language="go" />
+
+**Schema**: `backend/database/schema.go`
+
+Skip check (benchmarks only): `SKIP_MIGRATION_CHECK=true`
+
+## API Documentation
+
+**Swagger UI**: `http://localhost:8080/api/v1/docs` (admin-only)
+**OpenAPI Spec**: `http://localhost:8080/api/v1/docs/openapi.json`
+
+**Local access**: Set `ADMIN_USER_IDS=<your-user-id>` in `.env` to bootstrap admin access.
+
+Complete API reference: [REST API](/api/rest-api)
+
+## Pre-commit Hooks
+
+<Code code={`# Install
+python3 -m pip install --user pre-commit
+~/.local/bin/pre-commit install
+
+# Manual run
+~/.local/bin/pre-commit run --all-files
+
+# Skip (not recommended)
+git commit --no-verify -m "message"`} language="bash" />
+
+**Hooks**:
+- Security: detect-secrets, private key detection
+- Go: go-fmt, go-vet, go test, golangci-lint
+- Frontend: check-no-jsx, pnpm lint, pnpm test
+- General: trailing whitespace, YAML/JSON validation
+
+**Config**: `.pre-commit-config.yaml`
+
+## Health Checks
+
+<Code code={`# Liveness (3-5s)
+curl http://localhost:8080/api/v1/health/live
+
+# Readiness (15-30s, checks DB/Redis)
+curl http://localhost:8080/api/v1/health/ready
+
+# Response
+{
+  "status": "ready",
+  "admin_ready": true,
+  "templates_ready": true,
+  "redis_ready": true
+}`} language="bash" />
+
+## Testing
+
+**Backend**:
+<Code code={`cd backend
+go test -v ./...                          # All tests
+go test -v ./handlers/share_links_test.go # Specific
+go test -v -cover ./...                   # With coverage`} language="bash" />
+
+**Frontend**:
+<Code code={`cd frontend
+pnpm test                    # All tests
+pnpm test ShareDialog.test   # Specific
+pnpm test --coverage         # With coverage`} language="bash" />
+
+**E2E CI**: `.github/workflows/e2e-verify.yml`
+
+## Common Tasks
+
+**Reset database**:
+<Code code={`make down
+docker volume rm leaflock_postgres_data
+make up`} language="bash" />
+
+**View logs**:
+<Code code={`make logs                    # All services
+docker compose logs -f backend
+docker compose logs -f frontend`} language="bash" />
+
+**Access database**:
+<Code code={`docker compose exec postgres psql -U postgres notes`} language="sql" />
+
+**Access Redis**:
+<Code code={`docker compose exec redis redis-cli -a "$REDIS_PASSWORD"`} language="bash" />
+
+## Troubleshooting
+
+**Frontend can't reach backend**:
+- Check `VITE_API_URL` in `.env`
+- For IPv6: Use `http://[::1]:8080` format
+- Verify backend is running: `curl http://localhost:8080/api/v1/health`
+
+**Migration didn't run**:
+- Check if `MigrationSchemaVersion` was bumped in `backend/database/database.go:21`
+- Existing deployments skip if version matches
+
+**Docker containers can't communicate**:
+- Use service names (`postgres`, `redis`, `backend`) not IPs
+- Check `docker-compose.yml` service names
+
+**Build failures**:
+<Code code={`# Clean and rebuild
+docker compose down
+docker compose build --no-cache
+docker compose up -d`} language="bash" />
+
+See [Troubleshooting](/troubleshooting/) for platform-specific issues.
+
+## Additional Resources
+
+- **Architecture**: [Frontend](/architecture/frontend), [Backend](/architecture/backend), [Encryption](/architecture/encryption)
+- **Deployment**: [Docker](/deployment/docker), [Kubernetes](/deployment/kubernetes), [Railway](/deployment/railway)
+- **CLAUDE.md**: Repository root contains complete development guidelines
