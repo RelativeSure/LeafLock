@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense, lazy } from 'react'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group'
+import { Card } from '@/components/ui/card'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
 import { ErrorNotice } from '@/features/common/ErrorNotice'
+import Footer from '@/components/Footer'
 import { debounce, type DebounceFunction } from '@/utils/debounce'
 import { type Note } from '@/features/app/types'
 import { type SecureAPI } from '@/services/secureApi'
@@ -158,86 +162,96 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
   }, [title, content, debouncedSave, selectedNote])
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden" role="main" aria-label="Note editor">
-      <header className="bg-card border-b border-border px-6 py-4">
-        <label htmlFor="note-title" className="sr-only">
-          Note title
-        </label>
-        <input
-          id="note-title"
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Note title..."
-          className="w-full bg-transparent text-xl font-semibold text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 rounded px-2 py-1 -mx-2"
-        />
-        <div className="flex items-center justify-between mt-1 text-sm text-muted-foreground" aria-live="polite">
-          <div className="flex items-center">
-            {saving && (
-              <span className="flex items-center">
-                <Spinner className="mr-2 h-4 w-4" aria-hidden="true" />
-                <span>Saving...</span>
-                <span className="sr-only">Your note is being saved</span>
-              </span>
-            )}
-            {!saving && lastSaved && <span>Last saved {lastSaved.toLocaleTimeString()}</span>}
-            {!saving && !lastSaved && (title || content) && (
-              <span className="text-yellow-500">Unsaved changes</span>
-            )}
+    <div className="h-full flex flex-col" role="main" aria-label="Note editor">
+      {/* Title Bar */}
+      <Card className="rounded-none border-0 border-b flex-shrink-0">
+        <div className="px-4 py-2.5">
+          <div className="flex items-center gap-3">
+            <label htmlFor="note-title" className="sr-only">
+              Note title
+            </label>
+            <input
+              id="note-title"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Untitled"
+              className="flex-1 bg-transparent text-base font-semibold text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 rounded px-2 py-1 -mx-2"
+            />
+
+            <div className="flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
+              {saving && (
+                <span className="flex items-center">
+                  <Spinner className="mr-1 h-3 w-3" aria-hidden="true" />
+                  <span className="hidden sm:inline">Saving...</span>
+                  <span className="sr-only">Your note is being saved</span>
+                </span>
+              )}
+              {!saving && lastSaved && (
+                <span className="hidden sm:inline">
+                  {lastSaved.toLocaleTimeString()}
+                </span>
+              )}
+              {!saving && !lastSaved && (title || content) && (
+                <span className="text-yellow-500 hidden sm:inline">Unsaved</span>
+              )}
+
+              <ButtonGroup>
+                {selectedNote && selectedNote.id && (
+                  <>
+                    <Suspense fallback={<div className="h-8 w-20 bg-muted rounded animate-pulse" />}>
+                      <TagSelector noteId={selectedNote.id} size="sm" />
+                    </Suspense>
+                    <ButtonGroupSeparator />
+                  </>
+                )}
+
+                <Button
+                  data-save-action
+                  onClick={handleSave}
+                  disabled={saving || (!title && !content)}
+                  variant="default"
+                  size="sm"
+                  className="h-8"
+                  title="Save note manually (Ctrl+S)"
+                >
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12"
+                    />
+                  </svg>
+                  Save
+                </Button>
+              </ButtonGroup>
+            </div>
           </div>
-
-          <ButtonGroup>
-            {selectedNote && selectedNote.id && (
-              <>
-                <Suspense fallback={<div className="h-8 w-20 bg-muted rounded animate-pulse" />}>
-                  <TagSelector noteId={selectedNote.id} size="sm" />
-                </Suspense>
-                <ButtonGroupSeparator />
-              </>
-            )}
-
-            <Button
-              data-save-action
-              onClick={handleSave}
-              disabled={saving || (!title && !content)}
-              variant="default"
-              size="sm"
-              title="Save note manually (Ctrl+S)"
-            >
-              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12"
-                />
-              </svg>
-              Save
-            </Button>
-          </ButtonGroup>
         </div>
-      </header>
+      </Card>
 
+      {/* Error Notice */}
       {saveError && (
-        <div className="px-6 py-2">
+        <div className="px-4 py-2 flex-shrink-0">
           <ErrorNotice
             error={saveError}
             onRetry={handleSave}
             onDismiss={() => setSaveError(null)}
-            className="mb-4"
           />
         </div>
       )}
 
-      <div className="flex-1 overflow-auto">
-        <div className="p-6 h-full">
+      {/* Scrollable Editor Content */}
+      <ScrollArea className="flex-1">
+        <div className="min-h-full px-8 py-6">
           <Suspense fallback={<ComponentLoader />}>
             <RichTextEditor
               content={content}
               onChange={setContent}
               noteId={selectedNote?.id}
               placeholder="Start writing your secure note... You can use rich text formatting or Markdown!"
-              className="h-full"
+              className="min-h-[calc(100vh-14rem)]"
               editable
             />
           </Suspense>
@@ -245,7 +259,11 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
         <p id="editor-help" className="sr-only">
           This note is automatically encrypted and saved as you type. Supports rich text and Markdown formatting.
         </p>
-      </div>
+
+        {/* Footer inside scroll area */}
+        <Separator />
+        <Footer />
+      </ScrollArea>
     </div>
   )
 }

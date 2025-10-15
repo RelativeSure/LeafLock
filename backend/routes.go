@@ -105,6 +105,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	searchHandler := handlers.NewSearchHandler(db, crypto)
 	importExportHandler := handlers.NewImportExportHandler(db, crypto)
 	shareLinksHandler := handlers.NewShareLinksHandler(db, crypto, rdb)
+	announcementsHandler := handlers.NewAnnouncementsHandler(db)
 
 	// API group
 	api := app.Group("/api/v1")
@@ -220,6 +221,10 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	api.Get("/auth/password/reset-verify", rateLimits.AuthLimiter, authHandler.VerifyResetToken)
 	api.Post("/auth/password/reset-confirm", rateLimits.AuthLimiter, authHandler.ConfirmPasswordReset)
 
+	// Announcements (public with optional auth) - Tier 5: Lightweight
+	// Returns announcements based on auth status: 'all' for everyone, 'logged_in' only for authenticated users
+	api.Get("/announcements", rateLimits.LightweightLimiter, middleware.OptionalJWTMiddleware(config.JWTSecret, rdb, crypto), announcementsHandler.GetAnnouncements)
+
 	// Protected routes (require JWT)
 	protected := api.Group("", middleware.JWTMiddleware(config.JWTSecret, rdb, crypto))
 
@@ -302,6 +307,13 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	// Account management routes - Tier 3: Heavy operations
 	protected.Delete("/account", rateLimits.ImportExportLimiter, accountHandler.DeleteAccount)
 	protected.Get("/account/export", rateLimits.ImportExportLimiter, accountHandler.ExportData)
+
+	// Admin announcement routes - Tier 4: Standard CRUD (admin only)
+	admin := protected.Group("/admin", middleware.RequireRole(db, "admin"))
+	admin.Get("/announcements", rateLimits.StandardCRUDLimiter, announcementsHandler.GetAllAnnouncements)
+	admin.Post("/announcements", rateLimits.StandardCRUDLimiter, announcementsHandler.CreateAnnouncement)
+	admin.Put("/announcements/:id", rateLimits.StandardCRUDLimiter, announcementsHandler.UpdateAnnouncement)
+	admin.Delete("/announcements/:id", rateLimits.StandardCRUDLimiter, announcementsHandler.DeleteAnnouncement)
 
 	// WebSocket setup
 	hub := websocketpkg.NewHub()
