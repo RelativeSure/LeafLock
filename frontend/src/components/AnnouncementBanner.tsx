@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { X, Info, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { Card } from '@/components/ui/card'
@@ -43,19 +43,19 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
   onDismiss,
   className = '',
 }) => {
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') {
+      return new Set()
+    }
 
-  // Load dismissed announcements from localStorage
-  useEffect(() => {
     try {
-      const dismissed = localStorage.getItem('dismissedAnnouncements')
-      if (dismissed) {
-        setDismissedIds(new Set(JSON.parse(dismissed)))
-      }
+      const dismissed = window.localStorage.getItem('dismissedAnnouncements')
+      return dismissed ? new Set(JSON.parse(dismissed)) : new Set()
     } catch (error) {
       console.warn('Failed to load dismissed announcements:', error)
+      return new Set()
     }
-  }, [])
+  })
 
   // Save dismissed announcements to localStorage
   const saveDismissedIds = (ids: Set<string>) => {

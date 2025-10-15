@@ -2,6 +2,8 @@ import React, { useState, Suspense, lazy } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
 import { Plus, FileText } from 'lucide-react'
 import ComponentLoader from '@/components/loaders/ComponentLoader'
 import { NoteListSkeleton } from './NoteSkeletons'
@@ -81,14 +83,20 @@ export const NotesList: React.FC<NotesListProps> = ({
   }
 
   return (
-    <nav className="w-full md:w-80 bg-card md:border-r border-border flex flex-col h-full" role="navigation" aria-label={viewingTrash ? 'Trash list' : 'Notes list'}>
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-foreground">{viewingTrash ? 'Trash' : 'Notes'}</h2>
+    <nav className="w-full bg-card md:border-r border-border flex flex-col h-full" role="navigation" aria-label={viewingTrash ? 'Trash list' : 'Notes list'}>
+      {/* Header Section */}
+      <div className="p-3 flex-shrink-0">
+        <div className="flex items-center justify-between mb-2">
+          {!viewingTrash && (
+            <h2 className="text-sm font-semibold text-foreground">Notes</h2>
+          )}
           {viewingTrash && (
-            <Badge variant="secondary" className="text-xs">
-              {trashedNotes.length} items
-            </Badge>
+            <>
+              <h2 className="text-sm font-semibold text-foreground">Trash</h2>
+              <Badge variant="secondary" className="text-xs">
+                {trashedNotes.length}
+              </Badge>
+            </>
           )}
         </div>
 
@@ -125,7 +133,10 @@ export const NotesList: React.FC<NotesListProps> = ({
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto" role="list" aria-label="Notes">
+      <Separator />
+
+      {/* Scrollable Content Area */}
+      <ScrollArea className="flex-1" role="list" aria-label="Notes">
         {notesError ? (
           <div className="p-4">
             <ErrorNotice error={notesError} onRetry={onRetryLoad} onDismiss={onDismissError} />
@@ -234,10 +245,12 @@ export const NotesList: React.FC<NotesListProps> = ({
                 : 'No notes yet'}
           </div>
         )}
-      </div>
+      </ScrollArea>
 
       {!viewingTrash && (
-        <div className="p-4 border-t border-border space-y-2">
+        <>
+          <Separator />
+          <div className="p-3 flex-shrink-0 space-y-2">
           <Button
             onClick={() => {
               onStartNewNote()
@@ -265,6 +278,7 @@ export const NotesList: React.FC<NotesListProps> = ({
             Create a new note from a template
           </p>
         </div>
+        </>
       )}
     </nav>
   )

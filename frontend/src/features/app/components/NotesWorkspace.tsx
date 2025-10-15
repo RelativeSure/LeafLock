@@ -1,8 +1,9 @@
 import React from 'react'
+import { Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
 import { NotesList } from '@/features/notes/components/NotesList'
 import { NotesEditor } from '@/features/notes/components/NotesEditor'
-import { MainHeader } from './MainHeader'
 import { EmptyState } from './EmptyState'
 import { type Note, type ViewType } from '../types'
 import { type SecureAPI } from '@/services/secureApi'
@@ -16,7 +17,6 @@ interface NotesWorkspaceProps {
   loading: boolean
   notesError: string | null
   currentView: ViewType
-  isAdmin: boolean
   onSelectNote: (note: Note | null) => void
   onNotesChange: React.Dispatch<React.SetStateAction<Note[]>>
   onChangeView: (view: ViewType) => void
@@ -27,11 +27,6 @@ interface NotesWorkspaceProps {
   onOpenTemplateSelector: () => void
   onRetryLoad: () => Promise<void>
   onDismissError: () => void
-  onLoadNotes: () => Promise<void>
-  onLoadTrash: () => Promise<void>
-  onSetViewingTrash: (viewing: boolean) => void
-  onSetNotesError: (error: string | null) => void
-  onLogout: () => void
   api: SecureAPI
   cryptoService: CryptoService
 }
@@ -44,7 +39,6 @@ export const NotesWorkspace: React.FC<NotesWorkspaceProps> = ({
   loading,
   notesError,
   currentView,
-  isAdmin,
   onSelectNote,
   onNotesChange,
   onChangeView,
@@ -55,89 +49,115 @@ export const NotesWorkspace: React.FC<NotesWorkspaceProps> = ({
   onOpenTemplateSelector,
   onRetryLoad,
   onDismissError,
-  onLoadNotes,
-  onLoadTrash,
-  onSetViewingTrash,
-  onSetNotesError,
-  onLogout,
   api,
   cryptoService,
 }) => {
   return (
     <>
-      {/* Mobile header */}
-      <div className="md:hidden flex items-center justify-between bg-card border-b border-border px-4 py-3">
-        <h1 className="text-lg font-semibold text-foreground">LeafLock</h1>
-        <Button
-          onClick={() => onChangeView(currentView === 'notes' ? 'editor' : 'notes')}
-          variant="ghost"
-          size="sm"
-          className="p-1"
-          aria-label={currentView === 'notes' ? 'Show editor' : 'Show notes list'}
-        >
-          {currentView === 'notes' ? (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
+      {/* Mobile: Toggle between notes list and editor */}
+      <div className="md:hidden flex flex-col h-full">
+        {/* Mobile toggle header */}
+        <div className="flex items-center justify-between bg-card border-b border-border px-4 py-3 flex-shrink-0">
+          <h1 className="text-base font-semibold text-foreground">
+            {currentView === 'notes' ? 'Notes' : selectedNote?.title || 'Editor'}
+          </h1>
+          <Button
+            onClick={() => onChangeView(currentView === 'notes' ? 'editor' : 'notes')}
+            variant="ghost"
+            size="icon"
+            aria-label={currentView === 'notes' ? 'Show editor' : 'Show notes list'}
+          >
+            {currentView === 'notes' ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </Button>
+        </div>
+
+        {/* Mobile content area */}
+        <div className="flex-1 overflow-hidden">
+          {currentView === 'notes' || !selectedNote ? (
+            <NotesList
+              notes={notes}
+              trashedNotes={trashedNotes}
+              viewingTrash={viewingTrash}
+              selectedNote={selectedNote}
+              loading={loading}
+              notesError={notesError}
+              onRetryLoad={onRetryLoad}
+              onDismissError={onDismissError}
+              onSelectNote={(note) => {
+                onSelectNote(note)
+                if (note) onChangeView('editor')
+              }}
+              onClearSelection={() => onSelectNote(null)}
+              onChangeView={onChangeView}
+              onRestoreNote={onRestoreNote}
+              onPermanentDelete={onPermanentDelete}
+              onMoveToTrash={onMoveToTrash}
+              onStartNewNote={onStartNewNote}
+              onOpenTemplateSelector={onOpenTemplateSelector}
+            />
           ) : (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
+            <>
+              {selectedNote ? (
+                <NotesEditor
+                  selectedNote={selectedNote}
+                  onSelectNote={onSelectNote}
+                  onNotesChange={onNotesChange}
+                  api={api}
+                  cryptoService={cryptoService}
+                />
+              ) : (
+                <EmptyState />
+              )}
+            </>
           )}
-        </Button>
+        </div>
       </div>
 
-      {/* Notes list sidebar */}
-      <div
-        className={`${currentView === 'notes' || selectedNote || currentView === 'editor' ? 'hidden md:block' : 'block'} w-full md:w-80`}
-      >
-        <NotesList
-          notes={notes}
-          trashedNotes={trashedNotes}
-          viewingTrash={viewingTrash}
-          selectedNote={selectedNote}
-          loading={loading}
-          notesError={notesError}
-          onRetryLoad={onRetryLoad}
-          onDismissError={onDismissError}
-          onSelectNote={onSelectNote}
-          onClearSelection={() => onSelectNote(null)}
-          onChangeView={onChangeView}
-          onRestoreNote={onRestoreNote}
-          onPermanentDelete={onPermanentDelete}
-          onMoveToTrash={onMoveToTrash}
-          onStartNewNote={onStartNewNote}
-          onOpenTemplateSelector={onOpenTemplateSelector}
-        />
-      </div>
+      {/* Desktop: Resizable panels */}
+      <div className="hidden md:block h-full">
+        <ResizablePanelGroup direction="horizontal">
+          {/* Sidebar Panel */}
+          <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+            <NotesList
+              notes={notes}
+              trashedNotes={trashedNotes}
+              viewingTrash={viewingTrash}
+              selectedNote={selectedNote}
+              loading={loading}
+              notesError={notesError}
+              onRetryLoad={onRetryLoad}
+              onDismissError={onDismissError}
+              onSelectNote={onSelectNote}
+              onClearSelection={() => onSelectNote(null)}
+              onChangeView={onChangeView}
+              onRestoreNote={onRestoreNote}
+              onPermanentDelete={onPermanentDelete}
+              onMoveToTrash={onMoveToTrash}
+              onStartNewNote={onStartNewNote}
+              onOpenTemplateSelector={onOpenTemplateSelector}
+            />
+          </ResizablePanel>
 
-      {/* Editor area */}
-      <div className={`${currentView === 'notes' && !selectedNote ? 'hidden md:flex' : 'flex'} flex-1 flex-col`}>
-        <MainHeader
-          selectedNote={selectedNote}
-          notes={notes}
-          setNotes={onNotesChange}
-          viewingTrash={viewingTrash}
-          isAdmin={isAdmin}
-          onLoadNotes={onLoadNotes}
-          onLoadTrash={onLoadTrash}
-          onChangeView={onChangeView}
-          onLogout={onLogout}
-          onSetViewingTrash={onSetViewingTrash}
-          onSetNotesError={onSetNotesError}
-        />
+          {/* Resizable Handle */}
+          <ResizableHandle withHandle />
 
-        {selectedNote || currentView === 'editor' ? (
-          <NotesEditor
-            selectedNote={selectedNote}
-            onSelectNote={onSelectNote}
-            onNotesChange={onNotesChange}
-            api={api}
-            cryptoService={cryptoService}
-          />
-        ) : (
-          <EmptyState />
-        )}
+          {/* Editor Panel */}
+          <ResizablePanel defaultSize={80}>
+            <div className="h-full flex flex-col">
+              {selectedNote ? (
+                <NotesEditor
+                  selectedNote={selectedNote}
+                  onSelectNote={onSelectNote}
+                  onNotesChange={onNotesChange}
+                  api={api}
+                  cryptoService={cryptoService}
+                />
+              ) : (
+                <EmptyState />
+              )}
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </>
   )

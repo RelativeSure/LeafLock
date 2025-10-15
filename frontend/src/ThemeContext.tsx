@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode, type FC } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode, type FC } from 'react'
 
 export type ThemeType = 'light' | 'blue' | 'dark' | 'system'
 type EffectiveTheme = 'light' | 'blue' | 'dark'
@@ -56,36 +56,34 @@ const applyThemeClasses = (theme: EffectiveTheme) => {
   }
 }
 
+const useSystemTheme = (): EffectiveTheme => {
+  return useSyncExternalStore(
+    (callback) => {
+      if (typeof window === 'undefined') {
+        return () => undefined
+      }
+
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+      const listener = () => callback()
+      mediaQuery.addEventListener('change', listener)
+      return () => mediaQuery.removeEventListener('change', listener)
+    },
+    () => getSystemTheme(),
+    () => 'light'
+  )
+}
+
 export const ThemeProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<ThemeType>(() => readStoredTheme())
-  const [effectiveTheme, setEffectiveTheme] = useState<EffectiveTheme>(() => {
-    const storedTheme = readStoredTheme()
-    return storedTheme === 'system' ? getSystemTheme() : storedTheme
-  })
+  const systemTheme = useSystemTheme()
+
+  const effectiveTheme = useMemo<EffectiveTheme>(() => {
+    return theme === 'system' ? systemTheme : theme
+  }, [theme, systemTheme])
 
   useEffect(() => {
-    const handleSystemChange = () => {
-      if (theme === 'system') {
-        const systemTheme = getSystemTheme()
-        setEffectiveTheme(systemTheme)
-        applyThemeClasses(systemTheme)
-      }
-    }
-
-    if (typeof window !== 'undefined') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-      mediaQuery.addEventListener('change', handleSystemChange)
-      return () => mediaQuery.removeEventListener('change', handleSystemChange)
-    }
-
-    return undefined
-  }, [theme])
-
-  useEffect(() => {
-    const resolvedTheme = theme === 'system' ? getSystemTheme() : theme
-    setEffectiveTheme(resolvedTheme)
-    applyThemeClasses(resolvedTheme)
-  }, [theme])
+    applyThemeClasses(effectiveTheme)
+  }, [effectiveTheme])
 
   const setTheme = (newTheme: ThemeType) => {
     setThemeState(newTheme)
