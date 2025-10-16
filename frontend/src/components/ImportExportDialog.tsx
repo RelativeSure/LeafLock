@@ -1,8 +1,18 @@
-import React, { useState, useRef, useCallback } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog'
+import React, { useState, useRef, useCallback, useId } from 'react'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from './ui/dialog'
 import { Button } from './ui/button'
-import { Upload, Download, FileText, File, X } from 'lucide-react'
+import { Upload, Download, FileText, File, FileJson, X } from 'lucide-react'
 import { resolveApiBaseUrl } from '@/utils/network'
+import { getStoredAuthToken } from '@/utils/auth'
 interface Note {
   id: string
   title: string
@@ -31,6 +41,7 @@ export function ImportExportDialog({
   const [isOpen, setIsOpen] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const [isAccountExporting, setIsAccountExporting] = useState(false)
   const [dragActive, setDragActive] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [exportFormat, setExportFormat] = useState<'markdown' | 'text' | 'html' | 'json'>(
@@ -44,12 +55,14 @@ export function ImportExportDialog({
   } | null>(null)
   const [storageError, setStorageError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const descriptionId = useId()
 
   const API_BASE_URL = resolveApiBaseUrl()
+  const getAuthToken = () => getStoredAuthToken() || localStorage.getItem('token')
 
   // Fetch storage information
   const fetchStorageInfo = useCallback(async () => {
-    const token = localStorage.getItem('token')
+    const token = getAuthToken()
     if (!token) return
 
     try {
@@ -121,6 +134,9 @@ export function ImportExportDialog({
   React.useEffect(() => {
     if (isOpen) {
       fetchStorageInfo()
+    } else {
+      setDragActive(false)
+      setSelectedFiles([])
     }
   }, [isOpen, fetchStorageInfo])
 
@@ -220,7 +236,7 @@ export function ImportExportDialog({
     if (selectedFiles.length === 0) return
 
     setIsImporting(true)
-    const token = localStorage.getItem('token')
+    const token = getAuthToken()
 
     try {
       if (selectedFiles.length === 1) {
@@ -291,7 +307,7 @@ export function ImportExportDialog({
     if (!noteId) return
 
     setIsExporting(true)
-    const token = localStorage.getItem('token')
+    const token = getAuthToken()
 
     try {
       const response = await fetch(`${API_BASE_URL}/notes/${noteId}/export`, {
@@ -330,6 +346,64 @@ export function ImportExportDialog({
     }
   }
 
+  const handleExportAccount = async () => {
+    const token = getAuthToken()
+    if (!token) {
+      alert('You need to be signed in to export your data.')
+      return
+    }
+
+    setIsAccountExporting(true)
+
+    try {
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      }
+
+      const csrfToken = localStorage.getItem('csrf_token')
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken
+      }
+
+      const response = await fetch(`${API_BASE_URL}/account/export`, {
+        method: 'GET',
+        headers,
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => null)
+        const message =
+          (error && (error.error || error.message)) || `Export failed with status ${response.status}`
+        throw new Error(message)
+      }
+
+      const data = await response.json()
+
+      const now = new Date()
+      const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: 'application/json',
+      })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `leaflock-export-${formattedDate}.json`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      alert('Your full data export has started downloading.')
+    } catch (error) {
+      console.error('Account export error:', error)
+      alert(error instanceof Error ? error.message : 'Export failed')
+    } finally {
+      setIsAccountExporting(false)
+    }
+  }
+
   const getFileIcon = (file: File) => {
     if (file.name.endsWith('.md') || file.type === 'text/markdown') {
       return <FileText className="w-4 h-4 text-blue-500" />
@@ -347,9 +421,12 @@ export function ImportExportDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl" aria-describedby={descriptionId}>
         <DialogHeader>
           <DialogTitle>Import & Export Notes</DialogTitle>
+          <DialogDescription id={descriptionId}>
+            Manage your note files, bulk import supported formats, or export your data securely.
+          </DialogDescription>
         </DialogHeader>
 
         {/* Storage Information */}
@@ -492,7 +569,29 @@ export function ImportExportDialog({
               </div>
             </div>
           )}
+
+          {/* Account Export Section */}
+          <div className="space-y-4 border-t pt-6">
+            <h3 className="text-lg font-medium flex items-center">
+              <FileJson className="w-5 h-5 mr-2" />
+              Export All Data
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Download a decrypted JSON archive of your account, including all notes and settings.
+            </p>
+            <Button onClick={handleExportAccount} disabled={isAccountExporting} className="w-full">
+              {isAccountExporting ? 'Preparing export...' : 'Export Everything'}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              The exported file contains readable copies of your notes. Store it securely.
+            </p>
+          </div>
         </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">Close</Button>
+          </DialogClose>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

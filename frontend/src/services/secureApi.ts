@@ -78,7 +78,10 @@ export class SecureAPI {
           console.log('🚨 401 Unauthorized - triggering logout')
           this.handleUnauthorized()
         }
-        throw new Error(errorMessage)
+        const error = new Error(errorMessage) as Error & { status?: number }
+        error.name = 'APIError'
+        error.status = response.status
+        throw error
       }
 
       const data = await response.json()
@@ -409,8 +412,18 @@ export class SecureAPI {
   }
 
   async adminHealth(): Promise<boolean> {
-    const r = await this.request('/admin/health')
-    return r && r.status === 'ok'
+    try {
+      const r = await this.request('/admin/health')
+      return r && r.status === 'ok'
+    } catch (error) {
+      const status = (error as { status?: number } | undefined)?.status
+      if (status === 404 || status === 403) {
+        console.debug('Admin health endpoint unavailable for current user.')
+        return false
+      }
+      console.warn('Admin health check failed:', error)
+      return false
+    }
   }
 
   async adminSetAdmin(userId: string, admin: boolean): Promise<AdminActionResponse> {
