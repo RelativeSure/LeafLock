@@ -107,8 +107,8 @@ export const padding = {
     /** List item large: p-4 - Large list items (notes) */
     listItemLg: 'p-4',
 
-    /** List item with mobile touch: p-4 md:p-4 py-6 md:py-4 - Enhanced mobile touch targets */
-    listItemTouch: 'p-4 md:p-4 py-6 md:py-4',
+    /** List item with mobile touch: p-0 - Removed padding for tight layout */
+    listItemTouch: 'p-0',
 
     /** Empty state: py-8 - Empty state messages */
     emptyState: 'py-8',
@@ -131,11 +131,11 @@ export const padding = {
     /** Section spacing: pt-4 - Spacing between sections */
     sectionSpacing: 'pt-4',
 
-    /** Footer: p-3 - Footer padding */
-    footer: 'px-3 py-2',
+    /** Footer: p-0 - No padding */
+    footer: 'p-0',
 
     /** Header section: p-3 - Header sections in lists */
-    headerSection: 'px-3 py-2',
+    headerSection: 'p-0',
   },
 
   // ==================== FORM ELEMENTS ====================
@@ -174,19 +174,19 @@ export const padding = {
   // ==================== EDITOR & RICH TEXT ====================
   editor: {
     /** Toolbar container: p-1.5 md:p-2 - Editor toolbar */
-    toolbarContainer: 'p-1 md:p-1.5',
+    toolbarContainer: 'p-0',
 
     /** Toolbar button: p-2.5 md:p-2 - Mobile-first touch target for toolbar buttons */
     toolbarButton: 'p-2.5 md:p-2',
 
     /** Editor content: px-3 py-2 - Main editor content area */
-    editorContent: 'px-2 py-1.5 md:px-3 md:py-2',
+    editorContent: 'p-0',
 
     /** Editor wrapper: px-4 py-4 - Editor container wrapper */
-    editorWrapper: 'px-3 py-3 md:px-5 md:py-4',
+    editorWrapper: 'p-0',
 
     /** Title bar: px-4 py-2.5 - Editor title bar */
-    titleBar: 'px-3 py-2 md:px-4 md:py-2',
+    titleBar: 'p-0',
 
     /** Inline code: px-1 py-0.5 - Inline code elements */
     inlineCode: 'px-1 py-0.5',
