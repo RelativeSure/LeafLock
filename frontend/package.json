@@ -25,6 +25,7 @@
     "clean": "rm -rf dist node_modules/.vite coverage",
     "analyze": "vite build --mode analyze",
     "serve": "vite preview",
+    "lhci": "lhci autorun",
     "check-all": "pnpm run type-check && pnpm run lint && pnpm run format:check && pnpm run test"
   },
   "dependencies": {
@@ -80,6 +81,7 @@
   },
   "devDependencies": {
     "@eslint/js": "9.37.0",
+    "@lhci/cli": "0.13.0",
     "@playwright/test": "1.56.0",
     "@tailwindcss/postcss": "4.1.14",
     "@testing-library/jest-dom": "6.9.1",
