@@ -45,12 +45,7 @@ export function QrCodeDisplay({
         <CardContent className="pt-6">
           <div className="flex justify-center p-4">
             <div className="border-4 border-background rounded bg-background p-2">
-              <QRCode
-                value={otpauthUrl}
-                size={qrSize}
-                level="H"
-                style={qrStyle}
-              />
+              <QRCode value={otpauthUrl} size={qrSize} level="H" style={qrStyle} />
             </div>
           </div>
         </CardContent>
@@ -59,21 +54,16 @@ export function QrCodeDisplay({
       <Alert>
         <AlertDescription>
           <div className="space-y-2">
-            <p className="text-sm font-medium">
-              Scan this QR code with your authenticator app
-            </p>
+            <p className="text-sm font-medium">Scan this QR code with your authenticator app</p>
             <p className="text-xs text-muted-foreground">
-              Recommended apps: Google Authenticator, Authy, 1Password, or
-              Microsoft Authenticator
+              Recommended apps: Google Authenticator, Authy, 1Password, or Microsoft Authenticator
             </p>
           </div>
         </AlertDescription>
       </Alert>
 
       <div className="space-y-2">
-        <p className="text-sm font-medium">
-          Can't scan the code? Enter this secret manually:
-        </p>
+        <p className="text-sm font-medium">Can't scan the code? Enter this secret manually:</p>
         <div className="flex items-center gap-2">
           <code className="flex-1 bg-muted px-3 py-2 rounded text-sm font-mono break-all">
             {secret}
@@ -85,11 +75,7 @@ export function QrCodeDisplay({
             onClick={copySecret}
             aria-label="Copy secret"
           >
-            {copied ? (
-              <Check className="h-4 w-4 text-green-500" />
-            ) : (
-              <Copy className="h-4 w-4" />
-            )}
+            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
           </Button>
         </div>
         {issuer && account && (

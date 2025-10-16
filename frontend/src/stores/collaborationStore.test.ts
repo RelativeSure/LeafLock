@@ -52,20 +52,17 @@ describe('CollaborationStore', () => {
 
     await store.shareNote('note-123', 'user@example.com', 'write')
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      'http://localhost:8080/api/v1/notes/note-123/share',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer mock-token',
-        },
-        body: JSON.stringify({
-          user_email: 'user@example.com',
-          permission: 'write',
-        }),
-      }
-    )
+    expect(mockFetch).toHaveBeenCalledWith('http://localhost:8080/api/v1/notes/note-123/share', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer mock-token',
+      },
+      body: JSON.stringify({
+        user_email: 'user@example.com',
+        permission: 'write',
+      }),
+    })
 
     expect(store.fetchCollaborators).toHaveBeenCalledWith('note-123')
   })
@@ -83,8 +80,9 @@ describe('CollaborationStore', () => {
     // Mock localStorage
     Storage.prototype.getItem = vi.fn(() => 'mock-token')
 
-    await expect(store.shareNote('note-123', 'invalid@example.com', 'write'))
-      .rejects.toThrow('User not found')
+    await expect(store.shareNote('note-123', 'invalid@example.com', 'write')).rejects.toThrow(
+      'User not found'
+    )
   })
 
   it('should handle successful collaborator removal', async () => {
@@ -110,7 +108,7 @@ describe('CollaborationStore', () => {
       {
         method: 'DELETE',
         headers: {
-          'Authorization': 'Bearer mock-token',
+          Authorization: 'Bearer mock-token',
         },
       }
     )

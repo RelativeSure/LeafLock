@@ -8,7 +8,12 @@ import { Label } from './ui/label'
 // import { Textarea } from './ui/textarea'
 import { Switch } from './ui/switch'
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
-import { templatesService, Template, CreateTemplateRequest, UpdateTemplateRequest } from '../services/templatesService'
+import {
+  templatesService,
+  Template,
+  CreateTemplateRequest,
+  UpdateTemplateRequest,
+} from '../services/templatesService'
 
 interface TemplatesManagerProps {
   onClose?: () => void
@@ -21,7 +26,7 @@ const defaultIcons = ['📝', '📋', '📄', '📊', '🗒️', '📑', '🔖',
 export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
   onClose,
   onTemplateSelect,
-  mode = 'manage'
+  mode = 'manage',
 }) => {
   const [templates, setTemplates] = useState<Template[]>([])
   const [filteredTemplates, setFilteredTemplates] = useState<Template[]>([])
@@ -62,9 +67,9 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
     // Filter by tab
     if (tab === 'my-templates') {
       // Show user's own templates (non-public or user-owned)
-      filtered = filtered.filter(t => !t.is_public || true) // Adjust based on user ownership
+      filtered = filtered.filter((t) => !t.is_public || true) // Adjust based on user ownership
     } else if (tab === 'public-templates') {
-      filtered = filtered.filter(t => t.is_public)
+      filtered = filtered.filter((t) => t.is_public)
     } else if (tab === 'popular') {
       filtered = filtered.sort((a, b) => b.usage_count - a.usage_count).slice(0, 20)
     }
@@ -72,10 +77,11 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
     // Filter by search query
     if (query) {
       const lowercaseQuery = query.toLowerCase()
-      filtered = filtered.filter(template =>
-        template.name.toLowerCase().includes(lowercaseQuery) ||
-        template.description?.toLowerCase().includes(lowercaseQuery) ||
-        template.tags.some(tag => tag.toLowerCase().includes(lowercaseQuery))
+      filtered = filtered.filter(
+        (template) =>
+          template.name.toLowerCase().includes(lowercaseQuery) ||
+          template.description?.toLowerCase().includes(lowercaseQuery) ||
+          template.tags.some((tag) => tag.toLowerCase().includes(lowercaseQuery))
       )
     }
 
@@ -204,8 +210,11 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
   }
 
   const handleTagInput = (value: string) => {
-    const tags = value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
-    setFormData(prev => ({ ...prev, tags }))
+    const tags = value
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0)
+    setFormData((prev) => ({ ...prev, tags }))
   }
 
   if (loading) {
@@ -230,7 +239,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
           <Input
             id="template-name"
             value={formData.name}
-            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
             placeholder="Enter template name"
           />
         </div>
@@ -239,11 +248,13 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
           <select
             id="template-icon"
             value={formData.icon}
-            onChange={(e) => setFormData(prev => ({ ...prev, icon: e.target.value }))}
+            onChange={(e) => setFormData((prev) => ({ ...prev, icon: e.target.value }))}
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
           >
-            {defaultIcons.map(icon => (
-              <option key={icon} value={icon}>{icon} {icon}</option>
+            {defaultIcons.map((icon) => (
+              <option key={icon} value={icon}>
+                {icon} {icon}
+              </option>
             ))}
           </select>
         </div>
@@ -254,7 +265,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
         <Input
           id="template-description"
           value={formData.description}
-          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+          onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
           placeholder="Brief description of the template"
         />
       </div>
@@ -274,7 +285,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
         <textarea
           id="template-content"
           value={formData.content}
-          onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+          onChange={(e) => setFormData((prev) => ({ ...prev, content: e.target.value }))}
           placeholder="Enter your template content here..."
           rows={8}
           className="w-full px-3 py-2 border border-gray-300 rounded-md resize-vertical"
@@ -285,7 +296,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
         <Switch
           id="is-public"
           checked={formData.is_public}
-          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_public: checked }))}
+          onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, is_public: checked }))}
         />
         <Label htmlFor="is-public">Make this template public</Label>
       </div>
@@ -350,9 +361,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
         {(isCreating || editingTemplate) && (
           <Card>
             <CardHeader>
-              <CardTitle>
-                {editingTemplate ? 'Edit Template' : 'Create New Template'}
-              </CardTitle>
+              <CardTitle>{editingTemplate ? 'Edit Template' : 'Create New Template'}</CardTitle>
             </CardHeader>
             <CardContent>
               <TemplateForm />
@@ -376,8 +385,10 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
                 <p className="text-gray-600">{viewingTemplate.description}</p>
               )}
               <div className="flex flex-wrap gap-2">
-                {viewingTemplate.tags.map(tag => (
-                  <Badge key={tag} variant="secondary">{tag}</Badge>
+                {viewingTemplate.tags.map((tag) => (
+                  <Badge key={tag} variant="secondary">
+                    {tag}
+                  </Badge>
                 ))}
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">
@@ -436,7 +447,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
 
               <div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredTemplates.map(template => (
+                  {filteredTemplates.map((template) => (
                     <Card key={template.id} className="hover:shadow-md transition-shadow">
                       <CardHeader className="pb-3">
                         <CardTitle className="flex items-center justify-between text-base">
@@ -460,7 +471,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
                       <CardContent className="pt-0 space-y-3">
                         {template.tags.length > 0 && (
                           <div className="flex flex-wrap gap-1">
-                            {template.tags.slice(0, 3).map(tag => (
+                            {template.tags.slice(0, 3).map((tag) => (
                               <Badge key={tag} variant="outline" className="text-xs">
                                 {tag}
                               </Badge>
@@ -507,10 +518,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
                               </>
                             )}
                           </div>
-                          <Button
-                            size="sm"
-                            onClick={() => handleUseTemplate(template)}
-                          >
+                          <Button size="sm" onClick={() => handleUseTemplate(template)}>
                             <Copy className="h-3 w-3 mr-1" />
                             {mode === 'select' ? 'Select' : 'Use'}
                           </Button>
@@ -526,8 +534,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
                       ? 'No templates found matching your search.'
                       : activeTab === 'my-templates'
                         ? 'No templates yet. Create your first template!'
-                        : 'No templates available.'
-                    }
+                        : 'No templates available.'}
                   </div>
                 )}
               </div>

@@ -14,7 +14,8 @@ marked.setOptions({
 })
 
 const renderer = new marked.Renderer()
-renderer.heading = ({ tokens, depth }) => `<h${depth}>${renderer.parser.parseInline(tokens)}</h${depth}>`
+renderer.heading = ({ tokens, depth }) =>
+  `<h${depth}>${renderer.parser.parseInline(tokens)}</h${depth}>`
 marked.use({ renderer })
 
 // Configure turndown for HTML to markdown conversion
@@ -46,7 +47,7 @@ turndownService.addRule('codeBlock', {
     const codeElement = node.firstChild as HTMLElement
     const language = codeElement.className.replace('language-', '') || ''
     return '\n```' + language + '\n' + content + '\n```\n'
-  }
+  },
 })
 
 /**
@@ -65,15 +66,35 @@ export const markdownToHtml = (markdown: string): string => {
     // Security: Sanitize the generated HTML to prevent XSS
     return DOMPurify.sanitize(html, {
       ALLOWED_TAGS: [
-        'p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre',
-        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'ul', 'ol', 'li', 'blockquote', 'hr',
-        'a', 'img', 'table', 'thead', 'tbody', 'tr', 'th', 'td'
+        'p',
+        'br',
+        'strong',
+        'em',
+        'u',
+        's',
+        'code',
+        'pre',
+        'h1',
+        'h2',
+        'h3',
+        'h4',
+        'h5',
+        'h6',
+        'ul',
+        'ol',
+        'li',
+        'blockquote',
+        'hr',
+        'a',
+        'img',
+        'table',
+        'thead',
+        'tbody',
+        'tr',
+        'th',
+        'td',
       ],
-      ALLOWED_ATTR: [
-        'href', 'title', 'alt', 'src', 'class',
-        'target', 'rel', 'colspan', 'rowspan'
-      ]
+      ALLOWED_ATTR: ['href', 'title', 'alt', 'src', 'class', 'target', 'rel', 'colspan', 'rowspan'],
     })
   } catch (error) {
     console.error('Error converting markdown to HTML:', error)
@@ -116,15 +137,35 @@ export const convertContentForEditor = (content: string): string => {
   if (isHtmlContent(content)) {
     return DOMPurify.sanitize(content, {
       ALLOWED_TAGS: [
-        'p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre',
-        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'ul', 'ol', 'li', 'blockquote', 'hr',
-        'a', 'img', 'table', 'thead', 'tbody', 'tr', 'th', 'td'
+        'p',
+        'br',
+        'strong',
+        'em',
+        'u',
+        's',
+        'code',
+        'pre',
+        'h1',
+        'h2',
+        'h3',
+        'h4',
+        'h5',
+        'h6',
+        'ul',
+        'ol',
+        'li',
+        'blockquote',
+        'hr',
+        'a',
+        'img',
+        'table',
+        'thead',
+        'tbody',
+        'tr',
+        'th',
+        'td',
       ],
-      ALLOWED_ATTR: [
-        'href', 'title', 'alt', 'src', 'class',
-        'target', 'rel', 'colspan', 'rowspan'
-      ]
+      ALLOWED_ATTR: ['href', 'title', 'alt', 'src', 'class', 'target', 'rel', 'colspan', 'rowspan'],
     })
   }
 
@@ -135,7 +176,10 @@ export const convertContentForEditor = (content: string): string => {
 /**
  * Export content from editor for storage
  */
-export const exportContentFromEditor = (html: string, format: 'html' | 'markdown' = 'html'): string => {
+export const exportContentFromEditor = (
+  html: string,
+  format: 'html' | 'markdown' = 'html'
+): string => {
   if (!html.trim()) return ''
 
   if (format === 'markdown') {

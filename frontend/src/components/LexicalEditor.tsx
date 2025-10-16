@@ -22,8 +22,23 @@ import {
   FORMAT_TEXT_COMMAND,
   DROP_COMMAND,
 } from 'lexical'
-import { Bold, Italic, Strikethrough, Code, Link as LinkIcon, Image as ImageIcon, List, ListOrdered, Quote, Heading1, Heading2, Heading3, Minus } from 'lucide-react'
+import {
+  Bold,
+  Italic,
+  Strikethrough,
+  Code,
+  Link as LinkIcon,
+  Image as ImageIcon,
+  List,
+  ListOrdered,
+  Quote,
+  Heading1,
+  Heading2,
+  Heading3,
+  Minus,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { padding } from '@/lib/padding'
 import { useTheme } from '@/ThemeContext'
 import DOMPurify from 'dompurify'
 import { attachmentService } from '../services/attachmentService'
@@ -68,21 +83,22 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
     type="button"
     className={cn(
       // Base styles - larger padding on mobile for 44px touch targets
-      'relative p-2.5 md:p-2 rounded-md border transition-all duration-200',
+      'relative rounded-md border transition-all duration-200',
+      padding.editor.toolbarButton,
       'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
 
       // Active state - more prominent with shadow and indicator
       isActive && [
         'bg-primary text-primary-foreground border-primary shadow-sm',
         'after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2',
-        'after:w-4 after:h-0.5 after:bg-primary-foreground after:rounded-full'
+        'after:w-4 after:h-0.5 after:bg-primary-foreground after:rounded-full',
       ],
 
       // Inactive state
       !isActive && [
         'bg-background text-foreground border-border',
         'hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20',
-        'hover:shadow-sm active:scale-95'
+        'hover:shadow-sm active:scale-95',
       ],
 
       // Disabled state - improved contrast
@@ -222,7 +238,12 @@ function ToolbarPlugin() {
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 p-2 md:p-3 border border-border border-b-0 rounded-t-lg bg-muted">
+    <div
+      className={cn(
+        'flex flex-wrap items-center justify-between gap-2 border border-border border-b-0 rounded-t-lg bg-muted',
+        padding.editor.toolbarContainer
+      )}
+    >
       {/* Mobile toolbar - essential tools with larger touch targets */}
       <div className="flex md:hidden flex-wrap items-center gap-2 w-full">
         <ToolbarButton onClick={formatBold} isActive={isBold} title="Bold (Ctrl+B)">
@@ -301,11 +322,11 @@ function ToolbarPlugin() {
           <ImageIcon className="w-4 h-4" />
         </ToolbarButton>
 
-      <ToolbarSeparator />
+        <ToolbarSeparator />
 
-      <ToolbarButton onClick={insertCodeBlock} title="Insert Code Block">
-        <Code className="w-4 h-4" />
-      </ToolbarButton>
+        <ToolbarButton onClick={insertCodeBlock} title="Insert Code Block">
+          <Code className="w-4 h-4" />
+        </ToolbarButton>
 
         <ToolbarButton onClick={insertHr} title="Horizontal Rule">
           <Minus className="w-4 h-4" />
@@ -333,10 +354,8 @@ function HtmlConverterPlugin({
   useEffect(() => {
     const importedKey = lastImportedContent.current
 
-    const alreadyImported =
-      importedKey?.content === content && importedKey?.noteId === noteId
-    const justEmitted =
-      lastEmittedContent.current === content && importedKey?.noteId === noteId
+    const alreadyImported = importedKey?.content === content && importedKey?.noteId === noteId
+    const justEmitted = lastEmittedContent.current === content && importedKey?.noteId === noteId
 
     if (alreadyImported || justEmitted) {
       lastImportedContent.current = { content, noteId }
@@ -509,8 +528,8 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
         listitem: 'mb-1',
       },
       quote: 'border-l-4 border-muted-foreground pl-4 italic my-4',
-      code: 'bg-muted px-1 py-0.5 rounded font-mono text-sm',
-      codeblock: 'bg-muted p-4 rounded font-mono text-sm mb-4 overflow-x-auto',
+      code: `bg-muted rounded font-mono text-sm ${padding.editor.inlineCode}`,
+      codeblock: `bg-muted rounded font-mono text-sm mb-4 overflow-x-auto ${padding.editor.codeBlock}`,
       link: 'text-primary underline hover:text-primary/80',
     },
     nodes: [
@@ -550,7 +569,8 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
             contentEditable={
               <ContentEditable
                 className={cn(
-                  'flex-1 p-4 focus:outline-none overflow-y-auto',
+                  'flex-1 focus:outline-none overflow-y-auto',
+                  padding.editor.editorContent,
                   'min-h-[300px]',
                   'focus:ring-2 focus:ring-ring focus:ring-offset-1 rounded-b-lg'
                 )}
@@ -558,13 +578,15 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
               />
             }
             placeholder={
-              <div className={cn(
-                'absolute top-4 left-4 text-muted-foreground',
-                'pointer-events-none select-none',
-                'transition-opacity duration-200',
-                content && content.length > 0 ? 'opacity-0' : 'opacity-100'
-              )}
-              aria-hidden="true">
+              <div
+                className={cn(
+                  'absolute top-2 left-3 text-muted-foreground',
+                  'pointer-events-none select-none',
+                  'transition-opacity duration-200',
+                  content && content.length > 0 ? 'opacity-0' : 'opacity-100'
+                )}
+                aria-hidden="true"
+              >
                 {placeholder}
               </div>
             }

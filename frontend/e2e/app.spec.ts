@@ -7,8 +7,8 @@ test.describe('Application', () => {
 
     // Check that the page loads without errors
     const pageErrors: string[] = []
-    page.on('pageerror', error => pageErrors.push(error.message))
-    page.on('console', msg => {
+    page.on('pageerror', (error) => pageErrors.push(error.message))
+    page.on('console', (msg) => {
       if (msg.type() === 'error') {
         pageErrors.push(msg.text())
       }
@@ -17,10 +17,9 @@ test.describe('Application', () => {
     await page.waitForLoadState('networkidle')
 
     // Verify no critical errors occurred
-    const criticalErrors = pageErrors.filter(error =>
-      !error.includes('favicon') &&
-      !error.includes('404') &&
-      !error.includes('ResizeObserver')
+    const criticalErrors = pageErrors.filter(
+      (error) =>
+        !error.includes('favicon') && !error.includes('404') && !error.includes('ResizeObserver')
     )
     expect(criticalErrors).toEqual([])
   })
@@ -34,7 +33,7 @@ test.describe('Application', () => {
 
   test('should handle network errors gracefully', async ({ page }) => {
     // Block API calls to simulate network issues
-    await page.route('**/api/**', route => route.abort())
+    await page.route('**/api/**', (route) => route.abort())
 
     await page.goto('/')
 

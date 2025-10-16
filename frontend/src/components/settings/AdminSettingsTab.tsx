@@ -43,8 +43,8 @@ export function AdminSettingsTab() {
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              SMTP settings are currently configured via environment variables and require a container
-              restart to change. Runtime configuration will be added in a future update.
+              SMTP settings are currently configured via environment variables and require a
+              container restart to change. Runtime configuration will be added in a future update.
             </AlertDescription>
           </Alert>
 
@@ -56,7 +56,8 @@ export function AdminSettingsTab() {
                   <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium">SMTP Server</p>
                     <p className="text-sm text-muted-foreground">
-                      Configured via <code className="bg-muted px-1.5 py-0.5 rounded text-xs">SMTP_HOST</code> and{' '}
+                      Configured via{' '}
+                      <code className="bg-muted px-1.5 py-0.5 rounded text-xs">SMTP_HOST</code> and{' '}
                       <code className="bg-muted px-1.5 py-0.5 rounded text-xs">SMTP_PORT</code>
                     </p>
                   </div>
@@ -67,7 +68,8 @@ export function AdminSettingsTab() {
                   <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium">Authentication</p>
                     <p className="text-sm text-muted-foreground">
-                      Configured via <code className="bg-muted px-1.5 py-0.5 rounded text-xs">SMTP_USER</code> and{' '}
+                      Configured via{' '}
+                      <code className="bg-muted px-1.5 py-0.5 rounded text-xs">SMTP_USER</code> and{' '}
                       <code className="bg-muted px-1.5 py-0.5 rounded text-xs">SMTP_PASSWORD</code>
                     </p>
                   </div>
@@ -78,7 +80,8 @@ export function AdminSettingsTab() {
                   <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium">Security</p>
                     <p className="text-sm text-muted-foreground">
-                      TLS encryption configured via <code className="bg-muted px-1.5 py-0.5 rounded text-xs">SMTP_USE_TLS</code>
+                      TLS encryption configured via{' '}
+                      <code className="bg-muted px-1.5 py-0.5 rounded text-xs">SMTP_USE_TLS</code>
                     </p>
                   </div>
                 </div>
@@ -88,7 +91,8 @@ export function AdminSettingsTab() {
                   <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium">Sender Address</p>
                     <p className="text-sm text-muted-foreground">
-                      Configured via <code className="bg-muted px-1.5 py-0.5 rounded text-xs">SMTP_FROM</code>
+                      Configured via{' '}
+                      <code className="bg-muted px-1.5 py-0.5 rounded text-xs">SMTP_FROM</code>
                     </p>
                   </div>
                 </div>
@@ -118,8 +122,8 @@ export function AdminSettingsTab() {
               <div className="space-y-1">
                 <p className="text-sm font-medium">SMTP Not Configured</p>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  Email features are currently disabled. Configure SMTP environment variables and restart the
-                  container to enable email functionality.
+                  Email features are currently disabled. Configure SMTP environment variables and
+                  restart the container to enable email functionality.
                 </p>
               </div>
             </div>
@@ -146,16 +150,14 @@ export function AdminSettingsTab() {
             <Shield className="h-5 w-5" />
             System Settings
           </CardTitle>
-          <CardDescription>
-            Global system configuration and security settings
-          </CardDescription>
+          <CardDescription>Global system configuration and security settings</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              Registration and other system settings are managed via the Admin page. Additional runtime
-              configuration options will be added in future updates.
+              Registration and other system settings are managed via the Admin page. Additional
+              runtime configuration options will be added in future updates.
             </AlertDescription>
           </Alert>
 

@@ -76,8 +76,12 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
 
   // Filter out dismissed announcements and sort by priority
   const visibleAnnouncements = announcements
-    .filter(announcement => !dismissedIds.has(announcement.id))
-    .sort((a, b) => b.priority - a.priority || new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .filter((announcement) => !dismissedIds.has(announcement.id))
+    .sort(
+      (a, b) =>
+        b.priority - a.priority ||
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
 
   if (visibleAnnouncements.length === 0) {
     return null
@@ -92,12 +96,21 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
         const textColor = announcement.style.textColor || '#0c4a6e'
         const borderColor = announcement.style.borderColor || '#0ea5e9'
 
-        const fontSize = announcement.style.fontSize === 'small' ? 'text-sm' :
-                        announcement.style.fontSize === 'large' ? 'text-lg' : 'text-base'
+        const fontSize =
+          announcement.style.fontSize === 'small'
+            ? 'text-sm'
+            : announcement.style.fontSize === 'large'
+              ? 'text-lg'
+              : 'text-base'
 
-        const animationClass = announcement.style.animation === 'fade' ? 'animate-in fade-in duration-500' :
-                             announcement.style.animation === 'slide' ? 'animate-in slide-in-from-top-2 duration-500' :
-                             announcement.style.animation === 'pulse' ? 'animate-pulse' : ''
+        const animationClass =
+          announcement.style.animation === 'fade'
+            ? 'animate-in fade-in duration-500'
+            : announcement.style.animation === 'slide'
+              ? 'animate-in slide-in-from-top-2 duration-500'
+              : announcement.style.animation === 'pulse'
+                ? 'animate-pulse'
+                : ''
 
         return (
           <Card
@@ -111,10 +124,7 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
           >
             <div className="flex items-start gap-3 p-4">
               {Icon && (
-                <Icon
-                  className="h-5 w-5 flex-shrink-0 mt-0.5"
-                  style={{ color: borderColor }}
-                />
+                <Icon className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: borderColor }} />
               )}
 
               <div className="flex-1 min-w-0">
@@ -136,10 +146,7 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
                         </a>
                       ),
                       code: ({ children, ...props }) => (
-                        <code
-                          className="bg-black/10 px-1 py-0.5 rounded text-sm"
-                          {...props}
-                        >
+                        <code className="bg-black/10 px-1 py-0.5 rounded text-sm" {...props}>
                           {children}
                         </code>
                       ),

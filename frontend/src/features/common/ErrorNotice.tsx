@@ -29,10 +29,7 @@ const suggestionFor = (error: string | Error): string => {
 }
 
 export const ErrorNotice: FC<ErrorNoticeProps> = ({ error, onRetry, onDismiss, className }) => (
-  <div
-    className={cn('bg-red-900/50 border border-red-600 rounded-lg p-4', className)}
-    role="alert"
-  >
+  <div className={cn('bg-red-900/50 border border-red-600 rounded-lg p-4', className)} role="alert">
     <div className="flex items-start">
       <svg
         className="w-5 h-5 text-red-400 mr-3 mt-0.5"

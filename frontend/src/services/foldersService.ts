@@ -154,15 +154,15 @@ class FoldersService {
     const rootFolders: FolderTreeNode[] = []
 
     // Create folder nodes
-    folders.forEach(folder => {
+    folders.forEach((folder) => {
       folderMap.set(folder.id, {
         ...folder,
-        children: []
+        children: [],
       })
     })
 
     // Build hierarchy
-    folders.forEach(folder => {
+    folders.forEach((folder) => {
       const node = folderMap.get(folder.id)!
 
       if (folder.parent_id) {
@@ -181,7 +181,7 @@ class FoldersService {
     // Sort by position
     const sortByPosition = (nodes: FolderTreeNode[]) => {
       nodes.sort((a, b) => a.position - b.position)
-      nodes.forEach(node => sortByPosition(node.children))
+      nodes.forEach((node) => sortByPosition(node.children))
     }
 
     sortByPosition(rootFolders)
@@ -193,9 +193,9 @@ class FoldersService {
    */
   getDescendantIds(folderId: string, folders: Folder[]): string[] {
     const descendants: string[] = []
-    const children = folders.filter(f => f.parent_id === folderId)
+    const children = folders.filter((f) => f.parent_id === folderId)
 
-    children.forEach(child => {
+    children.forEach((child) => {
       descendants.push(child.id)
       descendants.push(...this.getDescendantIds(child.id, folders))
     })

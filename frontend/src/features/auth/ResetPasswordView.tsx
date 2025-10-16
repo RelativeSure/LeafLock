@@ -38,9 +38,8 @@ export const ResetPasswordView: FC<ResetPasswordViewProps> = ({ api, token, onRe
         const result = await api.verifyResetToken(token)
         setTokenValid(result.valid)
       } catch (err) {
-        const message = err instanceof Error && err.message
-          ? err.message
-          : 'Invalid or expired reset token'
+        const message =
+          err instanceof Error && err.message ? err.message : 'Invalid or expired reset token'
         setError(message)
         setTokenValid(false)
       } finally {
@@ -95,9 +94,10 @@ export const ResetPasswordView: FC<ResetPasswordViewProps> = ({ api, token, onRe
         onResetComplete?.()
       }, 3000)
     } catch (err) {
-      const message = err instanceof Error && err.message
-        ? err.message
-        : 'Failed to reset password. Please try again.'
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : 'Failed to reset password. Please try again.'
       setError(message)
     } finally {
       setLoading(false)
@@ -133,13 +133,11 @@ export const ResetPasswordView: FC<ResetPasswordViewProps> = ({ api, token, onRe
           <CardContent>
             <Alert variant="destructive">
               <AlertDescription>
-                {error || 'This password reset link is invalid or has expired. Please request a new one.'}
+                {error ||
+                  'This password reset link is invalid or has expired. Please request a new one.'}
               </AlertDescription>
             </Alert>
-            <Button
-              className="w-full mt-4"
-              onClick={onResetComplete}
-            >
+            <Button className="w-full mt-4" onClick={onResetComplete}>
               Back to Login
             </Button>
           </CardContent>
@@ -169,10 +167,7 @@ export const ResetPasswordView: FC<ResetPasswordViewProps> = ({ api, token, onRe
                 Your password has been reset successfully. Redirecting to login...
               </AlertDescription>
             </Alert>
-            <Button
-              className="w-full mt-4"
-              onClick={onResetComplete}
-            >
+            <Button className="w-full mt-4" onClick={onResetComplete}>
               Continue to Login
             </Button>
           </CardContent>
@@ -193,9 +188,7 @@ export const ResetPasswordView: FC<ResetPasswordViewProps> = ({ api, token, onRe
             </div>
           </div>
           <CardTitle className="text-xl text-center">Create a new password</CardTitle>
-          <CardDescription className="text-center">
-            Enter your new password below
-          </CardDescription>
+          <CardDescription className="text-center">Enter your new password below</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -224,7 +217,12 @@ export const ResetPasswordView: FC<ResetPasswordViewProps> = ({ api, token, onRe
                 </InputGroupButton>
               </InputGroup>
               <div className="space-y-2" id="password-strength">
-                <div className="flex space-x-1" role="progressbar" aria-valuenow={passwordStrength} aria-valuemax={5}>
+                <div
+                  className="flex space-x-1"
+                  role="progressbar"
+                  aria-valuenow={passwordStrength}
+                  aria-valuemax={5}
+                >
                   {[...Array(5)].map((_, index) => (
                     <div
                       key={index}
@@ -267,7 +265,11 @@ export const ResetPasswordView: FC<ResetPasswordViewProps> = ({ api, token, onRe
                   aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                   onClick={() => setShowConfirmPassword((prev) => !prev)}
                 >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </InputGroupButton>
               </InputGroup>
             </div>

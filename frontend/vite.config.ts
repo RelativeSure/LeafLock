@@ -1,33 +1,33 @@
-import path from 'path';
-import { fileURLToPath, URL } from 'node:url';
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import path from 'path'
+import { fileURLToPath, URL } from 'node:url'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 const normalizeHost = (host: string): string => {
   if (host.includes(':') && !host.startsWith('[')) {
-    return `[${host}]`;
+    return `[${host}]`
   }
-  return host;
-};
+  return host
+}
 
 // Allow overriding the dev proxy target via VITE_API_URL or dedicated dev variables
 const resolveDevProxyTarget = (): string => {
-  const envTarget = process.env.VITE_API_URL?.trim() || process.env.VITE_DEV_PROXY_TARGET?.trim();
+  const envTarget = process.env.VITE_API_URL?.trim() || process.env.VITE_DEV_PROXY_TARGET?.trim()
   if (envTarget && envTarget.length > 0) {
-    return envTarget.replace(/\/$/, '');
+    return envTarget.replace(/\/$/, '')
   }
 
-  const protocol = (process.env.VITE_DEV_BACKEND_PROTOCOL || 'http').trim();
-  const host = normalizeHost((process.env.VITE_DEV_BACKEND_HOST || 'localhost').trim());
-  const port = (process.env.VITE_DEV_BACKEND_PORT || '8080').trim();
+  const protocol = (process.env.VITE_DEV_BACKEND_PROTOCOL || 'http').trim()
+  const host = normalizeHost((process.env.VITE_DEV_BACKEND_HOST || 'localhost').trim())
+  const port = (process.env.VITE_DEV_BACKEND_PORT || '8080').trim()
 
-  return `${protocol}://${host}:${port}`;
-};
+  return `${protocol}://${host}:${port}`
+}
 
-const devServerHost = process.env.VITE_DEV_HOST?.trim() || '::';
-const devServerPort = Number(process.env.VITE_DEV_PORT || 3000);
-const devProxyTarget = resolveDevProxyTarget();
+const devServerHost = process.env.VITE_DEV_HOST?.trim() || '::'
+const devServerPort = Number(process.env.VITE_DEV_PORT || 3000)
+const devProxyTarget = resolveDevProxyTarget()
 
 export default defineConfig({
   plugins: [
@@ -122,4 +122,4 @@ export default defineConfig({
     setupFiles: ['./src/test-setup.ts'],
     globals: true,
   },
-});
+})

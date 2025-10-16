@@ -35,9 +35,8 @@ export function MfaBackupCodes({ codes, onAcknowledge }: MfaBackupCodesProps) {
       <Alert variant="destructive">
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription className="text-sm">
-          <strong>Important:</strong> Save these backup codes securely. They
-          won't be shown again and can be used to access your account if you
-          lose your authentication device.
+          <strong>Important:</strong> Save these backup codes securely. They won't be shown again
+          and can be used to access your account if you lose your authentication device.
         </AlertDescription>
       </Alert>
 
@@ -53,9 +52,7 @@ export function MfaBackupCodes({ codes, onAcknowledge }: MfaBackupCodesProps) {
                 className="px-3 py-2 bg-background rounded border flex items-center justify-between"
               >
                 <span>{code}</span>
-                <span className="text-xs text-muted-foreground ml-2">
-                  #{index + 1}
-                </span>
+                <span className="text-xs text-muted-foreground ml-2">#{index + 1}</span>
               </div>
             ))}
           </div>
@@ -63,12 +60,7 @@ export function MfaBackupCodes({ codes, onAcknowledge }: MfaBackupCodesProps) {
       </Card>
 
       <div className="flex flex-col sm:flex-row gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          className="flex-1"
-          onClick={copyAll}
-        >
+        <Button type="button" variant="outline" className="flex-1" onClick={copyAll}>
           {copied ? (
             <>
               <Check className="mr-2 h-4 w-4 text-green-500" />
@@ -81,12 +73,7 @@ export function MfaBackupCodes({ codes, onAcknowledge }: MfaBackupCodesProps) {
             </>
           )}
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="flex-1"
-          onClick={downloadCodes}
-        >
+        <Button type="button" variant="outline" className="flex-1" onClick={downloadCodes}>
           <Download className="mr-2 h-4 w-4" />
           Download as Text File
         </Button>
@@ -108,9 +95,7 @@ export function MfaBackupCodes({ codes, onAcknowledge }: MfaBackupCodesProps) {
 
       {onAcknowledge && (
         <div className="flex justify-end">
-          <Button onClick={onAcknowledge}>
-            I've Saved My Backup Codes
-          </Button>
+          <Button onClick={onAcknowledge}>I've Saved My Backup Codes</Button>
         </div>
       )}
     </div>

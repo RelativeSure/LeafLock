@@ -92,7 +92,10 @@ export const LeafLockApp: React.FC = () => {
 
       const storedSalt = localStorage.getItem('user_salt')
       if (!storedSalt) {
-        throw new Error('No stored salt found - please log in again')
+        console.log('🚨 No stored salt found - redirecting to login')
+        // Clear session and redirect to login
+        handleLogout()
+        throw new Error('Session expired. Please log in again.')
       }
 
       try {
@@ -106,21 +109,17 @@ export const LeafLockApp: React.FC = () => {
         await loadNotes()
       } catch (error) {
         console.error('💥 Failed to unlock with provided password:', error)
-        throw (error instanceof Error ? error : new Error('Failed to unlock notes'))
+        throw error instanceof Error ? error : new Error('Failed to unlock notes')
       }
     },
-    [loadNotes]
+    [loadNotes, handleLogout]
   )
-
 
   const handleTemplateSelect = useCallback(
     async (template: Template) => {
       try {
-        const response = await api.request(`/templates/${template.id}/use`, {
-          method: 'POST',
-          body: JSON.stringify({
-            title: `${template.name} - ${new Date().toLocaleDateString()}`,
-          }),
+        const response = await api.useTemplate(template.id, {
+          title: `${template.name} - ${new Date().toLocaleDateString()}`,
         })
 
         console.log('✅ Note created from template:', response)
@@ -262,8 +261,15 @@ export const LeafLockApp: React.FC = () => {
   }, [loadNotes])
 
   useEffect(() => {
-    if (!initializing && encryptionStatus === 'locked' && isAuthenticated && currentView !== 'unlock') {
-      console.log('🚨 Security check: Locked while authenticated outside unlock view - forcing logout')
+    if (
+      !initializing &&
+      encryptionStatus === 'locked' &&
+      isAuthenticated &&
+      currentView !== 'unlock'
+    ) {
+      console.log(
+        '🚨 Security check: Locked while authenticated outside unlock view - forcing logout'
+      )
       setIsAuthenticated(false)
       setCurrentView('login')
     }
@@ -383,12 +389,7 @@ export const LeafLockApp: React.FC = () => {
   }
 
   if (showForgotPassword) {
-    return (
-      <ForgotPasswordView
-        api={api}
-        onBackToLogin={() => setShowForgotPassword(false)}
-      />
-    )
+    return <ForgotPasswordView api={api} onBackToLogin={() => setShowForgotPassword(false)} />
   }
 
   return (

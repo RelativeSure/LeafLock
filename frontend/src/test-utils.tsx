@@ -1,7 +1,13 @@
 // Test utilities for React components
-import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import type { ReactElement, ReactNode } from 'react'
+import { render, screen, fireEvent, waitFor, type RenderOptions } from '@testing-library/react'
 import { vi } from 'vitest'
+import type { Note } from '@/features/app/types'
+
+declare global {
+  // Some tests rely on toggling registration availability at runtime
+  var __LEAFLOCK_REGISTRATION__: boolean
+}
 
 // Mock libsodium-wrappers
 const sodiumMockBase = {
@@ -28,41 +34,70 @@ export const mockSodium = {
 }
 
 // Mock fetch for API calls
-export const mockFetch = vi.fn()
-global.fetch = mockFetch
+export const mockFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<any> = vi.fn()
+global.fetch = mockFetch as unknown as typeof fetch
 
 // Mock localStorage
-export const mockLocalStorage = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
+class LocalStorageMock implements Storage {
+  private store = new Map<string, string>()
+
+  clear = vi.fn(() => {
+    this.store.clear()
+  })
+
+  getItem = vi.fn((key: string): string | null => this.store.get(key) ?? null)
+
+  key = vi.fn((index: number): string | null => Array.from(this.store.keys())[index] ?? null)
+
+  removeItem = vi.fn((key: string): void => {
+    this.store.delete(key)
+  })
+
+  setItem = vi.fn((key: string, value: string): void => {
+    this.store.set(key, value)
+  })
+
+  get length(): number {
+    return this.store.size
+  }
 }
+
+export const mockLocalStorage = new LocalStorageMock()
 global.localStorage = mockLocalStorage
 
 // Mock crypto.subtle for password derivation
+const importKeyMock = vi.fn(async () => 'mock-key-material')
+const deriveBitsMock = vi.fn(async () => new ArrayBuffer(32))
+
 export const mockCryptoSubtle = {
-  importKey: vi.fn().mockResolvedValue('mock-key-material'),
-  deriveBits: vi.fn().mockResolvedValue(new ArrayBuffer(32)),
+  importKey: importKeyMock,
+  deriveBits: deriveBitsMock,
 }
-Object.defineProperty(global, 'crypto', {
+
+Object.defineProperty(globalThis, 'crypto', {
   value: {
-    subtle: mockCryptoSubtle,
-  },
+    subtle: mockCryptoSubtle as unknown as SubtleCrypto,
+  } as Crypto,
   writable: true,
 })
 
 // Default frontend configuration overrides for tests
 global.__LEAFLOCK_REGISTRATION__ = true
 
+type MockUser = {
+  id: string
+  email: string
+  [key: string]: unknown
+}
+
 // Test data factories
-export const createMockUser = (overrides = {}) => ({
+export const createMockUser = (overrides: Partial<MockUser> = {}): MockUser => ({
   id: 'test-user-id',
   email: 'test@example.com',
   ...overrides,
 })
 
-export const createMockNote = (overrides = {}) => ({
+export const createMockNote = (overrides: Partial<Note> = {}): Note => ({
   id: 'test-note-id',
   title: 'Test Note',
   content: 'Test content',
@@ -71,51 +106,60 @@ export const createMockNote = (overrides = {}) => ({
   ...overrides,
 })
 
-export const createMockEncryptedNote = (overrides = {}) => ({
+export const createMockEncryptedNote = (overrides: Partial<Note> = {}): Note => ({
   id: 'test-note-id',
   title_encrypted: 'dGVzdCB0aXRsZQ==',
   content_encrypted: 'dGVzdCBjb250ZW50',
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
+  title: 'Encrypted Note',
+  content: 'Encrypted content',
   ...overrides,
 })
 
 // API response mocks
-export const mockApiResponse = (data, status = 200) => {
-  const response = {
+export const mockApiResponse = <T,>(data: T, status = 200) => {
+  const json = vi.fn(async () => data) as unknown as () => Promise<T>
+  return {
     ok: status >= 200 && status < 300,
     status,
-    json: vi.fn().mockResolvedValue(data),
+    json,
   }
-  return response
 }
 
 export const mockApiError = (status = 500, message = 'Server Error') => {
-  const response = {
+  const json = vi.fn(async () => ({ error: message })) as unknown as () => Promise<{
+    error: string
+  }>
+  return {
     ok: false,
     status,
-    json: vi.fn().mockResolvedValue({ error: message }),
+    json,
   }
-  return response
 }
 
 // Custom render function with common providers
-export const renderWithProviders = (ui, options = {}) => {
-  const Wrapper = ({ children }) => {
-    return <div data-testid="test-wrapper">{children}</div>
-  }
-
+export const renderWithProviders = (ui: ReactElement, options: RenderOptions = {}) => {
+  const Wrapper = ({ children }: { children: ReactNode }) => (
+    <div data-testid="test-wrapper">{children}</div>
+  )
   return render(ui, { wrapper: Wrapper, ...options })
 }
 
 // Helper functions for common interactions
-export const typeIntoField = async (fieldName, value) => {
-  const field = screen.getByLabelText(fieldName) || screen.getByPlaceholderText(fieldName)
+export const typeIntoField = async (fieldName: string, value: string) => {
+  const labeledField = screen.queryByLabelText(fieldName) as HTMLInputElement | null
+  const placeholderField = screen.queryByPlaceholderText(fieldName) as HTMLInputElement | null
+  const field = labeledField ?? placeholderField
+  if (!field) {
+    throw new Error(`Unable to locate input with label or placeholder "${fieldName}"`)
+  }
+
   fireEvent.change(field, { target: { value } })
   await waitFor(() => expect(field.value).toBe(value))
 }
 
-export const clickButton = async (buttonText) => {
+export const clickButton = async (buttonText: string) => {
   const button = screen.getByRole('button', { name: new RegExp(buttonText, 'i') })
   fireEvent.click(button)
 }
@@ -126,7 +170,7 @@ export const waitForLoading = async () => {
   })
 }
 
-export const waitForError = async (errorText) => {
+export const waitForError = async (errorText: string) => {
   await waitFor(() => {
     expect(screen.getByText(new RegExp(errorText, 'i'))).toBeInTheDocument()
   })
@@ -134,38 +178,49 @@ export const waitForError = async (errorText) => {
 
 // Mock CryptoService for consistent testing
 export class MockCryptoService {
+  public masterKey: Uint8Array | null
+  public derivedKey: Uint8Array | null
+  public sodiumReady: boolean
+
   constructor() {
     this.masterKey = new Uint8Array(32).fill(1)
+    this.derivedKey = null
     this.sodiumReady = true
   }
 
-  async initSodium() {
+  async initSodium(): Promise<void> {
     this.sodiumReady = true
   }
 
-  async deriveKeyFromPassword(_password, _salt) {
+  async deriveKeyFromPassword(_password: string, _salt: Uint8Array): Promise<Uint8Array> {
     return new Uint8Array(32).fill(1)
   }
 
-  async encryptData(plaintext) {
+  async encryptData(plaintext: string): Promise<string> {
     return btoa(plaintext) // Simple base64 encoding for tests
   }
 
-  async decryptData(encryptedData) {
+  async decryptData(encryptedData: string): Promise<string> {
     return atob(encryptedData) // Simple base64 decoding for tests
   }
 
-  async generateSalt() {
+  async generateSalt(): Promise<Uint8Array> {
     return new Uint8Array(32).fill(1)
   }
 
-  async setMasterKey(key) {
+  async setMasterKey(key: Uint8Array): Promise<void> {
     this.masterKey = key
   }
 }
 
+type MockApiResponse = Record<string, unknown> & { error?: string }
+
 // Mock SecureAPI for consistent testing
 export class MockSecureAPI {
+  public token: string | null
+  public readonly responses: Map<string, MockApiResponse>
+  public readonly mockCrypto: MockCryptoService
+
   constructor() {
     this.token = null
     this.responses = new Map()
@@ -173,11 +228,11 @@ export class MockSecureAPI {
   }
 
   // Set mock responses for specific endpoints
-  setMockResponse(endpoint, response) {
+  setMockResponse(endpoint: string, response: MockApiResponse): void {
     this.responses.set(endpoint, response)
   }
 
-  async request(endpoint, _options = {}) {
+  async request(endpoint: string, _options: RequestInit = {}): Promise<MockApiResponse> {
     const mockResponse = this.responses.get(endpoint)
     if (mockResponse) {
       if (mockResponse.error) {
@@ -190,15 +245,15 @@ export class MockSecureAPI {
     return { success: true }
   }
 
-  setToken(token) {
+  setToken(token: string): void {
     this.token = token
   }
 
-  clearToken() {
+  clearToken(): void {
     this.token = null
   }
 
-  async register(_email, _password) {
+  async register(_email: string, _password: string): Promise<MockApiResponse> {
     const response = this.responses.get('/auth/register') || {
       token: 'mock-token',
       user_id: 'test-user-id',
@@ -206,13 +261,13 @@ export class MockSecureAPI {
     }
 
     if (response.token) {
-      this.setToken(response.token)
+      this.setToken(response.token as string)
     }
 
     return response
   }
 
-  async login(_email, _password, _mfaCode) {
+  async login(_email: string, _password: string, _mfaCode?: string): Promise<MockApiResponse> {
     const response = this.responses.get('/auth/login') || {
       token: 'mock-token',
       session: 'mock-session',
@@ -221,13 +276,13 @@ export class MockSecureAPI {
     }
 
     if (response.token) {
-      this.setToken(response.token)
+      this.setToken(response.token as string)
     }
 
     return response
   }
 
-  async createNote(_title, _content) {
+  async createNote(_title: string, _content: string): Promise<MockApiResponse> {
     return (
       this.responses.get('/notes') || {
         id: 'test-note-id',
@@ -236,16 +291,19 @@ export class MockSecureAPI {
     )
   }
 
-  async getNotes() {
-    const mockNotes = this.responses.get('/notes/list') || [
+  async getNotes(): Promise<Note[]> {
+    const mockNotes = this.responses.get('/notes/list')
+    if (Array.isArray(mockNotes)) {
+      return mockNotes as Note[]
+    }
+
+    return [
       createMockNote({ id: '1', title: 'Note 1' }),
       createMockNote({ id: '2', title: 'Note 2' }),
     ]
-
-    return mockNotes
   }
 
-  async updateNote(noteId, _title, _content) {
+  async updateNote(noteId: string, _title: string, _content: string): Promise<MockApiResponse> {
     return (
       this.responses.get(`/notes/${noteId}`) || {
         message: 'Note updated successfully',
@@ -253,7 +311,7 @@ export class MockSecureAPI {
     )
   }
 
-  async deleteNote(noteId) {
+  async deleteNote(noteId: string): Promise<MockApiResponse> {
     return (
       this.responses.get(`/notes/${noteId}/delete`) || {
         message: 'Note deleted successfully',
@@ -263,36 +321,39 @@ export class MockSecureAPI {
 }
 
 // Performance testing utilities
-export const measureRenderTime = (component) => {
+export const measureRenderTime = (component: ReactElement): number => {
   const start = performance.now()
   render(component)
   const end = performance.now()
   return end - start
 }
 
-export const measureEncryptionTime = async (cryptoService, data) => {
+export const measureEncryptionTime = async (
+  cryptoSvc: { encryptData: (data: string) => Promise<unknown> },
+  data: string
+): Promise<number> => {
   const start = performance.now()
-  await cryptoService.encryptData(data)
+  await cryptoSvc.encryptData(data)
   const end = performance.now()
   return end - start
 }
 
 // Accessibility testing helpers
-export const checkA11y = async () => {
+export const checkA11y = async (): Promise<void> => {
   // Check for basic accessibility attributes
-  const buttons = screen.getAllByRole('button')
+  const buttons = screen.getAllByRole('button') as HTMLElement[]
   buttons.forEach((button) => {
     expect(button).toHaveAttribute('type')
   })
 
-  const inputs = screen.getAllByRole('textbox')
+  const inputs = screen.getAllByRole('textbox') as HTMLElement[]
   inputs.forEach((input) => {
     expect(input).toHaveAttribute('aria-label')
   })
 }
 
 // Security testing utilities
-export const checkForXSS = (component, _userInput) => {
+export const checkForXSS = (component: ReactElement, _userInput?: unknown): void => {
   const scriptProtocol = ['java', 'script:'].join('')
   const maliciousInputs = [
     '<script>alert("xss")</script>',
@@ -311,9 +372,11 @@ export const checkForXSS = (component, _userInput) => {
   })
 }
 
-export const checkForCSRF = (apiCall) => {
+export const checkForCSRF = (
+  apiCall: (fn: (input: RequestInfo | URL, init?: RequestInit) => unknown) => void
+): void => {
   // Verify that API calls include proper headers
-  const mockCall = vi.fn()
+  const mockCall: (input: RequestInfo | URL, init?: RequestInit) => unknown = vi.fn()
   apiCall(mockCall)
 
   expect(mockCall).toHaveBeenCalledWith(

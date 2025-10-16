@@ -14,7 +14,7 @@ export default [
       '*.min.js',
       'public/vendor',
       '.vite',
-      'vite.config.js.timestamp*'
+      'vite.config.js.timestamp*',
     ],
   },
   {
@@ -72,9 +72,9 @@ export default [
       'template-curly-spacing': 'off',
       'arrow-spacing': 'off',
       'comma-dangle': 'off',
-      'quotes': 'off',
-      'semi': 'off',
-      'indent': 'off',
+      quotes: 'off',
+      semi: 'off',
+      indent: 'off',
       'linebreak-style': 'off',
       'eol-last': 'off',
       'no-trailing-spaces': 'off',
@@ -89,7 +89,7 @@ export default [
       'no-script-url': 'error',
 
       // Code quality (keep as warnings)
-      'complexity': ['warn', 30],
+      complexity: ['warn', 30],
       'max-depth': ['warn', 6],
       'max-lines': 'off',
       'max-params': ['warn', 8],
@@ -106,7 +106,7 @@ export default [
   {
     files: ['**/*.d.ts'],
     rules: {
-      'semi': 'off',
+      semi: 'off',
       'eol-last': 'off',
     },
   },
@@ -140,7 +140,7 @@ export default [
       '@typescript-eslint/no-unused-vars': 'off',
       'no-console': 'off',
       'no-undef': 'off',
-      'semi': 'off',
+      semi: 'off',
       'sort-imports': 'off',
       'no-trailing-spaces': 'off',
       'eol-last': 'off',

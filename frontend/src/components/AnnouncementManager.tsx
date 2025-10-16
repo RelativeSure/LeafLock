@@ -11,7 +11,7 @@ import {
   Palette,
   Calendar,
   Users,
-  Globe
+  Globe,
 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -235,7 +235,9 @@ const AnnouncementManager: React.FC<AnnouncementManagerProps> = ({ api }) => {
         )}
 
         <div className="flex justify-between items-center">
-          <h3 className="text-sm font-medium">Active Announcements ({announcements.filter(a => a.active).length})</h3>
+          <h3 className="text-sm font-medium">
+            Active Announcements ({announcements.filter((a) => a.active).length})
+          </h3>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => openDialog()}>
@@ -315,7 +317,9 @@ const AnnouncementManager: React.FC<AnnouncementManagerProps> = ({ api }) => {
                         min="0"
                         max="10"
                         value={formData.priority}
-                        onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) || 0 })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, priority: parseInt(e.target.value) || 0 })
+                        }
                       />
                     </div>
                   </div>
@@ -334,10 +338,12 @@ const AnnouncementManager: React.FC<AnnouncementManagerProps> = ({ api }) => {
                           type="color"
                           className="w-full h-8 rounded border"
                           value={formData.style.backgroundColor}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            style: { ...formData.style, backgroundColor: e.target.value }
-                          })}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              style: { ...formData.style, backgroundColor: e.target.value },
+                            })
+                          }
                         />
                       </div>
                       <div className="space-y-1">
@@ -346,10 +352,12 @@ const AnnouncementManager: React.FC<AnnouncementManagerProps> = ({ api }) => {
                           type="color"
                           className="w-full h-8 rounded border"
                           value={formData.style.textColor}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            style: { ...formData.style, textColor: e.target.value }
-                          })}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              style: { ...formData.style, textColor: e.target.value },
+                            })
+                          }
                         />
                       </div>
                       <div className="space-y-1">
@@ -358,10 +366,12 @@ const AnnouncementManager: React.FC<AnnouncementManagerProps> = ({ api }) => {
                           type="color"
                           className="w-full h-8 rounded border"
                           value={formData.style.borderColor}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            style: { ...formData.style, borderColor: e.target.value }
-                          })}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              style: { ...formData.style, borderColor: e.target.value },
+                            })
+                          }
                         />
                       </div>
                     </div>
@@ -392,7 +402,10 @@ const AnnouncementManager: React.FC<AnnouncementManagerProps> = ({ api }) => {
                         <Select
                           value={formData.style.fontSize}
                           onValueChange={(value: 'small' | 'normal' | 'large') =>
-                            setFormData({ ...formData, style: { ...formData.style, fontSize: value } })
+                            setFormData({
+                              ...formData,
+                              style: { ...formData.style, fontSize: value },
+                            })
                           }
                         >
                           <SelectTrigger>
@@ -443,10 +456,7 @@ const AnnouncementManager: React.FC<AnnouncementManagerProps> = ({ api }) => {
                   <Label>Preview</Label>
                   <div className="border rounded-lg p-4 min-h-[200px] bg-muted/30">
                     {previewData ? (
-                      <AnnouncementBanner
-                        announcements={[previewData]}
-                        className="mb-0"
-                      />
+                      <AnnouncementBanner announcements={[previewData]} className="mb-0" />
                     ) : (
                       <div className="text-center text-muted-foreground py-8">
                         Enter title and content to see preview
@@ -519,7 +529,11 @@ const AnnouncementManager: React.FC<AnnouncementManagerProps> = ({ api }) => {
                       onClick={() => toggleActive(announcement.id, announcement.active || false)}
                       disabled={loading}
                     >
-                      {announcement.active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {announcement.active ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </Button>
                     <Button
                       variant="ghost"
