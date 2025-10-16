@@ -1,5 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const port = process.env.PORT ?? '3000'
+const host = process.env.HOST ?? '127.0.0.1'
+const baseURL = process.env.BASE_URL ?? `http://${host}:${port}`
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -11,7 +15,7 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'list',
 
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -24,11 +28,10 @@ export default defineConfig({
     },
   ],
 
-  webServer: process.env.CI
-    ? undefined
-    : {
-        command: 'pnpm run dev',
-        url: 'http://localhost:3000',
-        reuseExistingServer: !process.env.CI,
-      },
+  webServer: {
+    command: `pnpm run dev -- --host ${host} --port ${port}`,
+    url: baseURL,
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+  },
 })
