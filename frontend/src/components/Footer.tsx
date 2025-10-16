@@ -9,9 +9,7 @@ const Footer: React.FC<FooterProps> = ({ className = '' }) => {
     <footer className={`border-t border-border/40 bg-background py-3 px-4 ${className}`}>
       <div className="container mx-auto">
         <div className="flex flex-wrap items-center justify-center gap-3 text-xs">
-          <span className="text-muted-foreground/70">
-            © {new Date().getFullYear()} LeafLock
-          </span>
+          <span className="text-muted-foreground/70">© {new Date().getFullYear()} LeafLock</span>
           <span className="text-muted-foreground/50">•</span>
           <a
             href="https://docs.leaflock.app"

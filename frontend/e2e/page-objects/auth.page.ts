@@ -55,10 +55,13 @@ export class AuthPage {
 
   async expectToBeRedirectedToNotes() {
     // Wait for the notes view to appear (app uses state-based routing, not URL routing)
-    await expect(this.page.getByRole('button', { name: 'New Note' })).toBeVisible({ timeout: 10000 })
+    await expect(this.page.getByRole('button', { name: 'New Note' })).toBeVisible({
+      timeout: 10000,
+    })
     // Additional verification that we're in the notes interface
     await expect(
-      this.page.locator('[data-testid="notes-list"]')
+      this.page
+        .locator('[data-testid="notes-list"]')
         .or(this.page.getByText('No notes yet'))
         .or(this.page.getByText('No notes found'))
     ).toBeVisible()

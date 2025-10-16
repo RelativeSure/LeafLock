@@ -42,7 +42,7 @@ class OfflineService {
     if ('serviceWorker' in navigator) {
       try {
         this.swRegistration = await navigator.serviceWorker.register('/sw.js', {
-          scope: '/'
+          scope: '/',
         })
 
         console.log('✅ Service Worker registered successfully')
@@ -62,7 +62,6 @@ class OfflineService {
             })
           }
         })
-
       } catch (error) {
         console.error('❌ Service Worker registration failed:', error)
       }
@@ -142,7 +141,7 @@ class OfflineService {
         if (!db.objectStoreNames.contains('requests')) {
           const requestsStore = db.createObjectStore('requests', {
             keyPath: 'id',
-            autoIncrement: true
+            autoIncrement: true,
           })
           requestsStore.createIndex('timestamp', 'timestamp')
         }
@@ -174,7 +173,7 @@ class OfflineService {
       if (this.swRegistration?.active) {
         this.swRegistration.active.postMessage({
           type: 'CACHE_NOTES',
-          data: notes
+          data: notes,
         })
       }
     } catch (error) {
@@ -224,7 +223,7 @@ class OfflineService {
   async getNotesWithOfflineChanges(): Promise<OfflineNote[]> {
     try {
       const notes = await this.getCachedNotes()
-      return notes.filter(note => note.offline_changes)
+      return notes.filter((note) => note.offline_changes)
     } catch (error) {
       console.error('Failed to get notes with offline changes:', error)
       return []
@@ -262,7 +261,7 @@ class OfflineService {
         method: options.method || 'GET',
         headers: this.headersToObject(options.headers),
         body: options.body as string,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       }
 
       const db = await this.openDB()
@@ -289,7 +288,7 @@ class OfflineService {
       // Trigger sync via service worker
       if (this.swRegistration?.active) {
         this.swRegistration.active.postMessage({
-          type: 'SYNC_OFFLINE_REQUESTS'
+          type: 'SYNC_OFFLINE_REQUESTS',
         })
       }
 
@@ -313,7 +312,7 @@ class OfflineService {
           const token = getStoredAuthToken()
           const headers: Record<string, string> = {
             'Content-Type': 'application/json',
-            'X-CSRF-Token': localStorage.getItem('csrf_token') || ''
+            'X-CSRF-Token': localStorage.getItem('csrf_token') || '',
           }
           if (token) {
             headers['Authorization'] = `Bearer ${token}`
@@ -324,8 +323,8 @@ class OfflineService {
             headers,
             body: JSON.stringify({
               title_encrypted: note.title,
-              content_encrypted: note.content
-            })
+              content_encrypted: note.content,
+            }),
           })
 
           if (response.ok) {
@@ -360,9 +359,11 @@ class OfflineService {
    * Check if app is installed
    */
   isInstalled(): boolean {
-    return window.matchMedia('(display-mode: standalone)').matches ||
-           (window.navigator as any).standalone ||
-           document.referrer.includes('android-app://')
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone ||
+      document.referrer.includes('android-app://')
+    )
   }
 
   /**

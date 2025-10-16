@@ -71,7 +71,7 @@ describe('ShareLinksStore', () => {
           method: 'POST',
           headers: expect.objectContaining({
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer mock-token',
+            Authorization: 'Bearer mock-token',
           }),
         })
       )
@@ -123,9 +123,9 @@ describe('ShareLinksStore', () => {
 
       const store = useShareLinksStore.getState()
 
-      await expect(
-        store.createShareLink('note-456', { permission: 'read' })
-      ).rejects.toThrow('Failed to create link')
+      await expect(store.createShareLink('note-456', { permission: 'read' })).rejects.toThrow(
+        'Failed to create link'
+      )
 
       const state = useShareLinksStore.getState()
       expect(state.error).toBe('Failed to create link')
@@ -248,7 +248,6 @@ describe('ShareLinksStore', () => {
         shareLinks: initialLinks,
         currentNoteLinks: initialLinks,
       })
-
       ;(global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ message: 'Link revoked' }),
@@ -271,9 +270,7 @@ describe('ShareLinksStore', () => {
 
       const store = useShareLinksStore.getState()
 
-      await expect(store.revokeShareLink('invalid-token')).rejects.toThrow(
-        'Link not found'
-      )
+      await expect(store.revokeShareLink('invalid-token')).rejects.toThrow('Link not found')
     })
   })
 
@@ -311,15 +308,13 @@ describe('ShareLinksStore', () => {
     })
 
     it('should handle clipboard errors', async () => {
-      ;(navigator.clipboard.writeText as any).mockRejectedValueOnce(
-        new Error('Clipboard error')
-      )
+      ;(navigator.clipboard.writeText as any).mockRejectedValueOnce(new Error('Clipboard error'))
 
       const store = useShareLinksStore.getState()
 
-      await expect(
-        store.copyLinkToClipboard('https://example.com/share/test')
-      ).rejects.toThrow('Failed to copy link to clipboard')
+      await expect(store.copyLinkToClipboard('https://example.com/share/test')).rejects.toThrow(
+        'Failed to copy link to clipboard'
+      )
     })
   })
 
@@ -390,9 +385,7 @@ describe('ShareLinksStore', () => {
 
       const store = useShareLinksStore.getState()
 
-      await expect(store.getSharedNote('expired-token')).rejects.toThrow(
-        'Link expired'
-      )
+      await expect(store.getSharedNote('expired-token')).rejects.toThrow('Link expired')
     })
   })
 
@@ -429,7 +422,6 @@ describe('ShareLinksStore', () => {
     it('should clear error on successful operation', async () => {
       // Set initial error state
       useShareLinksStore.setState({ error: 'Previous error' })
-
       ;(global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ share_links: [] }),
@@ -449,9 +441,9 @@ describe('ShareLinksStore', () => {
 
       const store = useShareLinksStore.getState()
 
-      await expect(
-        store.createShareLink('note-123', { permission: 'read' })
-      ).rejects.toThrow('No authentication token')
+      await expect(store.createShareLink('note-123', { permission: 'read' })).rejects.toThrow(
+        'No authentication token'
+      )
     })
 
     it('should include auth token in all requests', async () => {

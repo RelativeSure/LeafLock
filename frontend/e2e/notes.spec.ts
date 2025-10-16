@@ -111,7 +111,11 @@ test.describe('Notes Management', () => {
     await notesPage.expectNoteInList('This is a very long note')
   })
 
-  test('should maintain encryption for saved notes', async ({ notesPage, authenticatedUser, page }) => {
+  test('should maintain encryption for saved notes', async ({
+    notesPage,
+    authenticatedUser,
+    page,
+  }) => {
     await notesPage.goto()
 
     const secretContent = 'This is super secret information that should be encrypted'

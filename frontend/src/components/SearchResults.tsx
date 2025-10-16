@@ -25,9 +25,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       <div className={`text-center py-8 text-gray-500 ${className}`}>
         <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
         <p className="text-lg font-medium mb-2">No notes found</p>
-        <p className="text-sm">
-          Try searching for different keywords or check your spelling.
-        </p>
+        <p className="text-sm">Try searching for different keywords or check your spelling.</p>
       </div>
     )
   }

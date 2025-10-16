@@ -13,7 +13,7 @@ window.addEventListener('error', (event) => {
     filename: event.filename,
     lineno: event.lineno,
     colno: event.colno,
-    stack: event.error?.stack
+    stack: event.error?.stack,
   })
 })
 
@@ -24,7 +24,7 @@ window.addEventListener('unhandledrejection', (event) => {
 console.log('LeafLock initializing...', {
   env: import.meta.env.MODE,
   apiUrl: import.meta.env.VITE_API_URL,
-  origin: window.location.origin
+  origin: window.location.origin,
 })
 
 try {

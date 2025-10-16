@@ -23,10 +23,21 @@ class ErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ fontFamily: 'system-ui', padding: '2rem', maxWidth: '600px', margin: '0 auto' }}>
+        <div
+          style={{ fontFamily: 'system-ui', padding: '2rem', maxWidth: '600px', margin: '0 auto' }}
+        >
           <h1 style={{ color: '#dc2626' }}>LeafLock Error</h1>
-          <p><strong>Error:</strong> {this.state.error?.message}</p>
-          <pre style={{ background: '#f3f4f6', padding: '1rem', borderRadius: '0.5rem', overflowX: 'auto' }}>
+          <p>
+            <strong>Error:</strong> {this.state.error?.message}
+          </p>
+          <pre
+            style={{
+              background: '#f3f4f6',
+              padding: '1rem',
+              borderRadius: '0.5rem',
+              overflowX: 'auto',
+            }}
+          >
             {this.state.error?.stack}
           </pre>
           <button

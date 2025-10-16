@@ -16,7 +16,12 @@ const steps: Array<{ title: string; content: string; icon: ReactNode }> = [
     content:
       "Your notes are protected with end-to-end encryption. Only you can read your content, even we can't see it.",
     icon: (
-      <svg className="w-12 h-12 text-blue-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg
+        className="w-12 h-12 text-blue-500 mb-4"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6l4 2" />
         <path
           strokeLinecap="round"
@@ -32,7 +37,12 @@ const steps: Array<{ title: string; content: string; icon: ReactNode }> = [
     content:
       'We use end-to-end encryption with strong cryptography. Your master key never leaves your device.',
     icon: (
-      <svg className="w-12 h-12 text-green-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg
+        className="w-12 h-12 text-green-500 mb-4"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -40,7 +50,12 @@ const steps: Array<{ title: string; content: string; icon: ReactNode }> = [
           d="M12 11c0-1.105-.672-2-1.5-2S9 9.895 9 11v2h6v-2c0-1.105-.672-2-1.5-2S12 9.895 12 11z"
         />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 11h14v9H5z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11V7a5 5 0 0110 0v4" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M7 11V7a5 5 0 0110 0v4"
+        />
       </svg>
     ),
   },
@@ -49,15 +64,36 @@ const steps: Array<{ title: string; content: string; icon: ReactNode }> = [
     content:
       'Share notes securely with team members. You control permissions and access for every shared note.',
     icon: (
-      <svg className="w-12 h-12 text-purple-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 22v-2a4 4 0 014-4h4a4 4 0 014 4v2" />
+      <svg
+        className="w-12 h-12 text-purple-500 mb-4"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z"
+        />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M6 22v-2a4 4 0 014-4h4a4 4 0 014 4v2"
+        />
       </svg>
     ),
   },
 ]
 
-export const OnboardingOverlay: FC<OnboardingOverlayProps> = ({ step, onNext, onPrev, onSkip, onComplete }) => {
+export const OnboardingOverlay: FC<OnboardingOverlayProps> = ({
+  step,
+  onNext,
+  onPrev,
+  onSkip,
+  onComplete,
+}) => {
   const currentStep = Math.min(step, steps.length - 1)
   const isLast = currentStep === steps.length - 1
   const { title, content, icon } = steps[currentStep]

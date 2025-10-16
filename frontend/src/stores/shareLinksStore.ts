@@ -71,7 +71,7 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(config),
       })
@@ -91,7 +91,7 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
     } catch (error) {
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to create share link'
+        error: error instanceof Error ? error.message : 'Failed to create share link',
       })
       throw error
     }
@@ -105,7 +105,7 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/notes/${noteId}/share-links`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       })
 
@@ -116,12 +116,12 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
       const data = await response.json()
       set({
         currentNoteLinks: data.share_links || [],
-        isLoading: false
+        isLoading: false,
       })
     } catch (error) {
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch share links'
+        error: error instanceof Error ? error.message : 'Failed to fetch share links',
       })
       throw error
     }
@@ -135,7 +135,7 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/share-links`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       })
 
@@ -146,12 +146,12 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
       const data = await response.json()
       set({
         shareLinks: data.share_links || [],
-        isLoading: false
+        isLoading: false,
       })
     } catch (error) {
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch share links'
+        error: error instanceof Error ? error.message : 'Failed to fetch share links',
       })
       throw error
     }
@@ -166,7 +166,7 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
       const response = await fetch(`${API_BASE_URL}/api/v1/share-links/${token}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${authToken}`,
+          Authorization: `Bearer ${authToken}`,
         },
       })
 
@@ -176,15 +176,15 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
       }
 
       // Remove from local state
-      set(state => ({
-        shareLinks: state.shareLinks.filter(link => link.token !== token),
-        currentNoteLinks: state.currentNoteLinks.filter(link => link.token !== token),
-        isLoading: false
+      set((state) => ({
+        shareLinks: state.shareLinks.filter((link) => link.token !== token),
+        currentNoteLinks: state.currentNoteLinks.filter((link) => link.token !== token),
+        isLoading: false,
       }))
     } catch (error) {
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to revoke share link'
+        error: error instanceof Error ? error.message : 'Failed to revoke share link',
       })
       throw error
     }
@@ -200,7 +200,7 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify(updates),
       })
@@ -214,7 +214,7 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
     } catch (error) {
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to update share link'
+        error: error instanceof Error ? error.message : 'Failed to update share link',
       })
       throw error
     }
@@ -255,12 +255,14 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
       // Convert base64 encrypted data to Uint8Array if needed
       const sharedNote: SharedNoteData = {
         ...data,
-        title_encrypted: typeof data.title_encrypted === 'string'
-          ? new Uint8Array(Buffer.from(data.title_encrypted, 'base64'))
-          : data.title_encrypted,
-        content_encrypted: typeof data.content_encrypted === 'string'
-          ? new Uint8Array(Buffer.from(data.content_encrypted, 'base64'))
-          : data.content_encrypted,
+        title_encrypted:
+          typeof data.title_encrypted === 'string'
+            ? new Uint8Array(Buffer.from(data.title_encrypted, 'base64'))
+            : data.title_encrypted,
+        content_encrypted:
+          typeof data.content_encrypted === 'string'
+            ? new Uint8Array(Buffer.from(data.content_encrypted, 'base64'))
+            : data.content_encrypted,
       }
 
       set({ isLoading: false })
@@ -268,7 +270,7 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
     } catch (error) {
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to access shared note'
+        error: error instanceof Error ? error.message : 'Failed to access shared note',
       })
       throw error
     }

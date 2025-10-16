@@ -33,7 +33,13 @@ export interface LoginViewProps {
   onForgotPassword?: () => void
 }
 
-export const LoginView: FC<LoginViewProps> = ({ api, cryptoService, announcements = [], onAuthenticated, onForgotPassword }) => {
+export const LoginView: FC<LoginViewProps> = ({
+  api,
+  cryptoService,
+  announcements = [],
+  onAuthenticated,
+  onForgotPassword,
+}) => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [mfaCode, setMfaCode] = useState('')
@@ -153,11 +159,12 @@ export const LoginView: FC<LoginViewProps> = ({ api, cryptoService, announcement
 
       await onAuthenticated?.()
     } catch (err) {
-      const message = err instanceof Error && err.message
-        ? err.message
-        : isRegistering
-          ? 'Registration failed. Please check your email and password.'
-          : 'Login failed. Please check your credentials.'
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : isRegistering
+            ? 'Registration failed. Please check your email and password.'
+            : 'Login failed. Please check your credentials.'
 
       if (message.includes('Invalid credentials') && isRegistering) {
         setError('Registration failed. Please try a different email address.')
@@ -169,7 +176,9 @@ export const LoginView: FC<LoginViewProps> = ({ api, cryptoService, announcement
     }
   }
 
-  const publicAnnouncements = announcements.filter((announcement) => announcement.visibility === 'all')
+  const publicAnnouncements = announcements.filter(
+    (announcement) => announcement.visibility === 'all'
+  )
 
   return (
     <div className="h-screen overflow-y-auto bg-background flex flex-col items-center justify-center p-4">
@@ -236,7 +245,12 @@ export const LoginView: FC<LoginViewProps> = ({ api, cryptoService, announcement
               </InputGroup>
               {isRegistering && (
                 <div className="space-y-2" id="password-strength">
-                  <div className="flex space-x-1" role="progressbar" aria-valuenow={passwordStrength} aria-valuemax={5}>
+                  <div
+                    className="flex space-x-1"
+                    role="progressbar"
+                    aria-valuenow={passwordStrength}
+                    aria-valuemax={5}
+                  >
                     {[...Array(5)].map((_, index) => (
                       <div
                         key={index}

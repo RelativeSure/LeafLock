@@ -52,7 +52,13 @@ export class CryptoService {
     const encoder = new TextEncoder()
     const passwordBytes = encoder.encode(password)
 
-    const keyMaterial = await window.crypto.subtle.importKey('raw', passwordBytes, 'PBKDF2', false, ['deriveBits'])
+    const keyMaterial = await window.crypto.subtle.importKey(
+      'raw',
+      passwordBytes,
+      'PBKDF2',
+      false,
+      ['deriveBits']
+    )
 
     const derivedBits = await window.crypto.subtle.deriveBits(
       {
@@ -84,7 +90,9 @@ export class CryptoService {
 
     const base64Variants = sodium.base64_variants ?? {}
     const originalVariant = base64Variants.ORIGINAL ?? base64Variants.ORIGINAL_NO_PADDING
-    return originalVariant ? sodium.to_base64(combined, originalVariant) : sodium.to_base64(combined)
+    return originalVariant
+      ? sodium.to_base64(combined, originalVariant)
+      : sodium.to_base64(combined)
   }
 
   async decryptData(encryptedData: string): Promise<string> {

@@ -18,7 +18,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
   selectedTags = [],
   onTagsChange,
   className = '',
-  size = 'md'
+  size = 'md',
 }) => {
   const [availableTags, setAvailableTags] = useState<Tag[]>([])
   const [isOpen, setIsOpen] = useState(false)
@@ -48,11 +48,11 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     }
   }, [isOpen])
 
-  const selectedTagObjects = availableTags.filter(tag => selectedTags.includes(tag.id))
+  const selectedTagObjects = availableTags.filter((tag) => selectedTags.includes(tag.id))
 
-  const filteredTags = availableTags.filter(tag =>
-    !selectedTags.includes(tag.id) &&
-    tag.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredTags = availableTags.filter(
+    (tag) =>
+      !selectedTags.includes(tag.id) && tag.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const handleTagToggle = async (tag: Tag) => {
@@ -72,7 +72,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
 
       // Update local state
       const newSelectedTags = isSelected
-        ? selectedTags.filter(id => id !== tag.id)
+        ? selectedTags.filter((id) => id !== tag.id)
         : [...selectedTags, tag.id]
 
       onTagsChange?.(newSelectedTags)
@@ -92,10 +92,10 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
 
       const newTag = await tagsService.createTag({
         name: quickCreateName.trim(),
-        color: '#3b82f6' // Default blue color
+        color: '#3b82f6', // Default blue color
       })
 
-      setAvailableTags(prev => [...prev, newTag])
+      setAvailableTags((prev) => [...prev, newTag])
       setQuickCreateName('')
 
       // Auto-select the newly created tag
@@ -103,7 +103,6 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
         await tagsService.assignTagToNote(noteId, newTag.id)
       }
       onTagsChange?.([...selectedTags, newTag.id])
-
     } catch (err) {
       console.error('Failed to create tag:', err)
       setError(err instanceof Error ? err.message : 'Failed to create tag')
@@ -121,7 +120,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     <div className={`relative ${className}`}>
       {/* Selected Tags Display */}
       <div className="flex flex-wrap gap-1 mb-2">
-        {selectedTagObjects.map(tag => (
+        {selectedTagObjects.map((tag) => (
           <Badge
             key={tag.id}
             style={{ backgroundColor: tag.color, color: 'white' }}
@@ -147,9 +146,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
         className="flex items-center gap-2"
       >
         <Hash className={iconSize} />
-        <span className={textSize}>
-          {selectedTags.length > 0 ? 'Edit Tags' : 'Add Tags'}
-        </span>
+        <span className={textSize}>{selectedTags.length > 0 ? 'Edit Tags' : 'Add Tags'}</span>
         <ChevronDown className={`${iconSize} transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </Button>
 
@@ -183,11 +180,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                 maxLength={50}
                 disabled={isCreating}
               />
-              <Button
-                type="submit"
-                size="sm"
-                disabled={!quickCreateName.trim() || isCreating}
-              >
+              <Button type="submit" size="sm" disabled={!quickCreateName.trim() || isCreating}>
                 {isCreating ? (
                   <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
                 ) : (
@@ -207,7 +200,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                   {searchQuery ? 'No tags match your search' : 'No available tags'}
                 </div>
               ) : (
-                filteredTags.map(tag => (
+                filteredTags.map((tag) => (
                   <button
                     key={tag.id}
                     onClick={() => handleTagToggle(tag)}
@@ -223,12 +216,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
 
             {/* Close Button */}
             <div className="pt-2 border-t">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsOpen(false)}
-                className="w-full"
-              >
+              <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)} className="w-full">
                 Done
               </Button>
             </div>

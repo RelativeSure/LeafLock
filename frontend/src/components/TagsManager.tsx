@@ -79,7 +79,7 @@ export const TagsManager: React.FC<TagsManagerProps> = ({ onClose, onTagsChange 
     try {
       setError(null)
       await tagsService.deleteTag(tagId)
-      const updatedTags = tags.filter(tag => tag.id !== tagId)
+      const updatedTags = tags.filter((tag) => tag.id !== tagId)
       setTags(updatedTags)
       onTagsChange?.(updatedTags)
     } catch (err) {
@@ -173,11 +173,7 @@ export const TagsManager: React.FC<TagsManagerProps> = ({ onClose, onTagsChange 
             </div>
           </div>
 
-          <Button
-            type="submit"
-            disabled={!newTag.name.trim() || isCreating}
-            className="w-full"
-          >
+          <Button type="submit" disabled={!newTag.name.trim() || isCreating} className="w-full">
             {isCreating ? (
               <div className="flex items-center gap-2">
                 <Spinner className="h-4 w-4 text-white" aria-hidden="true" />

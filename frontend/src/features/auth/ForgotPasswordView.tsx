@@ -34,9 +34,10 @@ export const ForgotPasswordView: FC<ForgotPasswordViewProps> = ({ api, onBackToL
       setSuccess(true)
       setEmail('') // Clear email field after success
     } catch (err) {
-      const message = err instanceof Error && err.message
-        ? err.message
-        : 'Failed to request password reset. Please try again.'
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : 'Failed to request password reset. Please try again.'
       setError(message)
     } finally {
       setLoading(false)
@@ -92,7 +93,8 @@ export const ForgotPasswordView: FC<ForgotPasswordViewProps> = ({ api, onBackToL
               <Alert className="border-green-500 bg-green-50 dark:bg-green-950/30">
                 <Mail className="h-4 w-4 text-green-600 dark:text-green-400" />
                 <AlertDescription className="text-green-900 dark:text-green-100">
-                  If an account with that email exists, a password reset link has been sent. Please check your inbox.
+                  If an account with that email exists, a password reset link has been sent. Please
+                  check your inbox.
                 </AlertDescription>
               </Alert>
             )}
@@ -101,12 +103,7 @@ export const ForgotPasswordView: FC<ForgotPasswordViewProps> = ({ api, onBackToL
               {loading ? 'Sending...' : success ? 'Email Sent' : 'Send Reset Link'}
             </Button>
 
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full"
-              onClick={onBackToLogin}
-            >
+            <Button type="button" variant="ghost" className="w-full" onClick={onBackToLogin}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Login
             </Button>

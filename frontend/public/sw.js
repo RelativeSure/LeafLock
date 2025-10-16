@@ -14,7 +14,7 @@ const STATIC_ASSETS = [
   '/favicon-32.png',
   '/favicon-16.png',
   '/safari-pinned-tab.svg',
-  '/site.webmanifest'
+  '/site.webmanifest',
 ]
 
 // Install event - cache static assets
@@ -22,7 +22,8 @@ self.addEventListener('install', (event) => {
   console.log('Service Worker installing...')
 
   event.waitUntil(
-    caches.open(CACHE_NAME)
+    caches
+      .open(CACHE_NAME)
       .then((cache) => {
         console.log('Caching static assets')
         return cache.addAll(STATIC_ASSETS)
@@ -39,7 +40,8 @@ self.addEventListener('activate', (event) => {
   console.log('Service Worker activating...')
 
   event.waitUntil(
-    caches.keys()
+    caches
+      .keys()
       .then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
@@ -80,42 +82,40 @@ self.addEventListener('fetch', (event) => {
 
   // Handle static assets and navigation
   event.respondWith(
-    caches.match(request)
-      .then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse
-        }
+    caches.match(request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse
+      }
 
-        // Try network first for new requests
-        return fetch(request)
-          .then((response) => {
-            // Don't cache if not successful
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response
-            }
-
-            // Cache successful responses
-            const responseToCache = response.clone()
-            caches.open(RUNTIME_CACHE)
-              .then((cache) => {
-                cache.put(request, responseToCache)
-              })
-
+      // Try network first for new requests
+      return fetch(request)
+        .then((response) => {
+          // Don't cache if not successful
+          if (!response || response.status !== 200 || response.type !== 'basic') {
             return response
-          })
-          .catch(() => {
-            // If we're offline and it's a navigation request, serve the cached index.html
-            if (request.mode === 'navigate') {
-              return caches.match('/index.html')
-            }
+          }
 
-            // For other requests, return a basic offline response
-            return new Response('Offline', {
-              status: 503,
-              statusText: 'Service Unavailable'
-            })
+          // Cache successful responses
+          const responseToCache = response.clone()
+          caches.open(RUNTIME_CACHE).then((cache) => {
+            cache.put(request, responseToCache)
           })
-      })
+
+          return response
+        })
+        .catch(() => {
+          // If we're offline and it's a navigation request, serve the cached index.html
+          if (request.mode === 'navigate') {
+            return caches.match('/index.html')
+          }
+
+          // For other requests, return a basic offline response
+          return new Response('Offline', {
+            status: 503,
+            statusText: 'Service Unavailable',
+          })
+        })
+    })
   )
 })
 
@@ -145,24 +145,30 @@ async function handleAPIRequest(request) {
     if (request.method !== 'GET') {
       await queueOfflineRequest(request)
 
-      return new Response(JSON.stringify({
-        success: true,
-        offline: true,
-        message: 'Request queued for when online'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      })
+      return new Response(
+        JSON.stringify({
+          success: true,
+          offline: true,
+          message: 'Request queued for when online',
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
     }
 
     // Return offline response
-    return new Response(JSON.stringify({
-      error: 'Offline',
-      message: 'Please check your internet connection'
-    }), {
-      status: 503,
-      headers: { 'Content-Type': 'application/json' }
-    })
+    return new Response(
+      JSON.stringify({
+        error: 'Offline',
+        message: 'Please check your internet connection',
+      }),
+      {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
   }
 }
 
@@ -174,7 +180,7 @@ async function queueOfflineRequest(request) {
       method: request.method,
       headers: Object.fromEntries(request.headers.entries()),
       body: request.method !== 'GET' ? await request.text() : null,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }
 
     // Store in IndexedDB
@@ -204,7 +210,7 @@ function openOfflineDB() {
       if (!db.objectStoreNames.contains('requests')) {
         const store = db.createObjectStore('requests', {
           keyPath: 'id',
-          autoIncrement: true
+          autoIncrement: true,
         })
         store.createIndex('timestamp', 'timestamp')
       }
@@ -255,7 +261,7 @@ async function syncOfflineRequests() {
         const response = await fetch(requestData.url, {
           method: requestData.method,
           headers: requestData.headers,
-          body: requestData.body
+          body: requestData.body,
         })
 
         if (response.ok) {
@@ -270,15 +276,14 @@ async function syncOfflineRequests() {
     }
 
     // Notify main thread of sync completion
-    self.clients.matchAll().then(clients => {
-      clients.forEach(client => {
+    self.clients.matchAll().then((clients) => {
+      clients.forEach((client) => {
         client.postMessage({
           type: 'SYNC_COMPLETE',
-          data: { synced: requests.length }
+          data: { synced: requests.length },
         })
       })
     })
-
   } catch (error) {
     console.error('Failed to sync offline requests:', error)
   }

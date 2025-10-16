@@ -12,7 +12,9 @@ export const testUsers = {
 export const testNotes = {
   simple: 'This is a simple test note',
   markdown: '# Test Note\n\nThis is a **markdown** note with *formatting*.',
-  long: 'This is a very long note that contains a lot of text to test scrolling and rendering of large content. '.repeat(10),
+  long: 'This is a very long note that contains a lot of text to test scrolling and rendering of large content. '.repeat(
+    10
+  ),
   withSpecialChars: 'Test note with special characters: @#$%^&*()_+-=[]{}|;:,.<>?',
 }
 

@@ -50,7 +50,11 @@ interface CollaborationState {
   // Actions
   connect: (noteId: string, userId: string, token: string) => void
   disconnect: () => void
-  shareNote: (noteId: string, userEmail: string, permission: 'read' | 'write' | 'admin') => Promise<void>
+  shareNote: (
+    noteId: string,
+    userEmail: string,
+    permission: 'read' | 'write' | 'admin'
+  ) => Promise<void>
   removeCollaborator: (noteId: string, userId: string) => Promise<void>
   fetchCollaborators: (noteId: string) => Promise<void>
   fetchSharedNotes: () => Promise<void>
@@ -162,7 +166,7 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         user_email: userEmail,
@@ -186,7 +190,7 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
     const response = await fetch(`${API_BASE_URL}/api/v1/notes/${noteId}/collaborators/${userId}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     })
 
@@ -205,7 +209,7 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
 
     const response = await fetch(`${API_BASE_URL}/api/v1/notes/${noteId}/collaborators`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     })
 
@@ -221,7 +225,7 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
 
     const response = await fetch(`${API_BASE_URL}/api/v1/notes/shared`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     })
 
@@ -251,7 +255,7 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
     socket.send(JSON.stringify(message))
 
     // Add to pending edits for optimistic updates
-    set(state => ({
+    set((state) => ({
       pendingEdits: [...state.pendingEdits, fullEdit],
     }))
   },
@@ -323,9 +327,9 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
     // Don't process our own presence updates
     if (presence.user_id === currentUserId) return
 
-    set(state => {
+    set((state) => {
       const existingUserIndex = state.presenceUsers.findIndex(
-        user => user.user_id === presence.user_id
+        (user) => user.user_id === presence.user_id
       )
 
       let newPresenceUsers
@@ -341,10 +345,8 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
       // Remove offline users after a delay
       if (presence.status === 'offline') {
         setTimeout(() => {
-          set(state => ({
-            presenceUsers: state.presenceUsers.filter(
-              user => user.user_id !== presence.user_id
-            ),
+          set((state) => ({
+            presenceUsers: state.presenceUsers.filter((user) => user.user_id !== presence.user_id),
           }))
         }, 5000)
       }

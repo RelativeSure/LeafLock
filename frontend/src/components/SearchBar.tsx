@@ -23,27 +23,30 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   const [error, setError] = useState<string | null>(null)
 
   // Debounced search function
-  const performSearch = useCallback(async (searchQuery: string) => {
-    if (!searchQuery.trim()) {
-      onSearchResults([], '')
+  const performSearch = useCallback(
+    async (searchQuery: string) => {
+      if (!searchQuery.trim()) {
+        onSearchResults([], '')
+        setError(null)
+        return
+      }
+
+      setIsSearching(true)
       setError(null)
-      return
-    }
 
-    setIsSearching(true)
-    setError(null)
-
-    try {
-      const response = await searchService.searchNotes(searchQuery, 50)
-      onSearchResults(response.results, searchQuery)
-    } catch (err) {
-      console.error('Search failed:', err)
-      setError(err instanceof Error ? err.message : 'Search failed')
-      onSearchResults([], searchQuery)
-    } finally {
-      setIsSearching(false)
-    }
-  }, [onSearchResults])
+      try {
+        const response = await searchService.searchNotes(searchQuery, 50)
+        onSearchResults(response.results, searchQuery)
+      } catch (err) {
+        console.error('Search failed:', err)
+        setError(err instanceof Error ? err.message : 'Search failed')
+        onSearchResults([], searchQuery)
+      } finally {
+        setIsSearching(false)
+      }
+    },
+    [onSearchResults]
+  )
 
   // Debounce search requests
   useEffect(() => {

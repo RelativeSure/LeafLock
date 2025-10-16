@@ -163,7 +163,10 @@ class TemplatesService {
   /**
    * Create a note from a template
    */
-  async useTemplate(templateId: string, options: UseTemplateRequest = {}): Promise<UseTemplateResponse> {
+  async useTemplate(
+    templateId: string,
+    options: UseTemplateRequest = {}
+  ): Promise<UseTemplateResponse> {
     const response = await fetch(`${this.baseUrl}/templates/${templateId}/use`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
@@ -183,9 +186,7 @@ class TemplatesService {
    */
   async getTemplatesByTags(tags: string[]): Promise<Template[]> {
     const templates = await this.getTemplates()
-    return templates.filter(template =>
-      tags.some(tag => template.tags.includes(tag))
-    )
+    return templates.filter((template) => tags.some((tag) => template.tags.includes(tag)))
   }
 
   /**
@@ -193,9 +194,7 @@ class TemplatesService {
    */
   async getPopularTemplates(limit = 10): Promise<Template[]> {
     const templates = await this.getTemplates()
-    return templates
-      .sort((a, b) => b.usage_count - a.usage_count)
-      .slice(0, limit)
+    return templates.sort((a, b) => b.usage_count - a.usage_count).slice(0, limit)
   }
 
   /**
@@ -205,10 +204,11 @@ class TemplatesService {
     const templates = await this.getTemplates()
     const lowercaseQuery = query.toLowerCase()
 
-    return templates.filter(template =>
-      template.name.toLowerCase().includes(lowercaseQuery) ||
-      template.description?.toLowerCase().includes(lowercaseQuery) ||
-      template.tags.some(tag => tag.toLowerCase().includes(lowercaseQuery))
+    return templates.filter(
+      (template) =>
+        template.name.toLowerCase().includes(lowercaseQuery) ||
+        template.description?.toLowerCase().includes(lowercaseQuery) ||
+        template.tags.some((tag) => tag.toLowerCase().includes(lowercaseQuery))
     )
   }
 }
