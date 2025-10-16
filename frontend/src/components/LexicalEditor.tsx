@@ -572,7 +572,8 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
                   'flex-1 focus:outline-none overflow-y-auto',
                   padding.editor.editorContent,
                   'min-h-[300px]',
-                  'focus:ring-2 focus:ring-ring focus:ring-offset-1 rounded-b-lg'
+                  'focus:ring-2 focus:ring-ring focus:ring-offset-1 rounded-b-lg',
+                  '[&>*:first-child]:mt-0 [&>*:last-child]:mb-0'
                 )}
                 data-theme={effectiveTheme}
               />

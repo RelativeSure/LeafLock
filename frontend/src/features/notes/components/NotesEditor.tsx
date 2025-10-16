@@ -10,7 +10,6 @@ import { Spinner } from '@/components/ui/spinner'
 import { ErrorNotice } from '@/features/common/ErrorNotice'
 import Footer from '@/components/Footer'
 import { debounce, type DebounceFunction } from '@/utils/debounce'
-import { padding } from '@/lib/padding'
 import { type Note } from '@/features/app/types'
 import { type SecureAPI } from '@/services/secureApi'
 import { type CryptoService } from '@/services/cryptoService'
@@ -217,106 +216,99 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
           isFullscreen ? 'shadow-sm' : ''
         }`}
       >
-        <div className={padding.editor.titleBar}>
-          <div className="flex items-center gap-3">
-            <label htmlFor="note-title" className="sr-only">
-              Note title
-            </label>
-            <input
-              id="note-title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Untitled"
-              className="flex-1 bg-transparent text-base font-semibold text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 rounded px-2 py-1 -mx-2"
-            />
+        <div className="flex items-center gap-3">
+          <label htmlFor="note-title" className="sr-only">
+            Note title
+          </label>
+          <input
+            id="note-title"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Untitled"
+            className="flex-1 bg-transparent text-base font-semibold text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 rounded px-2 py-1 -mx-2"
+          />
 
-            <div
-              className="flex items-center gap-2 text-xs text-muted-foreground"
-              aria-live="polite"
-            >
-              {saving && (
-                <span className="flex items-center">
-                  <Spinner className="mr-1 h-3 w-3" aria-hidden="true" />
-                  <span className="hidden sm:inline">Saving...</span>
-                  <span className="sr-only">Your note is being saved</span>
-                </span>
-              )}
-              {!saving && lastSaved && (
-                <span className="hidden sm:inline">{lastSaved.toLocaleTimeString()}</span>
-              )}
-              {!saving && !lastSaved && (title || content) && (
-                <span className="hidden sm:inline text-yellow-500">Unsaved</span>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
+            {saving && (
+              <span className="flex items-center">
+                <Spinner className="mr-1 h-3 w-3" aria-hidden="true" />
+                <span className="hidden sm:inline">Saving...</span>
+                <span className="sr-only">Your note is being saved</span>
+              </span>
+            )}
+            {!saving && lastSaved && (
+              <span className="hidden sm:inline">{lastSaved.toLocaleTimeString()}</span>
+            )}
+            {!saving && !lastSaved && (title || content) && (
+              <span className="hidden sm:inline text-yellow-500">Unsaved</span>
+            )}
+
+            <ButtonGroup>
+              {selectedNote && selectedNote.id && (
+                <>
+                  <Suspense fallback={<div className="h-8 w-20 bg-muted rounded animate-pulse" />}>
+                    <TagSelector noteId={selectedNote.id} size="sm" />
+                  </Suspense>
+                  <ButtonGroupSeparator />
+                </>
               )}
 
-              <ButtonGroup>
-                {selectedNote && selectedNote.id && (
-                  <>
-                    <Suspense
-                      fallback={<div className="h-8 w-20 bg-muted rounded animate-pulse" />}
-                    >
-                      <TagSelector noteId={selectedNote.id} size="sm" />
-                    </Suspense>
-                    <ButtonGroupSeparator />
-                  </>
+              <Button
+                onClick={toggleFullscreen}
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                title={isFullscreen ? 'Exit full screen' : 'Enter full screen'}
+                aria-label={isFullscreen ? 'Exit full screen editor' : 'Enter full screen editor'}
+                aria-pressed={isFullscreen}
+                type="button"
+              >
+                {isFullscreen ? (
+                  <Minimize2 className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <Maximize2 className="h-4 w-4" aria-hidden="true" />
                 )}
+                <span className="sr-only">
+                  {isFullscreen ? 'Exit full screen editor view' : 'Enter full screen editor view'}
+                </span>
+              </Button>
+              <ButtonGroupSeparator />
 
-                <Button
-                  onClick={toggleFullscreen}
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  title={isFullscreen ? 'Exit full screen' : 'Enter full screen'}
-                  aria-label={isFullscreen ? 'Exit full screen editor' : 'Enter full screen editor'}
-                  aria-pressed={isFullscreen}
-                  type="button"
+              <Button
+                data-save-action
+                onClick={handleSave}
+                disabled={saving || (!title && !content)}
+                variant="default"
+                size="sm"
+                className="h-8"
+                title="Save note manually (Ctrl+S)"
+                type="button"
+              >
+                <svg
+                  className="mr-1 h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
-                  {isFullscreen ? (
-                    <Minimize2 className="h-4 w-4" aria-hidden="true" />
-                  ) : (
-                    <Maximize2 className="h-4 w-4" aria-hidden="true" />
-                  )}
-                  <span className="sr-only">
-                    {isFullscreen ? 'Exit full screen editor view' : 'Enter full screen editor view'}
-                  </span>
-                </Button>
-                <ButtonGroupSeparator />
-
-                <Button
-                  data-save-action
-                  onClick={handleSave}
-                  disabled={saving || (!title && !content)}
-                  variant="default"
-                  size="sm"
-                  className="h-8"
-                  title="Save note manually (Ctrl+S)"
-                  type="button"
-                >
-                  <svg
-                    className="mr-1 h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12"
-                    />
-                  </svg>
-                  Save
-                </Button>
-              </ButtonGroup>
-            </div>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12"
+                  />
+                </svg>
+                Save
+              </Button>
+            </ButtonGroup>
           </div>
         </div>
       </Card>
 
       {/* Error Notice */}
       {saveError && (
-        <div className={`${padding.directional.xLg} ${padding.directional.ySm} flex-shrink-0`}>
+        <div className="flex-shrink-0">
           <ErrorNotice
             error={saveError}
             onRetry={handleSave}
@@ -327,7 +319,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
 
       {/* Scrollable Editor Content */}
       <ScrollArea className="flex-1">
-        <div className={`min-h-full ${padding.editor.editorWrapper}`}>
+        <div className="min-h-full">
           <Suspense fallback={<ComponentLoader />}>
             <RichTextEditor
               content={content}
@@ -346,7 +338,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
 
         {/* Footer inside scroll area */}
         <Separator />
-        <Footer />
+        <Footer className="!py-0 !px-0" />
       </ScrollArea>
     </div>
   )
