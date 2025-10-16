@@ -132,10 +132,10 @@ export const padding = {
     sectionSpacing: 'pt-4',
 
     /** Footer: p-3 - Footer padding */
-    footer: 'p-3',
+    footer: 'px-3 py-2',
 
     /** Header section: p-3 - Header sections in lists */
-    headerSection: 'p-3',
+    headerSection: 'px-3 py-2',
   },
 
   // ==================== FORM ELEMENTS ====================
@@ -174,19 +174,19 @@ export const padding = {
   // ==================== EDITOR & RICH TEXT ====================
   editor: {
     /** Toolbar container: p-1.5 md:p-2 - Editor toolbar */
-    toolbarContainer: 'p-1.5 md:p-2',
+    toolbarContainer: 'p-1 md:p-1.5',
 
     /** Toolbar button: p-2.5 md:p-2 - Mobile-first touch target for toolbar buttons */
     toolbarButton: 'p-2.5 md:p-2',
 
     /** Editor content: px-3 py-2 - Main editor content area */
-    editorContent: 'px-3 py-2',
+    editorContent: 'px-2 py-1.5 md:px-3 md:py-2',
 
     /** Editor wrapper: px-4 py-4 - Editor container wrapper */
-    editorWrapper: 'px-4 py-4',
+    editorWrapper: 'px-3 py-3 md:px-5 md:py-4',
 
     /** Title bar: px-4 py-2.5 - Editor title bar */
-    titleBar: 'px-4 py-2.5',
+    titleBar: 'px-3 py-2 md:px-4 md:py-2',
 
     /** Inline code: px-1 py-0.5 - Inline code elements */
     inlineCode: 'px-1 py-0.5',
