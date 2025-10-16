@@ -6,7 +6,6 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Plus, FileText } from 'lucide-react'
 import ComponentLoader from '@/components/loaders/ComponentLoader'
-import { padding } from '@/lib/padding'
 import { NoteListSkeleton } from './NoteSkeletons'
 import { ErrorNotice } from '@/features/common/ErrorNotice'
 import type { Note, ViewType } from '@/features/app/types'
@@ -91,8 +90,8 @@ export const NotesList: React.FC<NotesListProps> = ({
       aria-label={viewingTrash ? 'Trash list' : 'Notes list'}
     >
       {/* Header Section */}
-      <div className={`${padding.component.headerSection} flex-shrink-0`}>
-        <div className="flex items-center justify-between mb-2">
+      <div className="flex-shrink-0">
+        <div className="flex items-center justify-between">
           {!viewingTrash && <h2 className="text-sm font-semibold text-foreground">Notes</h2>}
           {viewingTrash && (
             <>
@@ -153,13 +152,13 @@ export const NotesList: React.FC<NotesListProps> = ({
       {/* Scrollable Content Area */}
       <ScrollArea className="flex-1" role="list" aria-label="Notes">
         {notesError ? (
-          <div className={padding.lg}>
+          <div className="p-0">
             <ErrorNotice error={notesError} onRetry={onRetryLoad} onDismiss={onDismissError} />
           </div>
         ) : loading ? (
           <NoteListSkeleton />
         ) : !viewingTrash && isSearchMode ? (
-          <div className={padding.lg}>
+          <div className="p-0">
             <Suspense fallback={<ComponentLoader />}>
               <SearchResults
                 results={searchResults}
@@ -184,30 +183,33 @@ export const NotesList: React.FC<NotesListProps> = ({
                       onChangeView('editor')
                     }
                   }}
-                  className={`flex-1 text-left ${padding.component.listItemTouch} cursor-pointer hover:bg-accent active:bg-accent transition focus:outline-none focus:bg-accent focus:ring-2 focus:ring-ring ${viewingTrash ? 'cursor-default' : ''}`}
+                  className={`flex-1 text-left p-0 cursor-pointer hover:bg-accent active:bg-accent transition focus:outline-none focus:bg-accent focus:ring-2 focus:ring-ring ${viewingTrash ? 'cursor-default' : ''}`}
                   role="listitem"
                   aria-pressed={selectedNote?.id === note.id}
                   aria-describedby={`note-${note.id}-date`}
                   disabled={viewingTrash}
                 >
-                  <h3 className="font-medium text-foreground mb-1">{note.title || 'Untitled'}</h3>
-                  <p className="text-sm text-muted-foreground line-clamp-2">
+                  <h3 className="font-medium text-foreground">{note.title || 'Untitled'}</h3>
+                  <p className="text-sm text-muted-foreground line-clamp-2 mt-0 mb-0">
                     {note.content || 'No content'}
                   </p>
-                  <p id={`note-${note.id}-date`} className="text-xs text-muted-foreground mt-2">
+                  <p
+                    id={`note-${note.id}-date`}
+                    className="text-xs text-muted-foreground"
+                  >
                     {viewingTrash ? 'Deleted' : 'Modified'}{' '}
                     {new Date(note.updated_at).toLocaleDateString()}
                   </p>
                 </button>
 
                 <div
-                  className={`flex flex-col justify-center space-y-1 ${padding.directional.xSm} ${padding.directional.ySm}`}
+                  className="flex flex-col justify-center space-y-0 px-0 py-0"
                 >
                   {viewingTrash ? (
                     <>
                       <button
                         onClick={() => onRestoreNote(note.id)}
-                        className={`${padding.sm} text-green-400 hover:text-green-300 hover:bg-green-900/50 rounded transition focus:outline-none focus:ring-2 focus:ring-green-500/50`}
+                        className="p-1 text-green-400 hover:text-green-300 hover:bg-green-900/50 rounded transition focus:outline-none focus:ring-2 focus:ring-green-500/50"
                         title="Restore note"
                         aria-label="Restore note"
                       >
@@ -233,7 +235,7 @@ export const NotesList: React.FC<NotesListProps> = ({
                             return
                           await onPermanentDelete(note.id)
                         }}
-                        className={`${padding.sm} text-red-400 hover:text-red-300 hover:bg-red-900/50 rounded transition focus:outline-none focus:ring-2 focus:ring-red-500/50`}
+                        className="p-1 text-red-400 hover:text-red-300 hover:bg-red-900/50 rounded transition focus:outline-none focus:ring-2 focus:ring-red-500/50"
                         title="Delete permanently"
                         aria-label="Delete permanently"
                       >
@@ -262,7 +264,7 @@ export const NotesList: React.FC<NotesListProps> = ({
                           onClearSelection()
                         }
                       }}
-                      className={`${padding.sm} text-red-400 hover:text-red-300 hover:bg-red-900/50 rounded transition focus:outline-none focus:ring-2 focus:ring-red-500/50`}
+                      className="p-1 text-red-400 hover:text-red-300 hover:bg-red-900/50 rounded transition focus:outline-none focus:ring-2 focus:ring-red-500/50"
                       title="Move to trash"
                       aria-label="Move to trash"
                     >
@@ -287,11 +289,7 @@ export const NotesList: React.FC<NotesListProps> = ({
             </div>
           ))
         ) : (
-          <div
-            className={`${padding.lg} text-center text-gray-500`}
-            role="status"
-            aria-live="polite"
-          >
+          <div className="p-0 text-center text-gray-500" role="status" aria-live="polite">
             {viewingTrash
               ? searchQuery
                 ? 'No items found in trash'
@@ -306,7 +304,7 @@ export const NotesList: React.FC<NotesListProps> = ({
       {!viewingTrash && (
         <>
           <Separator />
-          <div className={`${padding.component.footer} flex-shrink-0 space-y-2`}>
+          <div className="flex-shrink-0 space-y-0 p-0">
             <Button
               onClick={() => {
                 onStartNewNote()
