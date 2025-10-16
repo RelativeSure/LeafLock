@@ -554,7 +554,7 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
   // WYSIWYG-only: no markdown mode
 
   return (
-    <div className={cn('w-full', className)}>
+    <div className={cn('w-full', padding.editor.editorWrapper, className)}>
       <LexicalComposer initialConfig={initialConfig}>
         {editable && <ToolbarPlugin />}
 
@@ -581,7 +581,7 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
             placeholder={
               <div
                 className={cn(
-                  'absolute top-2 left-3 text-muted-foreground',
+                  'absolute top-3 left-4 md:top-4 md:left-6 text-muted-foreground',
                   'pointer-events-none select-none',
                   'transition-opacity duration-200',
                   content && content.length > 0 ? 'opacity-0' : 'opacity-100'
