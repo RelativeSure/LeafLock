@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense, lazy } from 'react'
+import { createPortal } from 'react-dom'
+import { Maximize2, Minimize2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group'
 import { Card } from '@/components/ui/card'
@@ -39,6 +41,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
   const [saving, setSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   const titleRef = useRef(title)
   const contentRef = useRef(content)
@@ -62,6 +65,37 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
       setLastSaved(null)
     }
   }, [selectedNote])
+
+  useEffect(() => {
+    if (!selectedNote && isFullscreen) {
+      setIsFullscreen(false)
+    }
+  }, [selectedNote, isFullscreen])
+
+  useEffect(() => {
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
+      return
+    }
+
+    const body = document.body
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsFullscreen(false)
+      }
+    }
+
+    if (isFullscreen) {
+      body.classList.add('overflow-hidden')
+      window.addEventListener('keydown', handleKeyDown)
+    } else {
+      body.classList.remove('overflow-hidden')
+    }
+
+    return () => {
+      body.classList.remove('overflow-hidden')
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isFullscreen])
 
   const handleSave = useCallback(async () => {
     if (saving) {
@@ -162,10 +196,27 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
     }
   }, [title, content, debouncedSave, selectedNote])
 
-  return (
-    <div className="h-full flex flex-col" role="main" aria-label="Note editor">
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen((prev) => !prev)
+  }, [])
+
+  const editorHeightClass = isFullscreen
+    ? 'min-h-[calc(100vh-11rem)]'
+    : 'min-h-[calc(100vh-14rem)]'
+
+  const editorContent = (
+    <div
+      className={`h-full flex flex-col ${isFullscreen ? 'bg-background' : ''}`}
+      role="main"
+      aria-label="Note editor"
+      data-fullscreen={isFullscreen}
+    >
       {/* Title Bar */}
-      <Card className="rounded-none border-0 border-b flex-shrink-0">
+      <Card
+        className={`rounded-none border-0 border-b flex-shrink-0 ${
+          isFullscreen ? 'shadow-sm' : ''
+        }`}
+      >
         <div className={padding.editor.titleBar}>
           <div className="flex items-center gap-3">
             <label htmlFor="note-title" className="sr-only">
@@ -195,7 +246,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
                 <span className="hidden sm:inline">{lastSaved.toLocaleTimeString()}</span>
               )}
               {!saving && !lastSaved && (title || content) && (
-                <span className="text-yellow-500 hidden sm:inline">Unsaved</span>
+                <span className="hidden sm:inline text-yellow-500">Unsaved</span>
               )}
 
               <ButtonGroup>
@@ -211,6 +262,27 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
                 )}
 
                 <Button
+                  onClick={toggleFullscreen}
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  title={isFullscreen ? 'Exit full screen' : 'Enter full screen'}
+                  aria-label={isFullscreen ? 'Exit full screen editor' : 'Enter full screen editor'}
+                  aria-pressed={isFullscreen}
+                  type="button"
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Maximize2 className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  <span className="sr-only">
+                    {isFullscreen ? 'Exit full screen editor view' : 'Enter full screen editor view'}
+                  </span>
+                </Button>
+                <ButtonGroupSeparator />
+
+                <Button
                   data-save-action
                   onClick={handleSave}
                   disabled={saving || (!title && !content)}
@@ -218,12 +290,14 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
                   size="sm"
                   className="h-8"
                   title="Save note manually (Ctrl+S)"
+                  type="button"
                 >
                   <svg
-                    className="w-4 h-4 mr-1"
+                    className="mr-1 h-4 w-4"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
+                    aria-hidden="true"
                   >
                     <path
                       strokeLinecap="round"
@@ -260,7 +334,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
               onChange={setContent}
               noteId={selectedNote?.id}
               placeholder="Start writing your secure note... You can use rich text formatting or Markdown!"
-              className="min-h-[calc(100vh-14rem)]"
+              className={`w-full ${editorHeightClass}`}
               editable
             />
           </Suspense>
@@ -276,6 +350,17 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
       </ScrollArea>
     </div>
   )
+
+  if (isFullscreen && typeof document !== 'undefined') {
+    return createPortal(
+      <div className="fixed inset-0 z-50 bg-background flex flex-col">
+        <div className="flex-1 overflow-hidden">{editorContent}</div>
+      </div>,
+      document.body
+    )
+  }
+
+  return editorContent
 }
 
 export default NotesEditor
