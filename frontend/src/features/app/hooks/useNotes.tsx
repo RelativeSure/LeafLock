@@ -133,6 +133,12 @@ export const useNotes = (api: SecureAPI, onLogout: () => void) => {
     })
   }, [])
 
+  useEffect(() => {
+    if (notes.length > 0 && !selectedNote) {
+      setSelectedNote(notes[0])
+    }
+  }, [notes, selectedNote])
+
   return {
     notes,
     setNotes,

@@ -250,7 +250,8 @@
           "title": {"type": "string"},
           "content": {"type": "string"},
           "created_at": {"type": "string", "format": "date-time"},
-          "updated_at": {"type": "string", "format": "date-time"}
+          "updated_at": {"type": "string", "format": "date-time"},
+          "is_shared": {"type": "boolean", "description": "Whether the note has been shared"}
         }
       },
       "NoteListResponse": {
@@ -342,17 +343,6 @@
           "imported_count": {"type": "integer", "description": "Number of notes successfully imported"},
           "skipped_count": {"type": "integer", "description": "Number of files skipped"},
           "message": {"type": "string", "description": "Summary message"}
-        }
-      },
-      "Note": {
-        "type": "object",
-        "properties": {
-          "id": {"type": "string", "format": "uuid"},
-          "title": {"type": "string"},
-          "content": {"type": "string"},
-          "created_at": {"type": "string", "format": "date-time"},
-          "updated_at": {"type": "string", "format": "date-time"},
-          "is_shared": {"type": "boolean"}
         }
       }
     }
