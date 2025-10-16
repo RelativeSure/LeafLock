@@ -14,6 +14,7 @@ import { type Note } from '@/features/app/types'
 import { type SecureAPI } from '@/services/secureApi'
 import { type CryptoService } from '@/services/cryptoService'
 import ComponentLoader from '@/components/loaders/ComponentLoader'
+import { padding } from '@/lib/padding'
 
 const TagSelector = lazy(() => import('@/components/TagSelector'))
 const RichTextEditor = lazy(() =>
@@ -216,7 +217,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
           isFullscreen ? 'shadow-sm' : ''
         }`}
       >
-        <div className="flex items-center gap-3">
+        <div className={`flex items-center gap-3 ${padding.editor.titleBar}`}>
           <label htmlFor="note-title" className="sr-only">
             Note title
           </label>

@@ -174,19 +174,19 @@ export const padding = {
   // ==================== EDITOR & RICH TEXT ====================
   editor: {
     /** Toolbar container: p-1.5 md:p-2 - Editor toolbar */
-    toolbarContainer: 'p-0',
+    toolbarContainer: 'p-1.5 md:p-2',
 
     /** Toolbar button: p-2.5 md:p-2 - Mobile-first touch target for toolbar buttons */
     toolbarButton: 'p-2.5 md:p-2',
 
-    /** Editor content: px-3 py-2 - Main editor content area */
-    editorContent: 'p-0',
+    /** Editor content: px-4 py-3 (md:px-6 md:py-4) - Main editor content area */
+    editorContent: 'px-4 py-3 md:px-6 md:py-4',
 
-    /** Editor wrapper: px-4 py-4 - Editor container wrapper */
-    editorWrapper: 'p-0',
+    /** Editor wrapper: px-2 md:px-4 - Editor container wrapper */
+    editorWrapper: 'px-2 md:px-4',
 
-    /** Title bar: px-4 py-2.5 - Editor title bar */
-    titleBar: 'p-0',
+    /** Title bar: px-3 py-2 (md:px-4 md:py-3) - Editor title bar */
+    titleBar: 'px-3 py-2 md:px-4 md:py-3',
 
     /** Inline code: px-1 py-0.5 - Inline code elements */
     inlineCode: 'px-1 py-0.5',
