@@ -4,7 +4,12 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Label } from './ui/label'
-import { foldersService, Folder as FolderType, FolderTreeNode, CreateFolderRequest } from '../services/foldersService'
+import {
+  foldersService,
+  Folder as FolderType,
+  FolderTreeNode,
+  CreateFolderRequest,
+} from '../services/foldersService'
 import { Spinner } from '@/components/ui/spinner'
 
 interface FoldersManagerProps {
@@ -35,7 +40,7 @@ export const FoldersManager: React.FC<FoldersManagerProps> = ({ onClose, onFolde
   const [newFolder, setNewFolder] = useState<CreateFolderRequest>({
     name: '',
     color: defaultColors[0],
-    parent_id: undefined
+    parent_id: undefined,
   })
 
   const loadFolders = async () => {
@@ -76,7 +81,11 @@ export const FoldersManager: React.FC<FoldersManagerProps> = ({ onClose, onFolde
   }
 
   const handleDeleteFolder = async (folderId: string) => {
-    if (!confirm('Are you sure you want to delete this folder? Notes will be moved to the parent folder.')) {
+    if (
+      !confirm(
+        'Are you sure you want to delete this folder? Notes will be moved to the parent folder.'
+      )
+    ) {
       return
     }
 
@@ -187,9 +196,7 @@ export const FoldersManager: React.FC<FoldersManagerProps> = ({ onClose, onFolde
         </div>
 
         {hasChildren && isExpanded && (
-          <div>
-            {node.children.map(child => renderFolderNode(child, depth + 1))}
-          </div>
+          <div>{node.children.map((child) => renderFolderNode(child, depth + 1))}</div>
         )}
       </div>
     )
@@ -269,7 +276,7 @@ export const FoldersManager: React.FC<FoldersManagerProps> = ({ onClose, onFolde
 
           {newFolder.parent_id && (
             <div className="text-sm text-gray-600">
-              Parent: {folders.find(f => f.id === newFolder.parent_id)?.name}
+              Parent: {folders.find((f) => f.id === newFolder.parent_id)?.name}
               <Button
                 type="button"
                 variant="ghost"
@@ -282,11 +289,7 @@ export const FoldersManager: React.FC<FoldersManagerProps> = ({ onClose, onFolde
             </div>
           )}
 
-          <Button
-            type="submit"
-            disabled={!newFolder.name.trim() || isCreating}
-            className="w-full"
-          >
+          <Button type="submit" disabled={!newFolder.name.trim() || isCreating} className="w-full">
             {isCreating ? (
               <div className="flex items-center gap-2">
                 <Spinner className="h-4 w-4 text-white" aria-hidden="true" />
@@ -312,7 +315,7 @@ export const FoldersManager: React.FC<FoldersManagerProps> = ({ onClose, onFolde
             </div>
           ) : (
             <div className="mt-2 border rounded bg-white">
-              {folderTree.map(node => renderFolderNode(node))}
+              {folderTree.map((node) => renderFolderNode(node))}
             </div>
           )}
         </div>

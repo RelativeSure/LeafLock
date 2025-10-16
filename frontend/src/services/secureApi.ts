@@ -15,12 +15,16 @@ import { getStoredAuthToken, persistAuthToken, clearStoredAuthToken } from '@/ut
 import type { ThemeType } from '@/ThemeContext'
 import type { Note } from '@/features/app/types'
 import { cryptoService, type CryptoService } from './cryptoService'
+import type { UseTemplateRequest, UseTemplateResponse } from './templatesService'
 
 export class SecureAPI {
   private token: string | null
   private onUnauthorized: (() => void) | null = null
 
-  constructor(private readonly crypto: CryptoService, private readonly baseURL: string = '/api/v1') {
+  constructor(
+    private readonly crypto: CryptoService,
+    private readonly baseURL: string = '/api/v1'
+  ) {
     this.token = getStoredAuthToken()
   }
 
@@ -304,6 +308,16 @@ export class SecureAPI {
     })
   }
 
+  async useTemplate(
+    templateId: string,
+    options: UseTemplateRequest = {}
+  ): Promise<UseTemplateResponse> {
+    return this.request(`/templates/${templateId}/use`, {
+      method: 'POST',
+      body: JSON.stringify(options),
+    })
+  }
+
   async getNotes(): Promise<Note[]> {
     const response = await this.request('/notes')
     const notes = response.notes || response || []
@@ -390,7 +404,7 @@ export class SecureAPI {
   async updateUserSettings(theme: ThemeType): Promise<void> {
     await this.request('/settings', {
       method: 'PUT',
-      body: JSON.stringify({ theme })
+      body: JSON.stringify({ theme }),
     })
   }
 
@@ -451,12 +465,15 @@ export class SecureAPI {
       }
     }
 
-    const response = await fetch(`${this.baseURL}/admin/users/export${query.toString() ? `?${query}` : ''}`, {
-      method: 'GET',
-      headers: {
-        Authorization: this.token ? `Bearer ${this.token}` : '',
-      },
-    })
+    const response = await fetch(
+      `${this.baseURL}/admin/users/export${query.toString() ? `?${query}` : ''}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: this.token ? `Bearer ${this.token}` : '',
+        },
+      }
+    )
 
     if (!response.ok) {
       throw new Error('Failed to export users CSV')

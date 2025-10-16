@@ -32,11 +32,15 @@ function UserAvatar({ user, size = 'md' }: UserAvatarProps) {
   }
 
   return (
-    <div className={`relative ${sizeClasses[size]} flex items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-pink-600 text-white font-medium border-2 ${statusColors[user.status]}`}>
+    <div
+      className={`relative ${sizeClasses[size]} flex items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-pink-600 text-white font-medium border-2 ${statusColors[user.status]}`}
+    >
       {user.user_email.charAt(0).toUpperCase()}
 
       {/* Status indicator */}
-      <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${statusIndicatorColors[user.status]}`}>
+      <div
+        className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${statusIndicatorColors[user.status]}`}
+      >
         {user.status === 'typing' && (
           <div className="w-full h-full rounded-full bg-blue-500 animate-pulse" />
         )}
@@ -59,8 +63,8 @@ function UserList({ users }: UserListProps) {
     )
   }
 
-  const activeUsers = users.filter(user => user.status !== 'offline')
-  const typingUsers = users.filter(user => user.status === 'typing')
+  const activeUsers = users.filter((user) => user.status !== 'offline')
+  const typingUsers = users.filter((user) => user.status === 'typing')
 
   return (
     <div className="flex items-center space-x-2">
@@ -100,14 +104,19 @@ function UserList({ users }: UserListProps) {
           <div className="flex items-center space-x-1">
             <div className="flex space-x-1">
               <Circle className="w-2 h-2 fill-blue-500 text-blue-500 animate-pulse" />
-              <Circle className="w-2 h-2 fill-blue-500 text-blue-500 animate-pulse" style={{ animationDelay: '0.2s' }} />
-              <Circle className="w-2 h-2 fill-blue-500 text-blue-500 animate-pulse" style={{ animationDelay: '0.4s' }} />
+              <Circle
+                className="w-2 h-2 fill-blue-500 text-blue-500 animate-pulse"
+                style={{ animationDelay: '0.2s' }}
+              />
+              <Circle
+                className="w-2 h-2 fill-blue-500 text-blue-500 animate-pulse"
+                style={{ animationDelay: '0.4s' }}
+              />
             </div>
             <span className="text-blue-600">
               {typingUsers.length === 1
                 ? `${typingUsers[0].user_email.split('@')[0]} is typing...`
-                : `${typingUsers.length} people are typing...`
-              }
+                : `${typingUsers.length} people are typing...`}
             </span>
           </div>
         )}
@@ -154,7 +163,7 @@ export function CompactPresenceIndicators({ className }: PresenceIndicatorsProps
     )
   }
 
-  const activeUsers = presenceUsers.filter(user => user.status !== 'offline')
+  const activeUsers = presenceUsers.filter((user) => user.status !== 'offline')
 
   if (activeUsers.length === 0) {
     return (

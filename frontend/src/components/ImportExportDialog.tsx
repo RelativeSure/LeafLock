@@ -1,11 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from './ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog'
 import { Button } from './ui/button'
 import { Upload, Download, FileText, File, X } from 'lucide-react'
 import { resolveApiBaseUrl } from '@/utils/network'
@@ -32,14 +26,16 @@ export function ImportExportDialog({
   trigger,
   notes: _notes,
   setNotes,
-  onImportSuccess
+  onImportSuccess,
 }: ImportExportDialogProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [dragActive, setDragActive] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
-  const [exportFormat, setExportFormat] = useState<'markdown' | 'text' | 'html' | 'json'>('markdown')
+  const [exportFormat, setExportFormat] = useState<'markdown' | 'text' | 'html' | 'json'>(
+    'markdown'
+  )
   const [storageInfo, setStorageInfo] = useState<{
     storage_used: number
     storage_limit: number
@@ -59,7 +55,7 @@ export function ImportExportDialog({
     try {
       const response = await fetch(`${API_BASE_URL}/user/storage`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       })
 
@@ -87,7 +83,7 @@ export function ImportExportDialog({
     const allowedExtensions = ['.md', '.txt', '.html', '.json']
 
     const hasValidType = allowedTypes.includes(file.type)
-    const hasValidExtension = allowedExtensions.some(ext => file.name.toLowerCase().endsWith(ext))
+    const hasValidExtension = allowedExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))
 
     if (!hasValidType && !hasValidExtension) {
       return 'Invalid file type. Only .md, .txt, .html, and .json files are allowed'
@@ -138,43 +134,46 @@ export function ImportExportDialog({
     }
   }, [])
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setDragActive(false)
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const files = Array.from(e.dataTransfer.files)
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        const files = Array.from(e.dataTransfer.files)
 
-      // Validate each file
-      const validFiles: File[] = []
-      const errors: string[] = []
+        // Validate each file
+        const validFiles: File[] = []
+        const errors: string[] = []
 
-      for (const file of files) {
-        const validationError = validateFile(file)
-        if (validationError) {
-          errors.push(`${file.name}: ${validationError}`)
-        } else {
-          validFiles.push(file)
+        for (const file of files) {
+          const validationError = validateFile(file)
+          if (validationError) {
+            errors.push(`${file.name}: ${validationError}`)
+          } else {
+            validFiles.push(file)
+          }
+        }
+
+        // Check storage limit for valid files
+        if (validFiles.length > 0) {
+          const storageError = checkStorageLimit(validFiles)
+          if (storageError) {
+            errors.push(storageError)
+          } else {
+            setSelectedFiles((prev) => [...prev, ...validFiles])
+          }
+        }
+
+        // Show errors if any
+        if (errors.length > 0) {
+          alert(`File validation errors:\n${errors.join('\n')}`)
         }
       }
-
-      // Check storage limit for valid files
-      if (validFiles.length > 0) {
-        const storageError = checkStorageLimit(validFiles)
-        if (storageError) {
-          errors.push(storageError)
-        } else {
-          setSelectedFiles(prev => [...prev, ...validFiles])
-        }
-      }
-
-      // Show errors if any
-      if (errors.length > 0) {
-        alert(`File validation errors:\n${errors.join('\n')}`)
-      }
-    }
-  }, [validateFile, checkStorageLimit, selectedFiles])
+    },
+    [validateFile, checkStorageLimit, selectedFiles]
+  )
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -199,7 +198,7 @@ export function ImportExportDialog({
         if (storageError) {
           errors.push(storageError)
         } else {
-          setSelectedFiles(prev => [...prev, ...validFiles])
+          setSelectedFiles((prev) => [...prev, ...validFiles])
         }
       }
 
@@ -214,7 +213,7 @@ export function ImportExportDialog({
   }
 
   const removeFile = (index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
   const handleImport = async () => {
@@ -232,7 +231,7 @@ export function ImportExportDialog({
         const response = await fetch(`${API_BASE_URL}/notes/import`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
           body: formData,
         })
@@ -244,19 +243,19 @@ export function ImportExportDialog({
 
         const data = await response.json()
         if (setNotes && data.note) {
-          setNotes(prev => [data.note, ...prev])
+          setNotes((prev) => [data.note, ...prev])
         }
       } else {
         // Bulk import
         const formData = new FormData()
-        selectedFiles.forEach(file => {
+        selectedFiles.forEach((file) => {
           formData.append('files', file)
         })
 
         const response = await fetch(`${API_BASE_URL}/notes/bulk-import`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
           body: formData,
         })
@@ -268,7 +267,7 @@ export function ImportExportDialog({
 
         const data = await response.json()
         if (setNotes && data.imported_notes) {
-          setNotes(prev => [...data.imported_notes, ...prev])
+          setNotes((prev) => [...data.imported_notes, ...prev])
         }
       }
 
@@ -298,7 +297,7 @@ export function ImportExportDialog({
       const response = await fetch(`${API_BASE_URL}/notes/${noteId}/export`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ format: exportFormat }),
@@ -365,14 +364,18 @@ export function ImportExportDialog({
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
                 className={`h-2 rounded-full transition-all ${
-                  storageInfo.usage_percentage > 90 ? 'bg-red-500' :
-                  storageInfo.usage_percentage > 75 ? 'bg-yellow-500' : 'bg-green-500'
+                  storageInfo.usage_percentage > 90
+                    ? 'bg-red-500'
+                    : storageInfo.usage_percentage > 75
+                      ? 'bg-yellow-500'
+                      : 'bg-green-500'
                 }`}
                 style={{ width: `${Math.min(storageInfo.usage_percentage, 100)}%` }}
               />
             </div>
             <div className="text-xs text-gray-500">
-              {storageInfo.usage_percentage.toFixed(1)}% used • {formatBytes(storageInfo.storage_remaining)} remaining
+              {storageInfo.usage_percentage.toFixed(1)}% used •{' '}
+              {formatBytes(storageInfo.storage_remaining)} remaining
             </div>
           </div>
         )}
@@ -394,9 +397,7 @@ export function ImportExportDialog({
             {/* Drag and Drop Area */}
             <div
               className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                dragActive
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-300 hover:border-gray-400'
+                dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
               }`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
@@ -408,10 +409,7 @@ export function ImportExportDialog({
               <p className="text-sm text-gray-500 mb-4">
                 Supports .md, .txt, .html, and .json files (max 100KB per file)
               </p>
-              <Button
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-              >
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
                 Select Files
               </Button>
               <input
@@ -441,21 +439,13 @@ export function ImportExportDialog({
                           ({(file.size / 1024).toFixed(1)} KB)
                         </span>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFile(index)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => removeFile(index)}>
                         <X className="w-4 h-4" />
                       </Button>
                     </div>
                   ))}
                 </div>
-                <Button
-                  onClick={handleImport}
-                  disabled={isImporting}
-                  className="w-full"
-                >
+                <Button onClick={handleImport} disabled={isImporting} className="w-full">
                   {isImporting ? 'Importing...' : `Import ${selectedFiles.length} File(s)`}
                 </Button>
               </div>
@@ -496,11 +486,7 @@ export function ImportExportDialog({
                   </div>
                 </div>
 
-                <Button
-                  onClick={handleExport}
-                  disabled={isExporting}
-                  className="w-full"
-                >
+                <Button onClick={handleExport} disabled={isExporting} className="w-full">
                   {isExporting ? 'Exporting...' : `Export as ${exportFormat.toUpperCase()}`}
                 </Button>
               </div>

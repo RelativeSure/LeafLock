@@ -1,12 +1,15 @@
-export interface DebounceFunction {
-  (...args: unknown[]): void
+export interface DebounceFunction<T extends (...args: any[]) => unknown> {
+  (...args: Parameters<T>): void
   cancel: () => void
 }
 
-export function debounce<T extends (...args: any[]) => void>(func: T, wait: number): DebounceFunction {
+export function debounce<T extends (...args: any[]) => unknown>(
+  func: T,
+  wait: number
+): DebounceFunction<T> {
   let timeout: ReturnType<typeof setTimeout>
 
-  const executedFunction = (...args: Parameters<T>) => {
+  const executedFunction = ((...args: Parameters<T>) => {
     const later = () => {
       clearTimeout(timeout)
       func(...args)
@@ -14,7 +17,7 @@ export function debounce<T extends (...args: any[]) => void>(func: T, wait: numb
 
     clearTimeout(timeout)
     timeout = setTimeout(later, wait)
-  }
+  }) as DebounceFunction<T>
 
   executedFunction.cancel = () => {
     clearTimeout(timeout)

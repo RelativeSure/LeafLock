@@ -3,13 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button'
 import { Alert, AlertDescription } from '../ui/alert'
 import { Badge } from '../ui/badge'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { MfaSetupDialog } from '../auth/MfaSetupDialog'
@@ -140,9 +134,7 @@ export function MfaSettings({
       setNewBackupCodes(result.codes)
       setRegeneratePassword('')
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to regenerate backup codes'
-      )
+      setError(err instanceof Error ? err.message : 'Failed to regenerate backup codes')
     } finally {
       setIsRegenerating(false)
     }
@@ -162,9 +154,7 @@ export function MfaSettings({
               )}
               <div>
                 <CardTitle>Multi-Factor Authentication</CardTitle>
-                <CardDescription>
-                  Add an extra layer of security to your account
-                </CardDescription>
+                <CardDescription>Add an extra layer of security to your account</CardDescription>
               </div>
             </div>
             <Badge variant={mfaEnabled ? 'default' : 'secondary'}>
@@ -182,9 +172,8 @@ export function MfaSettings({
           {!mfaEnabled ? (
             <>
               <p className="text-sm text-muted-foreground">
-                Two-factor authentication (2FA) adds an additional layer of security by
-                requiring a code from your authenticator app in addition to your
-                password.
+                Two-factor authentication (2FA) adds an additional layer of security by requiring a
+                code from your authenticator app in addition to your password.
               </p>
               <Button onClick={handleBeginSetup} disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -197,16 +186,13 @@ export function MfaSettings({
               <Alert>
                 <ShieldCheck className="h-4 w-4" />
                 <AlertDescription>
-                  Your account is protected with two-factor authentication. You'll need
-                  your authenticator app to sign in.
+                  Your account is protected with two-factor authentication. You'll need your
+                  authenticator app to sign in.
                 </AlertDescription>
               </Alert>
 
               <div className="flex gap-2">
-                <Button
-                  variant="destructive"
-                  onClick={() => setDisableDialogOpen(true)}
-                >
+                <Button variant="destructive" onClick={() => setDisableDialogOpen(true)}>
                   Disable MFA
                 </Button>
               </div>
@@ -231,22 +217,15 @@ export function MfaSettings({
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Backup codes are one-time use codes that allow you to access your account
-              if you lose access to your authenticator app.
+              Backup codes are one-time use codes that allow you to access your account if you lose
+              access to your authenticator app.
             </p>
 
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={handleViewBackupCodes}
-                disabled={isLoading}
-              >
+              <Button variant="outline" onClick={handleViewBackupCodes} disabled={isLoading}>
                 View Backup Code Status
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => setRegenerateDialogOpen(true)}
-              >
+              <Button variant="outline" onClick={() => setRegenerateDialogOpen(true)}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Regenerate Backup Codes
               </Button>
@@ -277,8 +256,8 @@ export function MfaSettings({
           <div className="space-y-4 py-4">
             <Alert variant="destructive">
               <AlertDescription>
-                Disabling MFA will make your account less secure. You'll only need your
-                password to sign in.
+                Disabling MFA will make your account less secure. You'll only need your password to
+                sign in.
               </AlertDescription>
             </Alert>
 
@@ -324,9 +303,7 @@ export function MfaSettings({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Backup Code Status</DialogTitle>
-            <DialogDescription>
-              Information about your backup recovery codes
-            </DialogDescription>
+            <DialogDescription>Information about your backup recovery codes</DialogDescription>
           </DialogHeader>
 
           {backupCodesInfo && (
@@ -335,17 +312,13 @@ export function MfaSettings({
                 <Card>
                   <CardHeader className="pb-3">
                     <CardDescription>Total Codes</CardDescription>
-                    <CardTitle className="text-3xl">
-                      {backupCodesInfo.total}
-                    </CardTitle>
+                    <CardTitle className="text-3xl">{backupCodesInfo.total}</CardTitle>
                   </CardHeader>
                 </Card>
                 <Card>
                   <CardHeader className="pb-3">
                     <CardDescription>Remaining</CardDescription>
-                    <CardTitle className="text-3xl">
-                      {backupCodesInfo.remaining}
-                    </CardTitle>
+                    <CardTitle className="text-3xl">{backupCodesInfo.remaining}</CardTitle>
                   </CardHeader>
                 </Card>
               </div>
@@ -360,8 +333,8 @@ export function MfaSettings({
 
               <Alert>
                 <AlertDescription className="text-xs">
-                  Backup codes are stored securely and cannot be viewed in plaintext. If
-                  you need new codes, you can regenerate them at any time.
+                  Backup codes are stored securely and cannot be viewed in plaintext. If you need
+                  new codes, you can regenerate them at any time.
                 </AlertDescription>
               </Alert>
 
@@ -390,8 +363,8 @@ export function MfaSettings({
               <>
                 <Alert variant="destructive">
                   <AlertDescription>
-                    Regenerating backup codes will invalidate all your existing codes,
-                    including any unused ones.
+                    Regenerating backup codes will invalidate all your existing codes, including any
+                    unused ones.
                   </AlertDescription>
                 </Alert>
 
@@ -425,9 +398,7 @@ export function MfaSettings({
                     onClick={handleRegenerateBackupCodes}
                     disabled={!regeneratePassword.trim() || isRegenerating}
                   >
-                    {isRegenerating && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
+                    {isRegenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Generate New Codes
                   </Button>
                 </div>

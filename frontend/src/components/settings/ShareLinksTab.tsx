@@ -3,27 +3,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Badge } from '../ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../ui/table'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import * as LucideIcons from 'lucide-react'
 import { useShareLinksStore, ShareLink } from '../../stores/shareLinksStore'
 import { toast } from 'sonner'
 
 export function ShareLinksTab() {
-  const { shareLinks, fetchAllUserLinks, revokeShareLink, copyLinkToClipboard } = useShareLinksStore()
+  const { shareLinks, fetchAllUserLinks, revokeShareLink, copyLinkToClipboard } =
+    useShareLinksStore()
 
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'expired'>('all')
@@ -53,7 +41,9 @@ export function ShareLinksTab() {
   }
 
   const handleRevokeLink = async (token: string) => {
-    if (!confirm('Are you sure you want to revoke this share link? This action cannot be undone.')) {
+    if (
+      !confirm('Are you sure you want to revoke this share link? This action cannot be undone.')
+    ) {
       return
     }
 
@@ -98,7 +88,10 @@ export function ShareLinksTab() {
   const getPermissionBadge = (permission: string) => {
     if (permission === 'write') {
       return (
-        <Badge variant="outline" className="bg-blue-900 text-blue-100 border-blue-700 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-800">
+        <Badge
+          variant="outline"
+          className="bg-blue-900 text-blue-100 border-blue-700 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-800"
+        >
           <LucideIcons.Edit className="h-3 w-3 mr-1" />
           Write
         </Badge>
@@ -114,18 +107,34 @@ export function ShareLinksTab() {
 
   const getStatusBadge = (link: ShareLink) => {
     if (!link.is_active) {
-      return <Badge variant="outline" className="bg-gray-100 text-gray-800">Revoked</Badge>
+      return (
+        <Badge variant="outline" className="bg-gray-100 text-gray-800">
+          Revoked
+        </Badge>
+      )
     }
 
     if (link.expires_at && new Date(link.expires_at) < new Date()) {
-      return <Badge variant="outline" className="bg-red-100 text-red-800">Expired</Badge>
+      return (
+        <Badge variant="outline" className="bg-red-100 text-red-800">
+          Expired
+        </Badge>
+      )
     }
 
     if (link.max_uses && link.use_count >= link.max_uses) {
-      return <Badge variant="outline" className="bg-orange-100 text-orange-800">Limit Reached</Badge>
+      return (
+        <Badge variant="outline" className="bg-orange-100 text-orange-800">
+          Limit Reached
+        </Badge>
+      )
     }
 
-    return <Badge variant="outline" className="bg-green-100 text-green-800">Active</Badge>
+    return (
+      <Badge variant="outline" className="bg-green-100 text-green-800">
+        Active
+      </Badge>
+    )
   }
 
   return (
@@ -152,7 +161,9 @@ export function ShareLinksTab() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.totalAccesses}</div>
+            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+              {stats.totalAccesses}
+            </div>
             <div className="text-sm text-muted-foreground">Total Accesses</div>
           </CardContent>
         </Card>
@@ -165,9 +176,7 @@ export function ShareLinksTab() {
             <LucideIcons.Link className="h-5 w-5" />
             Share Links
           </CardTitle>
-          <CardDescription>
-            Manage all your shareable links across all notes
-          </CardDescription>
+          <CardDescription>Manage all your shareable links across all notes</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col md:flex-row gap-4">
@@ -194,7 +203,10 @@ export function ShareLinksTab() {
               </SelectContent>
             </Select>
 
-            <Select value={filterPermission} onValueChange={(value: any) => setFilterPermission(value)}>
+            <Select
+              value={filterPermission}
+              onValueChange={(value: any) => setFilterPermission(value)}
+            >
               <SelectTrigger className="w-full md:w-[160px]">
                 <SelectValue placeholder="Permission" />
               </SelectTrigger>
@@ -208,9 +220,7 @@ export function ShareLinksTab() {
 
           {/* Links Table */}
           {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Loading share links...
-            </div>
+            <div className="text-center py-8 text-muted-foreground">Loading share links...</div>
           ) : filteredLinks.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               {searchQuery || filterStatus !== 'all' || filterPermission !== 'all'

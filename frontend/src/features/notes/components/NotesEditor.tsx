@@ -8,6 +8,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { ErrorNotice } from '@/features/common/ErrorNotice'
 import Footer from '@/components/Footer'
 import { debounce, type DebounceFunction } from '@/utils/debounce'
+import { padding } from '@/lib/padding'
 import { type Note } from '@/features/app/types'
 import { type SecureAPI } from '@/services/secureApi'
 import { type CryptoService } from '@/services/cryptoService'
@@ -42,7 +43,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
   const titleRef = useRef(title)
   const contentRef = useRef(content)
   const selectedNoteRef = useRef(selectedNote)
-  const debouncedAutosaveRef = useRef<DebounceFunction | null>(null)
+  const debouncedAutosaveRef = useRef<DebounceFunction<() => Promise<void>> | null>(null)
 
   useEffect(() => {
     titleRef.current = title
@@ -165,7 +166,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
     <div className="h-full flex flex-col" role="main" aria-label="Note editor">
       {/* Title Bar */}
       <Card className="rounded-none border-0 border-b flex-shrink-0">
-        <div className="px-4 py-2.5">
+        <div className={padding.editor.titleBar}>
           <div className="flex items-center gap-3">
             <label htmlFor="note-title" className="sr-only">
               Note title
@@ -179,7 +180,10 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
               className="flex-1 bg-transparent text-base font-semibold text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 rounded px-2 py-1 -mx-2"
             />
 
-            <div className="flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
+            <div
+              className="flex items-center gap-2 text-xs text-muted-foreground"
+              aria-live="polite"
+            >
               {saving && (
                 <span className="flex items-center">
                   <Spinner className="mr-1 h-3 w-3" aria-hidden="true" />
@@ -188,9 +192,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
                 </span>
               )}
               {!saving && lastSaved && (
-                <span className="hidden sm:inline">
-                  {lastSaved.toLocaleTimeString()}
-                </span>
+                <span className="hidden sm:inline">{lastSaved.toLocaleTimeString()}</span>
               )}
               {!saving && !lastSaved && (title || content) && (
                 <span className="text-yellow-500 hidden sm:inline">Unsaved</span>
@@ -199,7 +201,9 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
               <ButtonGroup>
                 {selectedNote && selectedNote.id && (
                   <>
-                    <Suspense fallback={<div className="h-8 w-20 bg-muted rounded animate-pulse" />}>
+                    <Suspense
+                      fallback={<div className="h-8 w-20 bg-muted rounded animate-pulse" />}
+                    >
                       <TagSelector noteId={selectedNote.id} size="sm" />
                     </Suspense>
                     <ButtonGroupSeparator />
@@ -215,7 +219,12 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
                   className="h-8"
                   title="Save note manually (Ctrl+S)"
                 >
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    className="w-4 h-4 mr-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -233,7 +242,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
 
       {/* Error Notice */}
       {saveError && (
-        <div className="px-4 py-2 flex-shrink-0">
+        <div className={`${padding.directional.xLg} ${padding.directional.ySm} flex-shrink-0`}>
           <ErrorNotice
             error={saveError}
             onRetry={handleSave}
@@ -244,7 +253,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
 
       {/* Scrollable Editor Content */}
       <ScrollArea className="flex-1">
-        <div className="min-h-full px-8 py-6">
+        <div className={`min-h-full ${padding.editor.editorWrapper}`}>
           <Suspense fallback={<ComponentLoader />}>
             <RichTextEditor
               content={content}
@@ -257,7 +266,8 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
           </Suspense>
         </div>
         <p id="editor-help" className="sr-only">
-          This note is automatically encrypted and saved as you type. Supports rich text and Markdown formatting.
+          This note is automatically encrypted and saved as you type. Supports rich text and
+          Markdown formatting.
         </p>
 
         {/* Footer inside scroll area */}

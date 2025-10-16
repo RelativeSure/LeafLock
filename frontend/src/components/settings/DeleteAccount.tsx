@@ -4,13 +4,7 @@ import { Button } from '../ui/button'
 import { Alert, AlertDescription } from '../ui/alert'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 
 interface DeleteAccountProps {
@@ -118,11 +112,7 @@ export function DeleteAccount({ onDelete }: DeleteAccountProps) {
                 </AlertDescription>
               </Alert>
 
-              <Button
-                variant="destructive"
-                onClick={handleContinueStep1}
-                className="w-full"
-              >
+              <Button variant="destructive" onClick={handleContinueStep1} className="w-full">
                 I Understand, Continue
               </Button>
             </div>
@@ -176,8 +166,8 @@ export function DeleteAccount({ onDelete }: DeleteAccountProps) {
                 <AlertDescription>
                   <p className="font-semibold mb-2">Final confirmation required</p>
                   <p className="text-sm">
-                    Type <span className="font-mono font-bold">DELETE</span> below to
-                    confirm you want to permanently delete your account.
+                    Type <span className="font-mono font-bold">DELETE</span> below to confirm you
+                    want to permanently delete your account.
                   </p>
                 </AlertDescription>
               </Alert>
@@ -223,8 +213,8 @@ export function DeleteAccount({ onDelete }: DeleteAccountProps) {
           <DialogHeader>
             <DialogTitle>Are you absolutely sure?</DialogTitle>
             <DialogDescription>
-              This is your last chance to cancel. Once confirmed, your account and all
-              data will be permanently deleted.
+              This is your last chance to cancel. Once confirmed, your account and all data will be
+              permanently deleted.
             </DialogDescription>
           </DialogHeader>
 
@@ -237,18 +227,10 @@ export function DeleteAccount({ onDelete }: DeleteAccountProps) {
             </Alert>
 
             <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setDialogOpen(false)}
-                disabled={isDeleting}
-              >
+              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isDeleting}>
                 Cancel
               </Button>
-              <Button
-                variant="destructive"
-                onClick={handleFinalDelete}
-                disabled={isDeleting}
-              >
+              <Button variant="destructive" onClick={handleFinalDelete} disabled={isDeleting}>
                 {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Yes, Delete My Account
               </Button>

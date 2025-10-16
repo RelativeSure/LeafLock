@@ -11,7 +11,9 @@ import { type SecureAPI } from '@/services/secureApi'
 import { type CryptoService } from '@/services/cryptoService'
 
 const ImportExportDialog = lazy(() =>
-  import('@/components/ImportExportDialog').then((module) => ({ default: module.ImportExportDialog }))
+  import('@/components/ImportExportDialog').then((module) => ({
+    default: module.ImportExportDialog,
+  }))
 )
 
 interface AppLayoutProps {
@@ -214,7 +216,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           loading={loading}
           notesError={notesError}
           currentView={currentView}
-          isAdmin={isAdmin}
           onSelectNote={onSelectNote}
           onNotesChange={onNotesChange}
           onChangeView={onChangeView}
@@ -225,11 +226,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           onOpenTemplateSelector={onOpenTemplateSelector}
           onRetryLoad={onLoadNotes}
           onDismissError={() => onSetNotesError(null)}
-          onLoadNotes={onLoadNotes}
-          onLoadTrash={onLoadTrash}
-          onSetViewingTrash={onSetViewingTrash}
-          onSetNotesError={onSetNotesError}
-          onLogout={onLogout}
           api={api}
           cryptoService={cryptoService}
         />

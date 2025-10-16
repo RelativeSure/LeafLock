@@ -70,9 +70,7 @@ export function ExportDataComponent({ onExport }: ExportDataProps) {
           <FileJson className="h-6 w-6 text-muted-foreground" />
           <div>
             <CardTitle>Export Your Data</CardTitle>
-            <CardDescription>
-              Download all your data in JSON format
-            </CardDescription>
+            <CardDescription>Download all your data in JSON format</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -98,11 +96,7 @@ export function ExportDataComponent({ onExport }: ExportDataProps) {
         )}
 
         <div className="space-y-2">
-          <Button
-            onClick={handleExport}
-            disabled={isExporting}
-            className="w-full sm:w-auto"
-          >
+          <Button onClick={handleExport} disabled={isExporting} className="w-full sm:w-auto">
             {isExporting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -118,9 +112,7 @@ export function ExportDataComponent({ onExport }: ExportDataProps) {
 
           <p className="text-xs text-muted-foreground">
             The export file will be named{' '}
-            <span className="font-mono">
-              leaflock-export-{formatDate(new Date())}.json
-            </span>
+            <span className="font-mono">leaflock-export-{formatDate(new Date())}.json</span>
           </p>
         </div>
 
@@ -128,8 +120,8 @@ export function ExportDataComponent({ onExport }: ExportDataProps) {
           <AlertDescription className="text-xs">
             <p className="font-semibold mb-1">Security Notice:</p>
             <p>
-              Your exported data contains unencrypted notes. Store this file securely
-              and delete it when no longer needed.
+              Your exported data contains unencrypted notes. Store this file securely and delete it
+              when no longer needed.
             </p>
           </AlertDescription>
         </Alert>

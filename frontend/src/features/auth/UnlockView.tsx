@@ -37,7 +37,12 @@ export const UnlockView: FC<UnlockViewProps> = ({ onUnlock, onLogout }) => {
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center space-y-3">
-            <svg className="mx-auto h-12 w-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="mx-auto h-12 w-12 text-red-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -47,7 +52,8 @@ export const UnlockView: FC<UnlockViewProps> = ({ onUnlock, onLogout }) => {
             </svg>
             <h2 className="mt-6 text-3xl font-bold text-white">Locked</h2>
             <p className="text-sm text-gray-400">
-              Your session is valid but your notes are locked. Enter your password to decrypt your notes.
+              Your session is valid but your notes are locked. Enter your password to decrypt your
+              notes.
             </p>
           </div>
 
@@ -88,7 +94,12 @@ export const UnlockView: FC<UnlockViewProps> = ({ onUnlock, onLogout }) => {
                 {unlocking ? 'Unlocking...' : 'Unlock Notes'}
               </Button>
 
-              <Button type="button" variant="ghost" onClick={onLogout} className="text-gray-400 hover:text-white">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onLogout}
+                className="text-gray-400 hover:text-white"
+              >
                 Logout
               </Button>
             </div>

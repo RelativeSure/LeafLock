@@ -1,7 +1,16 @@
-import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode, type FC } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+  type FC,
+} from 'react'
 
-export type ThemeType = 'light' | 'blue' | 'dark' | 'system'
-type EffectiveTheme = 'light' | 'blue' | 'dark'
+export type ThemeType = 'light' | 'dark' | 'system'
+type EffectiveTheme = 'light' | 'dark'
 
 interface ThemeContextType {
   theme: ThemeType
@@ -12,7 +21,7 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 const THEME_COOKIE = 'theme'
-const SUPPORTED_THEMES: ThemeType[] = ['light', 'blue', 'dark', 'system']
+const SUPPORTED_THEMES: ThemeType[] = ['light', 'dark', 'system']
 
 const getSystemTheme = (): EffectiveTheme => {
   if (typeof window === 'undefined') {
@@ -40,12 +49,9 @@ const applyThemeClasses = (theme: EffectiveTheme) => {
   }
 
   const root = document.documentElement
-  root.classList.remove('light', 'theme-blue', 'dark')
+  root.classList.remove('light', 'dark')
 
   switch (theme) {
-    case 'blue':
-      root.classList.add('theme-blue')
-      break
     case 'dark':
       root.classList.add('dark')
       break

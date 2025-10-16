@@ -176,7 +176,9 @@ describe('ShareDialog', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/active share links \(1\)/i)).toBeInTheDocument()
-        expect(screen.getByDisplayValue(/https:\/\/example.com\/share\/token-abc/i)).toBeInTheDocument()
+        expect(
+          screen.getByDisplayValue(/https:\/\/example.com\/share\/token-abc/i)
+        ).toBeInTheDocument()
       })
     })
 

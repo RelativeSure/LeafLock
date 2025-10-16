@@ -120,6 +120,5 @@ export const selectIsAuthenticated = (state: AuthState) => state.isAuthenticated
 export const selectToken = (state: AuthState) => state.token
 export const selectUserId = (state: AuthState) => state.userId
 export const selectMfaStatus = (state: AuthState) => state.mfaStatus
-export const selectMfaVerificationPending = (state: AuthState) =>
-  state.mfaVerificationPending
+export const selectMfaVerificationPending = (state: AuthState) => state.mfaVerificationPending
 export const selectMfaSessionToken = (state: AuthState) => state.mfaSessionToken

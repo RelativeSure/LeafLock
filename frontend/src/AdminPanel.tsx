@@ -48,7 +48,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ api }) => {
   const [quickResults, setQuickResults] = useState<AdminPanelQuickUser[]>([])
   const quickDebounceRef = React.useRef<number | null>(null)
 
-  type AdminPanelQuickUser = Pick<AdminUser, 'user_id' | 'email' | 'is_admin' | 'admin_via_allowlist'>
+  type AdminPanelQuickUser = Pick<
+    AdminUser,
+    'user_id' | 'email' | 'is_admin' | 'admin_via_allowlist'
+  >
 
   const maskEmail = (email: string): string => {
     const [localPart, domain] = email.split('@')

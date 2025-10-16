@@ -11,9 +11,7 @@ export function PrivacySettingsTab() {
             <Mail className="h-5 w-5" />
             Email Notifications
           </CardTitle>
-          <CardDescription>
-            Manage which emails you receive from LeafLock
-          </CardDescription>
+          <CardDescription>Manage which emails you receive from LeafLock</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert>
@@ -57,14 +55,12 @@ export function PrivacySettingsTab() {
             <Download className="h-5 w-5" />
             Data Export
           </CardTitle>
-          <CardDescription>
-            Download your data or manage your account
-          </CardDescription>
+          <CardDescription>Download your data or manage your account</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            You can export all your notes and data from the <strong>Account</strong> tab in Settings.
-            This includes all notes, tags, folders, and templates in an encrypted format.
+            You can export all your notes and data from the <strong>Account</strong> tab in
+            Settings. This includes all notes, tags, folders, and templates in an encrypted format.
           </p>
 
           <div className="pt-2">
@@ -90,9 +86,7 @@ export function PrivacySettingsTab() {
             <Eye className="h-5 w-5" />
             Privacy & Security
           </CardTitle>
-          <CardDescription>
-            Understand how your data is protected
-          </CardDescription>
+          <CardDescription>Understand how your data is protected</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3">

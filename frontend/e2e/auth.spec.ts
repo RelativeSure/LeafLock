@@ -57,7 +57,10 @@ test.describe('Authentication', () => {
     await expect(page).toHaveURL('/')
   })
 
-  test('should show password strength indicator during registration', async ({ authPage, page }) => {
+  test('should show password strength indicator during registration', async ({
+    authPage,
+    page,
+  }) => {
     const email = generateUniqueEmail()
 
     await authPage.goto()
