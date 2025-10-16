@@ -54,6 +54,7 @@ jobs:
         run: docker compose up -d --wait
         env:
           FRONTEND_PORT: 3000
+          VITE_API_URL: http://localhost:8080
           BACKEND_INTERNAL_URL: http://backend:8080
 
       - name: Run Playwright tests
@@ -123,6 +124,7 @@ jobs:
         run: docker compose up -d --wait
         env:
           FRONTEND_PORT: 3000
+          VITE_API_URL: http://localhost:8080
           BACKEND_INTERNAL_URL: http://backend:8080
 
       - name: Run Lighthouse CI
