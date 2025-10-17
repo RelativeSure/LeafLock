@@ -1,10 +1,10 @@
 # LeafLock
 
-[![Unit Tests](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-unit-tests.yml?branch=main&label=unit%20tests)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-unit-tests.yml)
+[![Unit Tests](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/unit-tests.yml?branch=main&label=unit%20tests)](https://github.com/RelativeSure/LeafLock/actions/workflows/unit-tests.yml)
 [![Code Coverage](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-code-coverage.yml?branch=main&label=coverage)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-code-coverage.yml)
 [![Backend Lint](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-backend-lint.yml?branch=main&label=backend%20lint)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-backend-lint.yml)
 [![Frontend Quality](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-frontend-quality.yml?branch=main&label=frontend%20quality)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-frontend-quality.yml)
-[![MegaLinter](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-megalinter.yml?branch=main&label=mega%20linter)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-megalinter.yml)
+[![MegaLinter](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/mega-linter.yml?branch=main&label=mega%20linter)](https://github.com/RelativeSure/LeafLock/actions/workflows/mega-linter.yml)
 [![Application E2E](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-app-e2e.yml?branch=main&label=app%20e2e)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-app-e2e.yml)
 [![Frontend Lighthouse](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-frontend-lighthouse.yml?branch=main&label=lighthouse)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-frontend-lighthouse.yml)
 [![Container Build](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-container-build.yml?branch=main&label=container%20build)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-container-build.yml)
