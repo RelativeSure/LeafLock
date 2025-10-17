@@ -99,9 +99,15 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
-      - name: Install Chromium for Lighthouse
-        working-directory: frontend
-        run: pnpm exec lhci install --type=chromium
+      - name: Verify system Chrome
+        run: |
+          CHROME_BIN="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium-browser || true)"
+          if [ -z "$CHROME_BIN" ]; then
+            echo "Chrome/Chromium executable not found on PATH."
+            exit 1
+          fi
+          echo "Using Chrome binary at: $CHROME_BIN"
+          "$CHROME_BIN" --version
 
       - name: Start services with Docker Compose
         run: docker compose up -d --wait
