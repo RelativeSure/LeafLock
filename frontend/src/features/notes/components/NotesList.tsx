@@ -193,18 +193,13 @@ export const NotesList: React.FC<NotesListProps> = ({
                   <p className="text-sm text-muted-foreground line-clamp-2 mt-0 mb-0">
                     {note.content || 'No content'}
                   </p>
-                  <p
-                    id={`note-${note.id}-date`}
-                    className="text-xs text-muted-foreground"
-                  >
+                  <p id={`note-${note.id}-date`} className="text-xs text-muted-foreground">
                     {viewingTrash ? 'Deleted' : 'Modified'}{' '}
                     {new Date(note.updated_at).toLocaleDateString()}
                   </p>
                 </button>
 
-                <div
-                  className="flex flex-col justify-center space-y-0 px-0 py-0"
-                >
+                <div className="flex flex-col justify-center space-y-0 px-0 py-0">
                   {viewingTrash ? (
                     <>
                       <button

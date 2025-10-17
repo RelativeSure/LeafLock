@@ -21,6 +21,6 @@ jobs:
           fetch-depth: 2
 
       - name: Review dependencies
-        uses: github/dependency-review-action@v4
+        uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high

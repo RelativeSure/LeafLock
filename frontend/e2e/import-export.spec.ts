@@ -10,11 +10,7 @@ const SALT_BASE64 = Buffer.from(SALT_BYTES).toString('base64')
 
 const createJwt = (payload: Record<string, unknown>): string => {
   const base64Url = (value: string) =>
-    Buffer.from(value)
-      .toString('base64')
-      .replace(/=/g, '')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
+    Buffer.from(value).toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
   const header = base64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
   const body = base64Url(JSON.stringify(payload))
   return `${header}.${body}.signature`
@@ -37,10 +33,13 @@ test.describe('Import/Export dialog', () => {
       }
     })
 
-    await page.addInitScript(({ salt }) => {
-      window.localStorage.setItem('user_salt', salt)
-      window.localStorage.setItem('hasSeenOnboarding', 'true')
-    }, { salt: SALT_BASE64 })
+    await page.addInitScript(
+      ({ salt }) => {
+        window.localStorage.setItem('user_salt', salt)
+        window.localStorage.setItem('hasSeenOnboarding', 'true')
+      },
+      { salt: SALT_BASE64 }
+    )
 
     const token = createJwt({
       user_id: 'user-123',
@@ -148,7 +147,9 @@ test.describe('Import/Export dialog', () => {
       if (route.request().method() === 'GET') {
         lastNoteTimestamp = new Date().toISOString()
         return fulfillJson(route, {
-          notes: [{ ...encryptedNote, created_at: lastNoteTimestamp, updated_at: lastNoteTimestamp }],
+          notes: [
+            { ...encryptedNote, created_at: lastNoteTimestamp, updated_at: lastNoteTimestamp },
+          ],
         })
       }
       return fulfillJson(route, { success: true })
@@ -223,8 +224,8 @@ test.describe('Import/Export dialog', () => {
     const accountDialog = await accountExportAlert
     expect(accountDialog.message()).toContain('Your full data export has started downloading')
     await accountDialog.accept()
-    const accountExportFlag = await page.evaluate(
-      () => Boolean((window as any).__ACCOUNT_EXPORT_CALLED__)
+    const accountExportFlag = await page.evaluate(() =>
+      Boolean((window as any).__ACCOUNT_EXPORT_CALLED__)
     )
     expect(accountExportFlag).toBe(true)
     expect(consoleWarnings.some((msg) => msg.includes('Missing Description'))).toBe(false)

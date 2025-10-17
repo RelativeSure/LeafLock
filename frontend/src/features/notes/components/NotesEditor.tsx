@@ -200,9 +200,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
     setIsFullscreen((prev) => !prev)
   }, [])
 
-  const editorHeightClass = isFullscreen
-    ? 'min-h-[calc(100vh-11rem)]'
-    : 'min-h-[calc(100vh-14rem)]'
+  const editorHeightClass = isFullscreen ? 'min-h-[calc(100vh-11rem)]' : 'min-h-[calc(100vh-14rem)]'
 
   const editorContent = (
     <div

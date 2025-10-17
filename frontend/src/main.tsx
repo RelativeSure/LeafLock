@@ -34,8 +34,9 @@ try {
   }
 
   // Detect Playwright test environment
-  const isPlaywrightTest = window.location.search.includes('playwright') ||
-                           window.navigator.userAgent.includes('Playwright')
+  const isPlaywrightTest =
+    window.location.search.includes('playwright') ||
+    window.navigator.userAgent.includes('Playwright')
 
   const root = ReactDOM.createRoot(rootElement)
 
