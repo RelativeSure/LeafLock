@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 - Go backend in `backend/`; handlers in `handlers/`, domain logic in `services/`, helpers in `utils/`, realtime in `websocket/`, tests `_test.go` beside code.
-- React/TypeScript frontend in `frontend/src`; UI in `components/`, stores in `stores/`, API helpers in `lib/`, e2e specs in `frontend/e2e`. pnpm is the supported package manager.
+- React/TypeScript frontend in `frontend/src`; UI in `components/`, stores in `stores/`, API helpers in `lib/`. pnpm is the supported package manager.
 - Deployment tooling spans `docker-compose.yml`, `helm/`, and `leaflock-kube.yaml`. Docs live in `docs/`; automation in repo `scripts/` and service `scripts/`.
 
 ## Build, Test, and Development Commands
@@ -21,7 +21,7 @@
 ## Testing Guidelines
 - Backend unit tests live beside code (`*_test.go`); flag integration suites with `Integration` in the test name and start dependencies via `make test-db-up`. Run `make test-ci` before submitting PRs.
 - Keep coverage artifacts (`coverage.out`, `coverage.html`) in `backend/` and review them when touching auth, crypto, or storage flows.
-- Frontend uses Vitest (`pnpm test`, `pnpm test:coverage`) and Playwright (`pnpm test:pw`); name specs `<feature>.test.tsx` and keep snapshots stable.
+- Frontend uses Vitest (`pnpm test`, `pnpm test:coverage`); name specs `<feature>.test.tsx` and keep snapshots stable.
 
 ## Commit & Pull Request Guidelines
 - Favor Conventional Commit prefixes (`feat:`, `fix:`, `chore(deps):`) and scopes that mirror directories, e.g., `feat(frontend): add passkey modal`.

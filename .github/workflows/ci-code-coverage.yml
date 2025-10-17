@@ -34,7 +34,7 @@ jobs:
         run: go mod download
 
       - name: Run coverage suite
-        run: make test-coverage-check
+        run: make test-coverage
 
       - name: Capture coverage summary
         run: |

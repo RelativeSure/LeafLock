@@ -127,19 +127,17 @@ For single reference in HTML:
 
 ## Testing and CI/CD
 
-### E2E Verification Workflow
+### Lighthouse Performance Workflow
 
-Located at `.github/workflows/ci-app-e2e.yml`
+Located at `.github/workflows/ci-frontend-lighthouse.yml`
 
 **What it does:**
-- Runs frontend lint, typecheck, tests
-- Builds and starts Postgres, Redis, backend, frontend via `docker compose`
-- Waits for readiness and tests API flow (register + list notes)
-- Smoke tests frontend (index + asset)
-- Runs backend tests with coverage gate
-- Verifies Swagger access with `ADMIN_USER_IDS` fallback, then via RBAC grant
+- Boots the stack with Docker Compose for realistic network and asset timing
+- Runs the production frontend build
+- Executes Lighthouse CI audits against the preview server
+- Uploads reports as workflow artifacts for manual inspection
 
-**Admin panel in E2E:**
+**Admin panel in Lighthouse runs:**
 - Sets `VITE_ENABLE_ADMIN_PANEL=true` so the UI contains the Admin section
 
 ## Performance Optimization

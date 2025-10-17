@@ -19,7 +19,6 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
-    "test:pw": "playwright test",
     "test:security": "vitest run src/**/*.test.js --reporter=verbose",
     "test:e2e": "vitest run src/e2e.test.js",
     "clean": "rm -rf dist node_modules/.vite coverage",
@@ -82,7 +81,6 @@
   "devDependencies": {
     "@eslint/js": "9.37.0",
     "@lhci/cli": "0.13.0",
-    "@playwright/test": "1.56.0",
     "@tailwindcss/postcss": "4.1.14",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.0",

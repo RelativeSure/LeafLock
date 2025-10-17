@@ -33,25 +33,14 @@ try {
     throw new Error('Root element not found')
   }
 
-  // Detect Playwright test environment
-  const isPlaywrightTest =
-    window.location.search.includes('playwright') ||
-    window.navigator.userAgent.includes('Playwright')
-
   const root = ReactDOM.createRoot(rootElement)
 
-  // Disable StrictMode in test environment to prevent double-renders and timing issues
-  if (isPlaywrightTest) {
-    root.render(<App />)
-    console.log('React app mounted (test mode, StrictMode disabled)')
-  } else {
-    root.render(
-      <React.StrictMode>
-        <App />
-      </React.StrictMode>
-    )
-    console.log('React app mounted successfully')
-  }
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  )
+  console.log('React app mounted successfully')
 } catch (error) {
   console.error('Failed to mount React app:', error)
   const errorMessage = error instanceof Error ? error.message : 'Unknown error'

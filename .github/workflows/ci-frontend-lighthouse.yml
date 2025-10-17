@@ -99,9 +99,9 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright Chromium for Lighthouse
+      - name: Install Chromium for Lighthouse
         working-directory: frontend
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec lhci install --type=chromium
 
       - name: Start services with Docker Compose
         run: docker compose up -d --wait
