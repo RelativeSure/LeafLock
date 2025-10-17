@@ -375,7 +375,8 @@ export function ImportExportDialog({
       if (!response.ok) {
         const error = await response.json().catch(() => null)
         const message =
-          (error && (error.error || error.message)) || `Export failed with status ${response.status}`
+          (error && (error.error || error.message)) ||
+          `Export failed with status ${response.status}`
         throw new Error(message)
       }
 

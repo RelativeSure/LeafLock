@@ -134,10 +134,10 @@ export const useNotes = (api: SecureAPI, onLogout: () => void) => {
   }, [])
 
   useEffect(() => {
-    if (notes.length > 0 && !selectedNote) {
+    if (notes.length > 0 && !selectedNote && !loading) {
       setSelectedNote(notes[0])
     }
-  }, [notes, selectedNote])
+  }, [notes.length, selectedNote, loading]) // Use notes.length instead of notes array to prevent re-renders
 
   return {
     notes,

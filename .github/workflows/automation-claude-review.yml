@@ -1,4 +1,4 @@
-name: Claude Code Review (on mention - extended)
+name: Automation - Claude Code Review
 
 on:
   issue_comment:
@@ -17,23 +17,25 @@ jobs:
     # - Submitted PR review body containing @claude
     # - Manual dispatch
     if: >
-      (
-        github.event_name == 'issue_comment' &&
-        github.event.issue.pull_request &&
-        github.event.comment.body != null &&
-        contains(toLower(github.event.comment.body), '@claude')
-      ) ||
-      (
-        github.event_name == 'pull_request_review_comment' &&
-        github.event.comment.body != null &&
-        contains(toLower(github.event.comment.body), '@claude')
-      ) ||
-      (
-        github.event_name == 'pull_request_review' &&
-        github.event.review.body != null &&
-        contains(toLower(github.event.review.body), '@claude')
-      ) ||
-      (github.event_name == 'workflow_dispatch')
+      secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && (
+        (
+          github.event_name == 'issue_comment' &&
+          github.event.issue.pull_request &&
+          github.event.comment.body != null &&
+          contains(toLower(github.event.comment.body), '@claude')
+        ) ||
+        (
+          github.event_name == 'pull_request_review_comment' &&
+          github.event.comment.body != null &&
+          contains(toLower(github.event.comment.body), '@claude')
+        ) ||
+        (
+          github.event_name == 'pull_request_review' &&
+          github.event.review.body != null &&
+          contains(toLower(github.event.review.body), '@claude')
+        ) ||
+        (github.event_name == 'workflow_dispatch')
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: read

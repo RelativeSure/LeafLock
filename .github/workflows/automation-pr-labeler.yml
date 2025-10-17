@@ -1,37 +1,38 @@
-name: 🏷️ Issue Title Labeler
+name: Automation - PR Labeler
 
 on:
-  issues:
-    types: [opened, edited, reopened]
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize]
 
 permissions:
   contents: read
-  issues: write
+  pull-requests: write
 
 jobs:
   label:
     runs-on: ubuntu-latest
     steps:
-      - name: Label by issue title
+      - name: Label by title
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:
           script: |
-            const title = context.payload.issue.title.toLowerCase();
+            const title = context.payload.pull_request.title.toLowerCase();
             const labels = new Set();
             if (title.startsWith('feat') || title.startsWith('feature')) labels.add('enhancement');
             if (title.startsWith('fix') || title.includes('bug')) labels.add('bug');
             if (title.startsWith('docs') || title.startsWith('doc')) labels.add('documentation');
             if (title.startsWith('chore') || title.startsWith('refactor')) labels.add('chore');
             if (title.startsWith('ci')) labels.add('automation');
-            if (title.includes('(frontend)') || title.includes('[frontend]')) labels.add('frontend');
-            if (title.includes('(backend)') || title.includes('[backend]')) labels.add('backend');
+            // Add scope-based labels if present
+            if (title.includes('(frontend)')) labels.add('frontend');
+            if (title.includes('(backend)')) labels.add('backend');
             if (labels.size === 0) {
               core.info('No labels matched.');
             } else {
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: context.payload.issue.number,
+                issue_number: context.payload.pull_request.number,
                 labels: Array.from(labels)
               });
               core.info(`Applied labels: ${Array.from(labels).join(', ')}`);
