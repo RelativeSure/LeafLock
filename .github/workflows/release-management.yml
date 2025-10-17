@@ -1,6 +1,6 @@
 # Automated Release Management Workflow
 # Handles semantic versioning, changelog generation, and GitHub releases
-name: 🚀 Release Management
+name: Release - Management
 
 on:
   workflow_dispatch:
@@ -332,7 +332,7 @@ jobs:
       - name: Container build notification
         run: |
           echo "📦 Container build workflow will be triggered automatically by the release event"
-          echo "🔗 Check build progress: https://github.com/${{ github.repository }}/actions/workflows/build-containers.yml"
+          echo "🔗 Check build progress: https://github.com/${{ github.repository }}/actions/workflows/ci-container-build.yml"
 
           VERSION="${{ needs.version-calculation.outputs.next_version }}"
           echo "📦 Containers will be available at:"
@@ -340,7 +340,7 @@ jobs:
           echo "   - ghcr.io/${{ github.repository }}/frontend:${VERSION}"
 
           echo ""
-          echo "The build-containers.yml workflow is configured to trigger on 'release: published' events"
+          echo "The ci-container-build.yml workflow is configured to trigger on 'release: published' events"
           echo "and will automatically build and push the container images for this release."
 
   # Post-release tasks
@@ -403,7 +403,7 @@ jobs:
           echo "### 🔗 Links:" >> $GITHUB_STEP_SUMMARY
           echo "- [📋 View Release](https://github.com/${{ github.repository }}/releases/tag/${{ needs.version-calculation.outputs.next_version }})" >> $GITHUB_STEP_SUMMARY
           echo "- [📦 View Packages](https://github.com/${{ github.repository }}/pkgs/container)" >> $GITHUB_STEP_SUMMARY
-          echo "- [🔄 Build Workflow](https://github.com/${{ github.repository }}/actions/workflows/build-containers.yml)" >> $GITHUB_STEP_SUMMARY
+          echo "- [🔄 Build Workflow](https://github.com/${{ github.repository }}/actions/workflows/ci-container-build.yml)" >> $GITHUB_STEP_SUMMARY
           echo "- [🚄 Railway Deploy (Manual)](https://github.com/${{ github.repository }}/actions/workflows/railway-deploy.yml)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🚀 Next Steps:" >> $GITHUB_STEP_SUMMARY

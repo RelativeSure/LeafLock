@@ -1,4 +1,4 @@
-name: E2E Verify
+name: CI - Application E2E
 
 on:
   push:

@@ -1,4 +1,4 @@
-name: Lighthouse CI
+name: CI - Frontend Lighthouse
 
 on:
   push:

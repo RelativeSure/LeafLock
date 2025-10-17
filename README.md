@@ -1,12 +1,17 @@
 # LeafLock
 
-[![CI/CD Pipeline](https://github.com/RelativeSure/LeafLock/actions/workflows/ci.yml/badge.svg)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci.yml)
-[![Build Containers](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/build-containers.yml?branch=main&label=build%20containers)](https://github.com/RelativeSure/LeafLock/actions/workflows/build-containers.yml)
-[![E2E Verify](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/e2e-verify.yml?branch=main&label=e2e%20verify)](https://github.com/RelativeSure/LeafLock/actions/workflows/e2e-verify.yml)
+[![Unit Tests](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-unit-tests.yml?branch=main&label=unit%20tests)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-unit-tests.yml)
+[![Code Coverage](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-code-coverage.yml?branch=main&label=coverage)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-code-coverage.yml)
+[![Backend Lint](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-backend-lint.yml?branch=main&label=backend%20lint)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-backend-lint.yml)
+[![Frontend Quality](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-frontend-quality.yml?branch=main&label=frontend%20quality)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-frontend-quality.yml)
+[![MegaLinter](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-megalinter.yml?branch=main&label=mega%20linter)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-megalinter.yml)
+[![Application E2E](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-app-e2e.yml?branch=main&label=app%20e2e)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-app-e2e.yml)
+[![Frontend Lighthouse](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-frontend-lighthouse.yml?branch=main&label=lighthouse)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-frontend-lighthouse.yml)
+[![Container Build](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-container-build.yml?branch=main&label=container%20build)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-container-build.yml)
+[![Dependency Review](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-dependency-review.yml?branch=main&label=dependency%20review)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-dependency-review.yml)
 [![Docs](https://img.shields.io/badge/docs-reference-blue)](./docs)
 [![Go Version](https://img.shields.io/badge/go-1.25-00ADD8?logo=go)](https://go.dev/dl/)
 [![pnpm](https://img.shields.io/badge/pnpm-10.x-ffd831?logo=pnpm)](https://pnpm.io/)
-[![Coverage](https://img.shields.io/badge/coverage-72%25-brightgreen)](./backend)
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm_Noncommercial-blue.svg)](https://polyformproject.org/licenses/noncommercial/1.0.0)
 
 LeafLock is a privacy-first notes application with end-to-end encryption, real-time collaboration, and a Go backend. Everything can be self-hosted and kept under your control.

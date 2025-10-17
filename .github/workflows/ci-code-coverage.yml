@@ -1,0 +1,105 @@
+name: CI - Code Coverage
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-coverage:
+    name: Backend Coverage
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+      - name: Set up Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Run coverage suite
+        run: make test-coverage-check
+
+      - name: Capture coverage summary
+        run: |
+          TOTAL_LINE_COVERAGE=$(go tool cover -func=coverage.out | awk '/total:/ {print $3}')
+          echo "## Backend Coverage" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Line coverage: ${TOTAL_LINE_COVERAGE}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Threshold: 72%" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: |
+            backend/coverage.out
+            backend/coverage.html
+          retention-days: 14
+
+  frontend-coverage:
+    name: Frontend Coverage
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run coverage suite
+        run: pnpm run test:coverage
+
+      - name: Capture coverage summary
+        run: |
+          SUMMARY_FILE="coverage/coverage-summary.json"
+          if [ -f "$SUMMARY_FILE" ]; then
+            LINES=$(jq -r '.total.lines.pct' "$SUMMARY_FILE")
+            STATEMENTS=$(jq -r '.total.statements.pct' "$SUMMARY_FILE")
+            echo "## Frontend Coverage" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Lines: ${LINES}%" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Statements: ${STATEMENTS}%" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## Frontend Coverage" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Coverage summary not found (expected at coverage/coverage-summary.json)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: |
+            frontend/coverage/**
+          retention-days: 14
