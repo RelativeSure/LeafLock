@@ -1,4 +1,4 @@
-name: 🔖 Sync Labels
+name: Automation - Label Sync
 
 on:
   push:

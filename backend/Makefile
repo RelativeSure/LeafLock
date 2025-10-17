@@ -84,7 +84,7 @@ fmt: ## Format Go code
 lint: ## Run linters
 	@echo "$(GREEN)Running linters...$(NC)"
 	@if command -v $(GOLINT) >/dev/null 2>&1; then \
-		$(GOLINT) run ./...; \
+		$(GOLINT) run --config ../.github/linters/.golangci.yml ./...; \
 	else \
 		echo "$(YELLOW)golangci-lint not found, skipping...$(NC)"; \
 	fi

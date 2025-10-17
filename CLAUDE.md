@@ -5,7 +5,7 @@ This file provides guidance to Claude Code when working with this repository.
 ## Project Overview
 
 Secure notes application with end-to-end encryption:
-- **Backend**: Go 1.23+ with Fiber v2, PostgreSQL (pgx), Redis, JWT auth
+- **Backend**: Go 1.25+ with Fiber v2, PostgreSQL (pgx), Redis, JWT auth
 - **Frontend**: React 18, TypeScript, Vite 5, Zustand, Quill 2.0 editor
 - **Encryption**: XChaCha20-Poly1305 (client-side), Argon2id (passwords)
 - **Infrastructure**: Podman/Docker, PostgreSQL 15, Redis 7
