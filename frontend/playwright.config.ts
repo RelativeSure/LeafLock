@@ -11,7 +11,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0, // Reduced from 2 to 1
   workers: process.env.CI ? 2 : undefined, // Increased from 1 to 2 for parallel execution
-  timeout: 30_000,
+  timeout: process.env.CI ? 60_000 : 30_000, // Increase timeout for CI (Docker is slower)
 
   reporter: process.env.CI ? 'github' : 'list',
 

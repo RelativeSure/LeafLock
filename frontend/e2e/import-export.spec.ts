@@ -28,50 +28,6 @@ const corsHeaders = {
 
 test.describe('Import/Export dialog', () => {
   test('supports closing and export actions', async ({ page }) => {
-    await page.addInitScript(
-      ({ saltBytes }) => {
-        const readyMasterKey = new Uint8Array(32).fill(5)
-        const saltArray = Uint8Array.from(saltBytes)
-        const encodeContent = (value: unknown): string => JSON.stringify(value)
-
-        ;(window as unknown as { __PLAYWRIGHT_CRYPTO_READY?: boolean }).__PLAYWRIGHT_CRYPTO_READY =
-          false
-
-        import('/src/services/cryptoService.ts').then((module) => {
-          const { cryptoService } = module as {
-            cryptoService: {
-              masterKey: Uint8Array | null
-              initSodium: () => Promise<void>
-              generateSalt: () => Promise<Uint8Array>
-              deriveKeyFromPassword: (password: string, salt: Uint8Array) => Promise<Uint8Array>
-              encryptData: (plaintext: string) => Promise<string>
-              decryptData: (ciphertext: string) => Promise<string>
-              setMasterKey: (key: Uint8Array) => Promise<void>
-            }
-          }
-
-          cryptoService.initSodium = async () => {}
-          cryptoService.generateSalt = async () => saltArray
-          cryptoService.deriveKeyFromPassword = async () => new Uint8Array(32).fill(9)
-          cryptoService.encryptData = async (plaintext: string) => encodeContent(plaintext)
-          cryptoService.decryptData = async (ciphertext: string) => {
-            try {
-              return JSON.parse(ciphertext)
-            } catch {
-              return typeof ciphertext === 'string' ? ciphertext : JSON.stringify(ciphertext)
-            }
-          }
-          cryptoService.setMasterKey = async (key: Uint8Array) => {
-            cryptoService.masterKey = key
-          }
-          cryptoService.masterKey = readyMasterKey
-          ;(window as unknown as { __PLAYWRIGHT_CRYPTO_READY?: boolean }).__PLAYWRIGHT_CRYPTO_READY =
-            true
-        })
-      },
-      { saltBytes: Array.from(SALT_BYTES) }
-    )
-
     let nowIso = new Date().toISOString()
 
     const consoleWarnings: string[] = []
@@ -223,8 +179,6 @@ test.describe('Import/Export dialog', () => {
     })
 
     await page.goto('/')
-
-    await page.waitForFunction(() => !!(window as any).__PLAYWRIGHT_CRYPTO_READY)
 
     await page.getByLabel('Email').fill('tester@example.com')
     await page.locator('input[name="password"]').fill(PASSWORD)
