@@ -55,7 +55,7 @@ export const NotesWorkspace: React.FC<NotesWorkspaceProps> = ({
   return (
     <>
       {/* Mobile: Toggle between notes list and editor */}
-      <div className="md:hidden flex flex-col h-full">
+      <div className="md:hidden flex flex-col h-full rounded-xl border border-border shadow-sm overflow-hidden bg-card transition-shadow duration-300 animate-fade-in">
         {/* Mobile toggle header */}
         <div className="flex items-center justify-between bg-card border-b border-border px-4 py-3 flex-shrink-0">
           <h1 className="text-base font-semibold text-foreground">
@@ -114,50 +114,55 @@ export const NotesWorkspace: React.FC<NotesWorkspaceProps> = ({
       </div>
 
       {/* Desktop: Resizable panels */}
-      <div className="hidden md:block h-full">
-        <ResizablePanelGroup direction="horizontal">
-          {/* Sidebar Panel */}
-          <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-            <NotesList
-              notes={notes}
-              trashedNotes={trashedNotes}
-              viewingTrash={viewingTrash}
-              selectedNote={selectedNote}
-              loading={loading}
-              notesError={notesError}
-              onRetryLoad={onRetryLoad}
-              onDismissError={onDismissError}
-              onSelectNote={onSelectNote}
-              onClearSelection={() => onSelectNote(null)}
-              onChangeView={onChangeView}
-              onRestoreNote={onRestoreNote}
-              onPermanentDelete={onPermanentDelete}
-              onMoveToTrash={onMoveToTrash}
-              onStartNewNote={onStartNewNote}
-              onOpenTemplateSelector={onOpenTemplateSelector}
+      <div className="hidden md:flex h-full">
+        <div className="flex-1 h-full rounded-xl border border-border shadow-sm overflow-hidden bg-card transition-shadow duration-300 animate-fade-in">
+          <ResizablePanelGroup direction="horizontal" className="bg-background">
+            {/* Sidebar Panel */}
+            <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+              <NotesList
+                notes={notes}
+                trashedNotes={trashedNotes}
+                viewingTrash={viewingTrash}
+                selectedNote={selectedNote}
+                loading={loading}
+                notesError={notesError}
+                onRetryLoad={onRetryLoad}
+                onDismissError={onDismissError}
+                onSelectNote={onSelectNote}
+                onClearSelection={() => onSelectNote(null)}
+                onChangeView={onChangeView}
+                onRestoreNote={onRestoreNote}
+                onPermanentDelete={onPermanentDelete}
+                onMoveToTrash={onMoveToTrash}
+                onStartNewNote={onStartNewNote}
+                onOpenTemplateSelector={onOpenTemplateSelector}
+              />
+            </ResizablePanel>
+
+            {/* Resizable Handle */}
+            <ResizableHandle
+              withHandle
+              className="bg-border transition-colors duration-200 hover:bg-muted"
             />
-          </ResizablePanel>
 
-          {/* Resizable Handle */}
-          <ResizableHandle withHandle />
-
-          {/* Editor Panel */}
-          <ResizablePanel defaultSize={80}>
-            <div className="h-full flex flex-col">
-              {selectedNote ? (
-                <NotesEditor
-                  selectedNote={selectedNote}
-                  onSelectNote={onSelectNote}
-                  onNotesChange={onNotesChange}
-                  api={api}
-                  cryptoService={cryptoService}
-                />
-              ) : (
-                <EmptyState />
-              )}
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+            {/* Editor Panel */}
+            <ResizablePanel defaultSize={80}>
+              <div className="h-full flex flex-col">
+                {selectedNote ? (
+                  <NotesEditor
+                    selectedNote={selectedNote}
+                    onSelectNote={onSelectNote}
+                    onNotesChange={onNotesChange}
+                    api={api}
+                    cryptoService={cryptoService}
+                  />
+                ) : (
+                  <EmptyState />
+                )}
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
       </div>
     </>
   )
