@@ -1,6 +1,7 @@
 // Test utilities for React components
 import type { ReactElement, ReactNode } from 'react'
 import { render, screen, fireEvent, waitFor, type RenderOptions } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { vi } from 'vitest'
 import type { Note } from '@/features/app/types'
 
@@ -139,10 +140,23 @@ export const mockApiError = (status = 500, message = 'Server Error') => {
 }
 
 // Custom render function with common providers
+export const createTestQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  })
+
 export const renderWithProviders = (ui: ReactElement, options: RenderOptions = {}) => {
+  const queryClient = createTestQueryClient()
+
   const Wrapper = ({ children }: { children: ReactNode }) => (
-    <div data-testid="test-wrapper">{children}</div>
+    <QueryClientProvider client={queryClient}>
+      <div data-testid="test-wrapper">{children}</div>
+    </QueryClientProvider>
   )
+
   return render(ui, { wrapper: Wrapper, ...options })
 }
 

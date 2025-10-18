@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
   mockSodium,
@@ -11,6 +11,7 @@ import {
   createMockNote,
   typeIntoField,
   clickButton,
+  renderWithProviders,
   waitForLoading,
   MockCryptoService,
   checkForXSS,
@@ -22,6 +23,8 @@ vi.mock('libsodium-wrappers', () => mockSodium)
 // Import React and the component AFTER setting up the mock
 import React from 'react'
 import LeafLockApp from './App'
+
+const render = renderWithProviders
 
 describe('LeafLockApp', () => {
   beforeEach(() => {
