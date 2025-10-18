@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react'
+import React, { useState, useEffect, useCallback, Suspense, lazy, useMemo } from 'react'
+import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { OnboardingOverlay } from '@/features/onboarding/OnboardingOverlay'
 import { LoginView } from '@/features/auth/LoginView'
 import { UnlockView } from '@/features/auth/UnlockView'
@@ -22,10 +23,74 @@ const TagsManager = lazy(() => import('@/components/TagsManager'))
 const FoldersManager = lazy(() => import('@/components/FoldersManager'))
 const TemplatesManager = lazy(() => import('@/components/TemplatesManager'))
 
+const APP_VIEWS = new Set<ViewType>(['notes', 'editor', 'settings', 'tags', 'folders', 'templates', 'admin'])
+const POST_LOGIN_REDIRECT_VIEWS = new Set<ViewType>(['login', 'forgot'])
+
+const normalizePath = (path: string): string => {
+  if (!path) return '/'
+  if (path === '/') return '/'
+  return path.endsWith('/') ? path.slice(0, -1) : path
+}
+
+const viewToPathMap: Record<ViewType, string> = {
+  login: '/auth/login',
+  unlock: '/auth/unlock',
+  forgot: '/auth/forgot',
+  reset: '/auth/reset',
+  notes: '/app/notes',
+  editor: '/app/editor',
+  settings: '/app/settings',
+  tags: '/app/tags',
+  folders: '/app/folders',
+  templates: '/app/templates',
+  admin: '/app/admin',
+}
+
+const viewToPath = (view: ViewType): string => viewToPathMap[view] ?? '/auth/login'
+
+const pathToView = (path: string): { view: ViewType; known: boolean } => {
+  switch (path) {
+    case '/':
+    case '/auth':
+    case '/auth/login':
+      return { view: 'login', known: true }
+    case '/auth/unlock':
+      return { view: 'unlock', known: true }
+    case '/auth/forgot':
+      return { view: 'forgot', known: true }
+    case '/auth/reset':
+      return { view: 'reset', known: true }
+    case '/app':
+    case '/app/notes':
+      return { view: 'notes', known: true }
+    case '/app/editor':
+      return { view: 'editor', known: true }
+    case '/app/settings':
+      return { view: 'settings', known: true }
+    case '/app/tags':
+      return { view: 'tags', known: true }
+    case '/app/folders':
+      return { view: 'folders', known: true }
+    case '/app/templates':
+      return { view: 'templates', known: true }
+    case '/app/admin':
+      return { view: 'admin', known: true }
+    default:
+      return { view: 'login', known: false }
+  }
+}
+
 export const LeafLockApp: React.FC = () => {
+  const navigate = useNavigate({ from: '/' })
+  const location = useRouterState({ select: (state) => state.location })
+  const normalizedPath = useMemo(() => normalizePath(location.pathname), [location.pathname])
+  const { view: derivedView, known: isKnownPath } = useMemo(() => pathToView(normalizedPath), [normalizedPath])
+
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [currentView, setCurrentView] = useState<ViewType>('login')
   const [encryptionStatus, setEncryptionStatus] = useState<EncryptionStatus>('locked')
+  const [isMobile, setIsMobile] = useState<boolean>(() =>
+    typeof window === 'undefined' ? true : window.innerWidth < 768
+  )
   const [viewingTrash, setViewingTrash] = useState(false)
   const [initializing, setInitializing] = useState(true)
   const [, setError] = useState<string | null>(null)
@@ -33,7 +98,6 @@ export const LeafLockApp: React.FC = () => {
   const [onboardingStep, setOnboardingStep] = useState(0)
   const [isAdmin, setIsAdmin] = useState(false)
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
-  const [showForgotPassword, setShowForgotPassword] = useState(false)
   const [resetToken, setResetToken] = useState<string | null>(null)
 
   // Use custom hooks for notes and announcements
@@ -56,13 +120,103 @@ export const LeafLockApp: React.FC = () => {
 
   const { announcements } = useAnnouncements(api, initializing)
 
+  const goToView = useCallback(
+    (view: ViewType) => {
+      const target = viewToPath(view)
+      const targetNormalized = normalizePath(target)
+      if (targetNormalized === normalizedPath) {
+        return
+      }
+      void navigate({ to: target as any })
+    },
+    [navigate, normalizedPath]
+  )
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    handleResize()
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
+
+  const fallbackView: ViewType = useMemo(() => {
+    if (!isAuthenticated) return 'login'
+    return encryptionStatus === 'unlocked' ? 'notes' : 'unlock'
+  }, [isAuthenticated, encryptionStatus])
+
+  const currentView: ViewType = useMemo(
+    () => (isKnownPath ? derivedView : fallbackView),
+    [isKnownPath, derivedView, fallbackView]
+  )
+
+  useEffect(() => {
+    if (!isKnownPath) {
+      goToView(fallbackView)
+      return
+    }
+
+    if (!isAuthenticated) {
+      if (APP_VIEWS.has(currentView) || currentView === 'unlock') {
+        goToView('login')
+        return
+      }
+    } else {
+      if (encryptionStatus === 'locked' && APP_VIEWS.has(currentView)) {
+        goToView('unlock')
+        return
+      }
+
+      if (encryptionStatus === 'unlocked') {
+        if (currentView === 'unlock' || POST_LOGIN_REDIRECT_VIEWS.has(currentView)) {
+          goToView('notes')
+          return
+        }
+      }
+    }
+
+    if (normalizedPath === '/' || normalizedPath === '/auth') {
+      goToView(fallbackView)
+    } else if (normalizedPath === '/app') {
+      goToView('notes')
+    }
+  }, [
+    isKnownPath,
+    fallbackView,
+    goToView,
+    normalizedPath,
+    isAuthenticated,
+    encryptionStatus,
+    currentView,
+  ])
+
+  useEffect(() => {
+    if (
+      isAuthenticated &&
+      encryptionStatus === 'unlocked' &&
+      currentView === 'editor' &&
+      !isMobile
+    ) {
+      goToView('notes')
+    }
+  }, [isAuthenticated, encryptionStatus, currentView, isMobile, goToView])
+
   console.log(
     '🔄 LeafLockApp render - initializing:',
     initializing,
     'isAuthenticated:',
     isAuthenticated,
     'currentView:',
-    currentView
+    currentView,
+    'path:',
+    normalizedPath
   )
 
   const handleLogout = useCallback(() => {
@@ -73,7 +227,7 @@ export const LeafLockApp: React.FC = () => {
     localStorage.removeItem('user_salt')
 
     setIsAuthenticated(false)
-    setCurrentView('login')
+    goToView('login')
     setEncryptionStatus('locked')
     setSelectedNote(null)
     setError(null)
@@ -81,7 +235,7 @@ export const LeafLockApp: React.FC = () => {
     setIsAdmin(false)
 
     console.log('✅ Complete logout finished')
-  }, [setSelectedNote, setNotesError])
+  }, [goToView, setSelectedNote, setNotesError])
 
   const handleUnlockWithPassword = useCallback(
     async (password: string) => {
@@ -104,7 +258,7 @@ export const LeafLockApp: React.FC = () => {
         const key = await cryptoService.deriveKeyFromPassword(trimmed, salt)
         await cryptoService.setMasterKey(key)
 
-        setCurrentView('notes')
+        goToView('notes')
         setEncryptionStatus('unlocked')
         await loadNotes()
       } catch (error) {
@@ -112,7 +266,7 @@ export const LeafLockApp: React.FC = () => {
         throw error instanceof Error ? error : new Error('Failed to unlock notes')
       }
     },
-    [loadNotes, handleLogout]
+    [loadNotes, handleLogout, goToView]
   )
 
   const handleTemplateSelect = useCallback(
@@ -130,14 +284,14 @@ export const LeafLockApp: React.FC = () => {
         const newNote = notes.find((note) => note.id === response.id)
         if (newNote) {
           setSelectedNote(newNote)
-          setCurrentView('editor')
+          goToView('editor')
         }
       } catch (err) {
         console.error('Failed to create note from template:', err)
         setError(err instanceof Error ? err.message : 'Failed to create note from template')
       }
     },
-    [loadNotes, notes]
+    [loadNotes, notes, goToView]
   )
 
   const handleOnboardingNext = () => {
@@ -214,12 +368,12 @@ export const LeafLockApp: React.FC = () => {
             if (!cryptoService.masterKey) {
               console.log('🔐 No master key - user needs to re-enter password')
               setIsAuthenticated(true)
-              setCurrentView('unlock')
+              goToView('unlock')
               setEncryptionStatus('locked')
             } else {
               console.log('🔑 Master key found, initializing app...')
               setIsAuthenticated(true)
-              setCurrentView('notes')
+              goToView('notes')
               setEncryptionStatus('unlocked')
               loadNotes().catch((err) => {
                 console.error('Failed to load notes during init:', err)
@@ -235,20 +389,20 @@ export const LeafLockApp: React.FC = () => {
             localStorage.removeItem('user_salt')
             cryptoService.masterKey = null
             setIsAuthenticated(false)
-            setCurrentView('login')
+            goToView('login')
             setEncryptionStatus('locked')
           }
         } else {
           console.log('ℹ️ No stored token found - showing login')
           setIsAuthenticated(false)
-          setCurrentView('login')
+          goToView('login')
           setEncryptionStatus('locked')
         }
       } catch (err) {
         console.error('💥 Failed to initialize app:', err)
         setError('Failed to initialize application')
         setIsAuthenticated(false)
-        setCurrentView('login')
+        goToView('login')
         setEncryptionStatus('locked')
       } finally {
         console.log('🏁 App initialization complete, setting initializing = false')
@@ -258,7 +412,7 @@ export const LeafLockApp: React.FC = () => {
     }
 
     void initializeApp()
-  }, [loadNotes])
+  }, [loadNotes, goToView])
 
   useEffect(() => {
     if (
@@ -271,16 +425,16 @@ export const LeafLockApp: React.FC = () => {
         '🚨 Security check: Locked while authenticated outside unlock view - forcing logout'
       )
       setIsAuthenticated(false)
-      setCurrentView('login')
+      goToView('login')
     }
-  }, [encryptionStatus, isAuthenticated, initializing, currentView])
+  }, [encryptionStatus, isAuthenticated, initializing, currentView, goToView])
 
   // Removed loading overlay - app initializes in background
 
   if (isAuthenticated && encryptionStatus === 'unlocked' && currentView === 'settings') {
     return (
       <Suspense fallback={<ComponentLoader />}>
-        <SettingsPage api={api} onBack={() => setCurrentView('notes')} onLogout={handleLogout} />
+        <SettingsPage api={api} onBack={() => goToView('notes')} onLogout={handleLogout} />
       </Suspense>
     )
   }
@@ -289,7 +443,7 @@ export const LeafLockApp: React.FC = () => {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
         <Suspense fallback={<ComponentLoader />}>
-          <TagsManager onClose={() => setCurrentView('notes')} />
+          <TagsManager onClose={() => goToView('notes')} />
         </Suspense>
       </div>
     )
@@ -299,7 +453,7 @@ export const LeafLockApp: React.FC = () => {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
         <Suspense fallback={<ComponentLoader />}>
-          <FoldersManager onClose={() => setCurrentView('notes')} />
+          <FoldersManager onClose={() => goToView('notes')} />
         </Suspense>
       </div>
     )
@@ -309,7 +463,7 @@ export const LeafLockApp: React.FC = () => {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
         <Suspense fallback={<ComponentLoader />}>
-          <TemplatesManager onClose={() => setCurrentView('notes')} mode="manage" />
+          <TemplatesManager onClose={() => goToView('notes')} mode="manage" />
         </Suspense>
       </div>
     )
@@ -318,7 +472,7 @@ export const LeafLockApp: React.FC = () => {
   if (isAuthenticated && encryptionStatus === 'unlocked' && isAdmin && currentView === 'admin') {
     return (
       <Suspense fallback={<ComponentLoader />}>
-        <AdminPage api={api} onBack={() => setCurrentView('notes')} />
+        <AdminPage api={api} onBack={() => goToView('notes')} />
       </Suspense>
     )
   }
@@ -338,7 +492,7 @@ export const LeafLockApp: React.FC = () => {
           isAdmin={isAdmin}
           onSelectNote={setSelectedNote}
           onNotesChange={setNotes}
-          onChangeView={setCurrentView}
+          onChangeView={goToView}
           onRestoreNote={handleRestoreNote}
           onPermanentDelete={handlePermanentDelete}
           onMoveToTrash={handleMoveNoteToTrash}
@@ -375,21 +529,21 @@ export const LeafLockApp: React.FC = () => {
   }
 
   // Password reset flow
-  if (resetToken) {
+  if (currentView === 'reset' && resetToken) {
     return (
       <ResetPasswordView
         api={api}
         token={resetToken}
         onResetComplete={() => {
           setResetToken(null)
-          setShowForgotPassword(false)
+          goToView('login')
         }}
       />
     )
   }
 
-  if (showForgotPassword) {
-    return <ForgotPasswordView api={api} onBackToLogin={() => setShowForgotPassword(false)} />
+  if (currentView === 'forgot') {
+    return <ForgotPasswordView api={api} onBackToLogin={() => goToView('login')} />
   }
 
   return (
@@ -398,10 +552,10 @@ export const LeafLockApp: React.FC = () => {
         api={api}
         cryptoService={cryptoService}
         announcements={announcements}
-        onForgotPassword={() => setShowForgotPassword(true)}
+        onForgotPassword={() => goToView('forgot')}
         onAuthenticated={async () => {
           setIsAuthenticated(true)
-          setCurrentView('notes')
+          goToView('notes')
           setEncryptionStatus('unlocked')
           try {
             const adminOk = await api.adminHealth()

@@ -106,8 +106,8 @@ test-unit: deps ## Run unit tests only
 test-integration: deps ## Run integration tests (requires test database)
 	@echo "$(GREEN)Running integration tests...$(NC)"
 	@echo "$(YELLOW)Make sure test database is running:$(NC)"
-	@echo "  Docker: docker run -d --name test-postgres -p 5433:5432 -e POSTGRES_USER=test -e POSTGRES_PASSWORD=test -e POSTGRES_DB=test_notes postgres:15"
-	@echo "  Docker: docker run -d --name test-redis -p 6380:6379 redis:7"
+	@echo "  Docker: docker run -d --name test-postgres -p 5433:5432 -e POSTGRES_USER=test -e POSTGRES_PASSWORD=test -e POSTGRES_DB=test_notes postgres:18"
+	@echo "  Docker: docker run -d --name test-redis -p 6380:6379 redis:8"
 	DATABASE_URL=$(TEST_DB_URL) REDIS_URL=$(TEST_REDIS_URL) $(GOTEST) -v -timeout=$(TEST_TIMEOUT) -run="Integration" ./...
 	@echo "$(GREEN)Integration tests completed$(NC)"
 
@@ -156,8 +156,8 @@ test-local: deps fmt vet test-unit test-integration test-security test-coverage 
 # Test database management
 test-db-up: ## Start test databases with Docker
 	@echo "$(GREEN)Starting test databases...$(NC)"
-	docker run -d --name test-postgres -p 5433:5432 -e POSTGRES_USER=test -e POSTGRES_PASSWORD=test -e POSTGRES_DB=test_notes postgres:15 || echo "test-postgres already exists"
-	docker run -d --name test-redis -p 6380:6379 redis:7 || echo "test-redis already exists"
+	docker run -d --name test-postgres -p 5433:5432 -e POSTGRES_USER=test -e POSTGRES_PASSWORD=test -e POSTGRES_DB=test_notes postgres:18 || echo "test-postgres already exists"
+	docker run -d --name test-redis -p 6380:6379 redis:8 || echo "test-redis already exists"
 	@echo "$(GREEN)Test databases started$(NC)"
 	@echo "$(YELLOW)Waiting for databases to be ready...$(NC)"
 	sleep 5

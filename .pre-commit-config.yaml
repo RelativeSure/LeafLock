@@ -16,7 +16,7 @@ repos:
         exclude: ^(frontend/node_modules|\.vscode)/
       - id: check-merge-conflict
       - id: check-added-large-files
-        args: ['--maxkb=1000']
+        args: ["--maxkb=1000"]
       - id: check-case-conflict
       - id: check-executables-have-shebangs
       - id: check-shebang-scripts-are-executable
@@ -30,7 +30,7 @@ repos:
     rev: v1.4.0
     hooks:
       - id: detect-secrets
-        args: ['--baseline', '.secrets.baseline']
+        args: ["--baseline", ".github/linters/.secrets.baseline"]
         exclude: |
           (?x)^(
             \.env\.example|

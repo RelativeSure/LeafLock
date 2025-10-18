@@ -9,22 +9,31 @@ import { Aside, Card, CardGrid, Code, Tabs, TabItem } from '@astrojs/starlight/c
 
 ## Stack Snapshot
 
-- React 18 + TypeScript, bundled with Vite (`frontend/vite.config.ts`).
+- React 19 + TypeScript, bundled with Vite (`frontend/vite.config.ts`).
+- TanStack Query orchestrates API reads/mutations and cache invalidation.
+- TanStack Router owns the `/auth/*` and `/app/*` route shells, keeping login, unlock, and workspace state in sync with the URL.
 - Zustand stores keep decrypted note state in memory only.
 - shadcn/ui components provide accessible primitives with Tailwind styling.
 - Auth + crypto live entirely inside the browser; the API never sees plaintext note content.
 
 <CardGrid columns={3}>
   <Card title="Entry Point" icon="rocket">
-    `frontend/src/main.tsx` mounts `<App />`, loads global styles, and registers the Theme context.
+    `frontend/src/main.tsx` mounts `<App />`, loads global styles, and provides the shared TanStack Query client.
   </Card>
   <Card title="Layout" icon="layout">
     `features/app/components/AppLayout.tsx` wraps the workspace, routing, and announcement banner.
   </Card>
   <Card title="Routing" icon="workflow">
-    `App.tsx` renders authenticated vs unauthenticated routes; React Router handles page shells.
+    `App.tsx` wires TanStack Router; `LeafLockApp` reacts to `/auth/login`, `/auth/unlock`, and `/app/*` routes to drive view transitions alongside encryption state.
   </Card>
 </CardGrid>
+
+## Data Fetching Strategy
+
+- `QueryClientProvider` wraps the app and enforces consistent retry/staleness behaviour.
+- `useNotes` and `useAnnouncements` expose the same API as before, but internally call `useQuery` / `useMutation` so cache updates stay centralized.
+- Mutations (`restoreNote`, `deleteNote`, share-link actions) update in-memory state via `queryClient.setQueryData`, keeping decrypted note content inside the browser only.
+- Admin dashboards render user tables with TanStack Table, wiring server-side sorting into the shared query cache.
 
 ## Client Encryption Pipeline
 

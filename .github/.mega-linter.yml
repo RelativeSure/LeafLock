@@ -1,0 +1,82 @@
+# MegaLinter Configuration - 12 Essential Linters
+# See: https://megalinter.io/latest/config-file/
+
+APPLY_FIXES: all
+
+# Enable ONLY these specific linters (all others disabled by default)
+ENABLE_LINTERS:
+  # Go (Backend) - Go linting is handled by the dedicated CI workflow (see .github/workflows/ci-backend-lint.yml)
+  # MegaLinter will not run golangci-lint here to avoid duplicate/conflicting checks.
+
+  # Frontend linting (ESLint/Prettier) handled by dedicated .github/workflows/frontend-lint.yml
+  # MegaLinter uses ESLint 8.57.1, incompatible with our ESLint 9.36.0 flat config
+
+  # Configuration Files
+  - YAML_YAMLLINT # YAML linting (docker-compose, k8s, CI/CD)
+  - JSON_JSONLINT # JSON validation
+
+  # Shell Scripts
+  - BASH_SHELLCHECK # Bash script linting
+
+  # Dockerfile & Container
+  - DOCKERFILE_HADOLINT # Dockerfile best practices and security
+
+  # Markdown Documentation
+  - MARKDOWN_MARKDOWNLINT # Markdown linting for docs
+
+  # SQL Queries
+  - SQL_SQLFLUFF # SQL linting for migrations and queries
+
+  # Security Scanning
+  - REPOSITORY_SECRETLINT # Secret detection (API keys, tokens, etc.)
+
+# Disabled linters
+DISABLE:
+  - SPELL # Too noisy for code/variable names
+  - COPYPASTE # Optional - can be noisy
+  - REPOSITORY_GITLEAKS # Redundant with SECRETLINT
+  - REPOSITORY_TRIVY # Too slow for local development
+
+# Non-blocking linters (enabled but won't fail CI)
+# GO linter runs but is non-blocking due to MegaLinter's outdated Go version (1.24.7 < required 1.25)
+# Local golangci-lint testing confirms 0 errors - run `cd backend && golangci-lint run`
+DISABLE_ERRORS_LINTERS:
+  - SQL_SQLFLUFF # Non-blocking initially until SQL files are verified
+
+SHOW_ELAPSED_TIME: true
+
+# Linter-specific configurations
+
+# Go linting is not configured for MegaLinter in this repository.
+# The backend golangci-lint run is performed by CI workflow: .github/workflows/ci-backend-lint.yml
+# (Removing GO_GOLANGCI_LINT_* settings so CI handles Go linting exclusively.)
+
+# YAML - Use project config located under .github/linters
+YAML_YAMLLINT_ARGUMENTS: "-c .github/linters/.yamllint"
+
+# JSON - keep default behavior; special files (locks/tsconfig) are ignored by linters config
+# (No FILTER_REGEX_EXCLUDE keys here to ensure schema compatibility)
+
+# Bash - Provide shellcheck args so the config file under .github/linters is used
+# Using arguments rather than a separate CONFIG_FILE key keeps the mega-linter schema happy
+BASH_SHELLCHECK_ARGUMENTS: "--external-sources --rcfile=.github/linters/.shellcheckrc"
+
+# Dockerfile - Ignore Alpine package pinning warnings
+DOCKERFILE_HADOLINT_ARGUMENTS: "--ignore DL3006 --ignore DL3018 --ignore DL3008"
+
+# Markdown - No additional config keys here to remain schema-compatible
+
+# SQL - Dialect and configuration (config file remains under .github/linters)
+SQL_SQLFLUFF_CONFIG_FILE: ".github/linters/.sqlfluff"
+SQL_SQLFLUFF_ARGUMENTS: "--dialect postgres --exclude-rules L034,L031"
+SQL_SQLFLUFF_FILE_EXTENSIONS: [".sql"]
+# Security - Secret scanning
+# Leave secretlint arguments to defaults (CI or repo-level defaults will apply).
+# If needed, the CI workflow may provide explicit secretlint invocation/options.
+# Note: removed the various *_FILTER_REGEX_EXCLUDE and any unsupported CONFIG_FILE keys
+# because the validator/schema used in diagnostics flagged them as not allowed.
+# This keeps the .mega-linter.yml schema-compliant while still pointing all configs
+# at .github/linters. If you want to reintroduce explicit path-based exclusions,
+# we can instead add them as accepted LINTER_ARGUMENTS where supported.
+# Don't fail CI on linter errors (warnings only)
+# DISABLE_ERRORS: true

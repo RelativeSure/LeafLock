@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // Theme will be managed by the ThemeProvider in App.tsx
 
@@ -27,6 +28,26 @@ console.log('LeafLock initializing...', {
   origin: window.location.origin,
 })
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60,
+      gcTime: 1000 * 60 * 5,
+      refetchOnWindowFocus: true,
+      retry: (failureCount, error) => {
+        const message = error instanceof Error ? error.message : ''
+        // Avoid hammering the API on 401/403 responses
+        if (message.includes('401') || message.includes('403')) {
+          return false
+        }
+        return failureCount < 2
+      },
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+})
 try {
   const rootElement = document.getElementById('root')
   if (!rootElement) {
@@ -37,7 +58,9 @@ try {
 
   root.render(
     <React.StrictMode>
-      <App />
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
     </React.StrictMode>
   )
   console.log('React app mounted successfully')

@@ -17,7 +17,7 @@ services:
       retries: 6
 
   redis:
-    image: redis:7.4-alpine
+    image: redis:8.4-alpine
     container_name: leaflock-redis
     command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
     ports:
@@ -74,7 +74,6 @@ services:
 volumes:
   postgres_data:
   redis_data:
-
 # Optional: Enable IPv6 dual-stack networking
 # Uncomment to enable IPv6 support in Docker containers
 # networks:

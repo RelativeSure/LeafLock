@@ -95,6 +95,12 @@ check_requirements() {
         log_success "Podman found"
     elif command -v docker &> /dev/null; then
         log_success "Docker found"
+        log_info "Cleaning up stopped containers from previous runs..."
+        if docker compose rm -sf >/dev/null 2>&1; then
+            log_success "Removed stopped containers"
+        else
+            log_warning "Unable to remove stopped containers automatically; you can run 'docker compose rm -sf' manually"
+        fi
     else
         log_error "Neither Docker nor Podman found. Please install one of them."
         errors=$((errors + 1))

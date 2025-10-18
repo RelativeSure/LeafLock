@@ -13,6 +13,8 @@ export type ViewType =
   | 'notes'
   | 'editor'
   | 'unlock'
+  | 'forgot'
+  | 'reset'
   | 'admin'
   | 'settings'
   | 'tags'

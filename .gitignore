@@ -13,6 +13,8 @@ backend/app
 backend/.gocache/
 frontend/dist/
 frontend/build/
+frontend/test-results/
+frontend/tests/
 
 # OS files
 .DS_Store

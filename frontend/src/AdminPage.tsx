@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -32,10 +32,18 @@ import {
 import { MultiCombobox } from '@/components/ui/multi-combobox'
 import { Switch } from '@/components/ui/switch'
 import type { AdminUser } from '@/lib/schemas'
+import {
+  SortingState,
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from '@tanstack/react-table'
 
 type AdminPageProps = { api: any; onBack: () => void }
 
 const availableRoles = ['moderator', 'auditor']
+const columnHelper = createColumnHelper<AdminUser>()
 
 const AdminPage: React.FC<AdminPageProps> = ({ api, onBack }) => {
   const [users, setUsers] = useState<AdminUser[]>([])
@@ -70,6 +78,107 @@ const AdminPage: React.FC<AdminPageProps> = ({ api, onBack }) => {
   const [confirmRoleText, setConfirmRoleText] = useState('')
   const [confirmAdminText, setConfirmAdminText] = useState('')
   // no-op: using Combobox component
+
+  const sortingState = useMemo<SortingState>(
+    () => [
+      {
+        id: sort,
+        desc: order === 'DESC',
+      },
+    ],
+    [sort, order]
+  )
+
+  const columns = useMemo(
+    () => [
+      columnHelper.accessor('email', {
+        header: () => 'Email',
+        cell: (info) => info.getValue(),
+      }),
+      columnHelper.accessor('is_admin', {
+        id: 'is_admin',
+        header: () => 'Admin',
+        cell: ({ row }) =>
+          row.original.is_admin ? (
+            <Badge variant={row.original.admin_via_allowlist ? 'secondary' : 'default'}>
+              admin{row.original.admin_via_allowlist ? ' • allowlist' : ''}
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground">-</span>
+          ),
+      }),
+      columnHelper.accessor('mfa_enabled', {
+        id: 'mfa_enabled',
+        header: () => 'MFA',
+        enableSorting: false,
+        cell: ({ getValue }) =>
+          getValue() ? (
+            <Badge variant="outline">enabled</Badge>
+          ) : (
+            <span className="text-muted-foreground">disabled</span>
+          ),
+      }),
+      columnHelper.display({
+        id: 'roles',
+        header: () => 'Roles',
+        enableSorting: false,
+        cell: ({ row }) =>
+          row.original.roles?.length ? (
+            <div className="flex flex-wrap gap-1">
+              {row.original.roles.map((role) => (
+                <Badge key={role} variant="secondary">
+                  {role}
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <span className="text-muted-foreground">(none)</span>
+          ),
+      }),
+      columnHelper.accessor('last_login', {
+        id: 'last_login',
+        header: () => 'Last Login',
+        cell: ({ getValue }) => {
+          const val = getValue()
+          return val ? new Date(val).toLocaleString() : '-'
+        },
+      }),
+      columnHelper.accessor('created_at', {
+        id: 'created_at',
+        header: () => 'Registered',
+        cell: ({ getValue }) => {
+          const val = getValue()
+          return val ? new Date(val).toLocaleString() : '-'
+        },
+      }),
+    ],
+    []
+  )
+
+  const table = useReactTable({
+    data: users,
+    columns,
+    state: {
+      sorting: sortingState,
+    },
+    manualSorting: true,
+    getCoreRowModel: getCoreRowModel(),
+    onSortingChange: (updater) => {
+      const nextSorting =
+        typeof updater === 'function' ? updater(sortingState) : (updater as SortingState)
+      if (!nextSorting.length) {
+        setSort('created_at')
+        setOrder('DESC')
+        setOffset(0)
+        return
+      }
+      const next = nextSorting[0]
+      const nextId = (next.id as typeof sort | undefined) ?? 'created_at'
+      setSort(nextId)
+      setOrder(next.desc ? 'DESC' : 'ASC')
+      setOffset(0)
+    },
+  })
 
   const loadUsers = async () => {
     setError(null)
@@ -655,54 +764,66 @@ const AdminPage: React.FC<AdminPageProps> = ({ api, onBack }) => {
                 <Label>All Users</Label>
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Admin</TableHead>
-                      <TableHead>MFA</TableHead>
-                      <TableHead>Roles</TableHead>
-                      <TableHead>Last Login</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((u) => (
-                      <TableRow
-                        key={u.user_id}
-                        className={u.user_id === selectedUserId ? 'bg-accent/30' : ''}
-                        onClick={() => setSelectedUserId(u.user_id)}
-                      >
-                        <TableCell>{u.email}</TableCell>
-                        <TableCell>
-                          {u.is_admin ? (
-                            <Badge variant={u.admin_via_allowlist ? 'secondary' : 'default'}>
-                              admin{u.admin_via_allowlist ? ' • allowlist' : ''}
-                            </Badge>
-                          ) : (
-                            '-'
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {u.mfa_enabled ? (
-                            <Badge variant="outline">enabled</Badge>
-                          ) : (
-                            <span className="text-muted-foreground">disabled</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="space-x-1">
-                          {u.roles?.length ? (
-                            u.roles.map((r) => (
-                              <Badge key={r} variant="secondary">
-                                {r}
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-muted-foreground">(none)</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {u.last_login ? new Date(u.last_login).toLocaleString() : '-'}
-                        </TableCell>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => {
+                          if (header.isPlaceholder) {
+                            return <TableHead key={header.id} />
+                          }
+                          const canSort = header.column.getCanSort()
+                          const sorted = header.column.getIsSorted()
+                          if (!canSort) {
+                            return (
+                              <TableHead key={header.id} className="text-sm font-medium">
+                                {flexRender(header.column.columnDef.header, header.getContext())}
+                              </TableHead>
+                            )
+                          }
+                          return (
+                            <TableHead key={header.id}>
+                              <button
+                                type="button"
+                                onClick={header.column.getToggleSortingHandler()}
+                                className="flex items-center gap-1 text-sm font-medium cursor-pointer select-none"
+                              >
+                                {flexRender(header.column.columnDef.header, header.getContext())}
+                                {sorted ? (
+                                  <span aria-hidden>{sorted === 'asc' ? '↑' : '↓'}</span>
+                                ) : null}
+                              </button>
+                            </TableHead>
+                          )
+                        })}
                       </TableRow>
                     ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows.length ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow
+                          key={row.id}
+                          className={
+                            row.original.user_id === selectedUserId ? 'bg-accent/30 cursor-pointer' : 'cursor-pointer'
+                          }
+                          onClick={() => setSelectedUserId(row.original.user_id)}
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={columns.length}
+                          className="text-center text-sm text-muted-foreground"
+                        >
+                          No users found
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>

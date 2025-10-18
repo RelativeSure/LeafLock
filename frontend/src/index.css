@@ -4,66 +4,66 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Light theme variables with HSL wrapper */
-  --background: hsl(0 0% 100%);
-  --foreground: hsl(222.2 84% 4.9%);
-  --card: hsl(0 0% 100%);
-  --card-foreground: hsl(222.2 84% 4.9%);
-  --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(222.2 84% 4.9%);
-  --primary: hsl(217 91% 55%);
-  --primary-foreground: hsl(0 0% 100%);
-  --secondary: hsl(210 40% 96%);
-  --secondary-foreground: hsl(222.2 47.4% 11.2%);
-  --muted: hsl(210 40% 96%);
-  --muted-foreground: hsl(215.4 16.3% 42%);
-  --accent: hsl(210 40% 96%);
-  --accent-foreground: hsl(222.2 47.4% 11.2%);
-  --destructive: hsl(0 84.2% 60.2%);
-  --destructive-foreground: hsl(210 40% 98%);
-  --border: hsl(214.3 31.8% 91.4%);
-  --input: hsl(214.3 31.8% 91.4%);
-  --ring: hsl(217 91% 55%);
+  /* Light theme variables with custom palette */
+  --background: #121212;
+  --foreground: #16f101;
+  --card: #121212;
+  --card-foreground: #16f101;
+  --popover: #121212;
+  --popover-foreground: #16f101;
+  --primary: #16f101;
+  --primary-foreground: #121212;
+  --secondary: #121212;
+  --secondary-foreground: #16f101;
+  --muted: #121212;
+  --muted-foreground: #16f101;
+  --accent: #121212;
+  --accent-foreground: #16f101;
+  --destructive: #ff4d4f;
+  --destructive-foreground: #121212;
+  --border: #1f1f1f;
+  --input: #1f1f1f;
+  --ring: #16f101;
   --radius: 0.5rem;
-  --sidebar: hsl(0 0% 98%);
-  --sidebar-foreground: hsl(240 5.3% 26.1%);
-  --sidebar-primary: hsl(240 5.9% 10%);
-  --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(240 4.8% 95.9%);
-  --sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --sidebar-border: hsl(220 13% 91%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --sidebar: #121212;
+  --sidebar-foreground: #16f101;
+  --sidebar-primary: #16f101;
+  --sidebar-primary-foreground: #121212;
+  --sidebar-accent: #1c1c1c;
+  --sidebar-accent-foreground: #16f101;
+  --sidebar-border: #1f1f1f;
+  --sidebar-ring: #16f101;
 }
 
 .dark {
-  /* Dark theme variables with HSL wrapper */
-  --background: hsl(222.2 84% 4.9%);
-  --foreground: hsl(210 40% 98%);
-  --card: hsl(222.2 84% 4.9%);
-  --card-foreground: hsl(210 40% 98%);
-  --popover: hsl(222.2 84% 4.9%);
-  --popover-foreground: hsl(210 40% 98%);
-  --primary: hsl(212 92% 60%);
-  --primary-foreground: hsl(0 0% 100%);
-  --secondary: hsl(217.2 32.6% 17.5%);
-  --secondary-foreground: hsl(210 40% 98%);
-  --muted: hsl(217.2 32.6% 17.5%);
-  --muted-foreground: hsl(215 20.2% 65.1%);
-  --accent: hsl(217.2 32.6% 17.5%);
-  --accent-foreground: hsl(210 40% 98%);
-  --destructive: hsl(0 62.8% 30.6%);
-  --destructive-foreground: hsl(210 40% 98%);
-  --border: hsl(217.2 32.6% 17.5%);
-  --input: hsl(217.2 32.6% 17.5%);
-  --ring: hsl(212 92% 60%);
-  --sidebar: hsl(240 5.9% 10%);
-  --sidebar-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-primary: hsl(224.3 76.3% 48%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(240 3.7% 15.9%);
-  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-border: hsl(240 3.7% 15.9%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  /* Dark theme mirrors primary palette */
+  --background: #121212;
+  --foreground: #16f101;
+  --card: #121212;
+  --card-foreground: #16f101;
+  --popover: #121212;
+  --popover-foreground: #16f101;
+  --primary: #16f101;
+  --primary-foreground: #121212;
+  --secondary: #121212;
+  --secondary-foreground: #16f101;
+  --muted: #121212;
+  --muted-foreground: #16f101;
+  --accent: #121212;
+  --accent-foreground: #16f101;
+  --destructive: #ff4d4f;
+  --destructive-foreground: #121212;
+  --border: #1f1f1f;
+  --input: #1f1f1f;
+  --ring: #16f101;
+  --sidebar: #121212;
+  --sidebar-foreground: #16f101;
+  --sidebar-primary: #16f101;
+  --sidebar-primary-foreground: #121212;
+  --sidebar-accent: #1c1c1c;
+  --sidebar-accent-foreground: #16f101;
+  --sidebar-border: #1f1f1f;
+  --sidebar-ring: #16f101;
 }
 
 @theme inline {
@@ -147,16 +147,16 @@ code {
 }
 
 ::-webkit-scrollbar-track {
-  background: #374151;
+  background: #121212;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #6b7280;
+  background: #16f101;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: #1cff1a;
 }
 
 /* Line clamp utility */
