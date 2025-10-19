@@ -154,7 +154,7 @@ export function MfaSettings({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {mfaEnabled ? (
-                <ShieldCheck className="h-6 w-6 text-green-500" />
+                <ShieldCheck className="h-6 w-6 text-primary" />
               ) : (
                 <ShieldAlert className="h-6 w-6 text-yellow-500" />
               )}

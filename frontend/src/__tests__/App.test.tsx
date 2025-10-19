@@ -96,9 +96,9 @@ describe('AppRouter', () => {
         .getAllByRole('generic')
         .filter(
           (el) =>
-            el.className.includes('bg-green-500') ||
+            el.className.includes('bg-primary') ||
             el.className.includes('bg-yellow-500') ||
-            el.className.includes('bg-red-500')
+            el.className.includes('bg-destructive')
         )
       expect(strengthBars.length).toBeGreaterThan(0)
     })

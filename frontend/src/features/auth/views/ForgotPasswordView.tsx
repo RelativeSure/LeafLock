@@ -90,9 +90,9 @@ export const ForgotPasswordView: FC<ForgotPasswordViewProps> = ({ api, onBackToL
             )}
 
             {success && (
-              <Alert className="border-green-500 bg-green-50 dark:bg-green-950/30">
-                <Mail className="h-4 w-4 text-green-600 dark:text-green-400" />
-                <AlertDescription className="text-green-900 dark:text-green-100">
+              <Alert className="border border-primary/40 bg-primary/10 dark:bg-primary/15">
+                <Mail className="h-4 w-4 text-primary" />
+                <AlertDescription className="text-foreground">
                   If an account with that email exists, a password reset link has been sent. Please
                   check your inbox.
                 </AlertDescription>

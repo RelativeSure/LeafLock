@@ -261,7 +261,7 @@ export const LoginView: FC<LoginViewProps> = ({
                               ? 'bg-destructive'
                               : passwordStrength <= 3
                                 ? 'bg-yellow-500'
-                                : 'bg-green-500'
+                                : 'bg-primary'
                             : 'bg-muted'
                         )}
                       />

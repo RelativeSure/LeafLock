@@ -102,15 +102,15 @@ export function AdminSettingsTab() {
                 <h4 className="text-sm font-medium mb-2">Features Enabled</h4>
                 <ul className="space-y-1.5 text-sm text-muted-foreground">
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-500" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                     Welcome emails on registration
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-500" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                     Password reset emails
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-500" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                     Password changed notifications
                   </li>
                 </ul>

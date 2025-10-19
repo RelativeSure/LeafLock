@@ -212,7 +212,7 @@ export const NotesList: React.FC<NotesListProps> = ({
                     <>
                       <button
                         onClick={() => onRestoreNote(note.id)}
-                        className="p-1 text-green-400 hover:text-green-300 hover:bg-green-900/50 rounded transition focus:outline-none focus:ring-2 focus:ring-green-500/50"
+                        className="p-1 text-primary hover:text-primary/80 hover:bg-primary/10 rounded transition focus:outline-none focus:ring-2 focus:ring-primary/40"
                         title="Restore note"
                         aria-label="Restore note"
                       >

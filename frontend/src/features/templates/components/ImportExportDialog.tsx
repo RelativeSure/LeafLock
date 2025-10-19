@@ -446,7 +446,7 @@ export function ImportExportDialog({
                     ? 'bg-red-500'
                     : storageInfo.usage_percentage > 75
                       ? 'bg-yellow-500'
-                      : 'bg-green-500'
+                      : 'bg-primary'
                 }`}
                 style={{ width: `${Math.min(storageInfo.usage_percentage, 100)}%` }}
               />

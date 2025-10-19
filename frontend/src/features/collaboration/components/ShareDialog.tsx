@@ -186,7 +186,7 @@ export function ShareDialog({ noteId, isOwner, children }: ShareDialogProps) {
       case 'write':
         return 'bg-blue-900 text-blue-100 border-blue-700 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-800'
       case 'read':
-        return 'bg-green-100 text-green-800 border-green-200'
+        return 'bg-primary/10 text-primary border-primary/30'
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200'
     }
@@ -496,7 +496,7 @@ export function ShareDialog({ noteId, isOwner, children }: ShareDialogProps) {
                                 className={
                                   link.permission === 'write'
                                     ? 'bg-blue-900 text-blue-100 border-blue-700 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-800'
-                                    : 'bg-green-100 text-green-800 border-green-200'
+                                    : 'bg-primary/10 text-primary border-primary/30'
                                 }
                               >
                                 {link.permission === 'write' ? (

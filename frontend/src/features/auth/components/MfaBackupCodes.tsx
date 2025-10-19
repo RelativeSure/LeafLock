@@ -63,7 +63,7 @@ export function MfaBackupCodes({ codes, onAcknowledge }: MfaBackupCodesProps) {
         <Button type="button" variant="outline" className="flex-1" onClick={copyAll}>
           {copied ? (
             <>
-              <Check className="mr-2 h-4 w-4 text-green-500" />
+              <Check className="mr-2 h-4 w-4 text-primary" />
               Copied!
             </>
           ) : (

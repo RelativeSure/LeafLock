@@ -20,13 +20,13 @@ function UserAvatar({ user, size = 'md' }: UserAvatarProps) {
   }
 
   const statusColors: Record<PresenceUser['status'], string> = {
-    online: 'border-green-500',
+    online: 'border-primary',
     typing: 'border-blue-500',
     offline: 'border-gray-300',
   }
 
   const statusIndicatorColors: Record<PresenceUser['status'], string> = {
-    online: 'bg-green-500',
+    online: 'bg-primary',
     typing: 'bg-blue-500',
     offline: 'bg-gray-400',
   }
@@ -122,7 +122,7 @@ function UserList({ users }: UserListProps) {
         )}
 
         {activeUsers.length > 0 && typingUsers.length === 0 && (
-          <Badge variant="secondary" className="bg-green-100 text-green-800">
+          <Badge variant="secondary" className="bg-primary/10 text-primary">
             {activeUsers.length} active
           </Badge>
         )}
@@ -175,8 +175,8 @@ export function CompactPresenceIndicators({ className }: PresenceIndicatorsProps
   }
 
   return (
-    <Badge variant="outline" className={`text-green-600 border-green-200 ${className}`}>
-      <Circle className="w-2 h-2 mr-1 fill-green-500" />
+    <Badge variant="outline" className={`text-primary border-primary/40 ${className}`}>
+      <Circle className="w-2 h-2 mr-1 fill-primary" />
       {activeUsers.length} online
     </Badge>
   )

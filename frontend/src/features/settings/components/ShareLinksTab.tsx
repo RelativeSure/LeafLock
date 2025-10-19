@@ -111,7 +111,7 @@ export function ShareLinksTab() {
       )
     }
     return (
-      <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
+      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
         <LucideIcons.Eye className="h-3 w-3 mr-1" />
         Read
       </Badge>
@@ -144,7 +144,7 @@ export function ShareLinksTab() {
     }
 
     return (
-      <Badge variant="outline" className="bg-green-100 text-green-800">
+      <Badge variant="outline" className="bg-primary/10 text-primary">
         Active
       </Badge>
     )
@@ -162,7 +162,7 @@ export function ShareLinksTab() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">{stats.active}</div>
+            <div className="text-2xl font-bold text-primary">{stats.active}</div>
             <div className="text-sm text-muted-foreground">Active</div>
           </CardContent>
         </Card>

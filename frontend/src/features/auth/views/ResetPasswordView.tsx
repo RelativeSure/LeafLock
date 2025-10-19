@@ -161,9 +161,9 @@ export const ResetPasswordView: FC<ResetPasswordViewProps> = ({ api, token, onRe
             <CardTitle className="text-xl text-center">Password Reset Successful</CardTitle>
           </CardHeader>
           <CardContent>
-            <Alert className="border-green-500 bg-green-50 dark:bg-green-950/30">
-              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-              <AlertDescription className="text-green-900 dark:text-green-100">
+            <Alert className="border border-primary/40 bg-primary/10 dark:bg-primary/15">
+              <CheckCircle className="h-4 w-4 text-primary" />
+              <AlertDescription className="text-foreground">
                 Your password has been reset successfully. Redirecting to login...
               </AlertDescription>
             </Alert>
@@ -233,7 +233,7 @@ export const ResetPasswordView: FC<ResetPasswordViewProps> = ({ api, token, onRe
                             ? 'bg-destructive'
                             : passwordStrength <= 3
                               ? 'bg-yellow-500'
-                              : 'bg-green-500'
+                              : 'bg-primary'
                           : 'bg-muted'
                       )}
                     />
