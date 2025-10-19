@@ -98,25 +98,21 @@ export const NotesList: React.FC<NotesListProps> = ({
       aria-label={viewingTrash ? 'Trash list' : 'Notes list'}
     >
       {/* Header Section */}
-      <div className="flex-shrink-0">
-        <div className="flex items-center justify-between">
-          {!viewingTrash && <h2 className="text-sm font-semibold text-foreground">Notes</h2>}
-          {viewingTrash && (
-            <>
-              <h2 className="text-sm font-semibold text-foreground">Trash</h2>
-              <Badge variant="secondary" className="text-xs">
-                {trashedNotes.length}
-              </Badge>
-            </>
-          )}
-        </div>
-
+      <div className="notes-pane-header">
+        {viewingTrash && (
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-foreground">Trash</h2>
+            <Badge variant="secondary" className="text-xs">
+              {trashedNotes.length}
+            </Badge>
+          </div>
+        )}
         {!viewingTrash ? (
           <Suspense fallback={<ComponentLoader />}>
             <SearchBar
               onSearchResults={handleSearchResults}
               onClear={handleSearchClear}
-              placeholder="Search notes..."
+              placeholder="Search"
               className="w-full"
             />
           </Suspense>
@@ -144,8 +140,8 @@ export const NotesList: React.FC<NotesListProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search trash..."
-              className="w-full pl-10"
+              placeholder="Search trash"
+              className="trash-search-input"
               aria-describedby="search-help"
             />
             <p id="search-help" className="sr-only">
@@ -176,74 +172,104 @@ export const NotesList: React.FC<NotesListProps> = ({
             </Suspense>
           </div>
         ) : filteredNotes.length > 0 ? (
-          filteredNotes.map((note) => (
-            <div
-              key={note.id}
-              className={`border-b border-border ${selectedNote?.id === note.id ? 'bg-accent' : ''}`}
-            >
-              <div className="flex">
-                <button
-                  data-note-button
-                  onClick={() => {
-                    if (viewingTrash) return
-                    onSelectNote(note)
-                    if (window.innerWidth < 768) {
-                      onChangeView('editor')
-                    }
-                  }}
-                  className={`flex-1 text-left p-0 cursor-pointer hover:bg-accent active:bg-accent transition focus:outline-none focus:bg-accent focus:ring-2 focus:ring-ring ${viewingTrash ? 'cursor-default' : ''}`}
-                  role="listitem"
-                  aria-pressed={selectedNote?.id === note.id}
-                  aria-describedby={`note-${note.id}-date`}
-                  disabled={viewingTrash}
-                >
-                  <h3 className="font-medium text-foreground">{note.title || 'Untitled'}</h3>
-                  <p className="text-sm text-muted-foreground line-clamp-2 mt-0 mb-0">
-                    {note.content || 'No content'}
-                  </p>
-                  <p id={`note-${note.id}-date`} className="text-xs text-muted-foreground">
-                    {viewingTrash ? 'Deleted' : 'Modified'}{' '}
-                    {new Date(note.updated_at).toLocaleDateString()}
-                  </p>
-                </button>
+          filteredNotes.map((note) => {
+            const isSelected = selectedNote?.id === note.id
 
-                <div className="flex flex-col justify-center space-y-0 px-0 py-0">
-                  {viewingTrash ? (
-                    <>
-                      <button
-                        onClick={() => onRestoreNote(note.id)}
-                        className="p-1 text-primary hover:text-primary/80 hover:bg-primary/10 rounded transition focus:outline-none focus:ring-2 focus:ring-primary/40"
-                        title="Restore note"
-                        aria-label="Restore note"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          aria-hidden="true"
+            return (
+              <div key={note.id} className="px-4 py-2">
+                <div className="notes-card" data-selected={isSelected}>
+                  <button
+                    data-note-button
+                    onClick={() => {
+                      if (viewingTrash) return
+                      onSelectNote(note)
+                      if (window.innerWidth < 768) {
+                        onChangeView('editor')
+                      }
+                    }}
+                    className="notes-card-button"
+                    data-trash={viewingTrash}
+                    role="listitem"
+                    aria-pressed={selectedNote?.id === note.id}
+                    aria-describedby={`note-${note.id}-date`}
+                    disabled={viewingTrash}
+                  >
+                    <h3 className="font-medium text-foreground">{note.title || 'Untitled'}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+                      {note.content || 'No content'}
+                    </p>
+                    <p id={`note-${note.id}-date`} className="mt-1 text-xs text-muted-foreground">
+                      {viewingTrash ? 'Deleted' : 'Modified'}{' '}
+                      {new Date(note.updated_at).toLocaleDateString()}
+                    </p>
+                  </button>
+
+                  <div className="notes-actions">
+                    {viewingTrash ? (
+                      <>
+                        <button
+                          onClick={() => onRestoreNote(note.id)}
+                          className="notes-action-restore"
+                          title="Restore note"
+                          aria-label="Restore note"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
-                          />
-                        </svg>
-                      </button>
+                          <svg
+                            className="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+                            />
+                          </svg>
+                        </button>
 
+                        <button
+                          onClick={async () => {
+                            if (!confirm('Permanently delete this note? This cannot be undone.'))
+                              return
+                            await onPermanentDelete(note.id)
+                          }}
+                          className="notes-action-delete"
+                          title="Delete permanently"
+                          aria-label="Delete permanently"
+                        >
+                          <svg
+                            className="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      </>
+                    ) : (
                       <button
                         onClick={async () => {
-                          if (!confirm('Permanently delete this note? This cannot be undone.'))
-                            return
-                          await onPermanentDelete(note.id)
+                          if (!confirm('Move this note to trash?')) return
+                          const success = await onMoveToTrash(note.id)
+                          if (success && selectedNote?.id === note.id) {
+                            onClearSelection()
+                          }
                         }}
-                        className="p-1 text-red-400 hover:text-red-300 hover:bg-red-900/50 rounded transition focus:outline-none focus:ring-2 focus:ring-red-500/50"
-                        title="Delete permanently"
-                        aria-label="Delete permanently"
+                        className="notes-action-trash"
+                        title="Move to trash"
+                        aria-label="Move to trash"
                       >
                         <svg
-                          className="w-4 h-4"
+                          className="h-4 w-4"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -253,44 +279,16 @@ export const NotesList: React.FC<NotesListProps> = ({
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H7a1 1 0 00-1 1v3M4 7h16"
                           />
                         </svg>
                       </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={async () => {
-                        if (!confirm('Move this note to trash?')) return
-                        const success = await onMoveToTrash(note.id)
-                        if (success && selectedNote?.id === note.id) {
-                          onClearSelection()
-                        }
-                      }}
-                      className="p-1 text-red-400 hover:text-red-300 hover:bg-red-900/50 rounded transition focus:outline-none focus:ring-2 focus:ring-red-500/50"
-                      title="Move to trash"
-                      aria-label="Move to trash"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H7a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            )
+          })
         ) : (
           <div className="p-0 text-center text-gray-500" role="status" aria-live="polite">
             {viewingTrash
