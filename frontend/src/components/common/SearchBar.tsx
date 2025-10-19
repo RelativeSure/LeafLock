@@ -4,6 +4,7 @@ import { searchService, type SearchResult } from '@/services/data/searchService'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
+import './search-bar.css'
 
 interface SearchBarProps {
   onSearchResults: (results: SearchResult[], query: string) => void

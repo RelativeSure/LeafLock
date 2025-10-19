@@ -299,22 +299,3 @@ code {
     @apply bg-background text-foreground;
   }
 }
-
-@layer components {
-  .search-input-field {
-    @apply h-11 rounded-lg pl-10 pr-12 text-sm md:text-base;
-  }
-
-  .search-input-icon {
-    @apply absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400;
-  }
-
-  .search-clear-button {
-    @apply h-6 w-6 p-0 hover:bg-muted;
-  }
-
-  .search-spinner {
-    @apply h-4 w-4 text-gray-400;
-  }
-
-}
