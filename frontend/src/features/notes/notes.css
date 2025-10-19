@@ -63,7 +63,7 @@
     @apply pt-2;
   }
 
-  @screen md {
+  @media (min-width: 768px) {
     .trash-search-input {
       @apply text-base;
     }
@@ -76,13 +76,9 @@
       @apply pt-3;
     }
   }
-}
 
-@layer components {
-  @variant dark {
-    .notes-action-restore {
-      @apply text-sky-400 hover:text-sky-300;
-    }
+  .dark .notes-action-restore {
+    @apply text-sky-400 hover:text-sky-300;
   }
 }
 
