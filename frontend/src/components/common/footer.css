@@ -1,0 +1,9 @@
+@layer components {
+  .app-footer {
+    @apply border-t border-border/40 bg-background px-6 py-4 md:px-8 md:py-6;
+  }
+
+  .footer-links {
+    @apply flex flex-wrap items-center justify-center gap-4 text-xs md:text-sm;
+  }
+}

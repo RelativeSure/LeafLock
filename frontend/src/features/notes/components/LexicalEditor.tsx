@@ -42,6 +42,7 @@ import { padding } from '@/lib/padding'
 import { useTheme } from '@/context'
 import DOMPurify from 'dompurify'
 import { attachmentService } from '@/services/storage/attachmentService'
+import '../notes.css'
 // Markdown helpers are no longer used; editor runs WYSIWYG-only
 
 interface LexicalEditorProps {
