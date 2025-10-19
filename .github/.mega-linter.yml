@@ -70,13 +70,8 @@ DOCKERFILE_HADOLINT_ARGUMENTS: "--ignore DL3006 --ignore DL3018 --ignore DL3008"
 SQL_SQLFLUFF_CONFIG_FILE: ".github/linters/.sqlfluff"
 SQL_SQLFLUFF_ARGUMENTS: "--dialect postgres --exclude-rules L034,L031"
 SQL_SQLFLUFF_FILE_EXTENSIONS: [".sql"]
-# Security - Secret scanning
-# Leave secretlint arguments to defaults (CI or repo-level defaults will apply).
-# If needed, the CI workflow may provide explicit secretlint invocation/options.
-# Note: removed the various *_FILTER_REGEX_EXCLUDE and any unsupported CONFIG_FILE keys
-# because the validator/schema used in diagnostics flagged them as not allowed.
-# This keeps the .mega-linter.yml schema-compliant while still pointing all configs
-# at .github/linters. If you want to reintroduce explicit path-based exclusions,
-# we can instead add them as accepted LINTER_ARGUMENTS where supported.
+
+# Security - Secret scanning with allowlist for test database URLs
+REPOSITORY_SECRETLINT_CONFIG_FILE: ".github/linters/.secretlintrc.json"
 # Don't fail CI on linter errors (warnings only)
 # DISABLE_ERRORS: true

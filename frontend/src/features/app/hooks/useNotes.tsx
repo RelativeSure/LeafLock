@@ -227,7 +227,12 @@ export const useNotes = (api: SecureAPI, onLogout: () => void) => {
   }, [trashQueryError])
 
   const loading =
-    manualLoading || isNotesFetching || isTrashFetching || isRestoring || isDeletingForever || isMovingToTrash
+    manualLoading ||
+    isNotesFetching ||
+    isTrashFetching ||
+    isRestoring ||
+    isDeletingForever ||
+    isMovingToTrash
 
   return {
     notes,

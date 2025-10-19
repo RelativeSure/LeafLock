@@ -2,7 +2,13 @@ import React from 'react'
 import { ThemeProvider } from '@/ThemeContext'
 import { Toaster } from '@/components/ui/sonner'
 import { LeafLockApp } from '@/features/app/LeafLockApp'
-import { Outlet, RouterProvider, createRoute, createRouter, createRootRoute } from '@tanstack/react-router'
+import {
+  Outlet,
+  RouterProvider,
+  createRoute,
+  createRouter,
+  createRootRoute,
+} from '@tanstack/react-router'
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },

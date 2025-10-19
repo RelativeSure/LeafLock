@@ -803,7 +803,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ api, onBack }) => {
                         <TableRow
                           key={row.id}
                           className={
-                            row.original.user_id === selectedUserId ? 'bg-accent/30 cursor-pointer' : 'cursor-pointer'
+                            row.original.user_id === selectedUserId
+                              ? 'bg-accent/30 cursor-pointer'
+                              : 'cursor-pointer'
                           }
                           onClick={() => setSelectedUserId(row.original.user_id)}
                         >

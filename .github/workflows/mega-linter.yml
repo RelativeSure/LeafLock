@@ -3,12 +3,13 @@
 ---
 name: CI - MegaLinter
 
-# Trigger mega-linter at every push. Action will also be visible from
-# Pull Requests to main
+# Trigger mega-linter on pull requests and pushes to main/master
+# Prevents duplicate runs when a PR is created from a branch
 on:
-  # Comment this line to trigger action only on pull-requests
-  # (not recommended if you don't pay for GH Actions)
   push:
+    branches:
+      - main
+      - master
 
   pull_request:
     branches:

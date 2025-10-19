@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, Suspense, lazy, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, Suspense, lazy, useMemo, useRef } from 'react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { OnboardingOverlay } from '@/features/onboarding/OnboardingOverlay'
 import { LoginView } from '@/features/auth/LoginView'
@@ -23,7 +23,15 @@ const TagsManager = lazy(() => import('@/components/TagsManager'))
 const FoldersManager = lazy(() => import('@/components/FoldersManager'))
 const TemplatesManager = lazy(() => import('@/components/TemplatesManager'))
 
-const APP_VIEWS = new Set<ViewType>(['notes', 'editor', 'settings', 'tags', 'folders', 'templates', 'admin'])
+const APP_VIEWS = new Set<ViewType>([
+  'notes',
+  'editor',
+  'settings',
+  'tags',
+  'folders',
+  'templates',
+  'admin',
+])
 const POST_LOGIN_REDIRECT_VIEWS = new Set<ViewType>(['login', 'forgot'])
 
 const normalizePath = (path: string): string => {
@@ -84,7 +92,10 @@ export const LeafLockApp: React.FC = () => {
   const navigate = useNavigate({ from: '/' })
   const location = useRouterState({ select: (state) => state.location })
   const normalizedPath = useMemo(() => normalizePath(location.pathname), [location.pathname])
-  const { view: derivedView, known: isKnownPath } = useMemo(() => pathToView(normalizedPath), [normalizedPath])
+  const { view: derivedView, known: isKnownPath } = useMemo(
+    () => pathToView(normalizedPath),
+    [normalizedPath]
+  )
 
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [encryptionStatus, setEncryptionStatus] = useState<EncryptionStatus>('locked')
@@ -99,6 +110,9 @@ export const LeafLockApp: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false)
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   const [resetToken, setResetToken] = useState<string | null>(null)
+
+  // Track if initialization has completed to prevent re-running on navigation
+  const hasInitialized = useRef(false)
 
   // Use custom hooks for notes and announcements
   const {
@@ -327,6 +341,11 @@ export const LeafLockApp: React.FC = () => {
   }, [])
 
   useEffect(() => {
+    // Only run initialization once on mount
+    if (hasInitialized.current) {
+      return
+    }
+
     const initializeApp = async () => {
       try {
         console.log('🚀 Starting app initialization...')
@@ -368,12 +387,12 @@ export const LeafLockApp: React.FC = () => {
             if (!cryptoService.masterKey) {
               console.log('🔐 No master key - user needs to re-enter password')
               setIsAuthenticated(true)
-              goToView('unlock')
+              void navigate({ to: '/auth/unlock' as any })
               setEncryptionStatus('locked')
             } else {
               console.log('🔑 Master key found, initializing app...')
               setIsAuthenticated(true)
-              goToView('notes')
+              void navigate({ to: '/app/notes' as any })
               setEncryptionStatus('unlocked')
               loadNotes().catch((err) => {
                 console.error('Failed to load notes during init:', err)
@@ -389,30 +408,31 @@ export const LeafLockApp: React.FC = () => {
             localStorage.removeItem('user_salt')
             cryptoService.masterKey = null
             setIsAuthenticated(false)
-            goToView('login')
+            void navigate({ to: '/auth/login' as any })
             setEncryptionStatus('locked')
           }
         } else {
           console.log('ℹ️ No stored token found - showing login')
           setIsAuthenticated(false)
-          goToView('login')
+          void navigate({ to: '/auth/login' as any })
           setEncryptionStatus('locked')
         }
       } catch (err) {
         console.error('💥 Failed to initialize app:', err)
         setError('Failed to initialize application')
         setIsAuthenticated(false)
-        goToView('login')
+        void navigate({ to: '/auth/login' as any })
         setEncryptionStatus('locked')
       } finally {
         console.log('🏁 App initialization complete, setting initializing = false')
         setInitializing(false)
         console.log('✅ setInitializing(false) called')
+        hasInitialized.current = true
       }
     }
 
     void initializeApp()
-  }, [loadNotes, goToView])
+  }, []) // Run only once on mount - intentionally ignoring loadNotes and navigate dependencies
 
   useEffect(() => {
     if (
