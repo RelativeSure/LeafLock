@@ -240,7 +240,7 @@ function ToolbarPlugin() {
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center justify-between gap-2 border border-border border-b-0 rounded-t-lg bg-muted',
+        'flex flex-wrap items-center justify-between gap-2 border-b border-emerald-500/60 bg-muted',
         padding.editor.toolbarContainer
       )}
     >
@@ -554,49 +554,51 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
   // WYSIWYG-only: no markdown mode
 
   return (
-    <div className={cn('w-full', padding.editor.editorWrapper, className)}>
-      <LexicalComposer initialConfig={initialConfig}>
-        {editable && <ToolbarPlugin />}
+    <div
+      className={cn(
+        'w-full rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-3 shadow-sm',
+        padding.editor.editorWrapper,
+        className
+      )}
+    >
+      <div className="rounded-lg border border-emerald-500/60 bg-background overflow-hidden">
+        <LexicalComposer initialConfig={initialConfig}>
+          {editable && <ToolbarPlugin />}
 
-        <div
-          className={cn(
-            'relative flex flex-col overflow-hidden',
-            editable ? 'border border-border border-t-0 rounded-b-lg bg-background' : '',
-            'h-full'
-          )}
-        >
-          <RichTextPlugin
-            contentEditable={
-              <ContentEditable
-                className={cn(
-                  'flex-1 focus:outline-none overflow-y-auto',
-                  padding.editor.editorContent,
-                  'min-h-[300px]',
-                  'focus:ring-2 focus:ring-ring focus:ring-offset-1 rounded-b-lg',
-                  '[&>*:first-child]:mt-0 [&>*:last-child]:mb-0'
-                )}
-                data-theme={effectiveTheme}
-              />
-            }
-            placeholder={
-              <div
-                className={cn(
-                  'absolute top-3 left-4 md:top-4 md:left-6 text-muted-foreground',
-                  'pointer-events-none select-none',
-                  'transition-opacity duration-200',
-                  content && content.length > 0 ? 'opacity-0' : 'opacity-100'
-                )}
-                aria-hidden="true"
-              >
-                {placeholder}
-              </div>
-            }
-            ErrorBoundary={LexicalErrorBoundary}
-          />
-          <HistoryPlugin />
-          <HtmlConverterPlugin content={content} onChange={onChange} noteId={noteId} />
-        </div>
-      </LexicalComposer>
+          <div className="relative flex flex-col overflow-hidden h-full bg-background">
+            <RichTextPlugin
+              contentEditable={
+                <ContentEditable
+                  className={cn(
+                    'flex-1 focus:outline-none overflow-y-auto',
+                    padding.editor.editorContent,
+                    'min-h-[300px]',
+                    'focus:ring-2 focus:ring-ring focus:ring-offset-1',
+                    '[&>*:first-child]:mt-0 [&>*:last-child]:mb-0'
+                  )}
+                  data-theme={effectiveTheme}
+                />
+              }
+              placeholder={
+                <div
+                  className={cn(
+                    'absolute top-3 left-4 md:top-4 md:left-6 text-muted-foreground',
+                    'pointer-events-none select-none',
+                    'transition-opacity duration-200',
+                    content && content.length > 0 ? 'opacity-0' : 'opacity-100'
+                  )}
+                  aria-hidden="true"
+                >
+                  {placeholder}
+                </div>
+              }
+              ErrorBoundary={LexicalErrorBoundary}
+            />
+            <HistoryPlugin />
+            <HtmlConverterPlugin content={content} onChange={onChange} noteId={noteId} />
+          </div>
+        </LexicalComposer>
+      </div>
     </div>
   )
 }
