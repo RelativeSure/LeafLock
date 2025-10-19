@@ -1,3 +1,5 @@
+@reference '../../index.css';
+
 @layer components {
   .notes-pane-header {
     @apply flex-shrink-0 space-y-4 px-4 py-4;
@@ -8,7 +10,8 @@
   }
 
   .notes-card {
-    @apply flex items-stretch gap-2 rounded-xl border border-border/40 bg-card transition-colors focus-within:ring-2 focus-within:ring-sky-500/40;
+    @apply flex items-stretch gap-2 rounded-xl border bg-card transition-colors focus-within:ring-2 focus-within:ring-sky-500/40;
+    border-color: color-mix(in srgb, var(--color-border) 40%, transparent);
   }
 
   .notes-card[data-selected='true'] {
@@ -48,7 +51,8 @@
   }
 
   .editor-shell {
-    @apply w-full rounded-xl border border-sky-400/30 bg-sky-500/5 p-1.5 shadow-sm transition-colors;
+    @apply w-full rounded-xl border bg-sky-500/5 p-1.5 shadow-sm transition-colors;
+    border-color: color-mix(in srgb, theme(colors.sky.400) 30%, transparent);
   }
 
   .editor-inner-shell {
