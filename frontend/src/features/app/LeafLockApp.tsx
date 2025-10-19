@@ -14,11 +14,9 @@ import { Template } from '@/services/templatesService'
 import { AppLayout, TemplateSelectorModal } from './components'
 import { useNotes } from './hooks/useNotes'
 import { useAnnouncements } from './hooks/useAnnouncements'
+import SettingsPage from '@/components/settings/SettingsPage'
 
 const AdminPage = lazy(() => import('@/AdminPage'))
-const SettingsPage = lazy(() =>
-  import('@/components/settings/SettingsPage').then((module) => ({ default: module.SettingsPage }))
-)
 const TagsManager = lazy(() => import('@/components/TagsManager'))
 const FoldersManager = lazy(() => import('@/components/FoldersManager'))
 const TemplatesManager = lazy(() => import('@/components/TemplatesManager'))
@@ -452,11 +450,7 @@ export const LeafLockApp: React.FC = () => {
   // Removed loading overlay - app initializes in background
 
   if (isAuthenticated && encryptionStatus === 'unlocked' && currentView === 'settings') {
-    return (
-      <Suspense fallback={<ComponentLoader />}>
-        <SettingsPage api={api} onBack={() => goToView('notes')} onLogout={handleLogout} />
-      </Suspense>
-    )
+    return <SettingsPage api={api} onBack={() => goToView('notes')} onLogout={handleLogout} />
   }
 
   if (isAuthenticated && encryptionStatus === 'unlocked' && currentView === 'tags') {

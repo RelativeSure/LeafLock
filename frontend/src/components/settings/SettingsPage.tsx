@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
 import { Button } from '../ui/button'
 import { MfaSettings } from './MfaSettings'
@@ -8,7 +9,6 @@ import { AdminSettingsTab } from './AdminSettingsTab'
 import { PrivacySettingsTab } from './PrivacySettingsTab'
 import { Shield, Eye, User, ArrowLeft, Link as LinkIcon, Settings } from 'lucide-react'
 import { ThemeToggle } from '@/components/ThemeToggle'
-import { useAuthStore } from '@/stores/authStore'
 import type { MfaSetup, MfaStatus } from '@/lib/schemas'
 
 // SecureAPI interface (for type checking)
@@ -29,8 +29,21 @@ interface SettingsPageProps {
   onLogout: () => void
 }
 
-export function SettingsPage({ api, onBack, onLogout }: SettingsPageProps) {
-  const isAdmin = useAuthStore((state) => state.isAdmin)
+function SettingsPage({ api, onBack, onLogout }: SettingsPageProps) {
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [isStoreReady, setIsStoreReady] = useState(false)
+
+  useEffect(() => {
+    // Dynamically import the auth store to avoid initialization issues
+    import('@/stores/authStore').then(({ useAuthStore }) => {
+      setIsAdmin(useAuthStore.getState().isAdmin)
+      const unsubscribe = useAuthStore.subscribe((state) => {
+        setIsAdmin(state.isAdmin)
+      })
+      setIsStoreReady(true)
+      return () => unsubscribe()
+    })
+  }, [])
 
   const handleGetBackupCodes = async () => {
     return await api.getBackupCodes()
@@ -47,6 +60,14 @@ export function SettingsPage({ api, onBack, onLogout }: SettingsPageProps) {
 
   const handleExportData = async () => {
     return await api.exportAccountData()
+  }
+
+  if (!isStoreReady) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <div className="text-muted-foreground">Loading settings...</div>
+      </div>
+    )
   }
 
   return (
@@ -141,3 +162,5 @@ export function SettingsPage({ api, onBack, onLogout }: SettingsPageProps) {
     </div>
   )
 }
+
+export default SettingsPage

@@ -1,5 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
-import type { SetStateAction } from 'react'
+import { useState, useCallback, useEffect, useRef, type SetStateAction } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type Note } from '../types'
 import { type SecureAPI } from '@/services/secureApi'
