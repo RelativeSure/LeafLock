@@ -2,16 +2,16 @@
 
 @layer components {
   .notes-pane-header {
-    @apply flex-shrink-0 space-y-4 px-4 py-4;
+    @apply flex-shrink-0 space-y-4 px-4 py-4 border-b border-border;
   }
 
   .trash-search-input {
-    @apply h-11 w-full rounded-lg pl-10 pr-12 text-sm;
+    @apply h-11 w-full rounded-lg pl-10 pr-12 text-sm border border-input;
   }
 
   .notes-card {
-    @apply flex items-stretch gap-2 rounded-xl border bg-card transition-colors focus-within:ring-2 focus-within:ring-sky-500/40;
-    border-color: color-mix(in srgb, var(--color-border) 40%, transparent);
+    @apply flex items-stretch gap-2 rounded-xl border bg-card transition-colors focus-within:ring-2 focus-within:ring-sky-500/40 my-2;
+    border-color: var(--color-border);
   }
 
   .notes-card[data-selected='true'] {
@@ -51,12 +51,13 @@
   }
 
   .editor-shell {
-    @apply w-full rounded-xl border bg-sky-500/5 p-1.5 shadow-sm transition-colors;
-    border-color: color-mix(in srgb, theme(colors.sky.400) 30%, transparent);
+    @apply w-full rounded-xl border bg-sky-500/5 p-1.5 shadow-sm transition-colors mt-4;
+    border-color: var(--color-border);
   }
 
   .editor-inner-shell {
-    @apply overflow-hidden rounded-lg border border-sky-500/40 bg-background transition-colors;
+    @apply overflow-hidden rounded-lg border bg-background transition-colors;
+    border-color: var(--color-border);
   }
 
   .notes-editor__footer {

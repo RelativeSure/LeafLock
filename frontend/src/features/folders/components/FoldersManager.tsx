@@ -137,13 +137,13 @@ export const FoldersManager: React.FC<FoldersManagerProps> = ({ onClose, onFolde
     return (
       <div key={node.id}>
         <div
-          className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded group"
+          className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded group"
           style={{ marginLeft: `${depth * 20}px` }}
         >
           {hasChildren ? (
             <button
               onClick={() => toggleExpanded(node.id)}
-              className="w-4 h-4 flex items-center justify-center hover:bg-gray-200 rounded"
+              className="w-4 h-4 flex items-center justify-center hover:bg-muted rounded"
             >
               {isExpanded ? (
                 <ChevronDown className="w-3 h-3" />
@@ -187,7 +187,7 @@ export const FoldersManager: React.FC<FoldersManagerProps> = ({ onClose, onFolde
               variant="ghost"
               size="sm"
               onClick={() => handleDeleteFolder(node.id)}
-              className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="h-6 w-6 p-0 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
               title="Delete folder"
             >
               <Trash2 className="w-3 h-3" />
@@ -236,13 +236,16 @@ export const FoldersManager: React.FC<FoldersManagerProps> = ({ onClose, onFolde
 
       <CardContent className="space-y-4">
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
+          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded text-destructive text-sm">
             {error}
           </div>
         )}
 
         {/* Create New Folder Form */}
-        <form onSubmit={handleCreateFolder} className="space-y-3 p-3 bg-gray-50 rounded">
+        <form
+          onSubmit={handleCreateFolder}
+          className="space-y-3 p-4 bg-muted/30 rounded-lg border border-border"
+        >
           <div>
             <Label htmlFor="folder-name">Folder Name</Label>
             <Input
@@ -263,8 +266,8 @@ export const FoldersManager: React.FC<FoldersManagerProps> = ({ onClose, onFolde
                 <button
                   key={color}
                   type="button"
-                  className={`w-6 h-6 rounded-full border-2 ${
-                    newFolder.color === color ? 'border-gray-900' : 'border-gray-300'
+                  className={`w-6 h-6 rounded-full border-2 transition-all ${
+                    newFolder.color === color ? 'border-foreground scale-110' : 'border-border'
                   }`}
                   style={{ backgroundColor: color }}
                   onClick={() => setNewFolder({ ...newFolder, color })}
@@ -275,14 +278,14 @@ export const FoldersManager: React.FC<FoldersManagerProps> = ({ onClose, onFolde
           </div>
 
           {newFolder.parent_id && (
-            <div className="text-sm text-gray-600">
-              Parent: {folders.find((f) => f.id === newFolder.parent_id)?.name}
+            <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <span>Parent: {folders.find((f) => f.id === newFolder.parent_id)?.name}</span>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setNewFolder({ ...newFolder, parent_id: undefined })}
-                className="ml-2 h-5 w-5 p-0"
+                className="h-5 w-5 p-0"
               >
                 <X className="w-3 h-3" />
               </Button>
@@ -308,13 +311,13 @@ export const FoldersManager: React.FC<FoldersManagerProps> = ({ onClose, onFolde
         <div>
           <Label>Your Folders ({folders.length})</Label>
           {folderTree.length === 0 ? (
-            <div className="text-center py-6 text-gray-500">
-              <Folder className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+            <div className="text-center py-6 text-muted-foreground">
+              <Folder className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
               <p>No folders yet</p>
               <p className="text-sm">Create your first folder above</p>
             </div>
           ) : (
-            <div className="mt-2 border rounded bg-white">
+            <div className="mt-2 border border-border rounded-lg bg-card p-2">
               {folderTree.map((node) => renderFolderNode(node))}
             </div>
           )}

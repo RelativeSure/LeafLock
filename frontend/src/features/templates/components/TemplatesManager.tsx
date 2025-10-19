@@ -249,11 +249,11 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
             id="template-icon"
             value={formData.icon}
             onChange={(e) => setFormData((prev) => ({ ...prev, icon: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            className="w-full px-3 py-2 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {defaultIcons.map((icon) => (
               <option key={icon} value={icon}>
-                {icon} {icon}
+                {icon}
               </option>
             ))}
           </select>
@@ -288,7 +288,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
           onChange={(e) => setFormData((prev) => ({ ...prev, content: e.target.value }))}
           placeholder="Enter your template content here..."
           rows={8}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md resize-vertical"
+          className="w-full px-3 py-2 border border-input bg-background rounded-md resize-vertical focus:outline-none focus:ring-2 focus:ring-ring"
         />
       </div>
 
@@ -301,7 +301,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
         <Label htmlFor="is-public">Make this template public</Label>
       </div>
 
-      <div className="flex justify-end space-x-2">
+      <div className="flex justify-end gap-3 mt-6">
         <Button
           variant="outline"
           onClick={() => {
@@ -411,7 +411,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
           <div className="space-y-4">
             <div className="flex items-center space-x-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 pointer-events-none z-10" />
                 <Input
                   placeholder="Search templates..."
                   value={searchQuery}
@@ -422,7 +422,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
             </div>
 
             <div className="space-y-4">
-              <div className="flex space-x-2">
+              <div className="flex gap-2 pb-4 border-b border-border">
                 <Button
                   variant={activeTab === 'my-templates' ? 'default' : 'outline'}
                   onClick={() => setActiveTab('my-templates')}
@@ -445,7 +445,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
                 </Button>
               </div>
 
-              <div>
+              <div className="pt-2">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredTemplates.map((template) => (
                     <Card key={template.id} className="hover:shadow-md transition-shadow">

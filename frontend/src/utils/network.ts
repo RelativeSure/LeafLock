@@ -17,7 +17,8 @@ const sanitizeEnvUrl = (value: string | undefined): string | undefined => {
 export const resolveApiBaseUrl = (): string => {
   const envOverride = sanitizeEnvUrl(import.meta.env.VITE_API_URL)
   if (envOverride) {
-    return `${envOverride}/api/v1`
+    // Don't append /api/v1 if it's already present
+    return envOverride.endsWith('/api/v1') ? envOverride : `${envOverride}/api/v1`
   }
 
   if (typeof window !== 'undefined' && window.location?.hostname) {

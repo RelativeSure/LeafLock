@@ -2,11 +2,11 @@
 
 @layer components {
   .search-input-field {
-    @apply h-11 rounded-lg pl-10 pr-12 text-sm;
+    @apply h-11 rounded-lg pl-10 pr-12 text-sm border border-input;
   }
 
   .search-input-icon {
-    @apply absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400;
+    @apply absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none z-10;
   }
 
   .search-clear-button {
@@ -14,7 +14,7 @@
   }
 
   .search-spinner {
-    @apply h-4 w-4 text-gray-400;
+    @apply h-4 w-4 text-muted-foreground;
   }
 
   @media (min-width: 768px) {
