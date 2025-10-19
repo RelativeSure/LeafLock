@@ -71,7 +71,8 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 			return method == fiber.MethodGet || method == fiber.MethodHead || method == fiber.MethodOptions ||
 				strings.HasPrefix(path, "/api/v1/health") ||
 				strings.HasPrefix(path, "/api/v1/ready") ||
-				strings.HasPrefix(path, "/api/v1/auth/")
+				strings.HasPrefix(path, "/api/v1/auth/") ||
+				strings.HasPrefix(path, "/api/v1/") // Skip CSRF for all API routes (JWT-authenticated, CSRF-safe)
 		},
 	}))
 
@@ -238,12 +239,13 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	api.Post("/auth/mfa/verify", rateLimits.MFAVerifyLimiter, authHandler.VerifyMFACode) // Public endpoint
 
 	// Notes routes - Tier 4: Standard CRUD
+	// Note: Specific routes MUST come before generic /:id routes to avoid route shadowing
 	protected.Get("/notes", rateLimits.StandardCRUDLimiter, notesHandler.GetNotes)
-	protected.Get("/notes/:id", rateLimits.StandardCRUDLimiter, notesHandler.GetNote)
+	protected.Get("/notes/trash", rateLimits.StandardCRUDLimiter, notesHandler.GetTrash)
 	protected.Post("/notes", rateLimits.StandardCRUDLimiter, notesHandler.CreateNote)
+	protected.Get("/notes/:id", rateLimits.StandardCRUDLimiter, notesHandler.GetNote)
 	protected.Put("/notes/:id", rateLimits.StandardCRUDLimiter, notesHandler.UpdateNote)
 	protected.Delete("/notes/:id", rateLimits.StandardCRUDLimiter, notesHandler.DeleteNote)
-	protected.Get("/notes/trash", rateLimits.StandardCRUDLimiter, notesHandler.GetTrash)
 	protected.Post("/notes/:id/restore", rateLimits.StandardCRUDLimiter, notesHandler.RestoreNote)
 	protected.Get("/notes/:id/versions", rateLimits.StandardCRUDLimiter, notesHandler.GetNoteVersions)
 	protected.Post("/notes/:id/versions/:version", rateLimits.StandardCRUDLimiter, notesHandler.RestoreNoteVersion)
