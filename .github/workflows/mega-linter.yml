@@ -3,12 +3,13 @@
 ---
 name: CI - MegaLinter
 
-# Trigger mega-linter at every push. Action will also be visible from
-# Pull Requests to main
+# Trigger mega-linter on pull requests and pushes to main/master
+# Prevents duplicate runs when a PR is created from a branch
 on:
-  # Comment this line to trigger action only on pull-requests
-  # (not recommended if you don't pay for GH Actions)
   push:
+    branches:
+      - main
+      - master
 
   pull_request:
     branches:
@@ -86,6 +87,7 @@ jobs:
           VALIDATE_ALL_CODEBASE: true
           GITHUB_STATUS_REPORTER: true
           SARIF_REPORTER: true
+          MEGALINTER_CONFIG: .github/.mega-linter.yml
 
           # Disable LLM Advisor for bot PRs (dependabot, renovate, etc.)
           LLM_ADVISOR_ENABLED: >-
@@ -213,4 +215,4 @@ jobs:
         if: success() || failure()
         uses: github/codeql-action/upload-sarif@16140ae1a102900babc80a33c44059580f687047 # v4
         with:
-            sarif_file: 'megalinter-reports/megalinter-report.sarif'
+          sarif_file: "megalinter-reports/megalinter-report.sarif"

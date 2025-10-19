@@ -223,7 +223,7 @@ func SetupTestDatabase() (Database, error) {
 	// For testing, we'll use an in-memory database or a test database
 	// This is a simplified version - in practice, you'd set up a proper test database
 	config := LoadConfig()
-	config.DatabaseURL = "postgres://test:test@localhost/leaflock_test?sslmode=disable"
+	config.DatabaseURL = "postgres://test:test@localhost/leaflock_test?sslmode=disable" // secretlint-disable-line
 
 	return SetupDatabase(config.DatabaseURL)
 }

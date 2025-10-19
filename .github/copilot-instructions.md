@@ -60,8 +60,8 @@ make test-coverage-check
 
 # Integration tests (requires test database)
 # Start test databases first:
-docker run -d --name test-postgres -p 5433:5432 -e POSTGRES_USER=test -e POSTGRES_PASSWORD=test -e POSTGRES_DB=test_notes postgres:15
-docker run -d --name test-redis -p 6380:6379 redis:7
+docker run -d --name test-postgres -p 5433:5432 -e POSTGRES_USER=test -e POSTGRES_PASSWORD=test -e POSTGRES_DB=test_notes postgres:18
+docker run -d --name test-redis -p 6380:6379 redis:8
 make test-integration
 ```
 

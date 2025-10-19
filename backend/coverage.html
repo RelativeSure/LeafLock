@@ -356,7 +356,7 @@ func LoadConfig() *Config <span class="cov2" title="2">{
 
         <span class="cov2" title="2">dbURL := os.Getenv("DATABASE_URL")
         if dbURL == "" </span><span class="cov1" title="1">{
-                dbURL = "postgres://postgres:postgres@localhost:5432/notes?sslmode=disable"
+                dbURL = "postgres://postgres:postgres@localhost:5432/notes?sslmode=disable" <!-- secretlint-disable-line -->
         }</span>
 
         <span class="cov2" title="2">return &amp;Config{

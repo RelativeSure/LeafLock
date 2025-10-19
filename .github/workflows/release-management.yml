@@ -228,7 +228,7 @@ jobs:
 
       - name: Quick integration test
         env:
-          DATABASE_URL: postgres://postgres:testpass123@localhost:5432/notes?sslmode=disable
+          DATABASE_URL: postgres://postgres:testpass123@localhost:5432/notes?sslmode=disable # secretlint-disable-line
           REDIS_URL: localhost:6379
           JWT_SECRET: test_jwt_secret_for_ci_only_not_for_production_use_12345678901234567890
           SERVER_ENCRYPTION_KEY: test_encryption_key_32_chars_ok12
