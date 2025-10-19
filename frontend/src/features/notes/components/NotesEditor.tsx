@@ -334,7 +334,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
 
         {/* Footer inside scroll area */}
         <Separator />
-        <Footer className="!py-0 !px-0" />
+        <Footer className="pt-4" />
       </ScrollArea>
     </div>
   )

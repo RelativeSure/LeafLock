@@ -299,3 +299,85 @@ code {
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .search-input-field {
+    @apply h-11 rounded-lg pl-10 pr-12 text-sm md:text-base;
+  }
+
+  .search-input-icon {
+    @apply absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400;
+  }
+
+  .search-clear-button {
+    @apply h-6 w-6 p-0 hover:bg-muted;
+  }
+
+  .search-spinner {
+    @apply h-4 w-4 text-gray-400;
+  }
+
+  .notes-pane-header {
+    @apply flex-shrink-0 space-y-4 px-4 py-4;
+  }
+
+  .trash-search-input {
+    @apply w-full h-11 rounded-lg pl-10 pr-12 text-sm md:text-base;
+  }
+
+  .notes-card {
+    @apply flex items-stretch gap-2 rounded-xl border border-border/40 bg-card transition-colors focus-within:ring-2 focus-within:ring-sky-500/40;
+  }
+
+  .notes-card[data-selected='true'] {
+    @apply border-sky-500/50 bg-sky-500/10 shadow-sm;
+  }
+
+  .notes-card:not([data-selected='true']):hover {
+    @apply bg-muted/60;
+  }
+
+  .notes-card-button {
+    @apply flex-1 rounded-xl px-4 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60;
+  }
+
+  .notes-card-button[data-trash='true'] {
+    @apply cursor-default text-muted-foreground/90;
+  }
+
+  .notes-card-button[data-trash='false'] {
+    @apply cursor-pointer;
+  }
+
+  .notes-actions {
+    @apply flex flex-col justify-center gap-2 px-3 py-2;
+  }
+
+  .notes-action-restore {
+    @apply rounded-md p-1.5 text-sky-600 hover:text-sky-700 hover:bg-sky-500/10 transition focus:outline-none focus:ring-2 focus:ring-sky-500/50 dark:text-sky-400 dark:hover:text-sky-300;
+  }
+
+  .notes-action-delete {
+    @apply rounded-md p-1.5 text-destructive hover:text-destructive/90 hover:bg-destructive/10 transition focus:outline-none focus:ring-2 focus:ring-destructive/50;
+  }
+
+  .notes-action-trash {
+    @apply rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition focus:outline-none focus:ring-2 focus:ring-destructive/50;
+  }
+
+  .editor-shell {
+    @apply w-full rounded-xl border border-sky-400/30 bg-sky-500/5 p-1.5 md:p-3 shadow-sm transition-colors;
+  }
+
+  .editor-inner-shell {
+    @apply rounded-lg border border-sky-500/40 bg-background overflow-hidden transition-colors;
+  }
+
+  .app-footer {
+    @apply border-t border-border/40 bg-background px-6 md:px-8 py-4 md:py-6;
+  }
+
+  .footer-links {
+    @apply flex flex-wrap items-center justify-center gap-4 text-xs md:text-sm;
+  }
+}

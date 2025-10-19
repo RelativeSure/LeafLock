@@ -179,11 +179,11 @@ export const padding = {
     /** Toolbar button: p-2.5 md:p-2 - Mobile-first touch target for toolbar buttons */
     toolbarButton: 'p-2.5 md:p-2',
 
-    /** Editor content: px-4 py-3 (md:px-6 md:py-4) - Main editor content area */
-    editorContent: 'px-4 py-3 md:px-6 md:py-4',
+    /** Editor content: px-3 py-2 (md:px-5 md:py-3) - Main editor content area */
+    editorContent: 'px-3 py-2 md:px-5 md:py-3',
 
-    /** Editor wrapper: px-2 md:px-4 - Editor container wrapper */
-    editorWrapper: 'px-2 md:px-4',
+    /** Editor wrapper: px-2 md:px-3 - Editor container wrapper */
+    editorWrapper: 'px-2 md:px-3',
 
     /** Title bar: px-3 py-2 (md:px-4 md:py-3) - Editor title bar */
     titleBar: 'px-3 py-2 md:px-4 md:py-3',

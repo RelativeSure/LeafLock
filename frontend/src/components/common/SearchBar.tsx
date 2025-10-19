@@ -15,7 +15,7 @@ interface SearchBarProps {
 export const SearchBar: React.FC<SearchBarProps> = ({
   onSearchResults,
   onClear,
-  placeholder = 'Search notes...',
+  placeholder = 'Search',
   className = '',
 }) => {
   const [query, setQuery] = useState('')
@@ -72,7 +72,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   return (
     <div className={`relative ${className}`}>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+        <Search className="search-input-icon" />
 
         <Input
           type="text"
@@ -80,20 +80,15 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="pl-10 pr-10"
+          className="search-input-field"
           disabled={isSearching}
         />
 
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center">
-          {isSearching && <Spinner className="w-4 h-4 text-gray-400" aria-hidden="true" />}
+          {isSearching && <Spinner className="search-spinner" aria-hidden="true" />}
 
           {query && !isSearching && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClear}
-              className="h-6 w-6 p-0 hover:bg-gray-200"
-            >
+            <Button variant="ghost" size="sm" onClick={handleClear} className="search-clear-button">
               <X className="w-3 h-3" />
             </Button>
           )}

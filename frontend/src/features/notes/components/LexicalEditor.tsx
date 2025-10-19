@@ -554,14 +554,8 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
   // WYSIWYG-only: no markdown mode
 
   return (
-    <div
-      className={cn(
-        'w-full rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-3 shadow-sm',
-        padding.editor.editorWrapper,
-        className
-      )}
-    >
-      <div className="rounded-lg border border-emerald-500/60 bg-background overflow-hidden">
+    <div className={cn('editor-shell', padding.editor.editorWrapper, className)}>
+      <div className="editor-inner-shell">
         <LexicalComposer initialConfig={initialConfig}>
           {editable && <ToolbarPlugin />}
 
