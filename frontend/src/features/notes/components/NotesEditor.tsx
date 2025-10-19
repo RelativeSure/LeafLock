@@ -14,6 +14,7 @@ import { type SecureAPI } from '@/services/api/secureApi'
 import { type CryptoService } from '@/services/crypto/cryptoService'
 import { ComponentLoader } from '@/components/loaders'
 import { padding } from '@/lib/padding'
+import '../notes.css'
 
 const TagSelector = lazy(() => import('@/features/tags/components/TagSelector'))
 const RichTextEditor = lazy(() => import('@/features/notes/components/RichTextEditor'))
@@ -334,7 +335,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
 
         {/* Footer inside scroll area */}
         <Separator />
-        <Footer className="pt-4" />
+        <Footer className="notes-editor__footer" />
       </ScrollArea>
     </div>
   )

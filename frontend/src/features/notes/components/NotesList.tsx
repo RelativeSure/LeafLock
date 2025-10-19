@@ -10,6 +10,7 @@ import { NoteListSkeleton } from './NoteSkeletons'
 import { ErrorNotice } from '@/components/common'
 import type { Note } from '@/types/auth'
 import type { SearchResult } from '@/services/data/searchService'
+import '../notes.css'
 
 const SearchBar = lazy(() =>
   import('@/components/common/SearchBar').then((mod) => ({
