@@ -10,7 +10,7 @@
     @apply flex flex-wrap items-center justify-center gap-4 text-xs;
   }
 
-  @screen md {
+  @media (min-width: 768px) {
     .app-footer {
       @apply px-8 py-6;
       border-color: color-mix(in srgb, var(--color-border) 40%, transparent);
