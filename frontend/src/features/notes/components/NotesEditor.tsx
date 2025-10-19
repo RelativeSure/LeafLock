@@ -7,19 +7,16 @@ import { Card } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
-import { ErrorNotice } from '@/features/common/ErrorNotice'
-import Footer from '@/components/Footer'
+import { Footer, ErrorNotice } from '@/components/common'
 import { debounce, type DebounceFunction } from '@/utils/debounce'
-import { type Note } from '@/features/app/types'
-import { type SecureAPI } from '@/services/secureApi'
-import { type CryptoService } from '@/services/cryptoService'
-import ComponentLoader from '@/components/loaders/ComponentLoader'
+import { type Note } from '@/types/auth'
+import { type SecureAPI } from '@/services/api/secureApi'
+import { type CryptoService } from '@/services/crypto/cryptoService'
+import { ComponentLoader } from '@/components/loaders'
 import { padding } from '@/lib/padding'
 
-const TagSelector = lazy(() => import('@/components/TagSelector'))
-const RichTextEditor = lazy(() =>
-  import('@/components/RichTextEditor').then((module) => ({ default: module.RichTextEditor }))
-)
+const TagSelector = lazy(() => import('@/features/tags/components/TagSelector'))
+const RichTextEditor = lazy(() => import('@/features/notes/components/RichTextEditor'))
 
 interface NotesEditorProps {
   selectedNote: Note | null

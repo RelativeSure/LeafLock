@@ -1,7 +1,7 @@
 import React from 'react'
-import { ThemeProvider } from '@/ThemeContext'
+import { ThemeProvider } from '@/context'
 import { Toaster } from '@/components/ui/sonner'
-import { LeafLockApp } from '@/features/app/LeafLockApp'
+import { AppRouter } from '@/features/router'
 import {
   Outlet,
   RouterProvider,
@@ -31,7 +31,12 @@ class ErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <div
-          style={{ fontFamily: 'system-ui', padding: '2rem', maxWidth: '600px', margin: '0 auto' }}
+          style={{
+            fontFamily: 'system-ui',
+            padding: '2rem',
+            maxWidth: '600px',
+            margin: '0 auto',
+          }}
         >
           <h1 style={{ color: '#dc2626' }}>LeafLock Error</h1>
           <p>
@@ -49,7 +54,11 @@ class ErrorBoundary extends React.Component<
           </pre>
           <button
             onClick={() => window.location.reload()}
-            style={{ marginTop: '1rem', padding: '0.5rem 1rem', cursor: 'pointer' }}
+            style={{
+              marginTop: '1rem',
+              padding: '0.5rem 1rem',
+              cursor: 'pointer',
+            }}
           >
             Reload Page
           </button>
@@ -64,7 +73,7 @@ class ErrorBoundary extends React.Component<
 const RootLayout: React.FC = () => (
   <ErrorBoundary>
     <ThemeProvider>
-      <LeafLockApp />
+      <AppRouter />
       <Outlet />
       <Toaster />
     </ThemeProvider>

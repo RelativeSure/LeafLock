@@ -5,14 +5,22 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Plus, FileText } from 'lucide-react'
-import ComponentLoader from '@/components/loaders/ComponentLoader'
+import { ComponentLoader } from '@/components/loaders'
 import { NoteListSkeleton } from './NoteSkeletons'
-import { ErrorNotice } from '@/features/common/ErrorNotice'
-import type { Note, ViewType } from '@/features/app/types'
-import type { SearchResult } from '@/services/searchService'
+import { ErrorNotice } from '@/components/common'
+import type { Note } from '@/types/auth'
+import type { SearchResult } from '@/services/data/searchService'
 
-const SearchBar = lazy(() => import('@/components/SearchBar'))
-const SearchResults = lazy(() => import('@/components/SearchResults'))
+const SearchBar = lazy(() =>
+  import('@/components/common/SearchBar').then((mod) => ({
+    default: mod.SearchBar,
+  }))
+)
+const SearchResults = lazy(() =>
+  import('@/components/common/SearchResults').then((mod) => ({
+    default: mod.SearchResults,
+  }))
+)
 
 interface NotesListProps {
   notes: Note[]
@@ -25,7 +33,7 @@ interface NotesListProps {
   onDismissError: () => void
   onSelectNote: (note: Note) => void
   onClearSelection: () => void
-  onChangeView: (view: ViewType) => void
+  onChangeView: (path: string) => void
   onRestoreNote: (noteId: string) => Promise<void>
   onPermanentDelete: (noteId: string) => Promise<void>
   onMoveToTrash: (noteId: string) => Promise<boolean>

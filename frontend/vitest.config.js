@@ -12,22 +12,21 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./src/test-setup.ts'],
+    setupFiles: ['./src/__tests__/test-setup.ts'],
     exclude: [...configDefaults.exclude, 'tests/**', 'e2e/**', '**/*.spec.ts'],
     coverage: {
       reporter: ['text', 'json', 'html', 'lcov'],
       reportsDirectory: './coverage',
       exclude: [
         'node_modules/',
-        'src/test-utils.jsx',
-        'src/test-setup.js',
-        '**/*.test.{js,jsx}',
-        '**/*.spec.{js,jsx}',
-        'src/main.jsx',
-        'vite.config.js',
+        'src/__tests__/**',
+        '**/*.test.{ts,tsx,js,jsx}',
+        '**/*.spec.{ts,tsx,js,jsx}',
+        'src/main.tsx',
+        'vite.config.ts',
         'vitest.config.js',
       ],
-      include: ['src/**/*.{js,jsx}'],
+      include: ['src/**/*.{ts,tsx}'],
       thresholds: {
         global: {
           branches: 80,
@@ -35,7 +34,7 @@ export default defineConfig({
           lines: 80,
           statements: 80,
         },
-        'src/App.jsx': {
+        'src/App.tsx': {
           branches: 85,
           functions: 85,
           lines: 85,
