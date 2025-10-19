@@ -4,7 +4,7 @@
   }
 
   .trash-search-input {
-    @apply h-11 w-full rounded-lg pl-10 pr-12 text-sm md:text-base;
+    @apply h-11 w-full rounded-lg pl-10 pr-12 text-sm;
   }
 
   .notes-card {
@@ -36,7 +36,7 @@
   }
 
   .notes-action-restore {
-    @apply rounded-md p-1.5 text-sky-600 transition hover:bg-sky-500/10 hover:text-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500/50 dark:text-sky-400 dark:hover:text-sky-300;
+    @apply rounded-md p-1.5 text-sky-600 transition hover:bg-sky-500/10 hover:text-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500/50;
   }
 
   .notes-action-delete {
@@ -48,7 +48,7 @@
   }
 
   .editor-shell {
-    @apply w-full rounded-xl border border-sky-400/30 bg-sky-500/5 p-1.5 shadow-sm transition-colors md:p-3;
+    @apply w-full rounded-xl border border-sky-400/30 bg-sky-500/5 p-1.5 shadow-sm transition-colors;
   }
 
   .editor-inner-shell {
@@ -56,7 +56,29 @@
   }
 
   .notes-editor__footer {
-    @apply pt-2 md:pt-3;
+    @apply pt-2;
+  }
+
+  @screen md {
+    .trash-search-input {
+      @apply text-base;
+    }
+
+    .editor-shell {
+      @apply p-3;
+    }
+
+    .notes-editor__footer {
+      @apply pt-3;
+    }
+  }
+}
+
+@layer components {
+  @variant dark {
+    .notes-action-restore {
+      @apply text-sky-400 hover:text-sky-300;
+    }
   }
 }
 
