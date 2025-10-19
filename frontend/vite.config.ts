@@ -65,6 +65,13 @@ export default defineConfig({
     cssCodeSplit: true,
     sourcemap: false, // Disable sourcemaps for production for faster builds
     rollupOptions: {
+      onwarn(warning, defaultHandler) {
+        if (warning.code === 'EVAL' && warning.id?.includes('vm-browserify')) {
+          return
+        }
+
+        defaultHandler(warning)
+      },
       output: {
         // Enable code splitting for better caching
         manualChunks(id) {
