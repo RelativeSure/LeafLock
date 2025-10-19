@@ -32,7 +32,7 @@ import (
 
 // Test configuration
 const (
-	TestDatabaseURL = "postgres://test:test@localhost:5433/test_leaflock?sslmode=disable"
+	TestDatabaseURL = "postgres://test:test@localhost:5433/test_leaflock?sslmode=disable" // secretlint-disable-line
 	TestRedisURL    = "localhost:6380"
 )
 
@@ -362,7 +362,7 @@ func TestConfig(t *testing.T) {
 
 		assert.NotEmpty(t, config.JWTSecret)
 		assert.NotEmpty(t, config.EncryptionKey)
-		assert.Equal(t, "postgres://postgres:postgres@localhost:5432/leaflock?sslmode=prefer", config.DatabaseURL)
+		assert.Equal(t, "postgres://postgres:postgres@localhost:5432/leaflock?sslmode=prefer", config.DatabaseURL) // secretlint-disable-line
 		assert.Equal(t, "8080", config.Port)
 		assert.Equal(t, 5, config.MaxLoginAttempts)
 		assert.Equal(t, 15*time.Minute, config.LockoutDuration)
@@ -371,7 +371,7 @@ func TestConfig(t *testing.T) {
 	t.Run("LoadConfigWithEnvironment", func(t *testing.T) {
 		testJWT := "unit-test-jwt-secret-key-with-sufficient-length-1234567890"
 		testEncKey := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{0x42}, 32))
-		testDBURL := "postgres://test:test@localhost:5432/testdb"
+		testDBURL := "postgres://test:test@localhost:5432/testdb" // secretlint-disable-line
 
 		_ = os.Setenv("JWT_SECRET", testJWT)               // Test setup
 		_ = os.Setenv("SERVER_ENCRYPTION_KEY", testEncKey) // Test setup
@@ -891,7 +891,7 @@ func BenchmarkCryptoService(b *testing.B) {
 // Additional coverage: database setup error path and registration disabled
 func TestSetupDatabase_InvalidConnection(t *testing.T) {
 	// Use an unreachable port to fail fast without external dependencies
-	badURL := "postgres://postgres:postgres@127.0.0.1:1/notes?sslmode=disable"
+	badURL := "postgres://postgres:postgres@127.0.0.1:1/notes?sslmode=disable" // secretlint-disable-line
 	pool, err := appdb.SetupDatabase(badURL)
 	if pool != nil {
 		pool.Close()

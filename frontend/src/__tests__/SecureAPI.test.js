@@ -224,7 +224,6 @@ describe('SecureAPI', () => {
       expect(tokenAPI.token).toBe('test-token')
       expect(localStorageMock.getItem).toHaveBeenCalledWith('secure_token')
     })
-
   })
 
   describe('Token Management', () => {

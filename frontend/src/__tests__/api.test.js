@@ -173,7 +173,6 @@ describe('SecureAPI', () => {
       const apiWithoutToken = new TestSecureAPI()
       expect(apiWithoutToken.token).toBeNull()
     })
-
   })
 
   describe('Request Method', () => {

@@ -129,12 +129,7 @@ export const AppRouter: React.FC = () => {
   if (isAuthenticated && encryptionStatus === 'unlocked') {
     // Settings view
     if (currentView === 'settings') {
-      return (
-        <SettingsView
-          onBack={() => navigateToPath(ROUTES.notes)}
-          onLogout={handleLogout}
-        />
-      )
+      return <SettingsView onBack={() => navigateToPath(ROUTES.notes)} onLogout={handleLogout} />
     }
 
     // Tags view
@@ -149,9 +144,7 @@ export const AppRouter: React.FC = () => {
 
     // Templates view
     if (currentView === 'templates') {
-      return (
-        <TemplatesView onClose={() => navigateToPath(ROUTES.notes)} />
-      )
+      return <TemplatesView onClose={() => navigateToPath(ROUTES.notes)} />
     }
 
     // Admin view
@@ -207,12 +200,7 @@ export const AppRouter: React.FC = () => {
 
   // Unlock view
   if (isAuthenticated && currentView === 'unlock') {
-    return (
-      <UnlockView
-        onUnlock={handleUnlockWithPassword}
-        onLogout={handleLogout}
-      />
-    )
+    return <UnlockView onUnlock={handleUnlockWithPassword} onLogout={handleLogout} />
   }
 
   // Password reset flow
@@ -231,12 +219,7 @@ export const AppRouter: React.FC = () => {
 
   // Forgot password view
   if (currentView === 'forgot') {
-    return (
-      <ForgotPasswordView
-        api={api}
-        onBackToLogin={() => navigateToPath(ROUTES.login)}
-      />
-    )
+    return <ForgotPasswordView api={api} onBackToLogin={() => navigateToPath(ROUTES.login)} />
   }
 
   // Login view (default)

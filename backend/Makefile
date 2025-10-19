@@ -33,7 +33,7 @@ SECURITY_TEST_TAG=security
 COVERAGE_THRESHOLD=72
 
 # Database test parameters
-TEST_DB_URL=postgres://test:test@localhost:5433/test_notes?sslmode=disable
+TEST_DB_URL=postgres://test:test@localhost:5433/test_notes?sslmode=disable # secretlint-disable-line
 TEST_REDIS_URL=localhost:6380
 
 help: ## Show this help message
