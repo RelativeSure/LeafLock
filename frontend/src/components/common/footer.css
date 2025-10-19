@@ -1,6 +1,9 @@
+@reference '../../index.css';
+
 @layer components {
   .app-footer {
-    @apply border-t border-border/40 bg-background px-6 py-4;
+    @apply border-t bg-background px-6 py-4;
+    border-color: color-mix(in srgb, var(--color-border) 40%, transparent);
   }
 
   .footer-links {
@@ -10,6 +13,7 @@
   @screen md {
     .app-footer {
       @apply px-8 py-6;
+      border-color: color-mix(in srgb, var(--color-border) 40%, transparent);
     }
 
     .footer-links {
