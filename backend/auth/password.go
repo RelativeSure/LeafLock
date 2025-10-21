@@ -65,6 +65,19 @@ func (pm *PasswordManager) HashPassword(password string, salt []byte) string {
 	)
 }
 
+// DeriveKeyBytes derives a raw key from password and salt using Argon2id.
+// Returns the raw key bytes for use in encryption (32 bytes).
+func (pm *PasswordManager) DeriveKeyBytes(password string, salt []byte) []byte {
+	return argon2.IDKey(
+		[]byte(password),
+		salt,
+		Argon2Time,
+		Argon2Memory,
+		Argon2Threads,
+		Argon2KeyLength,
+	)
+}
+
 // VerifyPassword verifies a password against a hash
 func (pm *PasswordManager) VerifyPassword(password, passwordHash string, salt []byte) bool {
 	computed := pm.HashPassword(password, salt)
@@ -221,7 +234,7 @@ func (pm *PasswordManager) CompletePasswordReset(ctx context.Context, token, new
 	)
 
 	// Encrypt master key with derived key
-	tempCrypto := appcrypto.NewCryptoService(string(derivedKey))
+	tempCrypto := appcrypto.NewCryptoService(derivedKey)
 	masterKeyEncrypted, err := tempCrypto.EncryptBytes(masterKey)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt master key: %w", err)

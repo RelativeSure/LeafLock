@@ -62,7 +62,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (*AuthRe
 	}
 
 	// Derive key from password for encrypting master key
-	derivedKey := s.password.HashPassword(password, salt) // Use same derivation
+	derivedKey := s.password.DeriveKeyBytes(password, salt) // Get raw key bytes
 	tempCrypto := appcrypto.NewCryptoService(derivedKey)
 	masterKeyEncrypted, err := tempCrypto.EncryptBytes(masterKey)
 	if err != nil {
