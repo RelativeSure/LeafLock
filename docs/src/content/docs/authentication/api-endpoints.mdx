@@ -1,243 +1,562 @@
 ---
-title: MFA API Endpoints
-description: Developer documentation for MFA API endpoints
+title: Authentication API Reference
+description: Complete API reference for LeafLock authentication endpoints
+sidebar:
+  order: 2
 ---
 
-# MFA API Reference
+import { Code, Tabs, TabItem } from '@astrojs/starlight/components';
 
-API endpoints for Multi-Factor Authentication implementation.
+Complete API reference for all authentication endpoints in LeafLock. Implementation: `backend/auth/handlers.go`
 
-## Authentication Flow
+## Core Authentication
 
-```
-POST /api/v1/auth/login
-  ↓ (password correct + MFA enabled)
-Response: { mfa_required: true, session_token: "mfa_session_xxx" }
-  ↓
-POST /api/v1/auth/mfa/verify
-  ↓
-Response: { token: "jwt_token", user_id: "uuid", workspace_id: "uuid" }
-```
+<Tabs>
+  <TabItem label="Register">
+<Code code={`POST /api/v1/auth/register
 
-## Public Endpoints
-
-### Verify MFA Code
-```http
-POST /api/v1/auth/mfa/verify
-```
-
-**Request Body:**
-```json
+Request:
 {
-  "session_token": "mfa_session_xxx",
-  "code": "123456",
-  "is_backup_code": false
+  "email": "user@example.com",
+  "password": "SecureP@ss123"
 }
-```
 
-**Response (Success):**
-```json
+Response (201):
 {
   "token": "eyJhbGc...",
   "user_id": "550e8400-e29b-41d4-a716-446655440000",
   "workspace_id": "660e8400-e29b-41d4-a716-446655440000",
-  "backup_code_used": false
+  "is_admin": false,
+  "expires_at": "2025-10-22T10:00:00Z"
 }
-```
 
-## Protected Endpoints (Require JWT)
+Errors:
+- 409 EMAIL_EXISTS - Email already registered
+- 400 VALIDATION_FAILED - Weak password or invalid email
+- 400 REGISTRATION_DISABLED - Registration not allowed
 
-### Get MFA Status
-```http
-GET /api/v1/auth/mfa/status
-Authorization: Bearer <jwt_token>
-```
+Password Requirements:
+- Minimum 12 characters
+- Uppercase + lowercase letters
+- At least one digit
+- At least one special character
 
-**Response:**
-```json
+Implementation: backend/auth/handlers.go:34
+Validation: backend/auth/password.go:101`} language="json" />
+  </TabItem>
+  <TabItem label="Login">
+<Code code={`POST /api/v1/auth/login
+
+Request:
 {
-  "enabled": true,
-  "has_secret": true
+  "email": "user@example.com",
+  "password": "SecureP@ss123",
+  "mfa_code": ""  # Optional, for single-step login
 }
-```
 
-### Begin MFA Setup
-```http
-POST /api/v1/auth/mfa/begin
+Response (200) - No MFA:
+{
+  "token": "eyJhbGc...",
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "workspace_id": "660e8400-e29b-41d4-a716-446655440000",
+  "is_admin": false,
+  "expires_at": "2025-10-22T10:00:00Z"
+}
+
+Response (200) - MFA Required:
+{
+  "mfa_required": true,
+  "session_token": "mfa_session_xxx",
+  "user_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+
+Errors:
+- 401 INVALID_CREDENTIALS - Wrong email/password
+- 403 ACCOUNT_LOCKED - Too many failed attempts (15min lockout)
+- 401 INVALID_MFA_CODE - Wrong MFA code (if provided)
+
+Account Locking:
+- Trigger: 5 failed attempts
+- Duration: 15 minutes
+- Counter reset: Successful login
+
+Implementation: backend/auth/handlers.go:88
+Rate Limit: 10 requests/5 minutes`} language="json" />
+  </TabItem>
+  <TabItem label="Logout">
+<Code code={`POST /api/v1/auth/logout
 Authorization: Bearer <jwt_token>
-```
 
-**Response:**
-```json
+Response (200):
+{
+  "message": "Logged out successfully"
+}
+
+Behavior:
+- Deletes session from Redis
+- Invalidates JWT token
+- Client must discard token
+
+Implementation: backend/auth/handlers.go:168`} language="json" />
+  </TabItem>
+  <TabItem label="Registration Status">
+<Code code={`GET /api/v1/auth/registration
+
+Response (200):
+{
+  "enabled": true
+}
+
+Notes:
+- Public endpoint
+- Controlled by ENABLE_REGISTRATION env var (default: false)
+- Returns current registration policy
+
+Implementation: backend/auth/handlers.go:486`} language="json" />
+  </TabItem>
+</Tabs>
+
+## Multi-Factor Authentication
+
+<Tabs>
+  <TabItem label="Verify MFA">
+<Code code={`POST /api/v1/auth/mfa/verify
+
+Request:
+{
+  "session_token": "mfa_session_xxx",
+  "code": "123456"  # TOTP code or backup code (XXXX-XXXX-XXXX)
+}
+
+Response (200):
+{
+  "token": "eyJhbGc...",
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "workspace_id": "660e8400-e29b-41d4-a716-446655440000",
+  "is_admin": false,
+  "expires_at": "2025-10-22T10:00:00Z"
+}
+
+Errors:
+- 401 INVALID_MFA_CODE - Wrong TOTP/backup code
+- 401 EXPIRED_TOKEN - MFA session expired (5min window)
+
+Notes:
+- Public endpoint (no JWT required)
+- Accepts both TOTP codes (6 digits) and backup codes (12 chars)
+- MFA session token valid for 5 minutes
+- TOTP valid for ±30 seconds (90-second window)
+- Backup codes are single-use, constant-time verified
+
+Implementation: backend/auth/handlers.go:134
+MFA Logic: backend/auth/mfa.go:65
+Rate Limit: 10 requests/5 minutes`} language="json" />
+  </TabItem>
+  <TabItem label="Get Status">
+<Code code={`GET /api/v1/auth/mfa/status
+Authorization: Bearer <jwt_token>
+
+Response (200):
+{
+  "mfa_enabled": true,
+  "backup_codes_remaining": 7
+}
+
+Implementation: backend/auth/handlers.go:210`} language="json" />
+  </TabItem>
+  <TabItem label="Setup">
+<Code code={`POST /api/v1/auth/mfa/setup
+Authorization: Bearer <jwt_token>
+
+Response (200):
 {
   "secret": "JBSWY3DPEHPK3PXP",
-  "otpauth_url": "otpauth://totp/LeafLock:user@example.com?secret=...",
-  "issuer": "LeafLock",
-  "account": "user@example.com"
+  "qr_code_url": "otpauth://totp/LeafLock:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=LeafLock"
 }
-```
 
-### Enable MFA
-```http
-POST /api/v1/auth/mfa/enable
+Notes:
+- Generates new TOTP secret (32 random bytes, base32 encoded)
+- QR code URL for authenticator apps
+- Secret not stored until /enable is called
+- User must verify code via /enable to activate
+
+TOTP Configuration:
+- Algorithm: SHA-1 (RFC 6238 standard)
+- Period: 30 seconds
+- Digits: 6
+- Issuer: LeafLock
+
+Implementation: backend/auth/handlers.go:235
+TOTP Generation: backend/auth/mfa.go:35
+Rate Limit: 10 requests/5 minutes`} language="json" />
+  </TabItem>
+  <TabItem label="Enable">
+<Code code={`POST /api/v1/auth/mfa/enable
 Authorization: Bearer <jwt_token>
-```
 
-**Request Body:**
-```json
+Request:
 {
+  "secret": "JBSWY3DPEHPK3PXP",
   "code": "123456"
 }
-```
 
-**Response:**
-```json
+Response (200):
 {
-  "enabled": true,
   "backup_codes": [
-    "A1B2-C3D4-E5F6-G7H8",
-    "I9J0-K1L2-M3N4-O5P6",
-    ...
-  ],
-  "message": "MFA enabled successfully..."
+    "A1B2-C3D4-E5F6",
+    "G7H8-I9J0-K1L2",
+    "M3N4-O5P6-Q7R8",
+    "S9T0-U1V2-W3X4",
+    "Y5Z6-A7B8-C9D0",
+    "E1F2-G3H4-I5J6",
+    "K7L8-M9N0-O1P2",
+    "Q3R4-S5T6-U7V8",
+    "W9X0-Y1Z2-A3B4",
+    "C5D6-E7F8-G9H0"
+  ]
 }
-```
 
-### Disable MFA
-```http
-POST /api/v1/auth/mfa/disable
+Notes:
+- Verifies TOTP code before enabling
+- Encrypts secret with XChaCha20-Poly1305
+- Generates 10 backup codes (12 chars each, Argon2id hashed)
+- Backup codes must be saved by user (one-time display)
+- Sets mfa_enabled = true in database
+
+Implementation: backend/auth/handlers.go:285
+Backup Code Generation: backend/auth/mfa.go:89
+Rate Limit: 10 requests/5 minutes`} language="json" />
+  </TabItem>
+  <TabItem label="Disable">
+<Code code={`POST /api/v1/auth/mfa/disable
 Authorization: Bearer <jwt_token>
-```
 
-**Request Body:**
-```json
+Request:
 {
-  "code": "123456"
+  "code": "123456"  # TOTP code or backup code
 }
-```
 
-**Response:**
-```json
+Response (200):
 {
-  "enabled": false
+  "message": "MFA disabled successfully"
 }
-```
 
-### Get Backup Codes Status
-```http
-GET /api/v1/auth/mfa/backup-codes
+Errors:
+- 400 INVALID_MFA_CODE - Wrong code
+
+Notes:
+- Requires valid TOTP or backup code
+- Deletes encrypted secret and backup codes
+- Sets mfa_enabled = false
+
+Implementation: backend/auth/handlers.go:322
+Rate Limit: 10 requests/5 minutes`} language="json" />
+  </TabItem>
+  <TabItem label="Regenerate Codes">
+<Code code={`POST /api/v1/auth/mfa/backup-codes/regenerate
 Authorization: Bearer <jwt_token>
-```
 
-**Response:**
-```json
-{
-  "total": 10,
-  "remaining": 7,
-  "note": "Backup codes are stored securely..."
-}
-```
-
-### Regenerate Backup Codes
-```http
-POST /api/v1/auth/mfa/backup-codes/regenerate
-Authorization: Bearer <jwt_token>
-```
-
-**Request Body:**
-```json
+Request:
 {
   "password": "user_password"
 }
-```
 
-**Response:**
-```json
+Response (200):
 {
-  "codes": [
-    "A1B2-C3D4-E5F6-G7H8",
+  "backup_codes": [
+    "A1B2-C3D4-E5F6",
     ...
-  ],
-  "message": "New backup codes generated..."
+  ]
 }
-```
 
-## Error Responses
+Errors:
+- 401 INVALID_CREDENTIALS - Wrong password
 
-### Invalid MFA Code
-```json
+Notes:
+- Requires password verification
+- Generates new set of 10 codes
+- Invalidates all old backup codes
+- Used codes list is reset
+
+Implementation: backend/auth/handlers.go:355
+Rate Limit: 10 requests/5 minutes`} language="json" />
+  </TabItem>
+</Tabs>
+
+## Password Reset
+
+<Tabs>
+  <TabItem label="Request Reset">
+<Code code={`POST /api/v1/auth/password/reset-request
+
+Request:
 {
-  "error": "Invalid MFA code"
+  "email": "user@example.com"
 }
-```
 
-### MFA Not Enabled
-```json
+Response (200):
 {
-  "error": "MFA not enabled"
+  "message": "If the email exists, a password reset link has been sent"
 }
-```
 
-### Rate Limited
-```json
-{
-  "error": "Too many failed attempts. Please try again later."
-}
-```
+Notes:
+- Public endpoint
+- Always returns success (prevents email enumeration)
+- TODO: Email sending not implemented
+- Token valid for 1 hour
+- Token stored as SHA-256 hash in database
 
-### Invalid Session Token
-```json
+Implementation: backend/auth/handlers.go:390
+Rate Limit: 10 requests/5 minutes`} language="json" />
+  </TabItem>
+  <TabItem label="Verify Token">
+<Code code={`GET /api/v1/auth/password/reset-verify?token=<reset_token>
+
+Response (200):
 {
-  "error": "Invalid or expired session token"
+  "valid": true
 }
-```
+
+Response (400):
+{
+  "valid": false,
+  "error": "Invalid or expired reset token"
+}
+
+Notes:
+- Public endpoint
+- Checks token exists, not expired, not used
+- Does not consume token
+
+Implementation: backend/auth/handlers.go:421
+Password Service: backend/auth/password.go:146`} language="json" />
+  </TabItem>
+  <TabItem label="Confirm Reset">
+<Code code={`POST /api/v1/auth/password/reset-confirm
+
+Request:
+{
+  "token": "<reset_token>",
+  "new_password": "NewSecureP@ss123"
+}
+
+Response (200):
+{
+  "message": "Password reset successfully"
+}
+
+Errors:
+- 400 VALIDATION_FAILED - Weak password
+- 400 INVALID_TOKEN - Invalid/expired/used token
+
+Notes:
+- Public endpoint
+- Validates new password strength
+- Marks token as used (prevents reuse)
+- Invalidates all active sessions for user
+- Resets failed_attempts counter
+
+Implementation: backend/auth/handlers.go:452
+Password Service: backend/auth/password.go:177
+Rate Limit: 10 requests/5 minutes`} language="json" />
+  </TabItem>
+</Tabs>
+
+## Error Codes
+
+All errors include structured `code` field for client-side handling:
+
+| Code | HTTP Status | Description | Handling |
+|------|-------------|-------------|----------|
+| `INVALID_CREDENTIALS` | 401 | Wrong email/password | Show error, allow retry |
+| `ACCOUNT_LOCKED` | 403 | 5+ failed attempts | Show 15min lockout message |
+| `MFA_REQUIRED` | 200 | MFA verification needed | Redirect to MFA input |
+| `INVALID_MFA_CODE` | 401 | Wrong TOTP/backup code | Show error, allow retry |
+| `INVALID_TOKEN` | 401 | Invalid/missing JWT | Redirect to login |
+| `EXPIRED_TOKEN` | 401 | Token expired | Redirect to login |
+| `USER_NOT_FOUND` | 404 | User doesn't exist | Generic error (security) |
+| `EMAIL_EXISTS` | 409 | Duplicate registration | Show "email taken" |
+| `VALIDATION_FAILED` | 400 | Input validation error | Show field-specific errors |
+| `REGISTRATION_DISABLED` | 403 | Registration not allowed | Show "registration closed" |
+
+**Implementation**: `backend/auth/models.go:97-110`
 
 ## Rate Limiting
 
-- **TOTP verification**: 5 attempts per 15 minutes
-- **Backup code verification**: 3 attempts per 15 minutes
-- **Implementation**: Redis-based
+Redis-based distributed rate limiting using fixed window algorithm:
 
-## Security Considerations
+| Endpoint Group | Limit | Window | Key Format |
+|----------------|-------|--------|------------|
+| Login | 10 requests | 5 minutes | `limiter:{ip}:/api/v1/auth/login` |
+| MFA Verify | 10 requests | 5 minutes | `limiter:{ip}:/api/v1/auth/mfa/verify` |
+| MFA Setup/Enable/Disable | 10 requests | 5 minutes | `limiter:{ip}:/api/v1/auth/mfa/*` |
+| Password Reset | 10 requests | 5 minutes | `limiter:{ip}:/api/v1/auth/password/*` |
 
-1. **Session tokens** expire after 5 minutes
-2. **TOTP codes** are valid for ±30 seconds
-3. **Backup codes** are one-time use only
-4. **All MFA events** are audit logged
-
-## Integration Example
-
-```javascript
-// Login flow with MFA
-const loginResponse = await fetch('/api/v1/auth/login', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ email, password })
-})
-
-const loginData = await loginResponse.json()
-
-if (loginData.mfa_required) {
-  // Show MFA verification UI
-  const mfaCode = await promptUserForMfaCode()
-
-  const verifyResponse = await fetch('/api/v1/auth/mfa/verify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      session_token: loginData.session_token,
-      code: mfaCode,
-      is_backup_code: false
-    })
-  })
-
-  const { token, user_id } = await verifyResponse.json()
-  // Store JWT token and proceed
+**Rate Limit Response (429)**:
+```json
+{
+  "error": "Too many requests, please try again later"
 }
 ```
 
-## Related Documentation
+**Implementation**: `backend/middleware/rate_limit.go:45`
+**IP Detection**: `backend/utils/network.go:34` (supports X-Forwarded-For, CF-Connecting-IP)
 
-- [MFA Setup Guide](/authentication/setup-guide)
-- [Admin Management](/authentication/admin-mfa-management)
-- [Database Schema](/reference/database-schema)
+## JWT Token Details
+
+**Token Structure**:
+- Signing: HS256 (HMAC-SHA256)
+- Expiration: 24 hours
+- Claims: `user_id`, `is_admin`, `exp`
+
+**Storage**:
+- Redis key: `session:<token_hash>` (Argon2id hash)
+- Session data: XChaCha20-Poly1305 encrypted
+- Contains: user_id, ip_address, user_agent, mfa_verified, created_at
+
+**Validation Flow**:
+1. Extract from `Authorization: Bearer <token>` header
+2. Verify JWT signature and expiration
+3. Check session exists in Redis
+4. Decrypt session data
+5. Set `user_id`, `is_admin` in Fiber context
+
+**Implementation**: `backend/auth/service.go:89` (GenerateJWT), `backend/auth/service.go:137` (ValidateJWT)
+
+## Integration Example
+
+<Code code={`// Complete login flow with MFA
+async function loginWithMFA(email, password) {
+  // Step 1: Initial login
+  const loginRes = await fetch('/api/v1/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  })
+
+  const loginData = await loginRes.json()
+
+  if (loginRes.status === 401 && loginData.code === 'INVALID_CREDENTIALS') {
+    throw new Error('Invalid email or password')
+  }
+
+  if (loginRes.status === 403 && loginData.code === 'ACCOUNT_LOCKED') {
+    throw new Error('Account locked. Try again in 15 minutes.')
+  }
+
+  // Step 2: Handle MFA if required
+  if (loginData.mfa_required) {
+    const mfaCode = await promptUserForMfaCode()
+
+    const mfaRes = await fetch('/api/v1/auth/mfa/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_token: loginData.session_token,
+        code: mfaCode
+      })
+    })
+
+    if (!mfaRes.ok) {
+      const error = await mfaRes.json()
+      throw new Error(error.error)
+    }
+
+    const { token, user_id, workspace_id } = await mfaRes.json()
+    return { token, user_id, workspace_id }
+  }
+
+  // No MFA required
+  return loginData
+}
+
+// Setup MFA
+async function setupMFA(jwtToken) {
+  // Step 1: Begin setup (get QR code)
+  const setupRes = await fetch('/api/v1/auth/mfa/setup', {
+    method: 'POST',
+    headers: { 'Authorization': \`Bearer \${jwtToken}\` }
+  })
+
+  const { secret, qr_code_url } = await setupRes.json()
+
+  // Show QR code to user
+  displayQRCode(qr_code_url)
+
+  // Step 2: User scans QR, enters verification code
+  const verificationCode = await promptUserForCode()
+
+  // Step 3: Enable MFA
+  const enableRes = await fetch('/api/v1/auth/mfa/enable', {
+    method: 'POST',
+    headers: {
+      'Authorization': \`Bearer \${jwtToken}\`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ secret, code: verificationCode })
+  })
+
+  const { backup_codes } = await enableRes.json()
+
+  // IMPORTANT: Show backup codes to user (one-time display)
+  displayBackupCodes(backup_codes)
+}
+
+// Password reset flow
+async function resetPassword(email) {
+  // Step 1: Request reset
+  await fetch('/api/v1/auth/password/reset-request', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  })
+
+  // Step 2: User receives email with token (TODO: email not implemented)
+  // Step 3: User clicks link, verify token
+  const token = new URLSearchParams(window.location.search).get('token')
+
+  const verifyRes = await fetch(\`/api/v1/auth/password/reset-verify?token=\${token}\`)
+  const { valid } = await verifyRes.json()
+
+  if (!valid) {
+    throw new Error('Invalid or expired reset link')
+  }
+
+  // Step 4: Set new password
+  const newPassword = await promptUserForNewPassword()
+
+  await fetch('/api/v1/auth/password/reset-confirm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, new_password: newPassword })
+  })
+}`} language="javascript" />
+
+## Security Notes
+
+**Encryption**:
+- MFA secrets: XChaCha20-Poly1305 with `SERVER_ENCRYPTION_KEY`
+- Sessions: XChaCha20-Poly1305 encrypted in Redis
+- Passwords: Argon2id (3 iterations, 64MB memory, 4 threads)
+- Backup codes: Argon2id with deterministic salt (for verification)
+
+**Constant-Time Operations**:
+- TOTP code comparison: `backend/auth/mfa.go:65`
+- Backup code comparison: `backend/auth/mfa.go:124`
+- Prevents timing attacks
+
+**Token Security**:
+- Reset tokens: SHA-256 hashed, 1-hour expiration, single-use
+- MFA sessions: 5-minute expiration, deleted after verification
+- JWT tokens: 24-hour expiration, Redis-backed validation
+
+**Account Protection**:
+- Failed attempts tracked per user
+- Auto-lock after 5 failures (15min duration)
+- Counter resets on successful login
+- All sessions invalidated on password change
+
+**Implementation Files**:
+- Crypto service: `backend/crypto/crypto.go`
+- Session management: `backend/auth/session.go`
+- Password handling: `backend/auth/password.go`
