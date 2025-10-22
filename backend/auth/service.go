@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
 	"fmt"
 	"strings"
 	"time"
@@ -134,7 +133,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (*AuthRe
 	}
 
 	// Encrypt workspace key with master key
-	workspaceCrypto := appcrypto.NewCryptoService(string(masterKey))
+	workspaceCrypto := appcrypto.NewCryptoService(masterKey)
 	workspaceKeyEncrypted, err := workspaceCrypto.EncryptBytes(workspaceKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt workspace key: %w", err)
@@ -175,7 +174,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (*AuthRe
 	ipAddress := utils.GetClientIPFromContext(ctx)
 	userAgent := utils.GetUserAgentFromContext(ctx)
 
-	session, token, err := s.session.CreateSession(ctx, userID, ipAddress, userAgent, false)
+	session, _, err := s.session.CreateSession(ctx, userID, ipAddress, userAgent, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
