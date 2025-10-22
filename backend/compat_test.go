@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -108,7 +107,12 @@ type AuthHandler struct {
 }
 
 func (h *AuthHandler) handler() *auth.Handler {
-	authService := auth.NewService(h.db, h.redis, h.crypto, string(h.config.JWTSecret))
+	// Type assert database.Database to *pgxpool.Pool for auth.NewService
+	db, ok := h.db.(*pgxpool.Pool)
+	if !ok {
+		panic("AuthHandler requires *pgxpool.Pool, not database.Database interface")
+	}
+	authService := auth.NewService(db, h.redis, h.crypto, string(h.config.JWTSecret))
 	return auth.NewHandler(authService)
 }
 
