@@ -10,11 +10,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	"leaflock/auth"
 	appconfig "leaflock/config"
 	appcrypto "leaflock/crypto"
 	appdb "leaflock/database"
 	"leaflock/handlers"
-	"leaflock/middleware"
 	"leaflock/services"
 	"leaflock/utils"
 	websocketpkg "leaflock/websocket"
@@ -31,9 +31,18 @@ func NewCryptoService(key []byte) *appcrypto.CryptoService {
 	return appcrypto.NewCryptoService(key)
 }
 
-type RegisterRequest = handlers.RegisterRequest
+// RegisterRequest for backward compatibility with tests
+type RegisterRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
 
-type LoginRequest = handlers.LoginRequest
+// LoginRequest for backward compatibility with tests
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	MFACode  string `json:"mfa_code,omitempty"`
+}
 type CreateNoteRequest = handlers.CreateNoteRequest
 type UpdateNoteRequest = handlers.UpdateNoteRequest
 type CreateTagRequest struct {
@@ -54,11 +63,9 @@ func VerifyPassword(password, encodedHash string) bool {
 }
 
 func seedDefaultAdminUser(db appdb.Database, crypto *appcrypto.CryptoService, cfg *appconfig.Config) error {
-	_ = os.Setenv("ENABLE_DEFAULT_ADMIN", strconv.FormatBool(cfg.DefaultAdminEnabled))
-	_ = os.Setenv("DEFAULT_ADMIN_EMAIL", cfg.DefaultAdminEmail)
-	_ = os.Setenv("DEFAULT_ADMIN_PASSWORD", cfg.DefaultAdminPassword)
-	adminService := services.NewAdminService(db, crypto)
-	return adminService.CreateDefaultAdminUser()
+	// Admin service removed - admin users must be created manually or via registration
+	// See CLAUDE.md for instructions on creating admin users
+	return nil
 }
 
 func LoadConfig() *appconfig.Config {
@@ -78,7 +85,10 @@ func SetupDatabase(url string) (*pgxpool.Pool, error) {
 }
 
 func JWTMiddleware(secret []byte, redis *redis.Client, crypto *appcrypto.CryptoService) fiber.Handler {
-	return middleware.JWTMiddleware(secret, redis, crypto)
+	// Use new auth package middleware
+	authService := auth.NewService(nil, redis, crypto, string(secret))
+	authHandler := auth.NewHandler(authService)
+	return authHandler.JWTMiddleware
 }
 
 func isValidHexColor(color string) bool {
@@ -97,8 +107,9 @@ type AuthHandler struct {
 	config *appconfig.Config
 }
 
-func (h *AuthHandler) handler() *handlers.AuthHandler {
-	return handlers.NewAuthHandler(h.db, h.redis, h.crypto, h.config)
+func (h *AuthHandler) handler() *auth.Handler {
+	authService := auth.NewService(h.db, h.redis, h.crypto, string(h.config.JWTSecret))
+	return auth.NewHandler(authService)
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
@@ -110,7 +121,10 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) AdminRecovery(c *fiber.Ctx) error {
-	return h.handler().AdminRecovery(c)
+	// AdminRecovery removed - no longer supported
+	return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+		"error": "Admin recovery endpoint no longer available",
+	})
 }
 
 // NotesHandler compatibility wrapper.

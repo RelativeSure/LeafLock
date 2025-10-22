@@ -95,7 +95,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	rateLimits := middleware.NewRateLimitConfig(rdb)
 
 	// Initialize modern auth package
-	authService := auth.NewService(db, rdb, crypto, config.JWTSecret)
+	authService := auth.NewService(db, rdb, crypto, string(config.JWTSecret))
 	authHandler := auth.NewHandler(authService)
 
 	// Initialize other handlers
@@ -304,7 +304,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	protected.Get("/account/export", rateLimits.ImportExportLimiter, accountHandler.ExportData)
 
 	// Admin announcement routes - Tier 4: Standard CRUD (admin only)
-	admin := protected.Group("/admin", middleware.RequireRole(db, "admin"))
+	admin := protected.Group("/admin", authHandler.RequireAdminMiddleware)
 	admin.Get("/announcements", rateLimits.StandardCRUDLimiter, announcementsHandler.GetAllAnnouncements)
 	admin.Post("/announcements", rateLimits.StandardCRUDLimiter, announcementsHandler.CreateAnnouncement)
 	admin.Put("/announcements/:id", rateLimits.StandardCRUDLimiter, announcementsHandler.UpdateAnnouncement)
