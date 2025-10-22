@@ -245,7 +245,9 @@ func (pm *PasswordManager) CompletePasswordReset(ctx context.Context, token, new
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	// Update user password
 	updateQuery := `

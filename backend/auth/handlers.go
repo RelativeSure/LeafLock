@@ -396,13 +396,10 @@ func (h *Handler) RequestPasswordReset(c *fiber.Ctx) error {
 		})
 	}
 
-	// Add client info to context
-	ctx := context.WithValue(c.Context(), utils.ContextKeyClientIP, utils.ClientIP(c))
-	ctx = context.WithValue(ctx, utils.ContextKeyUserAgent, c.Get("User-Agent"))
-
 	// Look up user by email (same logic as login)
 	// TODO: Implement email lookup and token generation
 	// For now, always return success to prevent email enumeration
+	// Note: Client IP and User-Agent tracking will be added when TODO is implemented
 
 	return c.JSON(fiber.Map{
 		"message": "If the email exists, a password reset link has been sent",

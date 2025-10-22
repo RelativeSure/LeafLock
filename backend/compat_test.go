@@ -117,6 +117,10 @@ func (h *AuthHandler) handler() *auth.Handler {
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
+	// Check if registration is enabled (for backward compatibility with tests)
+	if regEnabled.Load() != 1 {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Registration is currently disabled"})
+	}
 	return h.handler().Register(c)
 }
 

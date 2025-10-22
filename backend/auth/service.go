@@ -86,7 +86,9 @@ func (s *Service) Register(ctx context.Context, email, password string) (*AuthRe
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	// Insert user
 	userID := uuid.New()

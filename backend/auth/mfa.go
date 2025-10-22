@@ -107,7 +107,7 @@ func (mm *MFAManager) VerifyBackupCode(ctx context.Context, userID uuid.UUID, co
 
 	// Check each backup code
 	codeHash := mm.hashBackupCode(normalized)
-	var matchedIndex int = -1
+	matchedIndex := -1
 
 	for i, storedHash := range backupCodes {
 		if mm.compareHashes(codeHash, storedHash) {

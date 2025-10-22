@@ -55,42 +55,6 @@ func (m *mockDatabase) Begin(ctx context.Context) (pgx.Tx, error) {
 	return nil, nil
 }
 
-// Mock CryptoService implementation for testing
-type mockCryptoService struct {
-	encryptFunc              func(data []byte) ([]byte, error)
-	encryptDeterministicFunc func(data []byte, context string) ([]byte, error)
-	hashEmailFunc            func(email string) []byte
-	encryptWithGDPRKeyFunc   func(data []byte, gdprKey []byte) ([]byte, error)
-}
-
-func (m *mockCryptoService) Encrypt(data []byte) ([]byte, error) {
-	if m.encryptFunc != nil {
-		return m.encryptFunc(data)
-	}
-	return []byte("encrypted"), nil
-}
-
-func (m *mockCryptoService) EncryptDeterministic(data []byte, context string) ([]byte, error) {
-	if m.encryptDeterministicFunc != nil {
-		return m.encryptDeterministicFunc(data, context)
-	}
-	return []byte("deterministic_hash"), nil
-}
-
-func (m *mockCryptoService) HashEmail(email string) []byte {
-	if m.hashEmailFunc != nil {
-		return m.hashEmailFunc(email)
-	}
-	return []byte("email_hash")
-}
-
-func (m *mockCryptoService) EncryptWithGDPRKey(data []byte, gdprKey []byte) ([]byte, error) {
-	if m.encryptWithGDPRKeyFunc != nil {
-		return m.encryptWithGDPRKeyFunc(data, gdprKey)
-	}
-	return []byte("gdpr_encrypted"), nil
-}
-
 // Test Cleanup Service
 func TestRunCleanupTasks(t *testing.T) {
 	t.Run("successful cleanup", func(t *testing.T) {
