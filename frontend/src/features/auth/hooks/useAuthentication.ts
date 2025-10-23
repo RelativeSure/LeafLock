@@ -117,6 +117,7 @@ export const useAuthentication = ({
     }
 
     try {
+
       console.log('🚀 Starting app initialization...')
       const token = getStoredAuthToken()
 

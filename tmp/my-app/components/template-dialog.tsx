@@ -32,17 +32,17 @@ const templates: Template[] = [
     content: `# Meeting Notes
 
 **Date:** ${new Date().toLocaleDateString()}
-**Attendees:** 
+**Attendees:**
 
 ## Agenda
-- 
+-
 
 ## Discussion Points
-- 
+-
 
 ## Action Items
-- [ ] 
-- [ ] 
+- [ ]
+- [ ]
 
 ## Next Steps
 - `,
@@ -56,16 +56,16 @@ const templates: Template[] = [
     content: `# To-Do List
 
 ## Today
-- [ ] 
-- [ ] 
-- [ ] 
+- [ ]
+- [ ]
+- [ ]
 
 ## This Week
-- [ ] 
-- [ ] 
+- [ ]
+- [ ]
 
 ## Later
-- [ ] 
+- [ ]
 - [ ] `,
     tags: ["tasks", "productivity"],
   },
@@ -85,12 +85,12 @@ const templates: Template[] = [
 
 
 ## Grateful For
-- 
-- 
-- 
+-
+-
+-
 
 ## Tomorrow's Goals
-- 
+-
 - `,
     tags: ["journal", "personal"],
   },
@@ -105,9 +105,9 @@ const templates: Template[] = [
 
 
 ## Key Points
-- 
-- 
-- 
+-
+-
+-
 
 ## Potential Applications
 
@@ -126,9 +126,9 @@ const templates: Template[] = [
 **Week of:** ${new Date().toLocaleDateString()}
 
 ## Goals for This Week
-- [ ] 
-- [ ] 
-- [ ] 
+- [ ]
+- [ ]
+- [ ]
 
 ## Monday
 

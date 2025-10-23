@@ -14,7 +14,7 @@ export function useToast() {
   const toast = useCallback(({ title, description, variant = "default" }: Toast) => {
     const newToast = { title, description, variant }
     setToasts(prev => [...prev, newToast])
-    
+
     // Auto remove after 3 seconds
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t !== newToast))
