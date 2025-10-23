@@ -1,12 +1,11 @@
 import { useState, useEffect, type FC } from 'react'
-import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react'
+import { PenLine, Eye, EyeOff, CheckCircle } from 'lucide-react'
 
-import { Footer } from '@/components/common'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { InputGroup, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
 import { Label } from '@/components/ui/label'
+import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { cn } from '@/lib/utils'
 
 interface ResetPasswordApi {
@@ -106,31 +105,48 @@ export const ResetPasswordView: FC<ResetPasswordViewProps> = ({ api, token, onRe
 
   if (verifying) {
     return (
-      <div className="h-screen overflow-y-auto bg-background flex flex-col items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
+      <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-background">
+        {/* Theme Toggle */}
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
+
+        <div className="w-full max-w-md space-y-8">
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2 group">
+              <PenLine className="h-8 w-8 text-accent group-hover:text-accent/80 transition-colors" />
+              <span className="text-2xl font-semibold text-foreground">LeafLock</span>
+            </div>
+          </div>
+          <div className="bg-card border border-border rounded-2xl p-8 shadow-sm text-center">
             <p className="text-muted-foreground">Verifying reset link...</p>
-          </CardContent>
-        </Card>
-        <Footer />
+          </div>
+        </div>
       </div>
     )
   }
 
   if (!tokenValid) {
     return (
-      <div className="h-screen overflow-y-auto bg-background flex flex-col items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1">
-            <div className="flex items-center justify-center mb-4">
-              <div className="flex items-center space-x-2">
-                <Lock className="h-8 w-8 text-primary" />
-                <CardTitle className="text-2xl">LeafLock</CardTitle>
-              </div>
+      <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-background">
+        {/* Theme Toggle */}
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
+
+        <div className="w-full max-w-md space-y-8">
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2 group">
+              <PenLine className="h-8 w-8 text-accent group-hover:text-accent/80 transition-colors" />
+              <span className="text-2xl font-semibold text-foreground">LeafLock</span>
             </div>
-            <CardTitle className="text-xl text-center">Invalid Reset Link</CardTitle>
-          </CardHeader>
-          <CardContent>
+          </div>
+          <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
+            <div className="space-y-2 text-center mb-8">
+              <h1 className="text-3xl font-bold text-foreground text-balance">
+                Invalid Reset Link
+              </h1>
+            </div>
             <Alert variant="destructive">
               <AlertDescription>
                 {error ||
@@ -140,27 +156,33 @@ export const ResetPasswordView: FC<ResetPasswordViewProps> = ({ api, token, onRe
             <Button className="w-full mt-4" onClick={onResetComplete}>
               Back to Login
             </Button>
-          </CardContent>
-        </Card>
-        <Footer />
+          </div>
+        </div>
       </div>
     )
   }
 
   if (success) {
     return (
-      <div className="h-screen overflow-y-auto bg-background flex flex-col items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1">
-            <div className="flex items-center justify-center mb-4">
-              <div className="flex items-center space-x-2">
-                <Lock className="h-8 w-8 text-primary" />
-                <CardTitle className="text-2xl">LeafLock</CardTitle>
-              </div>
+      <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-background">
+        {/* Theme Toggle */}
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
+
+        <div className="w-full max-w-md space-y-8">
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2 group">
+              <PenLine className="h-8 w-8 text-accent group-hover:text-accent/80 transition-colors" />
+              <span className="text-2xl font-semibold text-foreground">LeafLock</span>
             </div>
-            <CardTitle className="text-xl text-center">Password Reset Successful</CardTitle>
-          </CardHeader>
-          <CardContent>
+          </div>
+          <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
+            <div className="space-y-2 text-center mb-8">
+              <h1 className="text-3xl font-bold text-foreground text-balance">
+                Password Reset Successful
+              </h1>
+            </div>
             <Alert className="border border-primary/40 bg-primary/10 dark:bg-primary/15">
               <CheckCircle className="h-4 w-4 text-primary" />
               <AlertDescription className="text-foreground">
@@ -170,28 +192,38 @@ export const ResetPasswordView: FC<ResetPasswordViewProps> = ({ api, token, onRe
             <Button className="w-full mt-4" onClick={onResetComplete}>
               Continue to Login
             </Button>
-          </CardContent>
-        </Card>
-        <Footer />
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="h-screen overflow-y-auto bg-background flex flex-col items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            <div className="flex items-center space-x-2">
-              <Lock className="h-8 w-8 text-primary" />
-              <CardTitle className="text-2xl">LeafLock</CardTitle>
-            </div>
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-background">
+      {/* Theme Toggle */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+
+      <div className="w-full max-w-md space-y-8">
+        {/* Logo */}
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2 group">
+            <PenLine className="h-8 w-8 text-accent group-hover:text-accent/80 transition-colors" />
+            <span className="text-2xl font-semibold text-foreground">LeafLock</span>
           </div>
-          <CardTitle className="text-xl text-center">Create a new password</CardTitle>
-          <CardDescription className="text-center">Enter your new password below</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        </div>
+
+        {/* Form Card */}
+        <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
+          <div className="space-y-2 text-center mb-8">
+            <h1 className="text-3xl font-bold text-foreground text-balance">
+              Create a new password
+            </h1>
+            <p className="text-muted-foreground leading-relaxed">Enter your new password below</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="new-password">New Password</Label>
               <InputGroup>
@@ -280,14 +312,16 @@ export const ResetPasswordView: FC<ResetPasswordViewProps> = ({ api, token, onRe
               </Alert>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+              disabled={loading}
+            >
               {loading ? 'Resetting...' : 'Reset Password'}
             </Button>
           </form>
-        </CardContent>
-      </Card>
-
-      <Footer />
+        </div>
+      </div>
     </div>
   )
 }

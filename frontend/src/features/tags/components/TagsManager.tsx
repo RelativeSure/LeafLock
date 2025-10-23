@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { tagsService, Tag, CreateTagRequest } from '@/services/data/tagsService'
 import { Spinner } from '@/components/ui/spinner'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface TagsManagerProps {
   onClose?: () => void
@@ -122,7 +123,7 @@ export const TagsManager: React.FC<TagsManagerProps> = ({ onClose, onTagsChange 
 
       <CardContent className="space-y-4">
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
+          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded text-destructive text-sm">
             {error}
           </div>
         )}
@@ -150,7 +151,7 @@ export const TagsManager: React.FC<TagsManagerProps> = ({ onClose, onTagsChange 
                   key={color}
                   type="button"
                   className={`w-6 h-6 rounded-full border-2 ${
-                    newTag.color === color ? 'border-gray-900' : 'border-gray-300'
+                    newTag.color === color ? 'border-foreground' : 'border-border'
                   }`}
                   style={{ backgroundColor: color }}
                   onClick={() => setNewTag({ ...newTag, color })}
@@ -159,7 +160,7 @@ export const TagsManager: React.FC<TagsManagerProps> = ({ onClose, onTagsChange 
               ))}
               <button
                 type="button"
-                className="w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-50"
+                className="w-6 h-6 rounded-full border-2 border-border flex items-center justify-center text-muted-foreground hover:bg-muted"
                 onClick={() => {
                   const customColor = prompt('Enter hex color (e.g., #ff0000):')
                   if (customColor && /^#[0-9A-F]{6}$/i.test(customColor)) {
@@ -192,35 +193,66 @@ export const TagsManager: React.FC<TagsManagerProps> = ({ onClose, onTagsChange 
         <div>
           <Label>Your Tags ({tags.length})</Label>
           {tags.length === 0 ? (
-            <div className="text-center py-6 text-gray-500">
-              <Hash className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-              <p>No tags yet</p>
-              <p className="text-sm">Create your first tag above</p>
-            </div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4 }}
+              className="text-center py-6 text-muted-foreground"
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              >
+                <Hash className="w-8 h-8 mx-auto mb-2 text-muted-foreground/30" />
+              </motion.div>
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="text-foreground"
+              >
+                No tags yet
+              </motion.p>
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="text-sm"
+              >
+                Create your first tag above
+              </motion.p>
+            </motion.div>
           ) : (
             <div className="space-y-2 mt-2 max-h-60 overflow-y-auto">
-              {tags.map((tag) => (
-                <div
-                  key={tag.id}
-                  className="flex items-center justify-between p-2 bg-gray-50 rounded"
-                >
-                  <Badge
-                    style={{ backgroundColor: tag.color, color: 'white' }}
-                    className="flex items-center gap-1"
+              <AnimatePresence>
+                {tags.map((tag, index) => (
+                  <motion.div
+                    key={tag.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.2, delay: index * 0.05 }}
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border/50 hover:bg-muted transition-colors"
                   >
-                    <Hash className="w-3 h-3" />
-                    {tag.name}
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteTag(tag.id)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 h-6 w-6"
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
-                </div>
-              ))}
+                    <Badge
+                      style={{ backgroundColor: tag.color, color: 'white' }}
+                      className="flex items-center gap-1.5 px-2 py-1"
+                    >
+                      <Hash className="w-3 h-3" />
+                      {tag.name}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteTag(tag.id)}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 p-1 h-6 w-6"
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </div>

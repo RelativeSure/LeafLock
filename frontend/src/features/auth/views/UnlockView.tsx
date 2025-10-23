@@ -1,8 +1,11 @@
 import { useState, type FC } from 'react'
+import { Lock } from 'lucide-react'
 
-import { Footer } from '@/components/common'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { cn } from '@/lib/utils'
 
 export interface UnlockViewProps {
@@ -33,35 +36,34 @@ export const UnlockView: FC<UnlockViewProps> = ({ onUnlock, onLogout }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col">
-      <div className="flex-1 flex items-center justify-center px-4">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center space-y-3">
-            <svg
-              className="mx-auto h-12 w-12 text-red-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
-            </svg>
-            <h2 className="mt-6 text-3xl font-bold text-white">Locked</h2>
-            <p className="text-sm text-gray-400">
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-background">
+      {/* Theme Toggle */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+
+      <div className="w-full max-w-md space-y-8">
+        {/* Logo */}
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2 group">
+            <Lock className="h-8 w-8 text-accent group-hover:text-accent/80 transition-colors" />
+            <span className="text-2xl font-semibold text-foreground">LeafLock</span>
+          </div>
+        </div>
+
+        {/* Form Card */}
+        <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
+          <div className="space-y-2 text-center mb-8">
+            <h1 className="text-3xl font-bold text-foreground text-balance">Unlock Notes</h1>
+            <p className="text-muted-foreground leading-relaxed">
               Your session is valid but your notes are locked. Enter your password to decrypt your
               notes.
             </p>
           </div>
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <label htmlFor="unlock-password" className="block text-sm font-medium text-gray-300">
-                Password
-              </label>
+              <Label htmlFor="unlock-password">Password</Label>
               <Input
                 id="unlock-password"
                 name="password"
@@ -72,21 +74,20 @@ export const UnlockView: FC<UnlockViewProps> = ({ onUnlock, onLogout }) => {
                 required
                 autoComplete="current-password"
                 autoFocus
-                className="bg-gray-700 border border-gray-600 text-white"
               />
             </div>
 
             {unlockError && (
-              <div className="bg-red-900/50 border border-red-600 rounded-lg p-3" role="alert">
-                <p className="text-red-200 text-sm">{unlockError}</p>
-              </div>
+              <Alert variant="destructive">
+                <AlertDescription>{unlockError}</AlertDescription>
+              </Alert>
             )}
 
             <div className="flex space-x-4">
               <Button
                 type="submit"
                 className={cn(
-                  'flex-1 bg-blue-900 hover:bg-blue-950 text-white dark:bg-blue-900 dark:hover:bg-blue-800',
+                  'flex-1 bg-primary text-primary-foreground hover:bg-primary/90',
                   unlocking && 'cursor-not-allowed opacity-80'
                 )}
                 disabled={unlocking || !password.trim()}
@@ -98,7 +99,7 @@ export const UnlockView: FC<UnlockViewProps> = ({ onUnlock, onLogout }) => {
                 type="button"
                 variant="ghost"
                 onClick={onLogout}
-                className="text-gray-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 Logout
               </Button>
@@ -106,7 +107,6 @@ export const UnlockView: FC<UnlockViewProps> = ({ onUnlock, onLogout }) => {
           </form>
         </div>
       </div>
-      <Footer />
     </div>
   )
 }

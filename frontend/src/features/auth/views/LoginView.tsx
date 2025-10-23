@@ -1,14 +1,13 @@
 import { useEffect, useState, type FC } from 'react'
-import { Lock, Eye, EyeOff } from 'lucide-react'
+import { PenLine, Eye, EyeOff } from 'lucide-react'
 
 import { AnnouncementBanner, type Announcement } from '@/features/announcements'
-import { Footer } from '@/components/common'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { InputGroup, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
 import { Label } from '@/components/ui/label'
+import { ThemeToggle } from '@/components/common/ThemeToggle'
 import type { AuthResponse } from '@/types/auth'
 import { cn } from '@/lib/utils'
 
@@ -181,29 +180,49 @@ export const LoginView: FC<LoginViewProps> = ({
   )
 
   return (
-    <div className="h-screen overflow-y-auto bg-background flex flex-col items-center justify-center p-4">
-      {publicAnnouncements.length > 0 && (
-        <div className="w-full max-w-md mb-4">
-          <AnnouncementBanner announcements={publicAnnouncements} />
-        </div>
-      )}
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-background">
+      {/* Theme Toggle */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
 
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            <div className="flex items-center space-x-2">
-              <Lock className="h-8 w-8 text-primary" />
-              <CardTitle className="text-2xl">LeafLock</CardTitle>
-            </div>
+      <div className="w-full max-w-md flex flex-col gap-8">
+        {/* Announcements */}
+        {publicAnnouncements.length > 0 && (
+          <div className="w-full">
+            <AnnouncementBanner announcements={publicAnnouncements} />
           </div>
-          <CardDescription className="text-center">
-            Your secure note-taking application
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+        )}
+
+        {/* Logo */}
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2 group">
+            <PenLine className="h-8 w-8 text-accent group-hover:text-accent/80 transition-colors" />
+            <span className="text-2xl font-semibold text-foreground">LeafLock</span>
+          </div>
+        </div>
+
+        {/* Form Card */}
+        <div
+          className="bg-card border border-border rounded-2xl shadow-sm"
+          style={{ padding: '32px' }}
+        >
+          <div className="flex flex-col gap-2 text-center" style={{ marginBottom: '32px' }}>
+            <h1 className="text-3xl font-bold text-foreground text-balance">
+              {isRegistering ? 'Create your account' : 'Welcome back'}
+            </h1>
+            <p className="text-muted-foreground leading-relaxed">
+              {isRegistering
+                ? 'Start capturing your thoughts today'
+                : 'Sign in to continue your writing journey'}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="email" className="text-foreground">
+                Email
+              </Label>
               <Input
                 id="email"
                 name="email"
@@ -215,12 +234,26 @@ export const LoginView: FC<LoginViewProps> = ({
                 autoCapitalize="none"
                 autoCorrect="off"
                 inputMode="email"
-                placeholder="Enter your email"
+                placeholder="you@example.com"
+                disabled={loading}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-foreground">
+                  Password
+                </Label>
+                {!isRegistering && onForgotPassword && (
+                  <button
+                    type="button"
+                    onClick={onForgotPassword}
+                    className="text-sm text-accent hover:text-accent/80 transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </div>
               <InputGroup>
                 <InputGroupInput
                   id="password"
@@ -231,7 +264,7 @@ export const LoginView: FC<LoginViewProps> = ({
                   required
                   minLength={12}
                   autoComplete={isRegistering ? 'new-password' : 'current-password'}
-                  placeholder="Enter your password"
+                  placeholder="••••••••"
                   aria-describedby={isRegistering ? 'password-strength' : undefined}
                 />
                 <InputGroupButton
@@ -244,7 +277,7 @@ export const LoginView: FC<LoginViewProps> = ({
                 </InputGroupButton>
               </InputGroup>
               {isRegistering && (
-                <div className="space-y-2" id="password-strength">
+                <div className="flex flex-col gap-2" id="password-strength">
                   <div
                     className="flex space-x-1"
                     role="progressbar"
@@ -274,20 +307,8 @@ export const LoginView: FC<LoginViewProps> = ({
               )}
             </div>
 
-            {!isRegistering && onForgotPassword && (
-              <div className="text-right">
-                <button
-                  type="button"
-                  onClick={onForgotPassword}
-                  className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
-                >
-                  Forgot password?
-                </button>
-              </div>
-            )}
-
             {mfaRequired && (
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="mfa">2FA Code</Label>
                 <Input
                   id="mfa"
@@ -314,33 +335,39 @@ export const LoginView: FC<LoginViewProps> = ({
               </Alert>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Processing...' : isRegistering ? 'Create Account' : 'Login'}
+            <Button
+              type="submit"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+              disabled={loading}
+            >
+              {loading ? 'Processing...' : isRegistering ? 'Create account' : 'Sign in'}
             </Button>
 
             {registrationEnabled ? (
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full"
-                onClick={() => {
-                  setIsRegistering(!isRegistering)
-                  setError(null)
-                  setMfaRequired(false)
-                }}
-              >
-                {isRegistering ? 'Already have an account? Login' : 'Need an account? Register'}
-              </Button>
+              <div className="text-center text-sm" style={{ marginTop: '24px' }}>
+                <span className="text-muted-foreground">
+                  {isRegistering ? 'Already have an account? ' : "Don't have an account? "}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRegistering(!isRegistering)
+                    setError(null)
+                    setMfaRequired(false)
+                  }}
+                  className="text-accent hover:text-accent/80 font-medium transition-colors"
+                >
+                  {isRegistering ? 'Sign in' : 'Sign up'}
+                </button>
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground text-center">
                 Registration is currently disabled
               </p>
             )}
           </form>
-        </CardContent>
-      </Card>
-
-      <Footer />
+        </div>
+      </div>
     </div>
   )
 }

@@ -1,12 +1,11 @@
 import { useState, type FC } from 'react'
-import { Lock, ArrowLeft, Mail } from 'lucide-react'
+import { PenLine, ArrowLeft, Mail } from 'lucide-react'
 
-import { Footer } from '@/components/common'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ThemeToggle } from '@/components/common/ThemeToggle'
 
 interface ForgotPasswordApi {
   requestPasswordReset: (email: string) => Promise<{ message: string }>
@@ -45,22 +44,31 @@ export const ForgotPasswordView: FC<ForgotPasswordViewProps> = ({ api, onBackToL
   }
 
   return (
-    <div className="h-screen overflow-y-auto bg-background flex flex-col items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            <div className="flex items-center space-x-2">
-              <Lock className="h-8 w-8 text-primary" />
-              <CardTitle className="text-2xl">LeafLock</CardTitle>
-            </div>
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-background">
+      {/* Theme Toggle */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+
+      <div className="w-full max-w-md space-y-8">
+        {/* Logo */}
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2 group">
+            <PenLine className="h-8 w-8 text-accent group-hover:text-accent/80 transition-colors" />
+            <span className="text-2xl font-semibold text-foreground">LeafLock</span>
           </div>
-          <CardTitle className="text-xl text-center">Reset your password</CardTitle>
-          <CardDescription className="text-center">
-            Enter your email address and we'll send you a password reset link
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        </div>
+
+        {/* Form Card */}
+        <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
+          <div className="space-y-2 text-center mb-8">
+            <h1 className="text-3xl font-bold text-foreground text-balance">Reset your password</h1>
+            <p className="text-muted-foreground leading-relaxed">
+              Enter your email address and we'll send you a password reset link
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
@@ -99,7 +107,11 @@ export const ForgotPasswordView: FC<ForgotPasswordViewProps> = ({ api, onBackToL
               </Alert>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading || success}>
+            <Button
+              type="submit"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+              disabled={loading || success}
+            >
               {loading ? 'Sending...' : success ? 'Email Sent' : 'Send Reset Link'}
             </Button>
 
@@ -108,10 +120,8 @@ export const ForgotPasswordView: FC<ForgotPasswordViewProps> = ({ api, onBackToL
               Back to Login
             </Button>
           </form>
-        </CardContent>
-      </Card>
-
-      <Footer />
+        </div>
+      </div>
     </div>
   )
 }

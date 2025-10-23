@@ -65,8 +65,8 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
 
     // Filter by tab
     if (tab === 'my-templates') {
-      // Show user's own templates (non-public or user-owned)
-      filtered = filtered.filter((t) => !t.is_public || true) // Adjust based on user ownership
+      // Show only user-created templates (exclude system templates)
+      filtered = filtered.filter((t) => !t.tags.includes('system'))
     } else if (tab === 'public-templates') {
       filtered = filtered.filter((t) => t.is_public)
     } else if (tab === 'popular') {
