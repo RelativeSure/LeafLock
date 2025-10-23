@@ -1,0 +1,116 @@
+# CSS linting workflow using stylelint
+name: CI - CSS Lint
+
+on:
+  push:
+    branches: [main, master, develop]
+    paths:
+      - 'frontend/**/*.css'
+      - 'frontend/**/*.scss'
+      - 'frontend/**/*.sass'
+      - 'frontend/**/*.less'
+      - '.github/workflows/ci-css-lint.yml'
+  pull_request:
+    paths:
+      - 'frontend/**/*.css'
+      - 'frontend/**/*.scss'
+      - 'frontend/**/*.sass'
+      - 'frontend/**/*.less'
+      - '.github/workflows/ci-css-lint.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  css-lint:
+    name: 🎨 Lint CSS Files
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 📦 Install dependencies
+        working-directory: frontend
+        run: |
+          npm install -g stylelint stylelint-config-standard stylelint-config-tailwindcss
+          npm install -g postcss postcss-cli
+
+      - name: 🔍 Run Stylelint
+        working-directory: frontend
+        run: |
+          # Create a temporary stylelint config if none exists
+          if [ ! -f .stylelintrc.json ] && [ ! -f .stylelintrc.js ] && [ ! -f stylelint.config.js ]; then
+            cat > .stylelintrc.json << 'EOF'
+          {
+            "extends": [
+              "stylelint-config-standard",
+              "stylelint-config-tailwindcss"
+            ],
+            "rules": {
+              "at-rule-no-unknown": [
+                true,
+                {
+                  "ignoreAtRules": [
+                    "tailwind",
+                    "apply",
+                    "variants",
+                    "responsive",
+                    "screen",
+                    "layer",
+                    "theme",
+                    "custom-variant"
+                  ]
+                }
+              ],
+              "property-no-unknown": [
+                true,
+                {
+                  "ignoreProperties": [
+                    "composes"
+                  ]
+                }
+              ],
+              "selector-pseudo-class-no-unknown": [
+                true,
+                {
+                  "ignorePseudoClasses": [
+                    "global"
+                  ]
+                }
+              ],
+              "function-no-unknown": [
+                true,
+                {
+                  "ignoreFunctions": [
+                    "theme",
+                    "screen"
+                  ]
+                }
+              ],
+              "declaration-block-trailing-semicolon": null,
+              "no-descending-specificity": null,
+              "color-function-notation": "modern",
+              "alpha-value-notation": "number"
+            }
+          }
+          EOF
+          fi
+
+          # Run stylelint on CSS files
+          stylelint "src/**/*.css" --formatter verbose
+
+      - name: 📊 Report Results
+        if: always()
+        run: |
+          echo "✅ CSS linting completed"
+          echo "Stylelint version: $(stylelint --version)"
+          echo "Node.js version: $(node --version)"

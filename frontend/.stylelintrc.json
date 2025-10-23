@@ -1,0 +1,87 @@
+{
+  "extends": [
+    "stylelint-config-standard",
+    "stylelint-config-tailwindcss"
+  ],
+  "rules": {
+    "at-rule-no-unknown": [
+      true,
+      {
+        "ignoreAtRules": [
+          "tailwind",
+          "apply",
+          "variants",
+          "responsive",
+          "screen",
+          "layer",
+          "theme",
+          "custom-variant"
+        ]
+      }
+    ],
+    "property-no-unknown": [
+      true,
+      {
+        "ignoreProperties": [
+          "composes"
+        ]
+      }
+    ],
+    "selector-pseudo-class-no-unknown": [
+      true,
+      {
+        "ignorePseudoClasses": [
+          "global"
+        ]
+      }
+    ],
+    "function-no-unknown": [
+      true,
+      {
+        "ignoreFunctions": [
+          "theme",
+          "screen"
+        ]
+      }
+    ],
+    "declaration-block-trailing-semicolon": null,
+    "no-descending-specificity": null,
+    "color-function-notation": "modern",
+    "alpha-value-notation": "number",
+    "vendor-prefix-no-redundant": true,
+    "property-no-vendor-prefix": [
+      true,
+      {
+        "ignoreProperties": [
+          "appearance",
+          "mask",
+          "mask-border",
+          "mask-border-source",
+          "mask-border-width",
+          "mask-border-outset",
+          "mask-border-repeat",
+          "mask-border-slice",
+          "mask-border-mode",
+          "mask-border-composite",
+          "mask-border",
+          "mask-clip",
+          "mask-origin",
+          "mask-size",
+          "mask-position",
+          "mask-repeat",
+          "mask-attachment",
+          "mask-image",
+          "mask-mode",
+          "mask-composite",
+          "mask",
+          "backdrop-filter",
+          "filter",
+          "clip-path",
+          "shape-outside",
+          "shape-margin",
+          "shape-image-threshold"
+        ]
+      }
+    ]
+  }
+}
