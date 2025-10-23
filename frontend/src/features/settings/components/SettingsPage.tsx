@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { MfaSettings } from './MfaSettings'
 import { DeleteAccount } from './DeleteAccount'
@@ -32,6 +31,7 @@ interface SettingsPageProps {
 function SettingsPage({ api, onBack, onLogout }: SettingsPageProps) {
   const [isAdmin, setIsAdmin] = useState(false)
   const [isStoreReady, setIsStoreReady] = useState(false)
+  const [activeTab, setActiveTab] = useState('security')
 
   useEffect(() => {
     // Dynamically import the auth store to avoid initialization issues
@@ -71,54 +71,76 @@ function SettingsPage({ api, onBack, onLogout }: SettingsPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-6">
-      <div className="w-full max-w-4xl space-y-6">
-        {/* Header with back button and theme toggle */}
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={onBack} className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back to notes
-          </Button>
-          <ThemeToggle />
-        </div>
-
-        {/* Page title */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground mt-2">
+    <div className="min-h-screen bg-background text-foreground flex">
+      {/* Sidebar */}
+      <aside className="w-64 border-r border-border bg-card flex flex-col">
+        <div className="p-6 border-b border-border">
+          <div className="flex items-center gap-2 mb-4">
+            <Button variant="ghost" onClick={onBack} className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to notes
+            </Button>
+          </div>
+          <h1 className="text-2xl font-serif font-semibold text-foreground">Settings</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Manage your account security, privacy, and preferences
           </p>
         </div>
 
-        {/* Tabbed content */}
-        <Tabs defaultValue="security" className="w-full">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
-            <TabsTrigger value="security" className="gap-2">
-              <Shield className="h-4 w-4" />
-              Security
-            </TabsTrigger>
-            <TabsTrigger value="sharing" className="gap-2">
-              <LinkIcon className="h-4 w-4" />
-              Sharing
-            </TabsTrigger>
-            <TabsTrigger value="privacy" className="gap-2">
-              <Eye className="h-4 w-4" />
-              Privacy
-            </TabsTrigger>
-            <TabsTrigger value="account" className="gap-2">
-              <User className="h-4 w-4" />
-              Account
-            </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="admin" className="gap-2">
-                <Settings className="h-4 w-4" />
-                Admin
-              </TabsTrigger>
-            )}
-          </TabsList>
+        <nav className="flex-1 p-4 space-y-2">
+          <Button
+            variant={activeTab === 'security' ? 'default' : 'ghost'}
+            className="w-full justify-start gap-3 text-foreground/80 hover:text-foreground"
+            onClick={() => setActiveTab('security')}
+          >
+            <Shield className="h-4 w-4" />
+            Security
+          </Button>
+          <Button
+            variant={activeTab === 'privacy' ? 'default' : 'ghost'}
+            className="w-full justify-start gap-3 text-foreground/60 hover:text-foreground"
+            onClick={() => setActiveTab('privacy')}
+          >
+            <Eye className="h-4 w-4" />
+            Privacy
+          </Button>
+          <Button
+            variant={activeTab === 'account' ? 'default' : 'ghost'}
+            className="w-full justify-start gap-3 text-foreground/60 hover:text-foreground"
+            onClick={() => setActiveTab('account')}
+          >
+            <User className="h-4 w-4" />
+            Account
+          </Button>
+          <Button
+            variant={activeTab === 'sharing' ? 'default' : 'ghost'}
+            className="w-full justify-start gap-3 text-foreground/60 hover:text-foreground"
+            onClick={() => setActiveTab('sharing')}
+          >
+            <LinkIcon className="h-4 w-4" />
+            Sharing
+          </Button>
+          {isAdmin && (
+            <Button
+              variant={activeTab === 'admin' ? 'default' : 'ghost'}
+              className="w-full justify-start gap-3 text-foreground/60 hover:text-foreground"
+              onClick={() => setActiveTab('admin')}
+            >
+              <Settings className="h-4 w-4" />
+              Admin
+            </Button>
+          )}
+        </nav>
 
-          {/* Security Tab */}
-          <TabsContent value="security" className="mt-6">
+        <div className="p-4 border-t border-border">
+          <ThemeToggle />
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex-1 overflow-auto p-8">
+          {activeTab === 'security' && (
             <MfaSettings
               onGetMfaStatus={() => api.getMfaStatus()}
               onBeginMfaSetup={() => api.startMfaSetup()}
@@ -130,34 +152,21 @@ function SettingsPage({ api, onBack, onLogout }: SettingsPageProps) {
               onGetBackupCodes={handleGetBackupCodes}
               onRegenerateBackupCodes={handleRegenerateBackupCodes}
             />
-          </TabsContent>
-
-          {/* Sharing Tab */}
-          <TabsContent value="sharing" className="mt-6">
-            <ShareLinksTab />
-          </TabsContent>
-
-          {/* Privacy Tab */}
-          <TabsContent value="privacy" className="mt-6">
-            <PrivacySettingsTab />
-          </TabsContent>
-
-          {/* Account Tab */}
-          <TabsContent value="account" className="mt-6 space-y-6">
-            {/* Export Data Section */}
-            <ExportDataComponent onExport={handleExportData} />
-
-            {/* Delete Account Section */}
-            <DeleteAccount onDelete={handleDeleteAccount} />
-          </TabsContent>
-
-          {/* Admin Tab - Only visible to admins */}
-          {isAdmin && (
-            <TabsContent value="admin" className="mt-6">
-              <AdminSettingsTab />
-            </TabsContent>
           )}
-        </Tabs>
+
+          {activeTab === 'privacy' && <PrivacySettingsTab />}
+
+          {activeTab === 'account' && (
+            <div className="space-y-6">
+              <ExportDataComponent onExport={handleExportData} />
+              <DeleteAccount onDelete={handleDeleteAccount} />
+            </div>
+          )}
+
+          {activeTab === 'sharing' && <ShareLinksTab />}
+
+          {activeTab === 'admin' && isAdmin && <AdminSettingsTab />}
+        </main>
       </div>
     </div>
   )
