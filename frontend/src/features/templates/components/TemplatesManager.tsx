@@ -330,28 +330,29 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
   )
 
   return (
-    <Card className="w-full max-w-6xl mx-auto">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" />
-          {mode === 'select' ? 'Select Template' : 'Template Manager'}
-        </CardTitle>
-        <div className="flex items-center gap-2">
-          {mode === 'manage' && (
-            <Button onClick={() => setIsCreating(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Template
-            </Button>
-          )}
-          {onClose && (
-            <Button variant="outline" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
+    <div className="w-full max-w-4xl mx-auto">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            {mode === 'select' ? 'Select Template' : 'Template Manager'}
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            {mode === 'manage' && (
+              <Button onClick={() => setIsCreating(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                New Template
+              </Button>
+            )}
+            {onClose && (
+              <Button variant="outline" size="sm" onClick={onClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 px-6 pb-6">
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
             {error}
@@ -543,6 +544,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
         )}
       </CardContent>
     </Card>
+    </div>
   )
 }
 

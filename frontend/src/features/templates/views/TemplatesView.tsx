@@ -12,7 +12,7 @@ interface TemplatesViewProps {
 
 export const TemplatesView: React.FC<TemplatesViewProps> = ({ onClose }) => {
   return (
-    <div className="h-screen flex items-center justify-center bg-background">
+    <div className="h-screen bg-background">
       <Suspense fallback={<ComponentLoader />}>
         <TemplatesManager onClose={onClose} mode="manage" />
       </Suspense>
