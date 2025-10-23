@@ -45,10 +45,9 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: 📦 Install dependencies
-        working-directory: frontend
         run: |
-          pnpm add -g stylelint stylelint-config-standard stylelint-config-tailwindcss
-          pnpm add -g postcss postcss-cli
+          npm install -g stylelint stylelint-config-standard stylelint-config-tailwindcss
+          npm install -g postcss postcss-cli
 
       - name: 🔍 Run Stylelint
         working-directory: frontend
