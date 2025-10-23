@@ -14,6 +14,10 @@ import (
 	"testing"
 	"time"
 
+	appconfig "leaflock/config"
+	appcrypto "leaflock/crypto"
+	appdb "leaflock/database"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -25,9 +29,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	appconfig "leaflock/config"
-	appcrypto "leaflock/crypto"
-	appdb "leaflock/database"
 )
 
 // Test configuration
