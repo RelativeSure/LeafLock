@@ -354,7 +354,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
 
         <CardContent className="space-y-4 px-6 pb-6">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded">
               {error}
             </div>
           )}
@@ -383,7 +383,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
               </CardHeader>
               <CardContent className="space-y-4">
                 {viewingTemplate.description && (
-                  <p className="text-gray-600">{viewingTemplate.description}</p>
+                  <p className="text-muted-foreground">{viewingTemplate.description}</p>
                 )}
                 <div className="flex flex-wrap gap-2">
                   {viewingTemplate.tags.map((tag) => (
@@ -392,7 +392,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
                     </Badge>
                   ))}
                 </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="bg-muted p-4 rounded-lg">
                   <pre className="whitespace-pre-wrap text-sm">{viewingTemplate.content}</pre>
                 </div>
                 <div className="flex justify-end gap-2">
@@ -412,12 +412,12 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
             <div className="space-y-4">
               <div className="flex items-center space-x-4">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 pointer-events-none z-10" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search templates..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 bg-background border-border"
                   />
                 </div>
               </div>
@@ -447,96 +447,107 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
                 </div>
 
                 <div className="pt-2">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredTemplates.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground/30" />
+                      <p className="text-lg font-medium text-foreground">No templates found</p>
+                      <p className="text-sm">
+                        {searchQuery ? 'Try adjusting your search terms' : 'Create your first template to get started'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredTemplates.map((template) => (
-                      <Card key={template.id} className="hover:shadow-md transition-shadow">
-                        <CardHeader className="pb-3">
-                          <CardTitle className="flex items-center justify-between text-base">
-                            <span className="flex items-center gap-2">
-                              <span className="text-xl">{template.icon}</span>
-                              <span className="truncate">{template.name}</span>
-                            </span>
+                      <Card key={template.id} className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border hover:border-primary/20 group">
+                        <div className="flex items-start gap-4">
+                          <div className="p-2.5 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                            <span className="text-xl">{template.icon}</span>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-foreground mb-1">{template.name}</h3>
+                            {template.description && (
+                              <p className="text-sm text-muted-foreground text-pretty line-clamp-2">
+                                {template.description}
+                              </p>
+                            )}
                             {template.is_public && (
-                              <Badge variant="secondary" className="text-xs">
+                              <Badge variant="secondary" className="text-xs mt-2">
                                 <Users className="h-3 w-3 mr-1" />
                                 Public
                               </Badge>
                             )}
-                          </CardTitle>
-                          {template.description && (
-                            <p className="text-sm text-gray-600 line-clamp-2">
-                              {template.description}
-                            </p>
-                          )}
-                        </CardHeader>
-                        <CardContent className="pt-0 space-y-3">
-                          {template.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {template.tags.slice(0, 3).map((tag) => (
-                                <Badge key={tag} variant="outline" className="text-xs">
-                                  {tag}
-                                </Badge>
-                              ))}
-                              {template.tags.length > 3 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{template.tags.length - 3}
-                                </Badge>
-                              )}
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between text-xs text-gray-500">
-                            <span>Used {template.usage_count} times</span>
-                            <span>{new Date(template.created_at).toLocaleDateString()}</span>
                           </div>
-
-                          <div className="flex justify-between gap-2">
-                            <div className="flex gap-1">
+                        </div>
+                        {template.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-3">
+                            {template.tags.slice(0, 3).map((tag) => (
+                              <Badge key={tag} variant="outline" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                            {template.tags.length > 3 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{template.tags.length - 3}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mt-3">
+                          <span>Used {template.usage_count} times</span>
+                          <span>{new Date(template.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleViewTemplate(template)
+                            }}
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                          {mode === 'manage' && (
+                            <>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleViewTemplate(template)}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  startEdit(template)
+                                }}
                               >
-                                <Eye className="h-3 w-3" />
+                                <Edit3 className="h-3 w-3 mr-1" />
+                                Edit
                               </Button>
-                              {mode === 'manage' && (
-                                <>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => startEdit(template)}
-                                  >
-                                    <Edit3 className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleDeleteTemplate(template.id)}
-                                    className="text-red-600 hover:text-red-700"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                            <Button size="sm" onClick={() => handleUseTemplate(template)}>
-                              <Copy className="h-3 w-3 mr-1" />
-                              {mode === 'select' ? 'Select' : 'Use'}
-                            </Button>
-                          </div>
-                        </CardContent>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteTemplate(template.id)
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3 mr-1" />
+                                Delete
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleUseTemplate(template)
+                            }}
+                          >
+                            <Copy className="h-3 w-3 mr-1" />
+                            {mode === 'select' ? 'Select' : 'Use'}
+                          </Button>
+                        </div>
                       </Card>
                     ))}
                   </div>
-
-                  {filteredTemplates.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      {searchQuery
-                        ? 'No templates found matching your search.'
-                        : activeTab === 'my-templates'
-                          ? 'No templates yet. Create your first template!'
-                          : 'No templates available.'}
-                    </div>
                   )}
                 </div>
               </div>
