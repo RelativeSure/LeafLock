@@ -75,27 +75,28 @@ export const UnlockView: FC<UnlockViewProps> = ({ onUnlock, onLogout }) => {
               </Alert>
             )}
 
-            <div className="flex gap-3">
-              <Button
-                type="submit"
-                className={cn(
-                  'flex-1 h-11',
-                  unlocking && 'cursor-not-allowed opacity-80'
-                )}
-                disabled={unlocking || !password.trim()}
-              >
-                {unlocking ? 'Unlocking...' : 'Unlock Notes'}
-              </Button>
+                   <div className="flex gap-3">
+                     <Button
+                       type="submit"
+                       variant="default"
+                       className={cn(
+                         'flex-1 h-11',
+                         unlocking && 'cursor-not-allowed opacity-80'
+                       )}
+                       disabled={unlocking || !password.trim()}
+                     >
+                       {unlocking ? 'Unlocking...' : 'Unlock Notes'}
+                     </Button>
 
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={onLogout}
-                className="h-11 px-6"
-              >
-                Logout
-              </Button>
-            </div>
+                     <Button
+                       type="button"
+                       variant="default"
+                       onClick={onLogout}
+                       className="flex-1 h-11"
+                     >
+                       Logout
+                     </Button>
+                   </div>
           </form>
         </div>
       </div>
