@@ -57,18 +57,15 @@
       automerge: true,
     },
     {
-      description: 'Security updates - auto-merge patch and minor versions',
+      description: 'Auto-merge minor and patch updates',
       matchUpdateTypes: [
         'minor',
         'patch',
       ],
       automerge: true,
+      automergeType: 'pr',
       labels: [
-        'security',
         'auto-merge',
-      ],
-      matchPackageNames: [
-        '/.*/',
       ],
     },
     {

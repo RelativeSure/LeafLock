@@ -1,4 +1,4 @@
-FROM docker.io/node:22-alpine@sha256:dbcedd8aeab47fbc0f4dd4bffa55b7c3c729a707875968d467aaaea42d6225af AS builder
+FROM docker.io/node:22-alpine@sha256:bd26af08779f746650d95a2e4d653b0fd3c8030c44284b6b98d701c9b5eb66b9 AS builder
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ ENV VITE_API_URL=$VITE_API_URL
 
 RUN pnpm run build
 
-FROM docker.io/nginxinc/nginx-unprivileged:alpine@sha256:20c59c7bf3602ebcc0b6866f900698ba2e6c6cb195ec6f36907eb192cd5a1ece
+FROM docker.io/nginxinc/nginx-unprivileged:alpine@sha256:7662e7dd548daacb2e1c0d00d1a9cd785cfad08e1f559cf233f84a7e08cc23a0
 
 RUN rm -rf /etc/nginx/conf.d/*
 
