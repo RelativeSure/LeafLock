@@ -1,5 +1,4 @@
 import { useState, type FC } from 'react'
-import { Lock } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -43,14 +42,6 @@ export const UnlockView: FC<UnlockViewProps> = ({ onUnlock, onLogout }) => {
       </div>
 
       <div className="w-full max-w-md space-y-8">
-        {/* Logo */}
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex items-center gap-2 group">
-            <Lock className="h-8 w-8 text-accent group-hover:text-accent/80 transition-colors" />
-            <span className="text-2xl font-semibold text-foreground">LeafLock</span>
-          </div>
-        </div>
-
         {/* Form Card */}
         <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
           <div className="space-y-2 text-center mb-8">
@@ -84,7 +75,7 @@ export const UnlockView: FC<UnlockViewProps> = ({ onUnlock, onLogout }) => {
               </Alert>
             )}
 
-            <div className="flex space-x-4">
+            <div className="flex gap-3">
               <Button
                 type="submit"
                 className={cn(
@@ -98,9 +89,9 @@ export const UnlockView: FC<UnlockViewProps> = ({ onUnlock, onLogout }) => {
 
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 onClick={onLogout}
-                className="h-11 text-muted-foreground hover:text-foreground"
+                className="h-11 px-6"
               >
                 Logout
               </Button>
