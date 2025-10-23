@@ -219,7 +219,7 @@ func (h *Handler) GetMFAStatus(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"mfa_enabled":    enabled,
+		"mfa_enabled":            enabled,
 		"backup_codes_remaining": remainingCodes,
 	})
 }

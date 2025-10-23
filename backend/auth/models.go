@@ -59,14 +59,14 @@ type MFASession struct {
 
 // PasswordResetToken represents a password reset token
 type PasswordResetToken struct {
-	ID                 uuid.UUID  `json:"id"`
-	UserID             uuid.UUID  `json:"user_id"`
-	TokenHash          []byte     `json:"-"` // SHA-256
-	ExpiresAt          time.Time  `json:"expires_at"`
-	Used               bool       `json:"used"`
-	CreatedAt          time.Time  `json:"created_at"`
-	IPAddressEncrypted []byte     `json:"-"`
-	UserAgentEncrypted []byte     `json:"-"`
+	ID                 uuid.UUID `json:"id"`
+	UserID             uuid.UUID `json:"user_id"`
+	TokenHash          []byte    `json:"-"` // SHA-256
+	ExpiresAt          time.Time `json:"expires_at"`
+	Used               bool      `json:"used"`
+	CreatedAt          time.Time `json:"created_at"`
+	IPAddressEncrypted []byte    `json:"-"`
+	UserAgentEncrypted []byte    `json:"-"`
 }
 
 // AuthRequest represents a login request
@@ -84,8 +84,8 @@ type RegisterRequest struct {
 
 // MFASetupResponse contains MFA setup information
 type MFASetupResponse struct {
-	Secret     string   `json:"secret"`
-	QRCodeURL  string   `json:"qr_code_url"`
+	Secret      string   `json:"secret"`
+	QRCodeURL   string   `json:"qr_code_url"`
 	BackupCodes []string `json:"backup_codes,omitempty"`
 }
 
@@ -126,15 +126,15 @@ type ErrorResponse struct {
 
 // Constants for error codes
 const (
-	ErrCodeInvalidCredentials  = "INVALID_CREDENTIALS"
-	ErrCodeAccountLocked       = "ACCOUNT_LOCKED"
-	ErrCodeMFARequired         = "MFA_REQUIRED"
-	ErrCodeInvalidMFACode      = "INVALID_MFA_CODE"
-	ErrCodeInvalidToken        = "INVALID_TOKEN"
-	ErrCodeExpiredToken        = "EXPIRED_TOKEN"
-	ErrCodeUserNotFound        = "USER_NOT_FOUND"
-	ErrCodeEmailExists         = "EMAIL_EXISTS"
-	ErrCodeValidationFailed    = "VALIDATION_FAILED"
-	ErrCodeInternalError       = "INTERNAL_ERROR"
+	ErrCodeInvalidCredentials   = "INVALID_CREDENTIALS"
+	ErrCodeAccountLocked        = "ACCOUNT_LOCKED"
+	ErrCodeMFARequired          = "MFA_REQUIRED"
+	ErrCodeInvalidMFACode       = "INVALID_MFA_CODE"
+	ErrCodeInvalidToken         = "INVALID_TOKEN"
+	ErrCodeExpiredToken         = "EXPIRED_TOKEN"
+	ErrCodeUserNotFound         = "USER_NOT_FOUND"
+	ErrCodeEmailExists          = "EMAIL_EXISTS"
+	ErrCodeValidationFailed     = "VALIDATION_FAILED"
+	ErrCodeInternalError        = "INTERNAL_ERROR"
 	ErrCodeRegistrationDisabled = "REGISTRATION_DISABLED"
 )

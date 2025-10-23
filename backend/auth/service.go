@@ -18,11 +18,11 @@ import (
 
 // Service coordinates all auth operations
 type Service struct {
-	db       *pgxpool.Pool
-	crypto   *appcrypto.CryptoService
-	session  *SessionManager
-	password *PasswordManager
-	mfa      *MFAManager
+	db        *pgxpool.Pool
+	crypto    *appcrypto.CryptoService
+	session   *SessionManager
+	password  *PasswordManager
+	mfa       *MFAManager
 	jwtSecret string
 }
 
