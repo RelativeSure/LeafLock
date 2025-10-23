@@ -269,11 +269,32 @@ git commit --no-verify -m "message"
 - **Tests**: See `*_test.go` and `*.test.tsx` files (self-documenting)
 - **Migration**: `2025.10.04.001`
 
-### Admin System
-- Auto-creates default admin if no users exist
-- Email: `DEFAULT_ADMIN_EMAIL` (default: <admin@leaflock.app>)
-- Password: `DEFAULT_ADMIN_PASSWORD` (supports all special chars)
-- Implementation: `backend/services/admin.go`
+### Modern Auth Package
+**Architecture**: Clean, modular Go authentication system (2,125 lines)
+
+**Package Structure** (`backend/auth/`):
+- `models.go` - Type-safe models, structured error codes
+- `session.go` - Redis-backed session management (encrypted)
+- `password.go` - Argon2id hashing, password reset flow
+- `mfa.go` - TOTP + backup codes implementation
+- `service.go` - Coordinating service layer
+- `handlers.go` - HTTP API (13 endpoints)
+- `middleware.go` - JWT validation, auth guards
+
+**Features**:
+- User registration with validation
+- Login with MFA support
+- Password reset (1-hour tokens)
+- TOTP MFA with QR codes
+- 10 backup codes (XXXX-XXXX-XXXX format)
+- Account locking (5 attempts = 15min lock)
+- Session management (24-hour duration)
+- Encrypted sessions (XChaCha20-Poly1305)
+
+**Admin Users**:
+- Created via standard registration flow
+- Admin flag set manually in database or via special registration
+- No auto-admin creation (removed in migration)
 
 ### IPv4/IPv6 Support
 - Backend auto-binds to `[::]:{PORT}` (dual-stack) with IPv4 fallback
@@ -294,7 +315,7 @@ git commit --no-verify -m "message"
 - Login: 10 requests/5 min
 - Register: 5 requests/15 min
 - MFA Verify: 10 requests/5 min
-- Admin Recovery: 3 requests/15 min
+- Password Reset: 10 requests/5 min
 - MFA Setup/Enable/Disable: 10 requests/5 min
 
 **Tier 2 - Public Share Links** (Aggressive - Prevent abuse):

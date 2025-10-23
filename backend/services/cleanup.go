@@ -4,10 +4,12 @@ import (
 	"context"
 	"log"
 	"time"
+
+	"leaflock/database"
 )
 
 // StartCleanupService starts a background cleanup service that runs every 24 hours
-func StartCleanupService(db Database) {
+func StartCleanupService(db database.Database) {
 	go func() {
 		ctx := context.Background()
 		ticker := time.NewTicker(24 * time.Hour)
@@ -23,7 +25,7 @@ func StartCleanupService(db Database) {
 }
 
 // RunCleanupTasks performs cleanup operations on the database
-func RunCleanupTasks(ctx context.Context, db Database) {
+func RunCleanupTasks(ctx context.Context, db database.Database) {
 	log.Println("🧹 Running scheduled cleanup tasks...")
 
 	// Note: Session cleanup is now handled by Redis TTL

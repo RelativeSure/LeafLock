@@ -182,3 +182,15 @@ func (c *CryptoService) HashEmail(email string) []byte {
 	h.Write([]byte(strings.ToLower(email)))
 	return h.Sum(nil)
 }
+
+// EncryptBytes is a convenience wrapper around Encrypt.
+// Encrypts byte slice using XChaCha20-Poly1305 with a random nonce.
+func (c *CryptoService) EncryptBytes(plaintext []byte) ([]byte, error) {
+	return c.Encrypt(plaintext)
+}
+
+// DecryptBytes is a convenience wrapper around Decrypt.
+// Decrypts ciphertext that was encrypted with EncryptBytes.
+func (c *CryptoService) DecryptBytes(ciphertext []byte) ([]byte, error) {
+	return c.Decrypt(ciphertext)
+}

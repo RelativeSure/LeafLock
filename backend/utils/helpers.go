@@ -1,9 +1,18 @@
 package utils
 
 import (
+	"context"
 	"database/sql"
 	"strings"
 	"time"
+)
+
+// Context keys for storing values
+type contextKey string
+
+const (
+	ContextKeyClientIP  contextKey = "client_ip"
+	ContextKeyUserAgent contextKey = "user_agent"
 )
 
 // NilIfInvalid returns nil if sql.NullTime is invalid, otherwise returns the time
@@ -44,6 +53,22 @@ func CSVEscape(s string) string {
 func FormatNullTime(t sql.NullTime) string {
 	if t.Valid {
 		return t.Time.Format(time.RFC3339)
+	}
+	return ""
+}
+
+// GetClientIPFromContext retrieves client IP from context
+func GetClientIPFromContext(ctx context.Context) string {
+	if ip, ok := ctx.Value(ContextKeyClientIP).(string); ok {
+		return ip
+	}
+	return ""
+}
+
+// GetUserAgentFromContext retrieves user agent from context
+func GetUserAgentFromContext(ctx context.Context) string {
+	if ua, ok := ctx.Value(ContextKeyUserAgent).(string); ok {
+		return ua
 	}
 	return ""
 }

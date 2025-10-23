@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	"leaflock/auth"
 	appconfig "leaflock/config"
 	appcrypto "leaflock/crypto"
 	"leaflock/handlers"
@@ -93,8 +94,11 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	// Initialize rate limiters
 	rateLimits := middleware.NewRateLimitConfig(rdb)
 
-	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(db, rdb, crypto, config)
+	// Initialize modern auth package
+	authService := auth.NewService(db, rdb, crypto, string(config.JWTSecret))
+	authHandler := auth.NewHandler(authService)
+
+	// Initialize other handlers
 	accountHandler := handlers.NewAccountHandler(db, rdb, crypto, config)
 	notesHandler := handlers.NewNotesHandler(db, crypto)
 	tagsHandler := handlers.NewTagsHandler(db, crypto)
@@ -201,21 +205,11 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	app.Get("/swagger", swaggerUIHandler)
 	app.Get("/swagger/openapi.json", swaggerJSONHandler)
 
-	// Authentication routes (public) - Tier 1: Strictest rate limiting
+	// Authentication routes (public) - Tier 1: Strictest rate limiting - MODERN AUTH PACKAGE
 	api.Post("/auth/register", rateLimits.RegisterLimiter, authHandler.Register)
 	api.Post("/auth/login", rateLimits.AuthLimiter, authHandler.Login)
-	api.Post("/auth/admin-recovery", rateLimits.AdminRecoveryLimiter, authHandler.AdminRecovery)
-	api.Get("/auth/registration", func(c *fiber.Ctx) error {
-		var dbVal string
-		if err := db.QueryRow(c.Context(), `SELECT value FROM app_settings WHERE key='registration_enabled'`).Scan(&dbVal); err == nil {
-			if strings.ToLower(strings.TrimSpace(dbVal)) == "true" {
-				appconfig.RegEnabled.Store(1)
-			} else {
-				appconfig.RegEnabled.Store(0)
-			}
-		}
-		return c.JSON(fiber.Map{"enabled": appconfig.RegEnabled.Load() == 1})
-	})
+	api.Post("/auth/logout", authHandler.JWTMiddleware, authHandler.Logout)
+	api.Get("/auth/registration", rateLimits.LightweightLimiter, authHandler.GetRegistrationStatus)
 
 	// Password reset routes (public) - Tier 1: Strictest rate limiting
 	api.Post("/auth/password/reset-request", rateLimits.AuthLimiter, authHandler.RequestPasswordReset)
@@ -224,19 +218,18 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 
 	// Announcements (public with optional auth) - Tier 5: Lightweight
 	// Returns announcements based on auth status: 'all' for everyone, 'logged_in' only for authenticated users
-	api.Get("/announcements", rateLimits.LightweightLimiter, middleware.OptionalJWTMiddleware(config.JWTSecret, rdb, crypto), announcementsHandler.GetAnnouncements)
+	api.Get("/announcements", rateLimits.LightweightLimiter, authHandler.OptionalJWTMiddleware, announcementsHandler.GetAnnouncements)
 
-	// Protected routes (require JWT)
-	protected := api.Group("", middleware.JWTMiddleware(config.JWTSecret, rdb, crypto))
+	// Protected routes (require JWT) - USING MODERN AUTH MIDDLEWARE
+	protected := api.Group("", authHandler.JWTMiddleware)
 
-	// MFA routes - Tier 5: Lightweight for status checks, Tier 1 for verification
+	// MFA routes - Tier 5: Lightweight for status checks, Tier 1 for verification - MODERN AUTH PACKAGE
 	protected.Get("/auth/mfa/status", rateLimits.LightweightLimiter, authHandler.GetMFAStatus)
-	protected.Post("/auth/mfa/begin", rateLimits.AuthLimiter, authHandler.BeginMFASetup)
+	protected.Post("/auth/mfa/setup", rateLimits.AuthLimiter, authHandler.BeginMFASetup)
 	protected.Post("/auth/mfa/enable", rateLimits.AuthLimiter, authHandler.EnableMFA)
 	protected.Post("/auth/mfa/disable", rateLimits.AuthLimiter, authHandler.DisableMFA)
-	protected.Get("/auth/mfa/backup-codes", rateLimits.LightweightLimiter, authHandler.GetBackupCodes)
 	protected.Post("/auth/mfa/backup-codes/regenerate", rateLimits.AuthLimiter, authHandler.RegenerateBackupCodes)
-	api.Post("/auth/mfa/verify", rateLimits.MFAVerifyLimiter, authHandler.VerifyMFACode) // Public endpoint
+	api.Post("/auth/mfa/verify", rateLimits.MFAVerifyLimiter, authHandler.VerifyMFA) // Public endpoint
 
 	// Notes routes - Tier 4: Standard CRUD
 	// Note: Specific routes MUST come before generic /:id routes to avoid route shadowing
@@ -311,7 +304,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	protected.Get("/account/export", rateLimits.ImportExportLimiter, accountHandler.ExportData)
 
 	// Admin announcement routes - Tier 4: Standard CRUD (admin only)
-	admin := protected.Group("/admin", middleware.RequireRole(db, "admin"))
+	admin := protected.Group("/admin", authHandler.RequireAdminMiddleware)
 	admin.Get("/announcements", rateLimits.StandardCRUDLimiter, announcementsHandler.GetAllAnnouncements)
 	admin.Post("/announcements", rateLimits.StandardCRUDLimiter, announcementsHandler.CreateAnnouncement)
 	admin.Put("/announcements/:id", rateLimits.StandardCRUDLimiter, announcementsHandler.UpdateAnnouncement)

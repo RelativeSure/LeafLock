@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+
+	"leaflock/crypto"
+	"leaflock/database"
 )
 
 // DefaultTemplate represents a default note template
@@ -333,7 +336,7 @@ Temporary solution (if any):
 }
 
 // SeedDefaultTemplates creates default public templates if they don't exist
-func SeedDefaultTemplates(db Database, crypto CryptoService) error {
+func SeedDefaultTemplates(db database.Database, cryptoSvc *crypto.CryptoService) error {
 	ctx := context.Background()
 
 	// Check if we already have default templates
@@ -352,17 +355,17 @@ func SeedDefaultTemplates(db Database, crypto CryptoService) error {
 
 	for _, template := range defaultTemplates {
 		// Encrypt template data (Encrypt returns []byte)
-		nameEncryptedBytes, err := crypto.Encrypt([]byte(template.Name))
+		nameEncryptedBytes, err := cryptoSvc.Encrypt([]byte(template.Name))
 		if err != nil {
 			return fmt.Errorf("failed to encrypt template name '%s': %w", template.Name, err)
 		}
 
-		descriptionEncryptedBytes, err := crypto.Encrypt([]byte(template.Description))
+		descriptionEncryptedBytes, err := cryptoSvc.Encrypt([]byte(template.Description))
 		if err != nil {
 			return fmt.Errorf("failed to encrypt template description '%s': %w", template.Name, err)
 		}
 
-		contentEncryptedBytes, err := crypto.Encrypt([]byte(template.Content))
+		contentEncryptedBytes, err := cryptoSvc.Encrypt([]byte(template.Content))
 		if err != nil {
 			return fmt.Errorf("failed to encrypt template content '%s': %w", template.Name, err)
 		}
