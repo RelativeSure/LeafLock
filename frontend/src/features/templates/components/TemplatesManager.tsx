@@ -350,200 +350,200 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
               </Button>
             )}
           </div>
-      </CardHeader>
+        </CardHeader>
 
-      <CardContent className="space-y-4 px-6 pb-6">
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
-        )}
-
-        {(isCreating || editingTemplate) && (
-          <Card>
-            <CardHeader>
-              <CardTitle>{editingTemplate ? 'Edit Template' : 'Create New Template'}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TemplateForm />
-            </CardContent>
-          </Card>
-        )}
-
-        {viewingTemplate && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <span className="text-2xl">{viewingTemplate.icon}</span>
-                {viewingTemplate.name}
-              </CardTitle>
-              <Button variant="outline" size="sm" onClick={() => setViewingTemplate(null)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {viewingTemplate.description && (
-                <p className="text-gray-600">{viewingTemplate.description}</p>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {viewingTemplate.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <pre className="whitespace-pre-wrap text-sm">{viewingTemplate.content}</pre>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setViewingTemplate(null)}>
-                  Close
-                </Button>
-                <Button onClick={() => handleUseTemplate(viewingTemplate)}>
-                  <Copy className="h-4 w-4 mr-2" />
-                  {mode === 'select' ? 'Select' : 'Use Template'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {!isCreating && !editingTemplate && !viewingTemplate && (
-          <div className="space-y-4">
-            <div className="flex items-center space-x-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 pointer-events-none z-10" />
-                <Input
-                  placeholder="Search templates..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+        <CardContent className="space-y-4 px-6 pb-6">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+              {error}
             </div>
+          )}
 
-            <div className="space-y-4">
-              <div className="flex gap-2 pb-4 border-b border-border">
-                <Button
-                  variant={activeTab === 'my-templates' ? 'default' : 'outline'}
-                  onClick={() => setActiveTab('my-templates')}
-                >
-                  My Templates
+          {(isCreating || editingTemplate) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{editingTemplate ? 'Edit Template' : 'Create New Template'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TemplateForm />
+              </CardContent>
+            </Card>
+          )}
+
+          {viewingTemplate && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">{viewingTemplate.icon}</span>
+                  {viewingTemplate.name}
+                </CardTitle>
+                <Button variant="outline" size="sm" onClick={() => setViewingTemplate(null)}>
+                  <X className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant={activeTab === 'public-templates' ? 'default' : 'outline'}
-                  onClick={() => setActiveTab('public-templates')}
-                >
-                  <Users className="h-4 w-4 mr-2" />
-                  Public
-                </Button>
-                <Button
-                  variant={activeTab === 'popular' ? 'default' : 'outline'}
-                  onClick={() => setActiveTab('popular')}
-                >
-                  <Clock className="h-4 w-4 mr-2" />
-                  Popular
-                </Button>
-              </div>
-
-              <div className="pt-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredTemplates.map((template) => (
-                    <Card key={template.id} className="hover:shadow-md transition-shadow">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="flex items-center justify-between text-base">
-                          <span className="flex items-center gap-2">
-                            <span className="text-xl">{template.icon}</span>
-                            <span className="truncate">{template.name}</span>
-                          </span>
-                          {template.is_public && (
-                            <Badge variant="secondary" className="text-xs">
-                              <Users className="h-3 w-3 mr-1" />
-                              Public
-                            </Badge>
-                          )}
-                        </CardTitle>
-                        {template.description && (
-                          <p className="text-sm text-gray-600 line-clamp-2">
-                            {template.description}
-                          </p>
-                        )}
-                      </CardHeader>
-                      <CardContent className="pt-0 space-y-3">
-                        {template.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {template.tags.slice(0, 3).map((tag) => (
-                              <Badge key={tag} variant="outline" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                            {template.tags.length > 3 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{template.tags.length - 3}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-
-                        <div className="flex items-center justify-between text-xs text-gray-500">
-                          <span>Used {template.usage_count} times</span>
-                          <span>{new Date(template.created_at).toLocaleDateString()}</span>
-                        </div>
-
-                        <div className="flex justify-between gap-2">
-                          <div className="flex gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewTemplate(template)}
-                            >
-                              <Eye className="h-3 w-3" />
-                            </Button>
-                            {mode === 'manage' && (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => startEdit(template)}
-                                >
-                                  <Edit3 className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleDeleteTemplate(template.id)}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                          <Button size="sm" onClick={() => handleUseTemplate(template)}>
-                            <Copy className="h-3 w-3 mr-1" />
-                            {mode === 'select' ? 'Select' : 'Use'}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {viewingTemplate.description && (
+                  <p className="text-gray-600">{viewingTemplate.description}</p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {viewingTemplate.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary">
+                      {tag}
+                    </Badge>
                   ))}
                 </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <pre className="whitespace-pre-wrap text-sm">{viewingTemplate.content}</pre>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setViewingTemplate(null)}>
+                    Close
+                  </Button>
+                  <Button onClick={() => handleUseTemplate(viewingTemplate)}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    {mode === 'select' ? 'Select' : 'Use Template'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-                {filteredTemplates.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    {searchQuery
-                      ? 'No templates found matching your search.'
-                      : activeTab === 'my-templates'
-                        ? 'No templates yet. Create your first template!'
-                        : 'No templates available.'}
+          {!isCreating && !editingTemplate && !viewingTemplate && (
+            <div className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 pointer-events-none z-10" />
+                  <Input
+                    placeholder="Search templates..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex gap-2 pb-4 border-b border-border">
+                  <Button
+                    variant={activeTab === 'my-templates' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('my-templates')}
+                  >
+                    My Templates
+                  </Button>
+                  <Button
+                    variant={activeTab === 'public-templates' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('public-templates')}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Public
+                  </Button>
+                  <Button
+                    variant={activeTab === 'popular' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('popular')}
+                  >
+                    <Clock className="h-4 w-4 mr-2" />
+                    Popular
+                  </Button>
+                </div>
+
+                <div className="pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredTemplates.map((template) => (
+                      <Card key={template.id} className="hover:shadow-md transition-shadow">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center justify-between text-base">
+                            <span className="flex items-center gap-2">
+                              <span className="text-xl">{template.icon}</span>
+                              <span className="truncate">{template.name}</span>
+                            </span>
+                            {template.is_public && (
+                              <Badge variant="secondary" className="text-xs">
+                                <Users className="h-3 w-3 mr-1" />
+                                Public
+                              </Badge>
+                            )}
+                          </CardTitle>
+                          {template.description && (
+                            <p className="text-sm text-gray-600 line-clamp-2">
+                              {template.description}
+                            </p>
+                          )}
+                        </CardHeader>
+                        <CardContent className="pt-0 space-y-3">
+                          {template.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {template.tags.slice(0, 3).map((tag) => (
+                                <Badge key={tag} variant="outline" className="text-xs">
+                                  {tag}
+                                </Badge>
+                              ))}
+                              {template.tags.length > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{template.tags.length - 3}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between text-xs text-gray-500">
+                            <span>Used {template.usage_count} times</span>
+                            <span>{new Date(template.created_at).toLocaleDateString()}</span>
+                          </div>
+
+                          <div className="flex justify-between gap-2">
+                            <div className="flex gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewTemplate(template)}
+                              >
+                                <Eye className="h-3 w-3" />
+                              </Button>
+                              {mode === 'manage' && (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => startEdit(template)}
+                                  >
+                                    <Edit3 className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDeleteTemplate(template.id)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                            <Button size="sm" onClick={() => handleUseTemplate(template)}>
+                              <Copy className="h-3 w-3 mr-1" />
+                              {mode === 'select' ? 'Select' : 'Use'}
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
-                )}
+
+                  {filteredTemplates.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      {searchQuery
+                        ? 'No templates found matching your search.'
+                        : activeTab === 'my-templates'
+                          ? 'No templates yet. Create your first template!'
+                          : 'No templates available.'}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

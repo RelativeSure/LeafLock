@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "lint": "sh scripts/check-no-jsx.sh && eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
-    "lint:css": "stylelint \"src/**/*.css\"",
+    "lint:css": "stylelint \"src/**/*.css\" --formatter verbose",
     "lint:css:fix": "stylelint \"src/**/*.css\" --fix",
     "format": "prettier --write --no-error-on-unmatched-pattern \"**/*.{js,ts,tsx,css}\"",
     "format:check": "prettier --check --no-error-on-unmatched-pattern \"**/*.{js,ts,tsx,css}\"",
