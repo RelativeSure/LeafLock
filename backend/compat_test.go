@@ -107,16 +107,13 @@ type AuthHandler struct {
 }
 
 func (h *AuthHandler) handler() *auth.Handler {
-	// For compatibility with tests, we need to handle both real and mock databases
-	// If it's a real pgxpool.Pool, use it directly
-	if db, ok := h.db.(*pgxpool.Pool); ok {
-		authService := auth.NewService(db, h.redis, h.crypto, string(h.config.JWTSecret))
-		return auth.NewHandler(authService)
+	// Type assert database.Database to *pgxpool.Pool for auth.NewService
+	db, ok := h.db.(*pgxpool.Pool)
+	if !ok {
+		panic("AuthHandler requires *pgxpool.Pool, not database.Database interface")
 	}
-
-	// For mock databases in tests, return a handler that will skip auth operations
-	// This allows tests to run without requiring a real database connection
-	return &auth.Handler{} // Empty handler for test compatibility
+	authService := auth.NewService(db, h.redis, h.crypto, string(h.config.JWTSecret))
+	return auth.NewHandler(authService)
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
