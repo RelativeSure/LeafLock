@@ -262,10 +262,53 @@
            gap: 0.75rem !important;
          }
 
+         /* Display utilities */
+         .block {
+           display: block !important;
+         }
+
+         .inline-block {
+           display: inline-block !important;
+         }
+
+         .inline {
+           display: inline !important;
+         }
+
          .flex {
            display: flex !important;
          }
 
+         .inline-flex {
+           display: inline-flex !important;
+         }
+
+         .grid {
+           display: grid !important;
+         }
+
+         .hidden {
+           display: none !important;
+         }
+
+         /* Position utilities */
+         .relative {
+           position: relative !important;
+         }
+
+         .absolute {
+           position: absolute !important;
+         }
+
+         .fixed {
+           position: fixed !important;
+         }
+
+         .sticky {
+           position: sticky !important;
+         }
+
+         /* Flex utilities */
          .flex-1 {
            flex: 1 1 0% !important;
          }
@@ -276,10 +319,6 @@
          }
 
          /* Fix button component utilities that aren't working with Tailwind v4 */
-         .inline-flex {
-           display: inline-flex !important;
-         }
-
          .items-center {
            align-items: center !important;
          }
