@@ -83,7 +83,7 @@ export const ThemeToggle: React.FC = () => {
         variant="outline"
         size="icon"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="rounded-full"
+        className="rounded-full transition-transform duration-200 hover:rotate-12 active:scale-95"
         aria-label="Toggle theme"
       >
         {activeOption.icon}
@@ -92,23 +92,39 @@ export const ThemeToggle: React.FC = () => {
       {isOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} aria-hidden="true" />
-          <div className="absolute right-0 top-12 z-50 w-48 rounded-md border bg-popover p-1 shadow-md">
+          <div className="absolute right-0 top-12 z-50 w-48 rounded-md border bg-popover p-1 shadow-lg animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200">
             <div className="space-y-1">
-              {themeOptions.map((option) => (
+              {themeOptions.map((option, index) => (
                 <button
                   key={option.value}
                   onClick={() => {
                     setTheme(option.value)
                     setIsOpen(false)
                   }}
-                  className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-sm transition-colors ${
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-sm transition-all duration-200 animate-in fade-in slide-in-from-left-1 ${
                     theme === option.value
-                      ? 'bg-accent text-accent-foreground'
-                      : 'hover:bg-accent hover:text-accent-foreground'
+                      ? 'bg-accent text-accent-foreground shadow-sm'
+                      : 'hover:bg-accent hover:text-accent-foreground hover:translate-x-1'
                   }`}
+                  style={{ animationDelay: `${index * 30}ms` }}
                 >
                   {option.icon}
                   <span>{option.label}</span>
+                  {theme === option.value && (
+                    <svg
+                      className="ml-auto h-4 w-4 animate-in zoom-in-50"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  )}
                 </button>
               ))}
             </div>
