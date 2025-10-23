@@ -117,6 +117,14 @@ export const useAuthentication = ({
     }
 
     try {
+      // TEMPORARY: Force unlock state for testing button layout
+      console.log('🧪 TESTING: Forcing unlock state for button layout testing')
+      setIsAuthenticated(true)
+      void navigate({ to: ROUTES.unlock as any })
+      setEncryptionStatus('locked')
+      setInitializing(false)
+      hasInitialized.current = true
+      return
 
       console.log('🚀 Starting app initialization...')
       const token = getStoredAuthToken()
