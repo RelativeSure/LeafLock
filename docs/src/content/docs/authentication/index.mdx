@@ -1,69 +1,81 @@
 ---
 title: Multi-Factor Authentication
-description: Overview of LeafLock's MFA implementation and security features
+description: Overview of LeafLock's MFA implementation
+sidebar:
+  order: 1
 ---
 
-# Multi-Factor Authentication (MFA)
+LeafLock implements RFC 6238 TOTP multi-factor authentication with encrypted secret storage and Argon2id-hashed backup codes.
 
-LeafLock implements Time-based One-Time Password (TOTP) multi-factor authentication to provide an additional layer of security for your account.
+## Implementation Details
 
-## What is MFA?
+**TOTP Configuration** (`backend/auth/mfa.go:35`):
+- Algorithm: SHA-1 (RFC 6238 standard)
+- Time step: 30 seconds
+- Code length: 6 digits
+- Window: ±30 seconds (90-second validity)
+- Secret storage: XChaCha20-Poly1305 encrypted in `mfa_secret_encrypted` column
 
-Multi-Factor Authentication (MFA) requires two forms of verification to access your account:
-1. **Something you know** - Your password
-2. **Something you have** - Your authentication device (phone/tablet with authenticator app)
+**Backup Codes** (`backend/auth/mfa.go:89`):
+- Count: 10 codes per user
+- Format: 12 characters (XXXX-XXXX-XXXX)
+- Storage: Argon2id hashed with deterministic salt
+- Usage: Single-use, constant-time comparison
+- Regeneration: Requires password confirmation
 
-Even if someone obtains your password, they cannot access your account without the second factor.
+**Rate Limiting** (`backend/middleware/rate_limit.go:45`):
+- MFA verification: 10 requests per 5 minutes (IP-based)
+- MFA setup/enable/disable: 10 requests per 5 minutes
+- Implementation: Redis fixed window algorithm
+- Key format: `limiter:{ip}:/api/v1/auth/mfa/*`
 
-## Features
+**Security Features**:
+- Constant-time code comparison (prevents timing attacks)
+- Account lockout: 5 failed login attempts = 15-minute lock
+- MFA session tokens: 5-minute expiration
+- Audit logging: All MFA events tracked in `audit_log` table
 
-- **TOTP-based authentication** compatible with all major authenticator apps
-- **Backup recovery codes** for emergency access
-- **QR code setup** for easy configuration
-- **Rate limiting** to prevent brute force attacks
-- **Audit logging** of all MFA events
+## Endpoints
 
-## Supported Authenticator Apps
+- `POST /api/v1/auth/mfa/setup` - Generate TOTP secret and QR code
+- `POST /api/v1/auth/mfa/enable` - Activate MFA (returns backup codes)
+- `POST /api/v1/auth/mfa/verify` - Verify TOTP/backup code during login
+- `POST /api/v1/auth/mfa/disable` - Deactivate MFA
+- `GET /api/v1/auth/mfa/status` - Check MFA status and remaining codes
+- `POST /api/v1/auth/mfa/backup-codes/regenerate` - Generate new backup codes
 
-LeafLock's MFA works with any TOTP-compatible authenticator app:
+Full API reference: [/authentication/api-endpoints](/authentication/api-endpoints)
 
-- **Google Authenticator** (iOS, Android)
-- **Authy** (iOS, Android, Desktop)
-- **Microsoft Authenticator** (iOS, Android)
-- **1Password** (with TOTP support)
-- **Bitwarden** (with premium)
-- **Any RFC 6238 compliant TOTP app**
+## Database Schema
 
-## Security Model
+**Users table columns** (`backend/database/schema.go:22-25`):
+```sql
+mfa_enabled BOOLEAN DEFAULT false
+mfa_secret_encrypted BYTEA
+mfa_backup_codes BYTEA[]        -- Argon2id hashes (10 total)
+mfa_backup_codes_used BYTEA[]   -- Hashes of used codes
+```
 
-### TOTP Configuration
-- **Algorithm**: SHA-1 (industry standard)
-- **Time step**: 30 seconds
-- **Code length**: 6 digits
-- **Secret storage**: Encrypted with server encryption key
+**Audit log events**:
+- `mfa.enabled` / `mfa.disabled`
+- `mfa.verification_success` / `mfa.verification_failed`
+- `mfa.backup_code_used` / `mfa.backup_code_failed`
+- `mfa.backup_codes_regenerated`
 
-### Backup Codes
-- **Count**: 10 codes per user
-- **Format**: 16 characters (XXXX-XXXX-XXXX-XXXX)
-- **Storage**: Argon2id hashed (cannot be retrieved in plaintext)
-- **Usage**: One-time use only
-- **Regeneration**: Available anytime with password confirmation
+## User Guides
 
-### Rate Limiting
-- **TOTP verification**: 5 attempts per 15 minutes per user
-- **Backup code verification**: 3 attempts per 15 minutes per user
-- **Implementation**: Redis-based rate limiting
+- [Setup Guide](/authentication/setup-guide) - Enable MFA step-by-step
+- [Backup Codes](/authentication/backup-codes) - Understanding recovery codes
+- [Managing MFA](/authentication/managing-mfa) - Enable/disable/regenerate
+- [Troubleshooting](/authentication/troubleshooting) - Common issues
 
-## Getting Started
+## Admin Operations
 
-1. [Setup Guide](/authentication/setup-guide) - Enable MFA on your account
-2. [Admin Management](/authentication/admin-mfa-management) - Administrative MFA operations
-3. [Backup Codes](/authentication/backup-codes) - Understanding recovery codes
-4. [Troubleshooting](/authentication/troubleshooting) - Common issues and solutions
-5. [API Reference](/authentication/api-endpoints) - Developer documentation
+- [Admin MFA Management](/authentication/admin-mfa-management) - Database-level MFA reset, monitoring queries, audit trail analysis
 
-## Next Steps
+## Implementation Files
 
-- [Set up MFA on your account →](/authentication/setup-guide)
-- [Learn about backup codes →](/authentication/backup-codes)
-- [View API documentation →](/authentication/api-endpoints)
+- `backend/auth/mfa.go` - TOTP generation, verification, backup codes
+- `backend/auth/handlers.go` - HTTP endpoints (lines 202-379)
+- `backend/auth/middleware.go` - JWT validation
+- `backend/middleware/rate_limit.go` - Rate limiting configuration

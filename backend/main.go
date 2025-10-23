@@ -141,24 +141,9 @@ func main() {
 	// Begin async initialization of non-critical components
 	initStart := time.Now()
 
-	// Validate encryption key (non-blocking warning, skip in dev mode)
-	go func() {
-		if os.Getenv("SKIP_ADMIN_VALIDATION") != "true" {
-			if err := services.ValidateEncryptionKeyAndAdminAccess(db, crypto, config.DefaultAdminEmail); err != nil {
-				log.Printf("⚠️  ENCRYPTION KEY WARNING: %v", err)
-			}
-		} else {
-			log.Println("⏭️ Skipping admin validation (SKIP_ADMIN_VALIDATION=true)")
-		}
-	}()
-
-	// Initialize admin user
-	adminStart := time.Now()
-	adminService := services.NewAdminService(db, crypto)
-	if err := adminService.CreateDefaultAdminUser(); err != nil {
-		log.Printf("Warning: Failed to create default admin user: %v", err)
-	}
-	log.Printf("⏱️  Admin user initialization completed in %v", time.Since(adminStart))
+	// Note: Admin user creation now handled by modern auth package
+	// Admin users created via registration flow with admin flag
+	log.Println("✅ Modern auth package enabled")
 	readyState.MarkAdminReady()
 
 	// Initialize templates
