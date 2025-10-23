@@ -45,73 +45,12 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: 📦 Install dependencies
-        run: |
-          npm install -g stylelint stylelint-config-standard stylelint-config-tailwindcss
-          npm install -g postcss postcss-cli
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
 
       - name: 🔍 Run Stylelint
         working-directory: frontend
-        run: |
-          # Create a temporary stylelint config if none exists
-          if [ ! -f .stylelintrc.json ] && [ ! -f .stylelintrc.js ] && [ ! -f stylelint.config.js ]; then
-            cat > .stylelintrc.json << 'EOF'
-          {
-            "extends": [
-              "stylelint-config-standard",
-              "stylelint-config-tailwindcss"
-            ],
-            "rules": {
-              "at-rule-no-unknown": [
-                true,
-                {
-                  "ignoreAtRules": [
-                    "tailwind",
-                    "apply",
-                    "variants",
-                    "responsive",
-                    "screen",
-                    "layer",
-                    "theme",
-                    "custom-variant"
-                  ]
-                }
-              ],
-              "property-no-unknown": [
-                true,
-                {
-                  "ignoreProperties": [
-                    "composes"
-                  ]
-                }
-              ],
-              "selector-pseudo-class-no-unknown": [
-                true,
-                {
-                  "ignorePseudoClasses": [
-                    "global"
-                  ]
-                }
-              ],
-              "function-no-unknown": [
-                true,
-                {
-                  "ignoreFunctions": [
-                    "theme",
-                    "screen"
-                  ]
-                }
-              ],
-              "declaration-block-trailing-semicolon": null,
-              "no-descending-specificity": null,
-              "color-function-notation": "modern",
-              "alpha-value-notation": "number"
-            }
-          }
-          EOF
-          fi
-
-          # Run stylelint on CSS files
-          stylelint "src/**/*.css" --formatter verbose
+        run: pnpm run lint:css
 
       - name: 📊 Report Results
         if: always()
