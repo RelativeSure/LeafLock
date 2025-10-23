@@ -203,23 +203,59 @@
     border-top: 1px solid var(--border);
   }
 
-  /* Fix padding utilities that aren't working with Tailwind v4 */
-  .p-6 {
-    padding: 1.5rem !important;
-  }
+         /* Fix padding utilities that aren't working with Tailwind v4 */
+         .p-6 {
+           padding: 1.5rem !important;
+         }
 
-  .px-6 {
-    padding-left: 1.5rem !important;
-    padding-right: 1.5rem !important;
-  }
+         .p-8 {
+           padding: 2rem !important;
+         }
 
-  .pb-6 {
-    padding-bottom: 1.5rem !important;
-  }
+         .px-6 {
+           padding-left: 1.5rem !important;
+           padding-right: 1.5rem !important;
+         }
 
-  .pt-0 {
-    padding-top: 0 !important;
-  }
+         .px-8 {
+           padding-left: 2rem !important;
+           padding-right: 2rem !important;
+         }
+
+         .py-8 {
+           padding-top: 2rem !important;
+           padding-bottom: 2rem !important;
+         }
+
+         .py-12 {
+           padding-top: 3rem !important;
+           padding-bottom: 3rem !important;
+         }
+
+         .pb-6 {
+           padding-bottom: 1.5rem !important;
+         }
+
+         .pt-0 {
+           padding-top: 0 !important;
+         }
+
+         /* Fix height utilities that aren't working with Tailwind v4 */
+         .h-11 {
+           height: 2.75rem !important;
+         }
+
+         .h-12 {
+           height: 3rem !important;
+         }
+
+         .h-16 {
+           height: 4rem !important;
+         }
+
+         .h-8 {
+           height: 2rem !important;
+         }
 }
 
 ::-webkit-scrollbar {

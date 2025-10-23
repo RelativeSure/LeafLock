@@ -63,7 +63,7 @@ export const UnlockView: FC<UnlockViewProps> = ({ onUnlock, onLogout }) => {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="unlock-password">Password</Label>
+              <Label htmlFor="unlock-password" className="text-foreground">Password</Label>
               <Input
                 id="unlock-password"
                 name="password"
@@ -74,6 +74,7 @@ export const UnlockView: FC<UnlockViewProps> = ({ onUnlock, onLogout }) => {
                 required
                 autoComplete="current-password"
                 autoFocus
+                className="h-11"
               />
             </div>
 
@@ -87,7 +88,7 @@ export const UnlockView: FC<UnlockViewProps> = ({ onUnlock, onLogout }) => {
               <Button
                 type="submit"
                 className={cn(
-                  'flex-1 bg-primary text-primary-foreground hover:bg-primary/90',
+                  'flex-1 h-11 bg-primary text-primary-foreground hover:bg-primary/90',
                   unlocking && 'cursor-not-allowed opacity-80'
                 )}
                 disabled={unlocking || !password.trim()}
@@ -99,7 +100,7 @@ export const UnlockView: FC<UnlockViewProps> = ({ onUnlock, onLogout }) => {
                 type="button"
                 variant="ghost"
                 onClick={onLogout}
-                className="text-muted-foreground hover:text-foreground"
+                className="h-11 text-muted-foreground hover:text-foreground"
               >
                 Logout
               </Button>
