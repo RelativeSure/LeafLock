@@ -64,6 +64,7 @@
     "cmdk": "^1.1.1",
     "dompurify": "^3.2.7",
     "file-saver": "^2.0.5",
+    "framer-motion": "^12.23.24",
     "lexical": "^0.37.0",
     "libsodium-wrappers": "^0.7.15",
     "lucide-react": "^0.546.0",

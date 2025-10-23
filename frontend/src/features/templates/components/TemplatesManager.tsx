@@ -5,9 +5,8 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
-// import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { motion } from 'framer-motion'
 import {
   templatesService,
   Template,
@@ -360,27 +359,40 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
           )}
 
           {(isCreating || editingTemplate) && (
-            <Card>
-              <CardHeader>
-                <CardTitle>{editingTemplate ? 'Edit Template' : 'Create New Template'}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <TemplateForm />
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle>{editingTemplate ? 'Edit Template' : 'Create New Template'}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <TemplateForm />
+                </CardContent>
+              </Card>
+            </motion.div>
           )}
 
           {viewingTemplate && (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <span className="text-2xl">{viewingTemplate.icon}</span>
-                  {viewingTemplate.name}
-                </CardTitle>
-                <Button variant="outline" size="sm" onClick={() => setViewingTemplate(null)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </CardHeader>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="text-2xl">{viewingTemplate.icon}</span>
+                    {viewingTemplate.name}
+                  </CardTitle>
+                  <Button variant="outline" size="sm" onClick={() => setViewingTemplate(null)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </CardHeader>
               <CardContent className="space-y-4">
                 {viewingTemplate.description && (
                   <p className="text-muted-foreground">{viewingTemplate.description}</p>
@@ -406,6 +418,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
                 </div>
               </CardContent>
             </Card>
+            </motion.div>
           )}
 
           {!isCreating && !editingTemplate && !viewingTemplate && (
@@ -448,17 +461,48 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
 
                 <div className="pt-2">
                   {filteredTemplates.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground/30" />
-                      <p className="text-lg font-medium text-foreground">No templates found</p>
-                      <p className="text-sm">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.4 }}
+                      className="text-center py-12 text-muted-foreground"
+                    >
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                      >
+                        <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground/30" />
+                      </motion.div>
+                      <motion.p
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                        className="text-lg font-medium text-foreground"
+                      >
+                        No templates found
+                      </motion.p>
+                      <motion.p
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5 }}
+                        className="text-sm"
+                      >
                         {searchQuery ? 'Try adjusting your search terms' : 'Create your first template to get started'}
-                      </p>
-                    </div>
+                      </motion.p>
+                    </motion.div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredTemplates.map((template) => (
-                      <Card key={template.id} className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border hover:border-primary/20 group">
+                    {filteredTemplates.map((template, index) => (
+                      <motion.div
+                        key={template.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                        whileHover={{ y: -5, scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Card className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border hover:border-primary/20 group">
                         <div className="flex items-start gap-4">
                           <div className="p-2.5 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                             <span className="text-xl">{template.icon}</span>
@@ -546,6 +590,7 @@ export const TemplatesManager: React.FC<TemplatesManagerProps> = ({
                           </Button>
                         </div>
                       </Card>
+                      </motion.div>
                     ))}
                   </div>
                   )}

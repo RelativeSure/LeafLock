@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
+import { motion, AnimatePresence } from 'framer-motion'
 import { MfaSettings } from './MfaSettings'
 import { DeleteAccount } from './DeleteAccount'
 import { ExportDataComponent } from './ExportData'
@@ -140,32 +141,79 @@ function SettingsPage({ api, onBack, onLogout }: SettingsPageProps) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <main className="flex-1 overflow-auto p-8">
-          {activeTab === 'security' && (
-            <MfaSettings
-              onGetMfaStatus={() => api.getMfaStatus()}
-              onBeginMfaSetup={() => api.startMfaSetup()}
-              onEnableMfa={async (code): Promise<MfaStatus & { backup_codes?: string[] }> => {
-                const status = await api.enableMfa(code)
-                return { ...status }
-              }}
-              onDisableMfa={(code): Promise<MfaStatus> => api.disableMfa(code)}
-              onGetBackupCodes={handleGetBackupCodes}
-              onRegenerateBackupCodes={handleRegenerateBackupCodes}
-            />
-          )}
+          <AnimatePresence mode="wait">
+            {activeTab === 'security' && (
+              <motion.div
+                key="security"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <MfaSettings
+                  onGetMfaStatus={() => api.getMfaStatus()}
+                  onBeginMfaSetup={() => api.startMfaSetup()}
+                  onEnableMfa={async (code): Promise<MfaStatus & { backup_codes?: string[] }> => {
+                    const status = await api.enableMfa(code)
+                    return { ...status }
+                  }}
+                  onDisableMfa={(code): Promise<MfaStatus> => api.disableMfa(code)}
+                  onGetBackupCodes={handleGetBackupCodes}
+                  onRegenerateBackupCodes={handleRegenerateBackupCodes}
+                />
+              </motion.div>
+            )}
 
-          {activeTab === 'privacy' && <PrivacySettingsTab />}
+            {activeTab === 'privacy' && (
+              <motion.div
+                key="privacy"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <PrivacySettingsTab />
+              </motion.div>
+            )}
 
-          {activeTab === 'account' && (
-            <div className="space-y-6">
-              <ExportDataComponent onExport={handleExportData} />
-              <DeleteAccount onDelete={handleDeleteAccount} />
-            </div>
-          )}
+            {activeTab === 'account' && (
+              <motion.div
+                key="account"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-6"
+              >
+                <ExportDataComponent onExport={handleExportData} />
+                <DeleteAccount onDelete={handleDeleteAccount} />
+              </motion.div>
+            )}
 
-          {activeTab === 'sharing' && <ShareLinksTab />}
+            {activeTab === 'sharing' && (
+              <motion.div
+                key="sharing"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <ShareLinksTab />
+              </motion.div>
+            )}
 
-          {activeTab === 'admin' && isAdmin && <AdminSettingsTab />}
+            {activeTab === 'admin' && isAdmin && (
+              <motion.div
+                key="admin"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <AdminSettingsTab />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </main>
       </div>
     </div>
