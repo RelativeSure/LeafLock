@@ -31,18 +31,24 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
+      - name: 🔧 Enable pnpm
+        run: |
+          corepack enable
+          PNPM_VERSION=$(jq -r '.packageManager' frontend/package.json)
+          corepack prepare "$PNPM_VERSION" --activate
+
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: 📦 Install dependencies
         working-directory: frontend
         run: |
-          npm install -g stylelint stylelint-config-standard stylelint-config-tailwindcss
-          npm install -g postcss postcss-cli
+          pnpm add -g stylelint stylelint-config-standard stylelint-config-tailwindcss
+          pnpm add -g postcss postcss-cli
 
       - name: 🔍 Run Stylelint
         working-directory: frontend
