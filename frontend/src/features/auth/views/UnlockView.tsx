@@ -79,7 +79,7 @@ export const UnlockView: FC<UnlockViewProps> = ({ onUnlock, onLogout }) => {
               <Button
                 type="submit"
                 className={cn(
-                  'flex-1 h-11 bg-primary text-primary-foreground hover:bg-primary/90',
+                  'flex-1 h-11',
                   unlocking && 'cursor-not-allowed opacity-80'
                 )}
                 disabled={unlocking || !password.trim()}
@@ -89,7 +89,7 @@ export const UnlockView: FC<UnlockViewProps> = ({ onUnlock, onLogout }) => {
 
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={onLogout}
                 className="h-11 px-6"
               >

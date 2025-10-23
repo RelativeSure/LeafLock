@@ -256,6 +256,124 @@
          .h-8 {
            height: 2rem !important;
          }
+
+         /* Fix button utilities that aren't working with Tailwind v4 */
+         .gap-3 {
+           gap: 0.75rem !important;
+         }
+
+         .flex-1 {
+           flex: 1 1 0% !important;
+         }
+
+         .px-6 {
+           padding-left: 1.5rem !important;
+           padding-right: 1.5rem !important;
+         }
+
+         /* Fix button component utilities that aren't working with Tailwind v4 */
+         .inline-flex {
+           display: inline-flex !important;
+         }
+
+         .items-center {
+           align-items: center !important;
+         }
+
+         .justify-center {
+           justify-content: center !important;
+         }
+
+         .gap-2 {
+           gap: 0.5rem !important;
+         }
+
+         .whitespace-nowrap {
+           white-space: nowrap !important;
+         }
+
+         .rounded-md {
+           border-radius: 0.375rem !important;
+         }
+
+         .text-sm {
+           font-size: 0.875rem !important;
+           line-height: 1.25rem !important;
+         }
+
+         .font-medium {
+           font-weight: 500 !important;
+         }
+
+         .transition-all {
+           transition-property: all !important;
+           transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
+           transition-duration: 150ms !important;
+         }
+
+         .px-4 {
+           padding-left: 1rem !important;
+           padding-right: 1rem !important;
+         }
+
+         .py-2 {
+           padding-top: 0.5rem !important;
+           padding-bottom: 0.5rem !important;
+         }
+
+         .border {
+           border-width: 1px !important;
+         }
+
+         .bg-background {
+           background-color: var(--background) !important;
+         }
+
+         .shadow-xs {
+           box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
+         }
+
+         /* Secondary button variant styles */
+         .bg-secondary {
+           background-color: var(--secondary) !important;
+         }
+
+         .text-secondary-foreground {
+           color: var(--secondary-foreground) !important;
+         }
+
+         .hover\\:bg-secondary\\/80:hover {
+           background-color: rgb(from var(--secondary) r g b / 0.8) !important;
+         }
+
+         /* Additional button variant styles */
+         .bg-accent {
+           background-color: var(--accent) !important;
+         }
+
+         .text-accent-foreground {
+           color: var(--accent-foreground) !important;
+         }
+
+         .hover\\:bg-accent:hover {
+           background-color: var(--accent) !important;
+         }
+
+         .hover\\:text-accent-foreground:hover {
+           color: var(--accent-foreground) !important;
+         }
+
+         .dark\\:bg-input\\/30:is(.dark *) {
+           background-color: rgb(from var(--input) r g b / 0.3) !important;
+         }
+
+         .dark\\:border-input:is(.dark *) {
+           border-color: var(--input) !important;
+         }
+
+         .dark\\:hover\\:bg-input\\/50:is(.dark *):hover {
+           background-color: rgb(from var(--input) r g b / 0.5) !important;
+         }
 }
 
 ::-webkit-scrollbar {
