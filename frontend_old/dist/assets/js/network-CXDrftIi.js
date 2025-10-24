@@ -1,1 +1,0 @@
-const o="8080",e=t=>t.includes(":")&&!t.startsWith("[")?`[${t}]`:t,i=t=>{},s=()=>{const t=i();if(t)return t;if(typeof window<"u"&&window.location?.hostname){const n=window.location.protocol==="https:"?"https":"http",r=e(window.location.hostname);return`${n}://${r}:${o}`}return`http://localhost:${o}`};export{s as r};
