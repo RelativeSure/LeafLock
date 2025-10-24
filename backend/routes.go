@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"regexp"
 	"strings"
 	"time"
 
@@ -77,9 +78,26 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 		},
 	}))
 
-	// CORS configuration
+	// CORS configuration with wildcard support for Railway PR deployments
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     strings.Join(config.AllowedOrigins, ","),
+		AllowOriginsFunc: func(origin string) bool {
+			// Check each configured origin
+			for _, allowedOrigin := range config.AllowedOrigins {
+				// Exact match
+				if allowedOrigin == origin {
+					return true
+				}
+				// Wildcard pattern matching (e.g., https://*.railway.app)
+				if strings.Contains(allowedOrigin, "*") {
+					pattern := strings.ReplaceAll(allowedOrigin, "*", ".*")
+					matched, err := regexp.MatchString("^"+pattern+"$", origin)
+					if err == nil && matched {
+						return true
+					}
+				}
+			}
+			return false
+		},
 		AllowCredentials: true,
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-CSRF-Token",
 		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",

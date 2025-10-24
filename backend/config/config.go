@@ -161,6 +161,16 @@ func LoadConfig() *Config {
 			for i := range origins {
 				origins[i] = strings.TrimSpace(origins[i])
 			}
+
+			// In development mode, automatically allow Railway PR preview deployments
+			// This enables dynamic testing without manual CORS_ORIGINS updates
+			environment := GetEnvOrDefault("APP_ENV", "development")
+			if environment == "development" {
+				// Add Railway wildcard pattern for PR deployments
+				origins = append(origins, "https://*.railway.app")
+				log.Println("🔓 Development mode: Allowing *.railway.app origins for PR testing")
+			}
+
 			return origins
 		}(),
 		MaxLoginAttempts:   GetEnvAsInt("MAX_LOGIN_ATTEMPTS", 5),

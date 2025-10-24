@@ -234,11 +234,16 @@ Access to fetch at 'https://backend.railway.app/api/v1/...' from origin
 ```
 </Card>
 
-**Solution:** Update CORS_ORIGINS
+**Solution:** Update CORS_ORIGINS or use development mode
 
 ```bash
-# Backend environment variable (frontend domains only - backend has no public access)
+# Option 1: Production mode (explicit CORS origins)
+APP_ENV=production
 CORS_ORIGINS=https://leaflock-frontend-production.up.railway.app,https://app.leaflock.app
+
+# Option 2: Development mode (auto-allows *.railway.app for PR testing)
+APP_ENV=development
+# Automatically allows all *.railway.app subdomains + explicit CORS_ORIGINS
 
 # Common mistakes:
 # ❌ Trailing slash: https://frontend.railway.app/
@@ -248,6 +253,8 @@ CORS_ORIGINS=https://leaflock-frontend-production.up.railway.app,https://app.lea
 
 # ✅ LeafLock automatically trims whitespace now
 ```
+
+**Note:** Railway PR deployments (`backend/railway.toml`) default to `APP_ENV=development` for automatic `*.railway.app` CORS support.
 
 **Test CORS:**
 
