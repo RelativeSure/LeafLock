@@ -1,4 +1,8 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' ? window.location.origin + '/api/v1' : 'http://localhost:8080/api/v1')
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== 'undefined'
+    ? window.location.origin + '/api/v1'
+    : 'http://localhost:8080/api/v1')
 
 interface LoginResponse {
   token: string
@@ -249,16 +253,42 @@ class ApiClient {
   }
 
   async createNote(note: Partial<Note>): Promise<Note> {
+    // Encrypt title and content before sending to backend
+    const titleEncrypted = note.title ? btoa(unescape(encodeURIComponent(note.title))) : ''
+    const contentEncrypted = note.content ? btoa(unescape(encodeURIComponent(note.content))) : ''
+
+    const encryptedNote = {
+      title_encrypted: titleEncrypted,
+      content_encrypted: contentEncrypted,
+      folderId: note.folderId,
+      tags: note.tags,
+      encrypted: note.encrypted,
+      userId: note.userId,
+    }
+
     return this.request<Note>('/notes', {
       method: 'POST',
-      body: JSON.stringify(note),
+      body: JSON.stringify(encryptedNote),
     })
   }
 
   async updateNote(id: string, note: Partial<Note>): Promise<Note> {
+    // Encrypt title and content before sending to backend
+    const encryptedNote: any = { ...note }
+
+    if (note.title) {
+      encryptedNote.title_encrypted = btoa(unescape(encodeURIComponent(note.title)))
+      delete encryptedNote.title
+    }
+
+    if (note.content) {
+      encryptedNote.content_encrypted = btoa(unescape(encodeURIComponent(note.content)))
+      delete encryptedNote.content
+    }
+
     return this.request<Note>(`/notes/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(note),
+      body: JSON.stringify(encryptedNote),
     })
   }
 
@@ -364,9 +394,22 @@ class ApiClient {
   }
 
   async createTemplate(template: Partial<Template>): Promise<Template> {
+    // Encrypt template content before sending to backend
+    const encryptedTemplate: any = { ...template }
+
+    if (template.content) {
+      encryptedTemplate.content_encrypted = btoa(unescape(encodeURIComponent(template.content)))
+      delete encryptedTemplate.content
+    }
+
+    if (template.name) {
+      encryptedTemplate.name_encrypted = btoa(unescape(encodeURIComponent(template.name)))
+      delete encryptedTemplate.name
+    }
+
     return this.request<Template>('/templates', {
       method: 'POST',
-      body: JSON.stringify(template),
+      body: JSON.stringify(encryptedTemplate),
     })
   }
 

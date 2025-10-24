@@ -2,6 +2,7 @@ export interface User {
   id: string
   email: string
   name: string
+  role: 'admin' | 'user'
   mfaEnabled: boolean
   mfaSecret?: string
   createdAt: string

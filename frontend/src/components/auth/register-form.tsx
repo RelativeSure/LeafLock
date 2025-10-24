@@ -3,10 +3,16 @@ import { useAuthStore } from '@/stores'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { UserPlus, Lock, Mail, User, Check, X } from 'lucide-react'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Lock, Mail, User, Check, X } from 'lucide-react'
 
-export function RegisterForm({ onToggleMode, animatedTitle }: { onToggleMode: () => void; animatedTitle?: React.ReactNode }) {
+export function RegisterForm({
+  onToggleMode,
+  animatedTitle,
+}: {
+  onToggleMode: () => void
+  animatedTitle?: React.ReactNode
+}) {
   const { register } = useAuthStore()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')

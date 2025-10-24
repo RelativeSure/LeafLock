@@ -418,3 +418,47 @@
   --color-muted: var(--color-dark-muted);
   --color-muted-foreground: var(--color-dark-muted-foreground);
 }
+
+/* Dialog and Modal Overlay Styling */
+[data-slot='dialog-overlay'] {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.4) 0%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
+}
+
+[data-slot='dialog-content'] {
+  animation: modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  background: var(--background);
+  border-color: var(--border);
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Smooth dropdown animations */
+[data-slot='dropdown-menu-content'] {
+  animation: dropdownSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

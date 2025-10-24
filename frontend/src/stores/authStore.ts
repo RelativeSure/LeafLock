@@ -60,6 +60,15 @@ export const useAuthStore = create<AuthState>()(
           }
 
           set({ user: response.user })
+
+          // Set up encryption key after successful login
+          // For now, use a simple key derived from email + password
+          // In production, this should be more secure
+          const encryptionKey = btoa(email + password).substring(0, 32)
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('encryptionKey', encryptionKey)
+          }
+
           return { requiresMFA: false }
         } catch (error) {
           throw new Error(error instanceof Error ? error.message : 'Login failed')

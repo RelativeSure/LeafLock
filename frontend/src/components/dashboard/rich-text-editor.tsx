@@ -28,7 +28,7 @@ import {
   CheckSquare,
   CodeIcon,
 } from 'lucide-react'
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 
 interface RichTextEditorProps {
   content: string

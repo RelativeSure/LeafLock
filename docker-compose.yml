@@ -36,7 +36,7 @@ services:
       dockerfile: Dockerfile
     container_name: leaflock-backend
     environment:
-      APP_ENV: development
+      APP_ENV: ${APP_ENV:-development}
       PORT: 8080
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-leaflock}?sslmode=disable
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
@@ -60,7 +60,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
     container_name: leaflock-frontend
     environment:
       BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8080}

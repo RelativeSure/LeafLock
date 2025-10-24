@@ -21,8 +21,9 @@ import {
   DropdownMenuTrigger,
 } from './components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from './components/ui/avatar'
-import { InteractiveGridPattern } from './components/ui/interactive-grid-pattern'
-import { ShimmeringText } from './components/ui/shimmering-text'
+import { SettingsPage } from './components/settings/settings-page'
+import { AdminPage } from './components/admin/admin-page'
+import { ProtectedRoute } from './components/common/ProtectedRoute'
 
 const RootLayout: React.FC = () => (
   <AppErrorBoundary>
@@ -79,11 +80,7 @@ const AuthComponent: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 animate-in fade-in-50 duration-700 relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-      <InteractiveGridPattern
-        width={50}
-        height={50}
-        className="absolute inset-0 opacity-50"
-      />
+      <InteractiveGridPattern width={50} height={50} className="absolute inset-0 opacity-50" />
       <div className="w-full max-w-md relative z-10">
         {mode === 'login' ? (
           <LoginForm onToggleMode={() => setMode('register')} />
@@ -202,27 +199,17 @@ const dashboardRoute = createRoute({
 const SettingsComponent: React.FC = () => {
   const { user, isLoading } = useAuthStore()
 
-  React.useEffect(() => {
-    if (!isLoading && !user) {
-      window.location.href = '/auth'
-    }
-  }, [user, isLoading])
-
-  if (isLoading || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-700">
-      <div className="text-center space-y-4">
-        <h1 className="text-2xl font-bold animate-slide-in">Settings</h1>
-        <p className="text-muted-foreground animate-fade-in">Settings page coming soon...</p>
+    <ProtectedRoute
+      user={user}
+      isLoading={isLoading}
+      requiredRole="user"
+      fallbackRoute="/auth/login"
+    >
+      <div className="min-h-screen bg-background animate-in fade-in-50 duration-700">
+        <SettingsPage />
       </div>
-    </div>
+    </ProtectedRoute>
   )
 }
 
@@ -236,27 +223,17 @@ const settingsRoute = createRoute({
 const AdminComponent: React.FC = () => {
   const { user, isLoading } = useAuthStore()
 
-  React.useEffect(() => {
-    if (!isLoading && !user) {
-      window.location.href = '/auth'
-    }
-  }, [user, isLoading])
-
-  if (isLoading || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-700">
-      <div className="text-center space-y-4">
-        <h1 className="text-2xl font-bold animate-slide-in">Admin Dashboard</h1>
-        <p className="text-muted-foreground animate-fade-in">Admin panel coming soon...</p>
+    <ProtectedRoute
+      user={user}
+      isLoading={isLoading}
+      requiredRole="admin"
+      fallbackRoute="/dashboard"
+    >
+      <div className="min-h-screen bg-background animate-in fade-in-50 duration-700">
+        <AdminPage />
       </div>
-    </div>
+    </ProtectedRoute>
   )
 }
 

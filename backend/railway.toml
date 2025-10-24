@@ -16,5 +16,13 @@ restartPolicyMaxRetries = 10
 PORT = "8080"
 # Advertise the backend's service keywords for cross-service discovery
 RAILWAY_BACKEND_KEYWORDS = "LEAFLOCK_BACKEND|BACKEND|API|SERVER|APP|SERVICE"
-# Enable development mode for PR deployments (allows *.railway.app CORS origins)
+
+# CORS Configuration
+# For PR deployments: APP_ENV=development allows all origins (no CORS restrictions)
+# For production: APP_ENV=production restricts to leaflock.app domains
 APP_ENV = "development"
+
+# Production CORS origins (only used when APP_ENV=production)
+# Supports wildcards: https://*.leaflock.app matches all subdomains
+# Override in Railway environment variables for production deployment
+# CORS_ORIGINS = "https://leaflock.app,https://*.leaflock.app"

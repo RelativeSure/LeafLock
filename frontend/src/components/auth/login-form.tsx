@@ -6,7 +6,13 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Shield, Lock, Mail } from 'lucide-react'
 
-export function LoginForm({ onToggleMode, animatedTitle }: { onToggleMode: () => void; animatedTitle?: React.ReactNode }) {
+export function LoginForm({
+  onToggleMode,
+  animatedTitle,
+}: {
+  onToggleMode: () => void
+  animatedTitle?: React.ReactNode
+}) {
   const { login, verifyMFA } = useAuthStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

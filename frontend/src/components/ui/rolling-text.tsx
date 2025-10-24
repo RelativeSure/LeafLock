@@ -1,33 +1,27 @@
-'use client';
+'use client'
 
-import * as React from 'react';
-import {
-  motion,
-  useInView,
-  type UseInViewOptions,
-  type Transition,
-} from 'motion/react';
+import * as React from 'react'
+import { motion, useInView, type UseInViewOptions, type Transition } from 'motion/react'
 
 const ENTRY_ANIMATION = {
   initial: { rotateX: 0 },
   animate: { rotateX: 90 },
-};
+}
 
 const EXIT_ANIMATION = {
   initial: { rotateX: 90 },
   animate: { rotateX: 0 },
-};
+}
 
-const formatCharacter = (char: string) =>
-  char === ' ' ? '\u00A0' : char;
+const formatCharacter = (char: string) => (char === ' ' ? '\u00A0' : char)
 
 type RollingTextProps = Omit<React.ComponentProps<'span'>, 'children'> & {
-  transition?: Transition;
-  inView?: boolean;
-  inViewMargin?: UseInViewOptions['margin'];
-  inViewOnce?: boolean;
-  text: string;
-};
+  transition?: Transition
+  inView?: boolean
+  inViewMargin?: UseInViewOptions['margin']
+  inViewOnce?: boolean
+  text: string
+}
 
 function RollingText({
   ref,
@@ -38,16 +32,16 @@ function RollingText({
   text,
   ...props
 }: RollingTextProps) {
-  const localRef = React.useRef<HTMLSpanElement>(null);
-  React.useImperativeHandle(ref, () => localRef.current!);
+  const localRef = React.useRef<HTMLSpanElement>(null)
+  React.useImperativeHandle(ref, () => localRef.current!)
 
   const inViewResult = useInView(localRef, {
     once: inViewOnce,
     margin: inViewMargin,
-  });
+  })
 
-  const isInView = !inView || inViewResult;
-  const characters = React.useMemo(() => text.split(''), [text]);
+  const isInView = !inView || inViewResult
+  const characters = React.useMemo(() => text.split(''), [text])
 
   return (
     <span data-slot="rolling-text" {...props} ref={localRef}>
@@ -84,7 +78,7 @@ function RollingText({
       ))}
       <span className="sr-only">{text}</span>
     </span>
-  );
+  )
 }
 
-export { RollingText, type RollingTextProps };
+export { RollingText, type RollingTextProps }

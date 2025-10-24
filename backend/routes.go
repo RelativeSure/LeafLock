@@ -78,16 +78,21 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 		},
 	}))
 
-	// CORS configuration with wildcard support for Railway PR deployments
+	// CORS configuration with development/production mode support
 	app.Use(cors.New(cors.Config{
 		AllowOriginsFunc: func(origin string) bool {
-			// Check each configured origin
+			// Development mode: allow all origins
+			if len(config.AllowedOrigins) == 1 && config.AllowedOrigins[0] == "*" {
+				return true
+			}
+
+			// Production mode: check each configured origin
 			for _, allowedOrigin := range config.AllowedOrigins {
 				// Exact match
 				if allowedOrigin == origin {
 					return true
 				}
-				// Wildcard pattern matching (e.g., https://*.railway.app)
+				// Wildcard pattern matching (e.g., https://*.leaflock.app)
 				if strings.Contains(allowedOrigin, "*") {
 					pattern := strings.ReplaceAll(allowedOrigin, "*", ".*")
 					matched, err := regexp.MatchString("^"+pattern+"$", origin)
