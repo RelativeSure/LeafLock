@@ -8,17 +8,6 @@ import Highlight from '@tiptap/extension-highlight'
 import Typography from '@tiptap/extension-typography'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
-import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
-import { createLowlight } from 'lowlight'
-// Import only essential languages to avoid circular dependencies in 'common' pack
-import javascript from 'highlight.js/lib/languages/javascript'
-import typescript from 'highlight.js/lib/languages/typescript'
-import python from 'highlight.js/lib/languages/python'
-import bash from 'highlight.js/lib/languages/bash'
-import json from 'highlight.js/lib/languages/json'
-import xml from 'highlight.js/lib/languages/xml'
-import css from 'highlight.js/lib/languages/css'
-import markdown from 'highlight.js/lib/languages/markdown'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -49,26 +38,9 @@ interface RichTextEditorProps {
 }
 
 export function RichTextEditor({ content, onChange, placeholder, disabled }: RichTextEditorProps) {
-  const lowlight = useMemo(() => {
-    const lowlightInstance = createLowlight()
-    // Register only the languages we need to avoid circular dependencies
-    lowlightInstance.register('javascript', javascript)
-    lowlightInstance.register('typescript', typescript)
-    lowlightInstance.register('python', python)
-    lowlightInstance.register('bash', bash)
-    lowlightInstance.register('json', json)
-    lowlightInstance.register('xml', xml)
-    lowlightInstance.register('html', xml) // HTML uses xml grammar
-    lowlightInstance.register('css', css)
-    lowlightInstance.register('markdown', markdown)
-    return lowlightInstance
-  }, [])
-
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
-        codeBlock: false,
-      }),
+      StarterKit,
       Placeholder.configure({
         placeholder: placeholder || 'Start writing...',
       }),
@@ -85,9 +57,6 @@ export function RichTextEditor({ content, onChange, placeholder, disabled }: Ric
       TaskList,
       TaskItem.configure({
         nested: true,
-      }),
-      CodeBlockLowlight.configure({
-        lowlight,
       }),
     ],
     content,
