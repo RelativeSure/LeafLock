@@ -7,8 +7,21 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
@@ -97,7 +110,7 @@ export function AdminPage() {
       setIsLoading(true)
       try {
         // Simulate API calls
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        await new Promise((resolve) => setTimeout(resolve, 1000))
 
         setUsers([
           {
@@ -176,9 +189,9 @@ export function AdminPage() {
   const handleUserStatusChange = async (userId: string, newStatus: string) => {
     try {
       // TODO: Implement API call
-      setUsers(prev => prev.map(user =>
-        user.id === userId ? { ...user, status: newStatus as any } : user
-      ))
+      setUsers((prev) =>
+        prev.map((user) => (user.id === userId ? { ...user, status: newStatus as any } : user))
+      )
       toast.success(`User status updated to ${newStatus}`)
     } catch (error) {
       toast.error('Failed to update user status')
@@ -188,9 +201,9 @@ export function AdminPage() {
   const handleUserRoleChange = async (userId: string, newRole: string) => {
     try {
       // TODO: Implement API call
-      setUsers(prev => prev.map(user =>
-        user.id === userId ? { ...user, role: newRole as any } : user
-      ))
+      setUsers((prev) =>
+        prev.map((user) => (user.id === userId ? { ...user, role: newRole as any } : user))
+      )
       toast.success(`User role updated to ${newRole}`)
     } catch (error) {
       toast.error('Failed to update user role')
@@ -200,16 +213,17 @@ export function AdminPage() {
   const handleDeleteUser = async (userId: string) => {
     try {
       // TODO: Implement API call
-      setUsers(prev => prev.filter(user => user.id !== userId))
+      setUsers((prev) => prev.filter((user) => user.id !== userId))
       toast.success('User deleted successfully')
     } catch (error) {
       toast.error('Failed to delete user')
     }
   }
 
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredUsers = users.filter(
+    (user) =>
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   if (isLoading) {
@@ -255,9 +269,7 @@ export function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{systemStats.totalUsers}</div>
-            <p className="text-xs text-muted-foreground">
-              {systemStats.activeUsers} active users
-            </p>
+            <p className="text-xs text-muted-foreground">{systemStats.activeUsers} active users</p>
           </CardContent>
         </Card>
 
@@ -268,9 +280,7 @@ export function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{systemStats.totalNotes}</div>
-            <p className="text-xs text-muted-foreground">
-              Across all users
-            </p>
+            <p className="text-xs text-muted-foreground">Across all users</p>
           </CardContent>
         </Card>
 
@@ -281,9 +291,7 @@ export function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{systemStats.systemUptime}</div>
-            <p className="text-xs text-muted-foreground">
-              Since last restart
-            </p>
+            <p className="text-xs text-muted-foreground">Since last restart</p>
           </CardContent>
         </Card>
 
@@ -294,9 +302,7 @@ export function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{systemStats.memoryUsage}%</div>
-            <p className="text-xs text-muted-foreground">
-              Current usage
-            </p>
+            <p className="text-xs text-muted-foreground">Current usage</p>
           </CardContent>
         </Card>
       </div>
@@ -333,9 +339,7 @@ export function AdminPage() {
                 <Users className="h-5 w-5" />
                 User Management
               </CardTitle>
-              <CardDescription>
-                Manage user accounts, roles, and permissions
-              </CardDescription>
+              <CardDescription>Manage user accounts, roles, and permissions</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-4">
@@ -445,9 +449,7 @@ export function AdminPage() {
                   <Server className="h-5 w-5" />
                   System Resources
                 </CardTitle>
-                <CardDescription>
-                  Monitor system performance and resource usage
-                </CardDescription>
+                <CardDescription>Monitor system performance and resource usage</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -497,9 +499,7 @@ export function AdminPage() {
                   <Database className="h-5 w-5" />
                   Database Statistics
                 </CardTitle>
-                <CardDescription>
-                  Overview of data storage and usage
-                </CardDescription>
+                <CardDescription>Overview of data storage and usage</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -553,13 +553,15 @@ export function AdminPage() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <h3 className="font-medium">{announcement.title}</h3>
-                          <Badge variant={announcement.isActive ? "default" : "secondary"}>
-                            {announcement.isActive ? "Active" : "Inactive"}
+                          <Badge variant={announcement.isActive ? 'default' : 'secondary'}>
+                            {announcement.isActive ? 'Active' : 'Inactive'}
                           </Badge>
                           <Badge variant="outline">{announcement.type}</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">{announcement.content}</p>
-                        <p className="text-xs text-muted-foreground">Created: {announcement.createdAt}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Created: {announcement.createdAt}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Switch
@@ -592,9 +594,7 @@ export function AdminPage() {
                 <Lock className="h-5 w-5" />
                 Security Settings
               </CardTitle>
-              <CardDescription>
-                Configure security policies and access controls
-              </CardDescription>
+              <CardDescription>Configure security policies and access controls</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
@@ -647,15 +647,15 @@ export function AdminPage() {
                 <BarChart3 className="h-5 w-5" />
                 Usage Analytics
               </CardTitle>
-              <CardDescription>
-                View usage statistics and trends
-              </CardDescription>
+              <CardDescription>View usage statistics and trends</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-center py-8 text-muted-foreground">
                 <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>Analytics dashboard coming soon...</p>
-                <p className="text-sm">Track user engagement, feature usage, and system performance metrics.</p>
+                <p className="text-sm">
+                  Track user engagement, feature usage, and system performance metrics.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -667,9 +667,7 @@ export function AdminPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>User Details</DialogTitle>
-            <DialogDescription>
-              View and manage user account information
-            </DialogDescription>
+            <DialogDescription>View and manage user account information</DialogDescription>
           </DialogHeader>
           {selectedUser && (
             <div className="space-y-4">
@@ -705,9 +703,7 @@ export function AdminPage() {
             <Button variant="outline" onClick={() => setIsUserDialogOpen(false)}>
               Close
             </Button>
-            <Button onClick={() => setIsUserDialogOpen(false)}>
-              Save Changes
-            </Button>
+            <Button onClick={() => setIsUserDialogOpen(false)}>Save Changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -717,9 +713,7 @@ export function AdminPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create Announcement</DialogTitle>
-            <DialogDescription>
-              Create a new system-wide announcement
-            </DialogDescription>
+            <DialogDescription>Create a new system-wide announcement</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -749,10 +743,12 @@ export function AdminPage() {
             <Button variant="outline" onClick={() => setIsAnnouncementDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => {
-              setIsAnnouncementDialogOpen(false)
-              toast.success('Announcement created successfully')
-            }}>
+            <Button
+              onClick={() => {
+                setIsAnnouncementDialogOpen(false)
+                toast.success('Announcement created successfully')
+              }}
+            >
               Create Announcement
             </Button>
           </DialogFooter>

@@ -10,6 +10,7 @@ interface LoginResponse {
     id: string
     email: string
     name: string
+    role: 'admin' | 'user'
     mfaEnabled: boolean
     createdAt: string
   }
@@ -22,6 +23,7 @@ interface RegisterResponse {
     id: string
     email: string
     name: string
+    role: 'admin' | 'user'
     mfaEnabled: boolean
     createdAt: string
   }
@@ -147,51 +149,109 @@ class ApiClient {
 
   // Authentication methods
   async login(email: string, password: string): Promise<LoginResponse> {
-    const response = await this.request<LoginResponse>('/auth/login', {
+    const response = await this.request<any>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     })
 
     if (response.token) {
       this.token = response.token
+
+      // Transform backend response to frontend format
+      const transformedResponse: LoginResponse = {
+        token: response.token,
+        user: {
+          id: response.user_id || '',
+          email: email, // Store the email we used for login
+          name: '', // We'll get the name from other endpoints or registration
+          role: response.is_admin ? 'admin' : 'user',
+          mfaEnabled: response.mfa_required || false,
+          createdAt: new Date().toISOString(),
+        },
+        requiresMFA: response.mfa_required,
+      }
+
       if (typeof window !== 'undefined') {
         localStorage.setItem('token', response.token)
-        localStorage.setItem('user', JSON.stringify(response.user))
+        localStorage.setItem('user', JSON.stringify(transformedResponse.user))
       }
+
+      return transformedResponse
     }
 
     return response
   }
 
   async register(email: string, password: string, name: string): Promise<RegisterResponse> {
-    const response = await this.request<RegisterResponse>('/auth/register', {
+    const response = await this.request<any>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, name }),
     })
 
     if (response.token) {
       this.token = response.token
+
+      // Transform backend response to frontend format
+      const transformedResponse: RegisterResponse = {
+        token: response.token,
+        user: {
+          id: response.user_id || '',
+          email: email,
+          name: name,
+          role: response.is_admin ? 'admin' : 'user',
+          mfaEnabled: false,
+          createdAt: new Date().toISOString(),
+        },
+      }
+
       if (typeof window !== 'undefined') {
         localStorage.setItem('token', response.token)
-        localStorage.setItem('user', JSON.stringify(response.user))
+        localStorage.setItem('user', JSON.stringify(transformedResponse.user))
       }
+
+      return transformedResponse
     }
 
     return response
   }
 
   async verifyMFA(code: string): Promise<LoginResponse> {
-    const response = await this.request<LoginResponse>('/auth/mfa/verify', {
+    const response = await this.request<any>('/auth/mfa/verify', {
       method: 'POST',
       body: JSON.stringify({ code }),
     })
 
     if (response.token) {
       this.token = response.token
+
+      // Get the stored user data to preserve email and name
+      let storedUser: any = {}
+      if (typeof window !== 'undefined') {
+        const userStr = localStorage.getItem('user')
+        if (userStr) {
+          storedUser = JSON.parse(userStr)
+        }
+      }
+
+      // Transform backend response to frontend format
+      const transformedResponse: LoginResponse = {
+        token: response.token,
+        user: {
+          id: response.user_id || storedUser.id || '',
+          email: storedUser.email || '',
+          name: storedUser.name || '',
+          role: response.is_admin ? 'admin' : 'user',
+          mfaEnabled: true,
+          createdAt: storedUser.createdAt || new Date().toISOString(),
+        },
+      }
+
       if (typeof window !== 'undefined') {
         localStorage.setItem('token', response.token)
-        localStorage.setItem('user', JSON.stringify(response.user))
+        localStorage.setItem('user', JSON.stringify(transformedResponse.user))
       }
+
+      return transformedResponse
     }
 
     return response

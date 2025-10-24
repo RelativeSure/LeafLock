@@ -5,7 +5,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -43,7 +49,7 @@ export function SettingsPage() {
   }, [settings])
 
   const handleSettingChange = (key: string, value: any) => {
-    setLocalSettings(prev => ({ ...prev, [key]: value }))
+    setLocalSettings((prev) => ({ ...prev, [key]: value }))
     setHasChanges(true)
   }
 
@@ -157,9 +163,7 @@ export function SettingsPage() {
                 <User className="h-5 w-5" />
                 General Preferences
               </CardTitle>
-              <CardDescription>
-                Configure your basic LeafLock preferences
-              </CardDescription>
+              <CardDescription>Configure your basic LeafLock preferences</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -226,7 +230,9 @@ export function SettingsPage() {
                       min="5"
                       max="300"
                       value={localSettings.autoSaveInterval}
-                      onChange={(e) => handleSettingChange('autoSaveInterval', parseInt(e.target.value))}
+                      onChange={(e) =>
+                        handleSettingChange('autoSaveInterval', parseInt(e.target.value))
+                      }
                       className="w-32"
                     />
                   </div>
@@ -244,9 +250,7 @@ export function SettingsPage() {
                 <Palette className="h-5 w-5" />
                 Appearance
               </CardTitle>
-              <CardDescription>
-                Customize the look and feel of LeafLock
-              </CardDescription>
+              <CardDescription>Customize the look and feel of LeafLock</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
@@ -269,7 +273,8 @@ export function SettingsPage() {
               <Alert>
                 <Globe className="h-4 w-4" />
                 <AlertDescription>
-                  Theme changes are applied immediately. The system theme follows your operating system's preference.
+                  Theme changes are applied immediately. The system theme follows your operating
+                  system's preference.
                 </AlertDescription>
               </Alert>
             </CardContent>
@@ -284,9 +289,7 @@ export function SettingsPage() {
                 <Bell className="h-5 w-5" />
                 Notifications
               </CardTitle>
-              <CardDescription>
-                Configure how you receive notifications
-              </CardDescription>
+              <CardDescription>Configure how you receive notifications</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
@@ -300,7 +303,9 @@ export function SettingsPage() {
                   <Switch
                     id="notificationsEnabled"
                     checked={localSettings.notificationsEnabled}
-                    onCheckedChange={(checked) => handleSettingChange('notificationsEnabled', checked)}
+                    onCheckedChange={(checked) =>
+                      handleSettingChange('notificationsEnabled', checked)
+                    }
                   />
                 </div>
 
@@ -314,7 +319,9 @@ export function SettingsPage() {
                   <Switch
                     id="emailNotifications"
                     checked={localSettings.emailNotifications}
-                    onCheckedChange={(checked) => handleSettingChange('emailNotifications', checked)}
+                    onCheckedChange={(checked) =>
+                      handleSettingChange('emailNotifications', checked)
+                    }
                   />
                 </div>
               </div>
@@ -358,7 +365,9 @@ export function SettingsPage() {
                     <Switch
                       id="encryptionEnabled"
                       checked={localSettings.encryptionEnabled}
-                      onCheckedChange={(checked) => handleSettingChange('encryptionEnabled', checked)}
+                      onCheckedChange={(checked) =>
+                        handleSettingChange('encryptionEnabled', checked)
+                      }
                     />
                   </div>
                 </div>
@@ -366,8 +375,8 @@ export function SettingsPage() {
                 <Alert>
                   <Shield className="h-4 w-4" />
                   <AlertDescription>
-                    When encryption is enabled, your notes are encrypted in your browser before being sent to our servers.
-                    Only you can decrypt them with your password.
+                    When encryption is enabled, your notes are encrypted in your browser before
+                    being sent to our servers. Only you can decrypt them with your password.
                   </AlertDescription>
                 </Alert>
               </div>
@@ -383,9 +392,7 @@ export function SettingsPage() {
                 <Download className="h-5 w-5" />
                 Data Management
               </CardTitle>
-              <CardDescription>
-                Export, import, or manage your data
-              </CardDescription>
+              <CardDescription>Export, import, or manage your data</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
@@ -433,7 +440,8 @@ export function SettingsPage() {
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
-                    Account deletion is permanent and cannot be undone. All your notes, templates, and settings will be permanently deleted.
+                    Account deletion is permanent and cannot be undone. All your notes, templates,
+                    and settings will be permanently deleted.
                   </AlertDescription>
                 </Alert>
               </div>

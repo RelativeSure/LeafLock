@@ -40,11 +40,9 @@ export function ProtectedRoute({
           </CardHeader>
           <CardContent className="space-y-4">
             <Alert variant="destructive">
-              <AlertDescription>
-                You must be logged in to access this page.
-              </AlertDescription>
+              <AlertDescription>You must be logged in to access this page.</AlertDescription>
             </Alert>
-            <Button onClick={() => window.location.href = '/auth/login'} className="w-full">
+            <Button onClick={() => (window.location.href = '/auth/login')} className="w-full">
               Go to Login
             </Button>
           </CardContent>
@@ -66,10 +64,11 @@ export function ProtectedRoute({
           <CardContent className="space-y-4">
             <Alert variant="destructive">
               <AlertDescription>
-                You do not have permission to access this page. Only administrators can access this resource.
+                You do not have permission to access this page. Only administrators can access this
+                resource.
               </AlertDescription>
             </Alert>
-            <Button onClick={() => window.location.href = fallbackRoute} className="w-full">
+            <Button onClick={() => (window.location.href = fallbackRoute)} className="w-full">
               Go Back
             </Button>
           </CardContent>

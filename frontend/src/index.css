@@ -423,11 +423,7 @@
 [data-slot='dialog-overlay'] {
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  background: linear-gradient(
-    135deg,
-    rgba(0, 0, 0, 0.4) 0%,
-    rgba(0, 0, 0, 0.3) 100%
-  );
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.3) 100%);
 }
 
 [data-slot='dialog-content'] {

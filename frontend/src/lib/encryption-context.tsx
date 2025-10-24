@@ -22,31 +22,37 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
     }
   }, [])
 
-  const encryptText = useCallback(async (text: string): Promise<string> => {
-    if (!encryptionKey) {
-      throw new Error('Encryption key not set')
-    }
+  const encryptText = useCallback(
+    async (text: string): Promise<string> => {
+      if (!encryptionKey) {
+        throw new Error('Encryption key not set')
+      }
 
-    // Simple base64 encoding for now - in production, use proper encryption
-    // This is a placeholder implementation
-    const encoded = btoa(unescape(encodeURIComponent(text)))
-    return encoded
-  }, [encryptionKey])
+      // Simple base64 encoding for now - in production, use proper encryption
+      // This is a placeholder implementation
+      const encoded = btoa(unescape(encodeURIComponent(text)))
+      return encoded
+    },
+    [encryptionKey]
+  )
 
-  const decryptText = useCallback(async (text: string): Promise<string> => {
-    if (!encryptionKey) {
-      throw new Error('Encryption key not set')
-    }
+  const decryptText = useCallback(
+    async (text: string): Promise<string> => {
+      if (!encryptionKey) {
+        throw new Error('Encryption key not set')
+      }
 
-    try {
-      // Simple base64 decoding for now - in production, use proper decryption
-      const decoded = decodeURIComponent(escape(atob(text)))
-      return decoded
-    } catch (error) {
-      console.error('Decryption error:', error)
-      return text // Return original text if decryption fails
-    }
-  }, [encryptionKey])
+      try {
+        // Simple base64 decoding for now - in production, use proper decryption
+        const decoded = decodeURIComponent(escape(atob(text)))
+        return decoded
+      } catch (error) {
+        console.error('Decryption error:', error)
+        return text // Return original text if decryption fails
+      }
+    },
+    [encryptionKey]
+  )
 
   const handleSetEncryptionKey = useCallback((key: string) => {
     setEncryptionKey(key)
