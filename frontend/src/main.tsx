@@ -22,7 +22,7 @@ window.addEventListener('unhandledrejection', (event) => {
 
 console.log('LeafLock initializing...', {
   env: import.meta.env.MODE,
-  apiUrl: import.meta.env.VITE_API_URL,
+  apiUrl: import.meta.env.VITE_API_URL || (typeof window !== 'undefined' ? window.location.origin + '/api/v1' : 'http://localhost:8080/api/v1'),
   origin: window.location.origin,
   userAgent: navigator.userAgent,
   timestamp: new Date().toISOString(),

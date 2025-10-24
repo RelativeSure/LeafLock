@@ -32,8 +32,12 @@ export const useAuthStore = create<AuthState>()(
             set({ user: userData })
             console.log('Found stored user:', userData.email)
             // Verify token is still valid by making a health check
-            await apiClient.healthCheck()
-            console.log('Token validation successful')
+            try {
+              await apiClient.healthCheck()
+              console.log('Token validation successful')
+            } catch (error) {
+              console.warn('Health check failed, but continuing with stored token:', error)
+            }
           } catch (error) {
             console.error('Error parsing stored user or token invalid:', error)
             localStorage.removeItem('user')
