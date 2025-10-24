@@ -22,6 +22,7 @@ export const useAuthStore = create<AuthState>()(
       isLoading: true,
 
       initialize: async () => {
+        console.log('Auth store initializing...')
         const storedUser = localStorage.getItem('user')
         const storedToken = localStorage.getItem('token')
 
@@ -29,15 +30,20 @@ export const useAuthStore = create<AuthState>()(
           try {
             const userData = JSON.parse(storedUser)
             set({ user: userData })
+            console.log('Found stored user:', userData.email)
             // Verify token is still valid by making a health check
             await apiClient.healthCheck()
+            console.log('Token validation successful')
           } catch (error) {
             console.error('Error parsing stored user or token invalid:', error)
             localStorage.removeItem('user')
             localStorage.removeItem('token')
             set({ user: null })
           }
+        } else {
+          console.log('No stored user/token found')
         }
+        console.log('Auth store initialization complete, setting isLoading to false')
         set({ isLoading: false })
       },
 

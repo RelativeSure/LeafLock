@@ -24,6 +24,8 @@ console.log('LeafLock initializing...', {
   env: import.meta.env.MODE,
   apiUrl: import.meta.env.VITE_API_URL,
   origin: window.location.origin,
+  userAgent: navigator.userAgent,
+  timestamp: new Date().toISOString(),
 })
 
 const queryClient = new QueryClient({
