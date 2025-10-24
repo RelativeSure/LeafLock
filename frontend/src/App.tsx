@@ -5,6 +5,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { EncryptionProvider } from './lib/encryption-context'
 import { ConfigDebug } from './components/debug/ConfigDebug'
 import { AppErrorBoundary } from './components/common/AppErrorBoundary'
+import { Toaster } from './components/ui/sonner'
 
 const App: React.FC = () => (
   <AppErrorBoundary>

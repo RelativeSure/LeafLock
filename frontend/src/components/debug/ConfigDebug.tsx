@@ -14,8 +14,7 @@ export function ConfigDebug() {
   const [isVisible, setIsVisible] = React.useState(false)
 
   // Only show in development or when explicitly enabled
-  const shouldShow = config.environment === 'development' ||
-                    process.env.VITE_SHOW_CONFIG === 'true'
+  const shouldShow = config.environment === 'development' || process.env.VITE_SHOW_CONFIG === 'true'
 
   if (!shouldShow) {
     return null
@@ -36,20 +35,10 @@ export function ConfigDebug() {
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm">Configuration Debug</CardTitle>
           <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={copyToClipboard}
-              className="h-6 w-6 p-0"
-            >
+            <Button size="sm" variant="ghost" onClick={copyToClipboard} className="h-6 w-6 p-0">
               <Copy className="h-3 w-3" />
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={refreshConfig}
-              className="h-6 w-6 p-0"
-            >
+            <Button size="sm" variant="ghost" onClick={refreshConfig} className="h-6 w-6 p-0">
               <RefreshCw className="h-3 w-3" />
             </Button>
             <Button

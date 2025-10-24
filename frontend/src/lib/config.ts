@@ -3,7 +3,7 @@
  * Automatically detects service URLs based on environment
  */
 
-interface Config {
+export interface Config {
   apiUrl: string
   environment: 'development' | 'production' | 'preview'
   isRailway: boolean
@@ -19,8 +19,7 @@ function isRailwayEnvironment(): boolean {
     process.env.RAILWAY_PROJECT_ID ||
     process.env.RAILWAY_SERVICE_NAME ||
     // Check for Railway-specific environment variables
-    (typeof window !== 'undefined' &&
-     window.location.hostname.includes('railway.app'))
+    (typeof window !== 'undefined' && window.location.hostname.includes('railway.app'))
   )
 }
 
@@ -62,9 +61,8 @@ function resolveApiUrl(): string {
   // 2. Railway service discovery (automatic - no manual config needed!)
   if (isRailwayEnvironment()) {
     // Try Railway's automatic service variables first (most reliable)
-    const automaticBackendUrl = process.env.BACKEND_URL ||
-                               process.env.API_URL ||
-                               process.env.SERVER_URL
+    const automaticBackendUrl =
+      process.env.BACKEND_URL || process.env.API_URL || process.env.SERVER_URL
 
     if (automaticBackendUrl) {
       return `${automaticBackendUrl}/api/v1`
@@ -125,8 +123,7 @@ function resolveApiUrl(): string {
  * Get service name from Railway environment
  */
 function getServiceName(): string | undefined {
-  return process.env.RAILWAY_SERVICE_NAME ||
-         process.env.VITE_SERVICE_NAME
+  return process.env.RAILWAY_SERVICE_NAME || process.env.VITE_SERVICE_NAME
 }
 
 /**

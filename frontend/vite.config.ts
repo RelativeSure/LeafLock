@@ -27,9 +27,10 @@ const resolveDevProxyTarget = (): string => {
     }
 
     // Try to find backend service URL
-    const backendUrl = process.env.RAILWAY_BACKEND_URL ||
-                      process.env.RAILWAY_API_URL ||
-                      process.env.RAILWAY_SERVER_URL
+    const backendUrl =
+      process.env.RAILWAY_BACKEND_URL ||
+      process.env.RAILWAY_API_URL ||
+      process.env.RAILWAY_SERVER_URL
     if (backendUrl) {
       return backendUrl
     }

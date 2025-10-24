@@ -31,10 +31,13 @@ export function useEnvironment(): {
   isProduction: boolean
   isPreview: boolean
 } {
-  return useMemo(() => ({
-    environment: config.environment,
-    isDevelopment: config.environment === 'development',
-    isProduction: config.environment === 'production',
-    isPreview: config.environment === 'preview',
-  }), [])
+  return useMemo(
+    () => ({
+      environment: config.environment,
+      isDevelopment: config.environment === 'development',
+      isProduction: config.environment === 'production',
+      isPreview: config.environment === 'preview',
+    }),
+    []
+  )
 }
