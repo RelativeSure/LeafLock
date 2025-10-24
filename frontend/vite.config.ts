@@ -80,12 +80,7 @@ export default defineConfig({
               return 'crypto-core'
             }
 
-            // Separate lowlight to avoid circular dependency with 'en' language grammar
-            if (id.includes('lowlight')) {
-              return 'syntax-highlighting'
-            }
-
-            if (id.includes('@tiptap') || id.includes('tiptap')) {
+            if (id.includes('@tiptap') || id.includes('tiptap') || id.includes('lowlight')) {
               return 'editor-core'
             }
 
