@@ -38,8 +38,7 @@ export function ExportImportDialog() {
 
     downloadJSON(data, `leaflock-notes-${new Date().toISOString().split('T')[0]}.json`)
 
-    toast({
-      title: 'Notes exported',
+    toast('Notes exported', {
       description: `Exported ${data.notes.length} notes, ${folders.length} folders, and ${tags.length} tags.`,
     })
   }
@@ -54,8 +53,7 @@ export function ExportImportDialog() {
 
     downloadJSON(data, `leaflock-templates-${new Date().toISOString().split('T')[0]}.json`)
 
-    toast({
-      title: 'Templates exported',
+    toast('Templates exported', {
       description: `Exported ${templates.length} templates.`,
     })
   }
@@ -105,10 +103,9 @@ export function ExportImportDialog() {
     )
 
     // Log the export action
-    ActivityLogger.log(user.id, user.name, user.email, 'data_export')
+    ActivityLogger.log(user.id, user.name, user.email, 'data_export', true)
 
-    toast({
-      title: 'Account data exported',
+    toast('Account data exported', {
       description: 'Your complete account data has been exported in compliance with GDPR.',
     })
   }
@@ -172,17 +169,14 @@ export function ExportImportDialog() {
           })
         }
 
-        toast({
-          title: 'Import successful',
+        toast('Import successful', {
           description: `Imported ${importedCount.notes} notes, ${importedCount.folders} folders, ${importedCount.tags} tags, and ${importedCount.templates} templates.`,
         })
 
         setIsOpen(false)
       } catch (error) {
-        toast({
-          title: 'Import failed',
+        toast('Import failed', {
           description: 'The file format is invalid. Please select a valid LeafLock backup file.',
-          variant: 'destructive',
         })
       }
     }

@@ -8,7 +8,9 @@ describe('utils', () => {
     })
 
     it('should handle conditional classes', () => {
-      expect(cn('class1', true && 'class2', false && 'class3')).toBe('class1 class2')
+      const condition1 = true
+      const condition2 = false
+      expect(cn('class1', condition1 && 'class2', condition2 && 'class3')).toBe('class1 class2')
     })
 
     it('should handle empty strings', () => {

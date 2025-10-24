@@ -48,16 +48,13 @@ export function TrashDialog() {
     try {
       await restoreFromTrash(noteId)
       await loadTrashedNotes() // Reload the list
-      toast({
-        title: 'Note restored',
+      toast('Note restored', {
         description: `"${noteTitle}" has been restored.`,
       })
     } catch (error) {
       console.error('Failed to restore note:', error)
-      toast({
-        title: 'Error',
+      toast('Error', {
         description: 'Failed to restore note.',
-        variant: 'destructive',
       })
     }
   }
@@ -66,17 +63,13 @@ export function TrashDialog() {
     try {
       await deleteNote(noteId)
       await loadTrashedNotes() // Reload the list
-      toast({
-        title: 'Note deleted permanently',
+      toast('Note deleted permanently', {
         description: `"${noteTitle}" has been permanently deleted.`,
-        variant: 'destructive',
       })
     } catch (error) {
       console.error('Failed to delete note:', error)
-      toast({
-        title: 'Error',
+      toast('Error', {
         description: 'Failed to delete note.',
-        variant: 'destructive',
       })
     }
   }
@@ -86,16 +79,13 @@ export function TrashDialog() {
       setIsLoading(true)
       await emptyTrash()
       await loadTrashedNotes() // Reload the list
-      toast({
-        title: 'Trash emptied',
+      toast('Trash emptied', {
         description: 'All notes in trash have been permanently deleted.',
       })
     } catch (error) {
       console.error('Failed to empty trash:', error)
-      toast({
-        title: 'Error',
+      toast('Error', {
         description: 'Failed to empty trash.',
-        variant: 'destructive',
       })
     } finally {
       setIsLoading(false)
