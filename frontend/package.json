@@ -27,7 +27,7 @@
     "clean": "rm -rf dist node_modules/.vite coverage",
     "analyze": "vite build --mode analyze",
     "serve": "vite preview",
-    "lhci": "lhci autorun",
+    "lhci": "sh scripts/lighthouse-check.sh",
     "check-all": "pnpm run type-check && pnpm run lint && pnpm run format:check && pnpm run test"
   },
   "dependencies": {
