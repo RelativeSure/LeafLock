@@ -275,6 +275,80 @@ Look for:
 
 **Note:** Since the backend is private-only, you cannot test it directly. All API requests must go through the frontend proxy.
 
+## Railway PR Preview Deployments
+
+<Badge text="IMPORTANT" variant="tip" />
+
+Railway PR deployments create **separate instances** of both frontend and backend services. For PRs to work correctly:
+
+### Backend PR Configuration
+
+**Required**: `backend/railway.toml` sets `APP_ENV=development` by default:
+
+```toml
+[deploy.env]
+APP_ENV = "development"  # Auto-allows *.railway.app CORS
+```
+
+This automatically allows all `*.railway.app` subdomains for CORS without manual configuration.
+
+### Frontend PR Configuration
+
+**Critical**: Do **NOT** set `VITE_API_URL` in Railway environment variables for PR deployments.
+
+**Why?** The frontend entrypoint (`docker-entrypoint.sh`) auto-discovers the PR backend via Railway's service discovery:
+
+1. Checks Railway-injected environment variables (`RAILWAY_BACKEND_*_URL`)
+2. Uses DNS discovery for service names (`backend`, `leaflock-backend`)
+3. Falls back to Railway private networking
+
+**If `VITE_API_URL` is set**, it overrides auto-discovery and points to that URL (usually production), causing CORS errors.
+
+### Common PR Deployment Issues
+
+<Card title="🔴 PR Frontend → Production Backend CORS Error" icon="error">
+```
+Access to fetch at 'https://leaflock.app/api/v1/auth/login' from origin
+'https://frontend-leaflock-pr-363.up.railway.app' has been blocked by CORS policy
+```
+</Card>
+
+**Cause**: `VITE_API_URL=https://leaflock.app` is set in Railway, forcing PR frontend to use production backend.
+
+**Solution**:
+1. **Remove** `VITE_API_URL` from Railway environment variables (for PR deployments)
+2. Ensure `APP_ENV=development` is set on backend (already in `railway.toml`)
+3. Railway will auto-discover the PR backend internally
+
+**Production Configuration**:
+```bash
+# Production frontend should use relative path
+VITE_API_URL=/api/v1
+
+# Production backend should use explicit mode
+APP_ENV=production
+CORS_ORIGINS=https://leaflock.app,https://www.leaflock.app
+```
+
+**PR Deployment Configuration**:
+```bash
+# Backend (from railway.toml)
+APP_ENV=development  # Auto-allows *.railway.app
+
+# Frontend (Railway env vars)
+# Do NOT set VITE_API_URL - let auto-discovery work
+```
+
+### Verifying PR Deployment
+
+Check frontend logs in Railway for backend discovery:
+
+```
+🔗 Proxying API requests to http://backend-pr-363.railway.internal:8080 (source: RAILWAY_BACKEND_PRIVATE_DOMAIN)
+```
+
+If you see `https://leaflock.app` instead, `VITE_API_URL` is incorrectly set.
+
 ## Environment Variable Issues
 
 ### ENABLE_REGISTRATION Not Working

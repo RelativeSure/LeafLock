@@ -158,12 +158,25 @@ Railway applies plugin variables automatically; only set secrets that are not pr
 - Update backend `CORS_ORIGINS` to include the new domain.
 - Toggle `ENABLE_REGISTRATION` based on whether sign-ups should be public.
 
+## PR Preview Deployments
+
+Railway automatically creates PR preview environments for each pull request. LeafLock is pre-configured for this:
+
+**Backend**: `backend/railway.toml` sets `APP_ENV=development` to auto-allow `*.railway.app` CORS origins.
+
+**Frontend**: **Do NOT set `VITE_API_URL`** in Railway environment variables. The frontend auto-discovers the PR backend via Railway's service discovery.
+
+**Common Issue**: If PR frontend shows CORS errors connecting to production backend (`https://leaflock.app`), remove `VITE_API_URL` from Railway environment variables and redeploy.
+
+See [Railway PR Preview Troubleshooting](/troubleshooting/railway/#railway-pr-preview-deployments) for detailed configuration.
+
 ## Troubleshooting
 
 - **502 from frontend** → backend domain mismatch. Ensure `BACKEND_INTERNAL_URL` points to `leaflock-backend.railway.internal:8080`.
 - **Backend crash loops** → secrets missing; check Railway logs for `FATAL` messages from `config.LoadConfig`.
 - **WebSocket disconnects** → Railway load balancer requires sticky sessions; enable them in service settings.
 - **Slow first request** → backend warms caches on boot (templates, admin, allowlist). Wait for readiness to report `status=ready`.
+- **PR CORS errors** → See [Railway PR Preview Deployments](#pr-preview-deployments) above.
 
 <Aside type="caution">
 Never assign a public domain to the backend service—doing so bypasses CSRF protection and exposes raw APIs to the internet.
