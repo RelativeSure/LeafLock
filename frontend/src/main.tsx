@@ -20,17 +20,10 @@ window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection:', event.reason)
 })
 
-console.log('LeafLock initializing...', {
-  env: import.meta.env.MODE,
-  apiUrl:
-    import.meta.env.VITE_API_URL ||
-    (typeof window !== 'undefined'
-      ? window.location.origin + '/api/v1'
-      : 'http://localhost:8080/api/v1'),
-  origin: window.location.origin,
-  userAgent: navigator.userAgent,
-  timestamp: new Date().toISOString(),
-})
+import { logConfig } from '@/lib/config'
+
+// Log configuration for debugging
+logConfig()
 
 const queryClient = new QueryClient({
   defaultOptions: {

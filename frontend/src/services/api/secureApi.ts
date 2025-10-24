@@ -1,8 +1,6 @@
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  (typeof window !== 'undefined'
-    ? window.location.origin + '/api/v1'
-    : 'http://localhost:8080/api/v1')
+import { config } from '@/lib/config'
+
+const API_BASE_URL = config.apiUrl
 
 interface LoginResponse {
   token: string

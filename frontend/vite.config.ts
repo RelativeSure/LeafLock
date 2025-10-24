@@ -13,11 +13,29 @@ const normalizeHost = (host: string): string => {
 
 // Allow overriding the dev proxy target via VITE_API_URL or dedicated dev variables
 const resolveDevProxyTarget = (): string => {
+  // 1. Direct API URL override (highest priority)
   const envTarget = process.env.VITE_API_URL?.trim() || process.env.VITE_DEV_PROXY_TARGET?.trim()
   if (envTarget && envTarget.length > 0) {
     return envTarget.replace(/\/$/, '')
   }
 
+  // 2. Railway service discovery
+  if (process.env.RAILWAY_ENVIRONMENT) {
+    const railwayInternalHost = process.env.RAILWAY_INTERNAL_HOST
+    if (railwayInternalHost) {
+      return `https://${railwayInternalHost}`
+    }
+
+    // Try to find backend service URL
+    const backendUrl = process.env.RAILWAY_BACKEND_URL ||
+                      process.env.RAILWAY_API_URL ||
+                      process.env.RAILWAY_SERVER_URL
+    if (backendUrl) {
+      return backendUrl
+    }
+  }
+
+  // 3. Granular dev settings
   const protocol = (process.env.VITE_DEV_BACKEND_PROTOCOL || 'http').trim()
   const host = normalizeHost((process.env.VITE_DEV_BACKEND_HOST || 'localhost').trim())
   const port = (process.env.VITE_DEV_BACKEND_PORT || '8080').trim()

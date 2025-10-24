@@ -3,7 +3,7 @@ import { RouterProvider } from '@tanstack/react-router'
 import { router } from './app-router'
 import { ThemeProvider } from './context/ThemeContext'
 import { EncryptionProvider } from './lib/encryption-context'
-import { Toaster } from './components/ui/sonner'
+import { ConfigDebug } from './components/debug/ConfigDebug'
 import { AppErrorBoundary } from './components/common/AppErrorBoundary'
 
 const App: React.FC = () => (
@@ -12,6 +12,7 @@ const App: React.FC = () => (
       <EncryptionProvider>
         <RouterProvider router={router} />
         <Toaster />
+        <ConfigDebug />
       </EncryptionProvider>
     </ThemeProvider>
   </AppErrorBoundary>
