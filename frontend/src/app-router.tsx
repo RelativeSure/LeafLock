@@ -39,7 +39,11 @@ const rootRoute = createRootRoute({
 
 // Landing page route
 const IndexComponent: React.FC = () => {
-  const { user, isLoading } = useAuthStore()
+  const { user, isLoading, initialize } = useAuthStore()
+
+  React.useEffect(() => {
+    initialize()
+  }, [initialize])
 
   React.useEffect(() => {
     if (!isLoading) {
@@ -53,7 +57,10 @@ const IndexComponent: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="text-center space-y-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
     </div>
   )
 }
