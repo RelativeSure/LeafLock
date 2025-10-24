@@ -97,6 +97,17 @@ func (h *NotesHandler) GetNotes(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"notes": notes})
 }
 
+// GetNote godoc
+// @Summary Get a specific note
+// @Description Get a single note by ID for the authenticated user
+// @Tags Notes
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Note ID"
+// @Success 200 {object} map[string]interface{} "Note details"
+// @Failure 400 {object} map[string]interface{} "Invalid note ID"
+// @Failure 404 {object} map[string]interface{} "Note not found"
+// @Router /notes/{id} [get]
 func (h *NotesHandler) GetNote(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 	noteID, err := uuid.Parse(c.Params("id"))
@@ -129,6 +140,18 @@ func (h *NotesHandler) GetNote(c *fiber.Ctx) error {
 	})
 }
 
+// CreateNote godoc
+// @Summary Create a new note
+// @Description Create a new note with encrypted title and content
+// @Tags Notes
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body CreateNoteRequest true "Note creation data"
+// @Success 201 {object} map[string]interface{} "Note created successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes [post]
 func (h *NotesHandler) CreateNote(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 	var req CreateNoteRequest
@@ -181,6 +204,20 @@ func (h *NotesHandler) CreateNote(c *fiber.Ctx) error {
 	})
 }
 
+// UpdateNote godoc
+// @Summary Update a note
+// @Description Update an existing note with new encrypted content
+// @Tags Notes
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Note ID"
+// @Param request body UpdateNoteRequest true "Note update data"
+// @Success 200 {object} map[string]interface{} "Note updated successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 404 {object} map[string]interface{} "Note not found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes/{id} [put]
 func (h *NotesHandler) UpdateNote(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 	noteID, err := uuid.Parse(c.Params("id"))
@@ -271,6 +308,18 @@ func (h *NotesHandler) UpdateNote(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Note updated successfully"})
 }
 
+// DeleteNote godoc
+// @Summary Delete a note
+// @Description Soft delete a note (move to trash)
+// @Tags Notes
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Note ID"
+// @Success 200 {object} map[string]interface{} "Note moved to trash successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid note ID"
+// @Failure 404 {object} map[string]interface{} "Note not found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes/{id} [delete]
 func (h *NotesHandler) DeleteNote(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 	noteID, err := uuid.Parse(c.Params("id"))
@@ -303,6 +352,15 @@ func (h *NotesHandler) DeleteNote(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Note moved to trash successfully"})
 }
 
+// GetTrash godoc
+// @Summary Get trash notes
+// @Description Get all deleted notes for the authenticated user
+// @Tags Notes
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "List of trashed notes"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes/trash [get]
 func (h *NotesHandler) GetTrash(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 	ctx := context.Background()
@@ -349,6 +407,18 @@ func (h *NotesHandler) GetTrash(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"notes": trashedNotes})
 }
 
+// RestoreNote godoc
+// @Summary Restore a note from trash
+// @Description Restore a deleted note back to active state
+// @Tags Notes
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Note ID"
+// @Success 200 {object} map[string]interface{} "Note restored successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid note ID"
+// @Failure 404 {object} map[string]interface{} "Note not found in trash"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes/{id}/restore [post]
 func (h *NotesHandler) RestoreNote(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 	noteID, err := uuid.Parse(c.Params("id"))
@@ -377,7 +447,17 @@ func (h *NotesHandler) RestoreNote(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Note restored successfully"})
 }
 
-// GetNoteVersions returns version history for a note
+// GetNoteVersions godoc
+// @Summary Get note version history
+// @Description Get version history for a specific note
+// @Tags Notes
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Note ID"
+// @Success 200 {object} map[string]interface{} "List of note versions"
+// @Failure 400 {object} map[string]interface{} "Invalid note ID"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes/{id}/versions [get]
 func (h *NotesHandler) GetNoteVersions(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 	noteID, err := uuid.Parse(c.Params("id"))
@@ -426,7 +506,19 @@ func (h *NotesHandler) GetNoteVersions(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"versions": versions})
 }
 
-// RestoreNoteVersion restores a note to a specific version
+// RestoreNoteVersion godoc
+// @Summary Restore note to specific version
+// @Description Restore a note to a previous version from history
+// @Tags Notes
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Note ID"
+// @Param version path int true "Version number to restore"
+// @Success 200 {object} map[string]interface{} "Note restored to version"
+// @Failure 400 {object} map[string]interface{} "Invalid note ID or version"
+// @Failure 404 {object} map[string]interface{} "Version not found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes/{id}/versions/{version}/restore [post]
 func (h *NotesHandler) RestoreNoteVersion(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 	noteID, err := uuid.Parse(c.Params("id"))
@@ -513,6 +605,18 @@ func (h *NotesHandler) RestoreNoteVersion(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Note restored to version " + strconv.Itoa(versionNumber)})
 }
 
+// PermanentlyDeleteNote godoc
+// @Summary Permanently delete a note
+// @Description Permanently delete a note from trash (cannot be recovered)
+// @Tags Notes
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Note ID"
+// @Success 200 {object} map[string]interface{} "Note permanently deleted successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid note ID"
+// @Failure 404 {object} map[string]interface{} "Note not found in trash"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes/{id}/permanent [delete]
 func (h *NotesHandler) PermanentlyDeleteNote(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 	noteID, err := uuid.Parse(c.Params("id"))

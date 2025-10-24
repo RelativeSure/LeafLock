@@ -24,15 +24,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/redis/go-redis/v9"
+	_ "leaflock/auth" // Import auth handlers for Swagger
 	appconfig "leaflock/config"
 	appcrypto "leaflock/crypto"
 	appdb "leaflock/database"
+	_ "leaflock/docs"     // Import docs for Swagger
+	_ "leaflock/handlers" // Import handlers for Swagger
 	appserver "leaflock/server"
 	"leaflock/services"
 	"leaflock/utils"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/redis/go-redis/v9"
 )
 
 // AUTOMATIC DATABASE SETUP - Runs migrations on startup

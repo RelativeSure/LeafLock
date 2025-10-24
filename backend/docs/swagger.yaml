@@ -1,0 +1,1854 @@
+basePath: /api/v1
+definitions:
+  auth.AuthRequest:
+    properties:
+      email:
+        type: string
+      mfa_code:
+        type: string
+      password:
+        minLength: 12
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  auth.AuthResponse:
+    properties:
+      expires_at:
+        type: string
+      is_admin:
+        type: boolean
+      mfa_required:
+        type: boolean
+      session_token:
+        description: For MFA flow
+        type: string
+      token:
+        type: string
+      user_id:
+        type: string
+      workspace_id:
+        type: string
+    type: object
+  auth.ErrorResponse:
+    properties:
+      code:
+        type: string
+      details:
+        additionalProperties: true
+        type: object
+      error:
+        type: string
+    type: object
+  auth.MFASetupResponse:
+    properties:
+      backup_codes:
+        items:
+          type: string
+        type: array
+      qr_code_url:
+        type: string
+      secret:
+        type: string
+    type: object
+  auth.MFAVerifyRequest:
+    properties:
+      code:
+        type: string
+      session_token:
+        type: string
+    required:
+    - code
+    type: object
+  auth.PasswordResetConfirm:
+    properties:
+      new_password:
+        minLength: 12
+        type: string
+      token:
+        type: string
+    required:
+    - new_password
+    - token
+    type: object
+  auth.PasswordResetRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  auth.RegisterRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 12
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  handlers.Announcement:
+    properties:
+      active:
+        type: boolean
+      content:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      dismissible:
+        type: boolean
+      end_date:
+        type: string
+      id:
+        type: string
+      priority:
+        type: integer
+      start_date:
+        type: string
+      style:
+        additionalProperties: true
+        type: object
+      title:
+        type: string
+      updated_at:
+        type: string
+      visibility:
+        description: '''all'' or ''logged_in'''
+        type: string
+    type: object
+  handlers.BulkImportRequest:
+    properties:
+      files:
+        items:
+          $ref: '#/definitions/handlers.ImportRequest'
+        maxItems: 50
+        minItems: 1
+        type: array
+    required:
+    - files
+    type: object
+  handlers.CreateAnnouncementRequest:
+    properties:
+      active:
+        type: boolean
+      content:
+        type: string
+      dismissible:
+        type: boolean
+      end_date:
+        type: string
+      priority:
+        type: integer
+      start_date:
+        type: string
+      style:
+        additionalProperties: true
+        type: object
+      title:
+        type: string
+      visibility:
+        enum:
+        - all
+        - logged_in
+        type: string
+    required:
+    - content
+    - title
+    - visibility
+    type: object
+  handlers.CreateNoteRequest:
+    properties:
+      content_encrypted:
+        type: string
+      title_encrypted:
+        type: string
+    required:
+    - content_encrypted
+    - title_encrypted
+    type: object
+  handlers.CreateShareLinkRequest:
+    properties:
+      expires_in:
+        description: '"1h", "24h", "7d", "30d", or null for never'
+        type: string
+      max_uses:
+        description: null for unlimited
+        type: integer
+      password:
+        description: Optional password protection
+        type: string
+      permission:
+        enum:
+        - read
+        - write
+        type: string
+    required:
+    - permission
+    type: object
+  handlers.DeleteAccountRequest:
+    properties:
+      password:
+        type: string
+    required:
+    - password
+    type: object
+  handlers.ExportDataResponse:
+    properties:
+      export_version:
+        type: string
+      exported_at:
+        type: string
+      folders:
+        items:
+          additionalProperties: true
+          type: object
+        type: array
+      notes:
+        items:
+          additionalProperties: true
+          type: object
+        type: array
+      tags:
+        items:
+          additionalProperties: true
+          type: object
+        type: array
+      templates:
+        items:
+          additionalProperties: true
+          type: object
+        type: array
+      user_id:
+        type: string
+      workspace:
+        additionalProperties: true
+        type: object
+    type: object
+  handlers.ExportRequest:
+    properties:
+      format:
+        enum:
+        - markdown
+        - text
+        - html
+        - json
+        type: string
+    required:
+    - format
+    type: object
+  handlers.ImportRequest:
+    properties:
+      content:
+        type: string
+      filename:
+        type: string
+      format:
+        enum:
+        - markdown
+        - text
+        - html
+        - json
+        type: string
+      title:
+        type: string
+    required:
+    - content
+    - format
+    type: object
+  handlers.ShareLinkResponse:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      has_password:
+        type: boolean
+      id:
+        type: string
+      is_active:
+        type: boolean
+      last_accessed_at:
+        type: string
+      max_uses:
+        type: integer
+      note_id:
+        type: string
+      permission:
+        type: string
+      share_url:
+        type: string
+      token:
+        type: string
+      use_count:
+        type: integer
+    type: object
+  handlers.ShareNoteRequest:
+    properties:
+      permission:
+        enum:
+        - read
+        - write
+        - admin
+        type: string
+      user_email:
+        type: string
+    required:
+    - permission
+    - user_email
+    type: object
+  handlers.UpdateAnnouncementRequest:
+    properties:
+      active:
+        type: boolean
+      content:
+        type: string
+      dismissible:
+        type: boolean
+      end_date:
+        type: string
+      priority:
+        type: integer
+      start_date:
+        type: string
+      style:
+        additionalProperties: true
+        type: object
+      title:
+        type: string
+      visibility:
+        enum:
+        - all
+        - logged_in
+        type: string
+    type: object
+  handlers.UpdateNoteRequest:
+    properties:
+      content_encrypted:
+        type: string
+      title_encrypted:
+        type: string
+    required:
+    - content_encrypted
+    - title_encrypted
+    type: object
+  handlers.UpdateSettingsRequest:
+    properties:
+      theme:
+        type: string
+    type: object
+  handlers.UserSettings:
+    properties:
+      theme:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: A secure notes application with end-to-end encryption and collaboration
+    features
+  title: LeafLock API
+  version: "1.0"
+paths:
+  /account:
+    delete:
+      consumes:
+      - application/json
+      description: Permanently delete user account and all associated data
+      parameters:
+      - description: Password confirmation
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DeleteAccountRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Account deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Invalid password
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete user account
+      tags:
+      - Account
+  /account/export:
+    get:
+      description: Export all user data in JSON format
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Exported data
+          schema:
+            $ref: '#/definitions/handlers.ExportDataResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Export user data
+      tags:
+      - Account
+  /api/v1/admin/announcements:
+    get:
+      consumes:
+      - application/json
+      description: Get all announcements including inactive ones for management
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.Announcement'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all announcements
+      tags:
+      - announcements
+    post:
+      consumes:
+      - application/json
+      description: Create a new system announcement
+      parameters:
+      - description: Announcement data
+        in: body
+        name: announcement
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateAnnouncementRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.Announcement'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create announcement
+      tags:
+      - announcements
+  /api/v1/admin/announcements/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an announcement
+      parameters:
+      - description: Announcement ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete announcement
+      tags:
+      - announcements
+    put:
+      consumes:
+      - application/json
+      description: Update an existing announcement
+      parameters:
+      - description: Announcement ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated announcement data
+        in: body
+        name: announcement
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateAnnouncementRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update announcement
+      tags:
+      - announcements
+  /api/v1/announcements:
+    get:
+      consumes:
+      - application/json
+      description: Get all active announcements visible to the current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handlers.Announcement'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get active announcements
+      tags:
+      - announcements
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate a user with email and password
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.AuthRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "423":
+          description: Locked
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Login
+      tags:
+      - Authentication
+  /auth/logout:
+    post:
+      description: End user session
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Logout
+      tags:
+      - Authentication
+  /auth/mfa/backup-codes/regenerate:
+    post:
+      consumes:
+      - application/json
+      description: Generate new MFA backup codes
+      parameters:
+      - description: Password for verification
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.MFASetupResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Regenerate backup codes
+      tags:
+      - Authentication
+  /auth/mfa/disable:
+    post:
+      consumes:
+      - application/json
+      description: Disable MFA after verifying code
+      parameters:
+      - description: TOTP code or backup code
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.MFAVerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Disable MFA
+      tags:
+      - Authentication
+  /auth/mfa/enable:
+    post:
+      consumes:
+      - application/json
+      description: Enable MFA after verifying TOTP code
+      parameters:
+      - description: TOTP code and secret
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.MFASetupResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Enable MFA
+      tags:
+      - Authentication
+  /auth/mfa/setup:
+    post:
+      description: Generate TOTP secret for MFA setup
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.MFASetupResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Begin MFA setup
+      tags:
+      - Authentication
+  /auth/mfa/status:
+    get:
+      description: Check if MFA is enabled and how many backup codes remain
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get MFA status
+      tags:
+      - Authentication
+  /auth/mfa/verify:
+    post:
+      consumes:
+      - application/json
+      description: Complete login by verifying MFA code
+      parameters:
+      - description: MFA code and session token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.MFAVerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Verify MFA code
+      tags:
+      - Authentication
+  /auth/password/reset-confirm:
+    post:
+      consumes:
+      - application/json
+      description: Set new password using reset token
+      parameters:
+      - description: Reset token and new password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.PasswordResetConfirm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Confirm password reset
+      tags:
+      - Authentication
+  /auth/password/reset-request:
+    post:
+      consumes:
+      - application/json
+      description: Send password reset email
+      parameters:
+      - description: Email address
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.PasswordResetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Request password reset
+      tags:
+      - Authentication
+  /auth/password/reset-verify:
+    get:
+      consumes:
+      - application/json
+      description: Check if password reset token is valid
+      parameters:
+      - description: Reset token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Verify reset token
+      tags:
+      - Authentication
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account
+      parameters:
+      - description: Registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/auth.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - Authentication
+  /auth/registration:
+    get:
+      description: Check if new user registration is allowed
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      summary: Get registration status
+      tags:
+      - Authentication
+  /notes:
+    get:
+      description: Get all notes for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of notes
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all notes
+      tags:
+      - Notes
+    post:
+      consumes:
+      - application/json
+      description: Create a new note with encrypted title and content
+      parameters:
+      - description: Note creation data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateNoteRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Note created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new note
+      tags:
+      - Notes
+  /notes/{id}:
+    delete:
+      description: Soft delete a note (move to trash)
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Note moved to trash successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid note ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Note not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a note
+      tags:
+      - Notes
+    get:
+      description: Get a single note by ID for the authenticated user
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Note details
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid note ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Note not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a specific note
+      tags:
+      - Notes
+    put:
+      consumes:
+      - application/json
+      description: Update an existing note with new encrypted content
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Note update data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateNoteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Note updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Note not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a note
+      tags:
+      - Notes
+  /notes/{id}/collaborators:
+    get:
+      description: Get list of users who have access to a note
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of collaborators
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid note ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Note not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get note collaborators
+      tags:
+      - Collaboration
+  /notes/{id}/collaborators/{userId}:
+    delete:
+      description: Remove a user's access to a shared note
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User ID to remove
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Collaborator removed successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid note ID or user ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Note not found or collaboration not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove collaborator from note
+      tags:
+      - Collaboration
+  /notes/{id}/export:
+    post:
+      consumes:
+      - application/json
+      description: Export a note as markdown, text, HTML, or JSON
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Export format
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ExportRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Note exported successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Note not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Export a note in various formats
+      tags:
+      - Import/Export
+  /notes/{id}/permanent:
+    delete:
+      description: Permanently delete a note from trash (cannot be recovered)
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Note permanently deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid note ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Note not found in trash
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Permanently delete a note
+      tags:
+      - Notes
+  /notes/{id}/restore:
+    post:
+      description: Restore a deleted note back to active state
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Note restored successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid note ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Note not found in trash
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Restore a note from trash
+      tags:
+      - Notes
+  /notes/{id}/share:
+    post:
+      consumes:
+      - application/json
+      description: Share a note with another user by email and set permission level
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Share request data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ShareNoteRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Note shared successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Note or user not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Note already shared with user
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Share a note with another user
+      tags:
+      - Collaboration
+  /notes/{id}/share-links:
+    get:
+      description: Get all share links for a specific note
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid note ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Note not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get share links for a note
+      tags:
+      - ShareLinks
+    post:
+      consumes:
+      - application/json
+      description: Create a public shareable link with read or write permissions
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Share link configuration
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateShareLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.ShareLinkResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Note not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a shareable link for a note
+      tags:
+      - ShareLinks
+  /notes/{id}/versions:
+    get:
+      description: Get version history for a specific note
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of note versions
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid note ID
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get note version history
+      tags:
+      - Notes
+  /notes/{id}/versions/{version}/restore:
+    post:
+      description: Restore a note to a previous version from history
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Version number to restore
+        in: path
+        name: version
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Note restored to version
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid note ID or version
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Version not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Restore note to specific version
+      tags:
+      - Notes
+  /notes/bulk-import:
+    post:
+      consumes:
+      - application/json
+      description: Import multiple notes from various formats
+      parameters:
+      - description: Bulk import data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.BulkImportRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Notes imported successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Import multiple notes at once
+      tags:
+      - Import/Export
+  /notes/import:
+    post:
+      consumes:
+      - application/json
+      description: Import a note from markdown, text, HTML, or JSON format
+      parameters:
+      - description: Import data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ImportRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Note imported successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Import failed
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Import a note from various formats
+      tags:
+      - Import/Export
+  /notes/shared:
+    get:
+      description: Get all notes shared with the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of shared notes
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get shared notes
+      tags:
+      - Collaboration
+  /notes/trash:
+    get:
+      description: Get all deleted notes for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of trashed notes
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get trash notes
+      tags:
+      - Notes
+  /settings:
+    get:
+      description: Get authenticated user's preferences including theme
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User settings
+          schema:
+            $ref: '#/definitions/handlers.UserSettings'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user settings
+      tags:
+      - Settings
+    put:
+      consumes:
+      - application/json
+      description: Update authenticated user's preferences including theme
+      parameters:
+      - description: Settings to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated settings
+          schema:
+            $ref: '#/definitions/handlers.UserSettings'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user settings
+      tags:
+      - Settings
+  /share-links:
+    get:
+      description: Get all share links created by the current user across all notes
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all user's share links
+      tags:
+      - ShareLinks
+  /share-links/{token}:
+    delete:
+      description: Revoke (deactivate) a share link by token
+      parameters:
+      - description: Share link token
+        in: path
+        name: token
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Share link not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Revoke a share link
+      tags:
+      - ShareLinks
+    put:
+      consumes:
+      - application/json
+      description: Update share link properties (extend expiry, change permission,
+        etc.)
+      parameters:
+      - description: Share link token
+        in: path
+        name: token
+        required: true
+        type: string
+      - description: Update fields
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Share link not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a share link
+      tags:
+      - ShareLinks
+  /share/{token}:
+    get:
+      description: Get note content via share link token
+      parameters:
+      - description: Share link token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Link expired or revoked
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Share link not found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Access a note via share link (public endpoint)
+      tags:
+      - ShareLinks
+  /user/storage:
+    get:
+      description: Get current storage usage and limit for the user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Storage information
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to get storage info
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user storage information
+      tags:
+      - Import/Export
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -4,9 +4,10 @@ import (
 	"context"
 	"strings"
 
+	"leaflock/utils"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"leaflock/utils"
 )
 
 // Handler provides HTTP handlers for auth endpoints
@@ -24,12 +25,14 @@ func NewHandler(service *Service) *Handler {
 // Register handles user registration
 // @Summary Register a new user
 // @Description Create a new user account
-// @Tags auth
+// @Tags Authentication
 // @Accept json
 // @Produce json
 // @Param request body RegisterRequest true "Registration details"
-// @Success 200 {object} AuthResponse
+// @Success 201 {object} AuthResponse
 // @Failure 400 {object} ErrorResponse
+// @Failure 409 {object} ErrorResponse
+// @Failure 503 {object} ErrorResponse
 // @Router /auth/register [post]
 func (h *Handler) Register(c *fiber.Ctx) error {
 	var req RegisterRequest
@@ -78,12 +81,14 @@ func (h *Handler) Register(c *fiber.Ctx) error {
 // Login handles user login
 // @Summary Login
 // @Description Authenticate a user with email and password
-// @Tags auth
+// @Tags Authentication
 // @Accept json
 // @Produce json
 // @Param request body AuthRequest true "Login credentials"
 // @Success 200 {object} AuthResponse
+// @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
+// @Failure 423 {object} ErrorResponse
 // @Router /auth/login [post]
 func (h *Handler) Login(c *fiber.Ctx) error {
 	var req AuthRequest
@@ -124,11 +129,12 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 // VerifyMFA handles MFA verification during login
 // @Summary Verify MFA code
 // @Description Complete login by verifying MFA code
-// @Tags auth
+// @Tags Authentication
 // @Accept json
 // @Produce json
 // @Param request body MFAVerifyRequest true "MFA code and session token"
 // @Success 200 {object} AuthResponse
+// @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
 // @Router /auth/mfa/verify [post]
 func (h *Handler) VerifyMFA(c *fiber.Ctx) error {
@@ -161,9 +167,12 @@ func (h *Handler) VerifyMFA(c *fiber.Ctx) error {
 // Logout handles user logout
 // @Summary Logout
 // @Description End user session
-// @Tags auth
+// @Tags Authentication
 // @Security BearerAuth
+// @Produce json
 // @Success 200 {object} map[string]string
+// @Failure 401 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /auth/logout [post]
 func (h *Handler) Logout(c *fiber.Ctx) error {
 	// Get token from Authorization header
@@ -202,10 +211,11 @@ func (h *Handler) Logout(c *fiber.Ctx) error {
 // GetMFAStatus returns MFA status for the current user
 // @Summary Get MFA status
 // @Description Check if MFA is enabled and how many backup codes remain
-// @Tags auth
+// @Tags Authentication
 // @Security BearerAuth
 // @Produce json
 // @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} ErrorResponse
 // @Router /auth/mfa/status [get]
 func (h *Handler) GetMFAStatus(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
@@ -227,10 +237,11 @@ func (h *Handler) GetMFAStatus(c *fiber.Ctx) error {
 // BeginMFASetup starts MFA setup process
 // @Summary Begin MFA setup
 // @Description Generate TOTP secret for MFA setup
-// @Tags auth
+// @Tags Authentication
 // @Security BearerAuth
 // @Produce json
 // @Success 200 {object} MFASetupResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /auth/mfa/setup [post]
 func (h *Handler) BeginMFASetup(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
@@ -275,12 +286,13 @@ func (h *Handler) BeginMFASetup(c *fiber.Ctx) error {
 // EnableMFA enables MFA for a user after verifying the code
 // @Summary Enable MFA
 // @Description Enable MFA after verifying TOTP code
-// @Tags auth
+// @Tags Authentication
 // @Security BearerAuth
 // @Accept json
 // @Produce json
-// @Param request body MFAVerifyRequest true "TOTP code and secret"
+// @Param request body map[string]string true "TOTP code and secret"
 // @Success 200 {object} MFASetupResponse
+// @Failure 400 {object} ErrorResponse
 // @Router /auth/mfa/enable [post]
 func (h *Handler) EnableMFA(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
@@ -312,12 +324,13 @@ func (h *Handler) EnableMFA(c *fiber.Ctx) error {
 // DisableMFA disables MFA for a user
 // @Summary Disable MFA
 // @Description Disable MFA after verifying code
-// @Tags auth
+// @Tags Authentication
 // @Security BearerAuth
 // @Accept json
 // @Produce json
 // @Param request body MFAVerifyRequest true "TOTP code or backup code"
 // @Success 200 {object} map[string]string
+// @Failure 400 {object} ErrorResponse
 // @Router /auth/mfa/disable [post]
 func (h *Handler) DisableMFA(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
@@ -345,12 +358,14 @@ func (h *Handler) DisableMFA(c *fiber.Ctx) error {
 // RegenerateBackupCodes generates new backup codes
 // @Summary Regenerate backup codes
 // @Description Generate new MFA backup codes
-// @Tags auth
+// @Tags Authentication
 // @Security BearerAuth
 // @Accept json
 // @Produce json
 // @Param request body map[string]string true "Password for verification"
 // @Success 200 {object} MFASetupResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
 // @Router /auth/mfa/backup-codes/regenerate [post]
 func (h *Handler) RegenerateBackupCodes(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
@@ -381,11 +396,12 @@ func (h *Handler) RegenerateBackupCodes(c *fiber.Ctx) error {
 // RequestPasswordReset initiates password reset
 // @Summary Request password reset
 // @Description Send password reset email
-// @Tags auth
+// @Tags Authentication
 // @Accept json
 // @Produce json
 // @Param request body PasswordResetRequest true "Email address"
 // @Success 200 {object} map[string]string
+// @Failure 400 {object} ErrorResponse
 // @Router /auth/password/reset-request [post]
 func (h *Handler) RequestPasswordReset(c *fiber.Ctx) error {
 	var req PasswordResetRequest
@@ -409,11 +425,12 @@ func (h *Handler) RequestPasswordReset(c *fiber.Ctx) error {
 // VerifyResetToken verifies a password reset token
 // @Summary Verify reset token
 // @Description Check if password reset token is valid
-// @Tags auth
+// @Tags Authentication
 // @Accept json
 // @Produce json
 // @Param token query string true "Reset token"
 // @Success 200 {object} map[string]bool
+// @Failure 400 {object} ErrorResponse
 // @Router /auth/password/reset-verify [get]
 func (h *Handler) VerifyResetToken(c *fiber.Ctx) error {
 	token := c.Query("token")
@@ -440,11 +457,12 @@ func (h *Handler) VerifyResetToken(c *fiber.Ctx) error {
 // ConfirmPasswordReset completes password reset
 // @Summary Confirm password reset
 // @Description Set new password using reset token
-// @Tags auth
+// @Tags Authentication
 // @Accept json
 // @Produce json
 // @Param request body PasswordResetConfirm true "Reset token and new password"
 // @Success 200 {object} map[string]string
+// @Failure 400 {object} ErrorResponse
 // @Router /auth/password/reset-confirm [post]
 func (h *Handler) ConfirmPasswordReset(c *fiber.Ctx) error {
 	var req PasswordResetConfirm
@@ -476,7 +494,7 @@ func (h *Handler) ConfirmPasswordReset(c *fiber.Ctx) error {
 // GetRegistrationStatus checks if registration is enabled
 // @Summary Get registration status
 // @Description Check if new user registration is allowed
-// @Tags auth
+// @Tags Authentication
 // @Produce json
 // @Success 200 {object} map[string]bool
 // @Router /auth/registration [get]
