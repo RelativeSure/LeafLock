@@ -30,9 +30,7 @@ import {
   CheckSquare,
   CodeIcon,
 } from 'lucide-react'
-import { useEffect } from 'react'
-
-const lowlight = createLowlight(common)
+import { useEffect, useMemo } from 'react'
 
 interface RichTextEditorProps {
   content: string
@@ -42,6 +40,8 @@ interface RichTextEditorProps {
 }
 
 export function RichTextEditor({ content, onChange, placeholder, disabled }: RichTextEditorProps) {
+  const lowlight = useMemo(() => createLowlight(common), [])
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
