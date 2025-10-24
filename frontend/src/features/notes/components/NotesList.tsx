@@ -1,4 +1,5 @@
 import React, { useState, Suspense, lazy } from 'react'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -209,7 +210,14 @@ export const NotesList: React.FC<NotesListProps> = ({
                     {viewingTrash ? (
                       <>
                         <button
-                          onClick={() => onRestoreNote(note.id)}
+                          onClick={async () => {
+                            try {
+                              await onRestoreNote(note.id)
+                              toast.success('Note restored successfully')
+                            } catch (err) {
+                              toast.error('Failed to restore note')
+                            }
+                          }}
                           className="notes-action-restore"
                           title="Restore note"
                           aria-label="Restore note"
@@ -234,7 +242,12 @@ export const NotesList: React.FC<NotesListProps> = ({
                           onClick={async () => {
                             if (!confirm('Permanently delete this note? This cannot be undone.'))
                               return
-                            await onPermanentDelete(note.id)
+                            try {
+                              await onPermanentDelete(note.id)
+                              toast.success('Note deleted permanently')
+                            } catch (err) {
+                              toast.error('Failed to delete note')
+                            }
                           }}
                           className="notes-action-delete"
                           title="Delete permanently"
@@ -260,9 +273,16 @@ export const NotesList: React.FC<NotesListProps> = ({
                       <button
                         onClick={async () => {
                           if (!confirm('Move this note to trash?')) return
-                          const success = await onMoveToTrash(note.id)
-                          if (success && selectedNote?.id === note.id) {
-                            onClearSelection()
+                          try {
+                            const success = await onMoveToTrash(note.id)
+                            if (success) {
+                              toast.success('Note moved to trash')
+                              if (selectedNote?.id === note.id) {
+                                onClearSelection()
+                              }
+                            }
+                          } catch (err) {
+                            toast.error('Failed to move note to trash')
                           }
                         }}
                         className="notes-action-trash"

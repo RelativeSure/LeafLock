@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense, lazy } from 'react'
 import { createPortal } from 'react-dom'
 import { Maximize2, Minimize2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group'
 import { Card } from '@/components/ui/card'
@@ -135,6 +136,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
         onNotesChange((prevNotes) =>
           prevNotes.map((note) => (note.id === updatedNote.id ? updatedNote : note))
         )
+        toast.success('Note saved successfully')
       } else {
         const response = await api.createNote(currentTitle, currentContent)
         console.log('✅ Created new note with ID:', response.id)
@@ -149,12 +151,15 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
 
         onSelectNote(newNote)
         onNotesChange((prevNotes) => [newNote, ...prevNotes])
+        toast.success('Note created successfully')
       }
 
       setLastSaved(new Date())
     } catch (err) {
       console.error('Failed to save note:', err)
-      setSaveError((err as Error).message || 'Failed to save note')
+      const errorMessage = (err as Error).message || 'Failed to save note'
+      setSaveError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setSaving(false)
     }

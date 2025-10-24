@@ -10,20 +10,20 @@
   }
 
   .notes-card {
-    @apply flex items-stretch gap-2 rounded-xl border bg-card transition-colors focus-within:ring-2 focus-within:ring-sky-500/40 my-2;
+    @apply flex items-stretch gap-2 rounded-xl border bg-card transition-all duration-300 focus-within:ring-2 focus-within:ring-sky-500/40 my-2;
     border-color: var(--color-border);
   }
 
   .notes-card[data-selected='true'] {
-    @apply border-sky-500/50 bg-sky-500/10 shadow-sm;
+    @apply border-sky-500/50 bg-sky-500/10 shadow-md transform scale-[1.02];
   }
 
   .notes-card:not([data-selected='true']):hover {
-    @apply bg-muted/60;
+    @apply bg-muted/60 shadow-sm transform scale-[1.01];
   }
 
   .notes-card-button {
-    @apply flex-1 rounded-xl px-4 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60;
+    @apply flex-1 rounded-xl px-4 py-3 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 active:scale-[0.99];
   }
 
   .notes-card-button[data-trash='true'] {
@@ -39,15 +39,15 @@
   }
 
   .notes-action-restore {
-    @apply rounded-md p-1.5 text-sky-600 transition hover:bg-sky-500/10 hover:text-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500/50;
+    @apply rounded-md p-1.5 text-sky-600 transition-all duration-200 hover:bg-sky-500/10 hover:text-sky-700 hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-sky-500/50;
   }
 
   .notes-action-delete {
-    @apply rounded-md p-1.5 text-destructive transition hover:bg-destructive/10 hover:text-destructive/90 focus:outline-none focus:ring-2 focus:ring-destructive/50;
+    @apply rounded-md p-1.5 text-destructive transition-all duration-200 hover:bg-destructive/10 hover:text-destructive/90 hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-destructive/50;
   }
 
   .notes-action-trash {
-    @apply rounded-md p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive focus:outline-none focus:ring-2 focus:ring-destructive/50;
+    @apply rounded-md p-1.5 text-muted-foreground transition-all duration-200 hover:bg-destructive/10 hover:text-destructive hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-destructive/50;
   }
 
   .editor-shell {

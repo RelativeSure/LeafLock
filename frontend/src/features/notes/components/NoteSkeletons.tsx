@@ -10,9 +10,15 @@ export const NoteSkeleton: React.FC = () => (
 )
 
 export const NoteListSkeleton: React.FC = () => (
-  <div>
+  <div className="animate-in fade-in duration-300">
     {[...Array(5)].map((_, index) => (
-      <NoteSkeleton key={index} />
+      <div
+        key={index}
+        className="animate-in fade-in slide-in-from-left-2"
+        style={{ animationDelay: `${index * 50}ms` }}
+      >
+        <NoteSkeleton />
+      </div>
     ))}
   </div>
 )
