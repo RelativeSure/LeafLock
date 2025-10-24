@@ -70,26 +70,49 @@ The Go server binds to `[::]:8080` (`backend/server/listener.go`) so Railway IPv
 - Port: `80`
 - Assign Railway public domain (e.g., `leaflock-frontend-production.up.railway.app`)
 
+<Card title="🚀 Dynamic Configuration" icon="zap">
+LeafLock automatically detects Railway services and uses private hostnames for internal communication. **No manual API URL configuration needed!**
+</Card>
+
 <Tabs>
-  <TabItem label="Required">
+  <TabItem label="Required (Minimal)">
 <Code
-  code={`BACKEND_INTERNAL_URL=http://leaflock-backend.railway.internal:8080
-VITE_API_URL=/api/v1
-PORT=80
+  code={`PORT=80
 NODE_ENV=production`}
   language="bash"
 />
   </TabItem>
-  <TabItem label="Optional">
+  <TabItem label="Optional Features">
 <Code
   code={`VITE_ENABLE_ADMIN_PANEL=false
-VITE_FEATURE_SHARE_LINKS=true`}
+VITE_FEATURE_SHARE_LINKS=true
+VITE_SHOW_CONFIG=true`}
+  language="bash"
+/>
+  </TabItem>
+  <TabItem label="Manual Override (Advanced)">
+<Code
+  code={`# Only set if you need to override automatic detection
+VITE_API_URL=https://your-custom-backend.com/api/v1`}
   language="bash"
 />
   </TabItem>
 </Tabs>
 
-Caddy (`frontend/docker-entrypoint.sh`) resolves the `.railway.internal` hostname on every request, preventing stale IPv6 records.
+### How Dynamic Configuration Works
+
+The frontend automatically detects Railway services using this priority order:
+
+1. **`VITE_API_URL`** (explicit override - highest priority)
+2. **`BACKEND_URL`** (Railway automatic service variable)
+3. **`RAILWAY_INTERNAL_HOST`** (Railway private hostname) ⭐ **Preferred**
+4. **`RAILWAY_PRIVATE_DOMAIN`** (Railway private domain) ⭐ **Preferred**
+5. Service name patterns (`backend`, `api`, `server`)
+6. **`RAILWAY_PUBLIC_DOMAIN`** (fallback)
+
+<Aside type="tip">
+Set `VITE_SHOW_CONFIG=true` to see the resolved configuration in a debug panel on your frontend. This helps troubleshoot connection issues.
+</Aside>
 
 ## Step 4 – Deploy
 
@@ -101,19 +124,30 @@ railway link
 railway up --service leaflock-backend
 
 # Watch logs until "HTTP server starting on [::]:8080"
+railway logs leaflock-backend
 
 # Then deploy frontend
 railway up --service leaflock-frontend`}
   language="bash"
 />
 
-Verify health via the public domain:
+### Verify Deployment
+
+Check that both services are healthy:
 
 <Code
-  code={`curl https://leaflock-frontend-production.up.railway.app/health
+  code={`# Check backend health
+railway logs leaflock-backend
+
+# Check frontend health via public domain
+curl https://leaflock-frontend-production.up.railway.app/health
 curl https://leaflock-frontend-production.up.railway.app/api/v1/health/ready`}
   language="bash"
 />
+
+<Aside type="tip">
+If you set `VITE_SHOW_CONFIG=true`, visit your frontend URL and look for the debug panel in the bottom-right corner to verify the API URL is correctly resolved.
+</Aside>
 
 ## Git-Based Automation
 
@@ -138,9 +172,8 @@ Commit a `railway.json` (optional) to codify services:
         "name": "leaflock-frontend",
         "path": "./frontend",
         "variables": {
-          "VITE_API_URL": "/api/v1",
-          "BACKEND_INTERNAL_URL": "http://leaflock-backend.railway.internal:8080",
-          "PORT": "80"
+          "PORT": "80",
+          "NODE_ENV": "production"
         }
       }
     ]
@@ -150,6 +183,38 @@ Commit a `railway.json` (optional) to codify services:
 />
 
 Railway applies plugin variables automatically; only set secrets that are not provided by the plugins.
+
+## Dynamic Configuration System
+
+LeafLock includes an intelligent configuration system that automatically detects Railway services and uses private hostnames for optimal security and performance.
+
+### How It Works
+
+The frontend automatically resolves the backend API URL using this priority:
+
+1. **`VITE_API_URL`** - Explicit override (highest priority)
+2. **`BACKEND_URL`** - Railway automatic service variable
+3. **`RAILWAY_INTERNAL_HOST`** - Railway private hostname ⭐ **Preferred**
+4. **`RAILWAY_PRIVATE_DOMAIN`** - Railway private domain ⭐ **Preferred**
+5. Service name patterns (`backend`, `api`, `server`)
+6. **`RAILWAY_PUBLIC_DOMAIN`** - Fallback
+
+### Benefits
+
+- **🔒 Security**: Uses Railway's private IPv6 networking
+- **⚡ Performance**: No external DNS lookups
+- **🔄 Automatic**: No manual configuration needed
+- **🐛 Debuggable**: Debug panel shows resolved configuration
+
+### Debug Mode
+
+Set `VITE_SHOW_CONFIG=true` to enable a debug panel that shows:
+- Resolved API URL
+- Platform detection (Railway vs local)
+- Environment variables
+- Service discovery status
+
+This helps troubleshoot connection issues and verify the configuration is working correctly.
 
 ## Custom Domain Checklist
 
@@ -164,19 +229,26 @@ Railway automatically creates PR preview environments for each pull request. Lea
 
 **Backend**: `backend/railway.toml` sets `APP_ENV=development` to auto-allow `*.railway.app` CORS origins.
 
-**Frontend**: **Do NOT set `VITE_API_URL`** in Railway environment variables. The frontend auto-discovers the PR backend via Railway's service discovery.
+**Frontend**: **Do NOT set `VITE_API_URL`** in Railway environment variables. The frontend automatically discovers the PR backend via Railway's service discovery using private hostnames.
 
-**Common Issue**: If PR frontend shows CORS errors connecting to production backend (`https://leaflock.app`), remove `VITE_API_URL` from Railway environment variables and redeploy.
+**Common Issue**: If PR frontend shows CORS errors connecting to production backend (`https://leaflock.app`), remove `VITE_API_URL` from Railway environment variables and redeploy. The dynamic configuration will automatically use the correct PR backend.
 
-See [Railway PR Preview Troubleshooting](/troubleshooting/railway/#railway-pr-preview-deployments) for detailed configuration.
+<Aside type="tip">
+PR previews work seamlessly with the dynamic configuration system. Each PR gets its own backend service, and the frontend automatically connects to it using Railway's private networking.
+</Aside>
 
 ## Troubleshooting
 
-- **502 from frontend** → backend domain mismatch. Ensure `BACKEND_INTERNAL_URL` points to `leaflock-backend.railway.internal:8080`.
+- **502 from frontend** → Check Railway logs for connection errors. The dynamic configuration should automatically resolve the backend URL.
 - **Backend crash loops** → secrets missing; check Railway logs for `FATAL` messages from `config.LoadConfig`.
 - **WebSocket disconnects** → Railway load balancer requires sticky sessions; enable them in service settings.
 - **Slow first request** → backend warms caches on boot (templates, admin, allowlist). Wait for readiness to report `status=ready`.
-- **PR CORS errors** → See [Railway PR Preview Deployments](#pr-preview-deployments) above.
+- **CORS errors** → Remove `VITE_API_URL` from Railway environment variables. The dynamic configuration will use Railway's private networking.
+- **API connection issues** → Set `VITE_SHOW_CONFIG=true` and check the debug panel to see which API URL is being used.
+
+<Aside type="tip">
+The dynamic configuration system eliminates most connection issues by automatically detecting Railway services. If you're having problems, check the debug panel first.
+</Aside>
 
 <Aside type="caution">
 Never assign a public domain to the backend service—doing so bypasses CSRF protection and exposes raw APIs to the internet.
@@ -190,3 +262,5 @@ Never assign a public domain to the backend service—doing so bypasses CSRF pro
 - [ ] Admin login works with the configured credentials
 - [ ] Metrics available at `/metrics` if enabled
 - [ ] Custom domain (if used) resolves over HTTPS
+- [ ] **Dynamic configuration working** (set `VITE_SHOW_CONFIG=true` and verify debug panel shows correct API URL)
+- [ ] **Private hostname being used** (check debug panel shows `RAILWAY_INTERNAL_HOST` or `RAILWAY_PRIVATE_DOMAIN`)
