@@ -1,19 +1,26 @@
-import { useState } from "react"
-import { useNotesStore } from "@/stores"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Button } from "@/components/ui/button"
-import { FileText, Lock, TagIcon, Pin, ArrowUpDown } from "lucide-react"
-import { formatDistanceToNow } from "date-fns"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useState } from 'react'
+import { useNotesStore } from '@/stores'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Button } from '@/components/ui/button'
+import { FileText, Lock, TagIcon, Pin, ArrowUpDown } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
-type SortOption = "updated" | "created" | "title" | "pinned"
+type SortOption = 'updated' | 'created' | 'title' | 'pinned'
 
 export function NoteList() {
   const { notes, selectedNote, selectedFolder, selectNote } = useNotesStore()
-  const [sortBy, setSortBy] = useState<SortOption>("updated")
+  const [sortBy, setSortBy] = useState<SortOption>('updated')
 
   const activeNotes = notes.filter((note) => !note.isTrashed)
-  const filteredNotes = selectedFolder ? activeNotes.filter((note) => note.folderId === selectedFolder) : activeNotes
+  const filteredNotes = selectedFolder
+    ? activeNotes.filter((note) => note.folderId === selectedFolder)
+    : activeNotes
 
   const sortedNotes = [...filteredNotes].sort((a, b) => {
     // Always show pinned notes first
@@ -21,11 +28,11 @@ export function NoteList() {
     if (!a.pinned && b.pinned) return 1
 
     switch (sortBy) {
-      case "updated":
+      case 'updated':
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-      case "created":
+      case 'created':
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      case "title":
+      case 'title':
         return a.title.localeCompare(b.title)
       default:
         return 0
@@ -51,13 +58,18 @@ export function NoteList() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
               <ArrowUpDown className="h-4 w-4" />
-              Sort by: {sortBy === "updated" ? "Last Updated" : sortBy === "created" ? "Date Created" : "Title"}
+              Sort by:{' '}
+              {sortBy === 'updated'
+                ? 'Last Updated'
+                : sortBy === 'created'
+                  ? 'Date Created'
+                  : 'Title'}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => setSortBy("updated")}>Last Updated</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortBy("created")}>Date Created</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortBy("title")}>Title</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortBy('updated')}>Last Updated</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortBy('created')}>Date Created</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortBy('title')}>Title</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -73,8 +85,8 @@ export function NoteList() {
                 onClick={() => selectNote(note.id)}
                 className={`w-full text-left p-3 rounded-lg transition-smooth hover-lift stagger-item ${
                   isSelected
-                    ? "bg-primary/10 border border-primary/20"
-                    : "hover:bg-surface-hover border border-transparent"
+                    ? 'bg-primary/10 border border-primary/20'
+                    : 'hover:bg-surface-hover border border-transparent'
                 }`}
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
@@ -83,14 +95,16 @@ export function NoteList() {
                     {note.pinned && <Pin className="h-3 w-3 text-primary flex-shrink-0 mt-0.5" />}
                     <h3 className="font-medium text-sm line-clamp-1">{note.title}</h3>
                   </div>
-                  {note.encrypted && <Lock className="h-3 w-3 text-muted flex-shrink-0 mt-0.5 animate-pulse" />}
+                  {note.encrypted && (
+                    <Lock className="h-3 w-3 text-muted flex-shrink-0 mt-0.5 animate-pulse" />
+                  )}
                 </div>
 
                 <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                   {note.content
-                    .replace(/<[^>]*>/g, " ")
-                    .replace(/\s+/g, " ")
-                    .trim() || "No content"}
+                    .replace(/<[^>]*>/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim() || 'No content'}
                 </p>
 
                 <div className="flex items-center justify-between gap-2">
@@ -104,7 +118,9 @@ export function NoteList() {
                         {tag}
                       </span>
                     ))}
-                    {note.tags.length > 2 && <span className="text-xs text-muted">+{note.tags.length - 2}</span>}
+                    {note.tags.length > 2 && (
+                      <span className="text-xs text-muted">+{note.tags.length - 2}</span>
+                    )}
                   </div>
 
                   <span className="text-xs text-muted-foreground flex-shrink-0">

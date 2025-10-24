@@ -29,9 +29,9 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
     try {
       const templatesData = await apiClient.getTemplates()
       // Filter templates by user and public status
-      const userTemplates = templatesData.filter(t => t.userId === user.id)
-      const publicTemplatesData = templatesData.filter(t => t.isPublic)
-      
+      const userTemplates = templatesData.filter((t) => t.userId === user.id)
+      const publicTemplatesData = templatesData.filter((t) => t.isPublic)
+
       set({ templates: userTemplates, publicTemplates: publicTemplatesData })
     } catch (error) {
       console.error('Failed to load templates:', error)
@@ -49,10 +49,10 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
         ...template,
         userId: user.id,
       })
-      
+
       set((state) => {
         const updatedTemplates = [newTemplate, ...state.templates]
-        const updatedPublicTemplates = newTemplate.isPublic 
+        const updatedPublicTemplates = newTemplate.isPublic
           ? [newTemplate, ...state.publicTemplates]
           : state.publicTemplates
 
@@ -72,15 +72,15 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
   updateTemplate: async (id: string, updates: Partial<Template>) => {
     try {
       const updatedTemplate = await apiClient.updateTemplate(id, updates)
-      
+
       set((state) => {
-        const updatedTemplates = state.templates.map((template) => 
+        const updatedTemplates = state.templates.map((template) =>
           template.id === id ? updatedTemplate : template
         )
 
         let updatedPublicTemplates = state.publicTemplates
         if (updatedTemplate.isPublic) {
-          updatedPublicTemplates = state.publicTemplates.map((template) => 
+          updatedPublicTemplates = state.publicTemplates.map((template) =>
             template.id === id ? updatedTemplate : template
           )
         } else {
@@ -139,8 +139,8 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
     const allTemplates = [...templates, ...publicTemplates]
     return allTemplates.filter(
       (template) =>
-        template.name.toLowerCase().includes(lowerQuery) || 
-        template.content.toLowerCase().includes(lowerQuery),
+        template.name.toLowerCase().includes(lowerQuery) ||
+        template.content.toLowerCase().includes(lowerQuery)
     )
   },
 }))

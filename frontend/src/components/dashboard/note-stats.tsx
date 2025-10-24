@@ -1,6 +1,6 @@
-"use client"
+'use client'
 
-import { FileText, Clock, Hash } from "lucide-react"
+import { FileText, Clock, Hash } from 'lucide-react'
 
 interface NoteStatsProps {
   content: string
@@ -9,8 +9,8 @@ interface NoteStatsProps {
 export function NoteStats({ content }: NoteStatsProps) {
   // Strip HTML tags for accurate word count
   const textContent = content
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim()
 
   const wordCount = textContent ? textContent.split(/\s+/).length : 0

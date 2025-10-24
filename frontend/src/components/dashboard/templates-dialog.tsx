@@ -1,14 +1,19 @@
-import { useState } from "react"
-import { useTemplatesStore, useNotesStore, useAuthStore } from "@/stores"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Badge } from "@/components/ui/badge"
-import { FileText, Globe, Lock, Search, Trash2, Share2, Copy, TagIcon } from "lucide-react"
-import { formatDistanceToNow } from "date-fns"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useState } from 'react'
+import { useTemplatesStore, useNotesStore, useAuthStore } from '@/stores'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Badge } from '@/components/ui/badge'
+import { FileText, Globe, Lock, Search, Trash2, Share2, Copy, TagIcon } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 interface TemplatesDialogProps {
   open: boolean
@@ -17,9 +22,10 @@ interface TemplatesDialogProps {
 
 export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
   const { user } = useAuthStore()
-  const { templates, publicTemplates, deleteTemplate, shareTemplate, applyTemplate } = useTemplatesStore()
+  const { templates, publicTemplates, deleteTemplate, shareTemplate, applyTemplate } =
+    useTemplatesStore()
   const { createNote, selectNote } = useNotesStore()
-  const [searchQuery, setSearchQuery] = useState("")
+  const [searchQuery, setSearchQuery] = useState('')
 
   const myTemplates = templates.filter((t) => t.userId === user?.id)
   const communityTemplates = publicTemplates.filter((t) => t.userId !== user?.id)
@@ -28,7 +34,8 @@ export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
     if (!searchQuery) return templateList
     const lowerQuery = searchQuery.toLowerCase()
     return templateList.filter(
-      (t) => t.name.toLowerCase().includes(lowerQuery) || t.content.toLowerCase().includes(lowerQuery),
+      (t) =>
+        t.name.toLowerCase().includes(lowerQuery) || t.content.toLowerCase().includes(lowerQuery)
     )
   }
 
@@ -39,7 +46,7 @@ export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
       selectNote(note.id)
       onOpenChange(false)
     } catch (error) {
-      console.error("Failed to use template:", error)
+      console.error('Failed to use template:', error)
     }
   }
 
@@ -47,7 +54,7 @@ export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
     try {
       await shareTemplate(templateId, !currentIsPublic)
     } catch (error) {
-      console.error("Failed to toggle share:", error)
+      console.error('Failed to toggle share:', error)
     }
   }
 
@@ -55,14 +62,17 @@ export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
     try {
       await deleteTemplate(templateId)
     } catch (error) {
-      console.error("Failed to delete template:", error)
+      console.error('Failed to delete template:', error)
     }
   }
 
   const TemplateCard = ({
     template,
     showActions = true,
-  }: { template: (typeof templates)[0]; showActions?: boolean }) => (
+  }: {
+    template: (typeof templates)[0]
+    showActions?: boolean
+  }) => (
     <div className="p-4 border border-border rounded-lg hover:bg-surface-hover transition-colors group">
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="flex-1 min-w-0">
@@ -73,7 +83,11 @@ export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
         {showActions && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100"
+              >
                 <span className="sr-only">Open menu</span>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -106,7 +120,10 @@ export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
                   </>
                 )}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleDeleteTemplate(template.id)} className="text-danger">
+              <DropdownMenuItem
+                onClick={() => handleDeleteTemplate(template.id)}
+                className="text-danger"
+              >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
               </DropdownMenuItem>
@@ -129,7 +146,9 @@ export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
               {tag}
             </Badge>
           ))}
-          {template.usageCount > 0 && <span className="text-xs text-muted-foreground">{template.usageCount} uses</span>}
+          {template.usageCount > 0 && (
+            <span className="text-xs text-muted-foreground">{template.usageCount} uses</span>
+          )}
         </div>
 
         <Button size="sm" variant="outline" onClick={() => handleUseTemplate(template.id)}>

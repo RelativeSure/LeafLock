@@ -1,23 +1,23 @@
-import { useState } from "react"
-import { useAuthStore } from "@/stores"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Shield, Lock, Mail } from "lucide-react"
+import { useState } from 'react'
+import { useAuthStore } from '@/stores'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Shield, Lock, Mail } from 'lucide-react'
 
 export function LoginForm({ onToggleMode }: { onToggleMode: () => void }) {
   const { login, verifyMFA } = useAuthStore()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [mfaCode, setMfaCode] = useState("")
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [mfaCode, setMfaCode] = useState('')
   const [requiresMFA, setRequiresMFA] = useState(false)
-  const [error, setError] = useState("")
+  const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
+    setError('')
     setIsLoading(true)
 
     try {
@@ -26,7 +26,7 @@ export function LoginForm({ onToggleMode }: { onToggleMode: () => void }) {
         setRequiresMFA(true)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed")
+      setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
       setIsLoading(false)
     }
@@ -34,16 +34,16 @@ export function LoginForm({ onToggleMode }: { onToggleMode: () => void }) {
 
   const handleMFAVerify = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
+    setError('')
     setIsLoading(true)
 
     try {
       const success = await verifyMFA(mfaCode)
       if (!success) {
-        setError("Invalid MFA code")
+        setError('Invalid MFA code')
       }
     } catch (err) {
-      setError("MFA verification failed")
+      setError('MFA verification failed')
     } finally {
       setIsLoading(false)
     }
@@ -57,7 +57,9 @@ export function LoginForm({ onToggleMode }: { onToggleMode: () => void }) {
             <Shield className="w-6 h-6 text-primary" />
           </div>
           <CardTitle className="text-2xl text-center">Two-Factor Authentication</CardTitle>
-          <CardDescription className="text-center">Enter the 6-digit code from your authenticator app</CardDescription>
+          <CardDescription className="text-center">
+            Enter the 6-digit code from your authenticator app
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleMFAVerify} className="space-y-4">
@@ -68,21 +70,25 @@ export function LoginForm({ onToggleMode }: { onToggleMode: () => void }) {
                 type="text"
                 placeholder="000000"
                 value={mfaCode}
-                onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 maxLength={6}
                 className="text-center text-2xl tracking-widest focus:animate-pulse-glow transition-smooth"
                 autoFocus
               />
             </div>
 
-            {error && <div className="text-sm text-danger bg-danger/10 p-3 rounded-md animate-slide-in">{error}</div>}
+            {error && (
+              <div className="text-sm text-danger bg-danger/10 p-3 rounded-md animate-slide-in">
+                {error}
+              </div>
+            )}
 
             <Button
               type="submit"
               className="w-full transition-bounce hover-lift"
               disabled={isLoading || mfaCode.length !== 6}
             >
-              {isLoading ? "Verifying..." : "Verify"}
+              {isLoading ? 'Verifying...' : 'Verify'}
             </Button>
 
             <Button
@@ -142,15 +148,27 @@ export function LoginForm({ onToggleMode }: { onToggleMode: () => void }) {
             </div>
           </div>
 
-          {error && <div className="text-sm text-danger bg-danger/10 p-3 rounded-md animate-slide-in">{error}</div>}
+          {error && (
+            <div className="text-sm text-danger bg-danger/10 p-3 rounded-md animate-slide-in">
+              {error}
+            </div>
+          )}
 
-          <Button type="submit" className="w-full transition-bounce hover-lift" disabled={isLoading}>
-            {isLoading ? "Signing in..." : "Sign in"}
+          <Button
+            type="submit"
+            className="w-full transition-bounce hover-lift"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Signing in...' : 'Sign in'}
           </Button>
 
           <div className="text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
-            <button type="button" onClick={onToggleMode} className="text-primary hover:underline transition-smooth">
+            Don't have an account?{' '}
+            <button
+              type="button"
+              onClick={onToggleMode}
+              className="text-primary hover:underline transition-smooth"
+            >
               Sign up
             </button>
           </div>

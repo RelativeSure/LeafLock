@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react"
-import { useNotesStore } from "@/stores"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from 'react'
+import { useNotesStore } from '@/stores'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -8,11 +8,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Trash2, RotateCcw, X } from "lucide-react"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { formatDistanceToNow } from "date-fns"
-import { useToast } from "@/hooks/use-toast"
+} from '@/components/ui/dialog'
+import { Trash2, RotateCcw, X } from 'lucide-react'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { formatDistanceToNow } from 'date-fns'
+import { useToast } from '@/hooks/use-toast'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from '@/components/ui/alert-dialog'
 
 export function TrashDialog() {
   const { getTrashedNotes, restoreFromTrash, deleteNote, emptyTrash } = useNotesStore()
@@ -40,7 +40,7 @@ export function TrashDialog() {
       const notes = await getTrashedNotes()
       setTrashedNotes(notes)
     } catch (error) {
-      console.error("Failed to load trashed notes:", error)
+      console.error('Failed to load trashed notes:', error)
     }
   }
 
@@ -49,15 +49,15 @@ export function TrashDialog() {
       await restoreFromTrash(noteId)
       await loadTrashedNotes() // Reload the list
       toast({
-        title: "Note restored",
+        title: 'Note restored',
         description: `"${noteTitle}" has been restored.`,
       })
     } catch (error) {
-      console.error("Failed to restore note:", error)
+      console.error('Failed to restore note:', error)
       toast({
-        title: "Error",
-        description: "Failed to restore note.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to restore note.',
+        variant: 'destructive',
       })
     }
   }
@@ -67,16 +67,16 @@ export function TrashDialog() {
       await deleteNote(noteId)
       await loadTrashedNotes() // Reload the list
       toast({
-        title: "Note deleted permanently",
+        title: 'Note deleted permanently',
         description: `"${noteTitle}" has been permanently deleted.`,
-        variant: "destructive",
+        variant: 'destructive',
       })
     } catch (error) {
-      console.error("Failed to delete note:", error)
+      console.error('Failed to delete note:', error)
       toast({
-        title: "Error",
-        description: "Failed to delete note.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to delete note.',
+        variant: 'destructive',
       })
     }
   }
@@ -87,15 +87,15 @@ export function TrashDialog() {
       await emptyTrash()
       await loadTrashedNotes() // Reload the list
       toast({
-        title: "Trash emptied",
-        description: "All notes in trash have been permanently deleted.",
+        title: 'Trash emptied',
+        description: 'All notes in trash have been permanently deleted.',
       })
     } catch (error) {
-      console.error("Failed to empty trash:", error)
+      console.error('Failed to empty trash:', error)
       toast({
-        title: "Error",
-        description: "Failed to empty trash.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to empty trash.',
+        variant: 'destructive',
       })
     } finally {
       setIsLoading(false)
@@ -128,15 +128,19 @@ export function TrashDialog() {
             <ScrollArea className="max-h-[400px]">
               <div className="space-y-2">
                 {trashedNotes.map((note) => (
-                  <div key={note.id} className="p-3 rounded-lg border border-border hover:bg-accent transition-smooth">
+                  <div
+                    key={note.id}
+                    className="p-3 rounded-lg border border-border hover:bg-accent transition-smooth"
+                  >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium mb-1 truncate">{note.title}</h3>
                         <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                          {note.content || "No content"}
+                          {note.content || 'No content'}
                         </p>
                         <span className="text-xs text-muted-foreground">
-                          Deleted {formatDistanceToNow(new Date(note.trashedAt!), { addSuffix: true })}
+                          Deleted{' '}
+                          {formatDistanceToNow(new Date(note.trashedAt!), { addSuffix: true })}
                         </span>
                       </div>
                       <div className="flex gap-1">
@@ -159,7 +163,8 @@ export function TrashDialog() {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete permanently?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete "{note.title}".
+                                This action cannot be undone. This will permanently delete "
+                                {note.title}".
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -188,7 +193,8 @@ export function TrashDialog() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Empty trash?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will permanently delete all {trashedNotes.length} notes in trash. This action cannot be undone.
+                    This will permanently delete all {trashedNotes.length} notes in trash. This
+                    action cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { useNotesStore, useTemplatesStore, useSettingsStore, useAuthStore } from "@/stores"
-import { ActivityLogger } from "@/lib/activity-logger"
-import { Button } from "@/components/ui/button"
+import { useState } from 'react'
+import { useNotesStore, useTemplatesStore, useSettingsStore, useAuthStore } from '@/stores'
+import { ActivityLogger } from '@/lib/activity-logger'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -11,12 +11,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Download, Upload, FileJson, Database, Shield } from "lucide-react"
-import { Label } from "@/components/ui/label"
-import { useToast } from "@/hooks/use-toast"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Separator } from "@/components/ui/separator"
+} from '@/components/ui/dialog'
+import { Download, Upload, FileJson, Database, Shield } from 'lucide-react'
+import { Label } from '@/components/ui/label'
+import { useToast } from '@/hooks/use-toast'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Separator } from '@/components/ui/separator'
 
 export function ExportImportDialog() {
   const { notes, folders, tags, createNote, createFolder, createTag } = useNotesStore()
@@ -32,14 +32,14 @@ export function ExportImportDialog() {
       folders,
       tags,
       exportedAt: new Date().toISOString(),
-      version: "1.0",
-      type: "notes",
+      version: '1.0',
+      type: 'notes',
     }
 
-    downloadJSON(data, `leaflock-notes-${new Date().toISOString().split("T")[0]}.json`)
+    downloadJSON(data, `leaflock-notes-${new Date().toISOString().split('T')[0]}.json`)
 
     toast({
-      title: "Notes exported",
+      title: 'Notes exported',
       description: `Exported ${data.notes.length} notes, ${folders.length} folders, and ${tags.length} tags.`,
     })
   }
@@ -48,14 +48,14 @@ export function ExportImportDialog() {
     const data = {
       templates,
       exportedAt: new Date().toISOString(),
-      version: "1.0",
-      type: "templates",
+      version: '1.0',
+      type: 'templates',
     }
 
-    downloadJSON(data, `leaflock-templates-${new Date().toISOString().split("T")[0]}.json`)
+    downloadJSON(data, `leaflock-templates-${new Date().toISOString().split('T')[0]}.json`)
 
     toast({
-      title: "Templates exported",
+      title: 'Templates exported',
       description: `Exported ${templates.length} templates.`,
     })
   }
@@ -90,30 +90,33 @@ export function ExportImportDialog() {
       // Metadata
       export: {
         exportedAt: new Date().toISOString(),
-        version: "1.0",
-        type: "gdpr-full-export",
+        version: '1.0',
+        type: 'gdpr-full-export',
         dataRetentionPolicy:
-          "Notes and data are stored locally in your browser. Trashed notes are deleted after 30 days.",
-        privacyPolicy: "https://docs.leaflock.app/privacy",
-        termsOfService: "https://docs.leaflock.app/terms",
+          'Notes and data are stored locally in your browser. Trashed notes are deleted after 30 days.',
+        privacyPolicy: 'https://docs.leaflock.app/privacy',
+        termsOfService: 'https://docs.leaflock.app/terms',
       },
     }
 
-    downloadJSON(accountData, `leaflock-account-data-${new Date().toISOString().split("T")[0]}.json`)
+    downloadJSON(
+      accountData,
+      `leaflock-account-data-${new Date().toISOString().split('T')[0]}.json`
+    )
 
     // Log the export action
-    ActivityLogger.log(user.id, user.name, user.email, "data_export")
+    ActivityLogger.log(user.id, user.name, user.email, 'data_export')
 
     toast({
-      title: "Account data exported",
-      description: "Your complete account data has been exported in compliance with GDPR.",
+      title: 'Account data exported',
+      description: 'Your complete account data has been exported in compliance with GDPR.',
     })
   }
 
   const downloadJSON = (data: any, filename: string) => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
+    const a = document.createElement('a')
     a.href = url
     a.download = filename
     document.body.appendChild(a)
@@ -134,7 +137,7 @@ export function ExportImportDialog() {
         const importedCount = { notes: 0, folders: 0, tags: 0, templates: 0 }
 
         // Import based on type
-        if (data.type === "notes" || !data.type) {
+        if (data.type === 'notes' || !data.type) {
           // Import folders first
           if (data.folders) {
             data.folders.forEach((folder: any) => {
@@ -161,7 +164,7 @@ export function ExportImportDialog() {
         }
 
         // Import templates
-        if (data.type === "templates" || data.templates) {
+        if (data.type === 'templates' || data.templates) {
           const templatesToImport = data.templates || []
           templatesToImport.forEach((template: any) => {
             createTemplate(template)
@@ -170,16 +173,16 @@ export function ExportImportDialog() {
         }
 
         toast({
-          title: "Import successful",
+          title: 'Import successful',
           description: `Imported ${importedCount.notes} notes, ${importedCount.folders} folders, ${importedCount.tags} tags, and ${importedCount.templates} templates.`,
         })
 
         setIsOpen(false)
       } catch (error) {
         toast({
-          title: "Import failed",
-          description: "The file format is invalid. Please select a valid LeafLock backup file.",
-          variant: "destructive",
+          title: 'Import failed',
+          description: 'The file format is invalid. Please select a valid LeafLock backup file.',
+          variant: 'destructive',
         })
       }
     }
@@ -262,8 +265,8 @@ export function ExportImportDialog() {
                 Export All Account Data
               </Button>
               <p className="text-xs text-muted-foreground">
-                Download your complete account data including notes, templates, settings, and activity logs. This export
-                complies with GDPR data portability requirements.
+                Download your complete account data including notes, templates, settings, and
+                activity logs. This export complies with GDPR data portability requirements.
               </p>
             </div>
           </TabsContent>
@@ -279,10 +282,16 @@ export function ExportImportDialog() {
                   </label>
                 </Button>
               </div>
-              <input id="import-file" type="file" accept=".json" onChange={handleImport} className="hidden" />
+              <input
+                id="import-file"
+                type="file"
+                accept=".json"
+                onChange={handleImport}
+                className="hidden"
+              />
               <p className="text-xs text-muted-foreground">
-                Import notes, templates, folders, and tags from a LeafLock backup file. This will add to your existing
-                data without overwriting.
+                Import notes, templates, folders, and tags from a LeafLock backup file. This will
+                add to your existing data without overwriting.
               </p>
             </div>
 

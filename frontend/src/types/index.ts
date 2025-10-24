@@ -66,7 +66,7 @@ export interface UserActivityLog {
   userId: string
   userName: string
   userEmail: string
-  action: "login" | "logout" | "mfa_enabled" | "mfa_disabled" | "mfa_verified"
+  action: 'login' | 'logout' | 'mfa_enabled' | 'mfa_disabled' | 'mfa_verified'
   timestamp: string
   ipAddress?: string
   userAgent?: string
@@ -74,10 +74,10 @@ export interface UserActivityLog {
 }
 
 export interface UserSettings {
-  theme: "light" | "dark" | "system"
+  theme: 'light' | 'dark' | 'system'
   autoSave: boolean
   autoSaveInterval: number
-  defaultView: "list" | "grid"
+  defaultView: 'list' | 'grid'
   notificationsEnabled: boolean
   emailNotifications: boolean
   encryptionEnabled: boolean

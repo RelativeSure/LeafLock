@@ -13,7 +13,13 @@ import { NoteEditor } from './components/dashboard/note-editor'
 import { ThemeToggle } from './components/theme-toggle'
 import { Button } from './components/ui/button'
 import { Leaf, Settings, LogOut, ShieldCheck } from 'lucide-react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './components/ui/dropdown-menu'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from './components/ui/avatar'
 
 const RootLayout: React.FC = () => (
@@ -34,7 +40,7 @@ const rootRoute = createRootRoute({
 // Landing page route
 const IndexComponent: React.FC = () => {
   const { user, isLoading } = useAuthStore()
-  
+
   React.useEffect(() => {
     if (!isLoading) {
       if (user) {
@@ -62,23 +68,23 @@ const indexRoute = createRoute({
 const AuthComponent: React.FC = () => {
   const [mode, setMode] = React.useState<'login' | 'register'>('login')
 
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface via-background to-surface p-4 animate-in fade-in-50 duration-700">
-          <div className="w-full max-w-md space-y-8">
-            <div className="text-center space-y-2 animate-fade-in">
-              <h1 className="text-4xl font-bold text-balance bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                LeafLock
-              </h1>
-            </div>
-
-            {mode === 'login' ? (
-              <LoginForm onToggleMode={() => setMode('register')} />
-            ) : (
-              <RegisterForm onToggleMode={() => setMode('login')} />
-            )}
-          </div>
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface via-background to-surface p-4 animate-in fade-in-50 duration-700">
+      <div className="w-full max-w-md space-y-8">
+        <div className="text-center space-y-2 animate-fade-in">
+          <h1 className="text-4xl font-bold text-balance bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            LeafLock
+          </h1>
         </div>
-      )
+
+        {mode === 'login' ? (
+          <LoginForm onToggleMode={() => setMode('register')} />
+        ) : (
+          <RegisterForm onToggleMode={() => setMode('login')} />
+        )}
+      </div>
+    </div>
+  )
 }
 
 const authRoute = createRoute({
@@ -90,86 +96,92 @@ const authRoute = createRoute({
 // Dashboard route
 const DashboardComponent: React.FC = () => {
   const { user, isLoading, logout } = useAuthStore()
-  
+
   React.useEffect(() => {
     if (!isLoading && !user) {
       window.location.href = '/auth'
     }
   }, [user, isLoading])
 
-      if (isLoading || !user) {
-        return (
-          <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">
-            <div className="flex flex-col items-center gap-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-              <p className="text-sm text-muted-foreground animate-pulse">Loading LeafLock...</p>
-            </div>
-          </div>
-        )
-      }
+  if (isLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-sm text-muted-foreground animate-pulse">Loading LeafLock...</p>
+        </div>
+      </div>
+    )
+  }
 
   const handleLogout = () => {
     logout()
     window.location.href = '/auth'
   }
 
-      return (
-        <div className="h-screen flex flex-col animate-in fade-in-50 duration-700">
-          {/* Header */}
-          <header className="border-b border-border bg-card px-6 py-3 flex items-center justify-between animate-slide-in">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center hover-glow transition-smooth">
-                <Leaf className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <h1 className="text-xl font-bold">LeafLock</h1>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <ThemeToggle />
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="gap-2 transition-smooth hover-lift">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>{user?.name.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <span className="hidden md:inline">{user?.name}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="animate-scale-in">
-                  <DropdownMenuItem onClick={() => window.location.href = '/settings'} className="transition-smooth">
-                    <Settings className="h-4 w-4 mr-2" />
-                    Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => window.location.href = '/admin'} className="transition-smooth">
-                    <ShieldCheck className="h-4 w-4 mr-2" />
-                    Admin Dashboard
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="transition-smooth">
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Logout
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </header>
-
-          {/* Main Content */}
-          <div className="flex-1 flex overflow-hidden">
-            <Sidebar />
-            <div className="flex-1 flex border-r border-border">
-              <div className="w-80 border-r border-border flex flex-col animate-slide-in-left">
-                <div className="p-4 border-b border-border">
-                  <h2 className="font-semibold">Notes</h2>
-                </div>
-                <NoteList />
-              </div>
-              <NoteEditor />
-            </div>
+  return (
+    <div className="h-screen flex flex-col animate-in fade-in-50 duration-700">
+      {/* Header */}
+      <header className="border-b border-border bg-card px-6 py-3 flex items-center justify-between animate-slide-in">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center hover-glow transition-smooth">
+            <Leaf className="w-5 h-5 text-primary-foreground" />
           </div>
+          <h1 className="text-xl font-bold">LeafLock</h1>
         </div>
-      )
+
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="gap-2 transition-smooth hover-lift">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback>{user?.name.charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <span className="hidden md:inline">{user?.name}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="animate-scale-in">
+              <DropdownMenuItem
+                onClick={() => (window.location.href = '/settings')}
+                className="transition-smooth"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => (window.location.href = '/admin')}
+                className="transition-smooth"
+              >
+                <ShieldCheck className="h-4 w-4 mr-2" />
+                Admin Dashboard
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="transition-smooth">
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        <Sidebar />
+        <div className="flex-1 flex border-r border-border">
+          <div className="w-80 border-r border-border flex flex-col animate-slide-in-left">
+            <div className="p-4 border-b border-border">
+              <h2 className="font-semibold">Notes</h2>
+            </div>
+            <NoteList />
+          </div>
+          <NoteEditor />
+        </div>
+      </div>
+    </div>
+  )
 }
 
 const dashboardRoute = createRoute({
@@ -181,29 +193,29 @@ const dashboardRoute = createRoute({
 // Settings route
 const SettingsComponent: React.FC = () => {
   const { user, isLoading } = useAuthStore()
-  
+
   React.useEffect(() => {
     if (!isLoading && !user) {
       window.location.href = '/auth'
     }
   }, [user, isLoading])
 
-      if (isLoading || !user) {
-        return (
-          <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        )
-      }
+  if (isLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
 
-      return (
-        <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-700">
-          <div className="text-center space-y-4">
-            <h1 className="text-2xl font-bold animate-slide-in">Settings</h1>
-            <p className="text-muted-foreground animate-fade-in">Settings page coming soon...</p>
-          </div>
-        </div>
-      )
+  return (
+    <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-700">
+      <div className="text-center space-y-4">
+        <h1 className="text-2xl font-bold animate-slide-in">Settings</h1>
+        <p className="text-muted-foreground animate-fade-in">Settings page coming soon...</p>
+      </div>
+    </div>
+  )
 }
 
 const settingsRoute = createRoute({
@@ -215,29 +227,29 @@ const settingsRoute = createRoute({
 // Admin route
 const AdminComponent: React.FC = () => {
   const { user, isLoading } = useAuthStore()
-  
+
   React.useEffect(() => {
     if (!isLoading && !user) {
       window.location.href = '/auth'
     }
   }, [user, isLoading])
 
-      if (isLoading || !user) {
-        return (
-          <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        )
-      }
+  if (isLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
 
-      return (
-        <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-700">
-          <div className="text-center space-y-4">
-            <h1 className="text-2xl font-bold animate-slide-in">Admin Dashboard</h1>
-            <p className="text-muted-foreground animate-fade-in">Admin panel coming soon...</p>
-          </div>
-        </div>
-      )
+  return (
+    <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-700">
+      <div className="text-center space-y-4">
+        <h1 className="text-2xl font-bold animate-slide-in">Admin Dashboard</h1>
+        <p className="text-muted-foreground animate-fade-in">Admin panel coming soon...</p>
+      </div>
+    </div>
+  )
 }
 
 const adminRoute = createRoute({
@@ -251,9 +263,11 @@ const NotFoundComponent: React.FC = () => (
   <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-700">
     <div className="text-center space-y-6">
       <h1 className="text-2xl font-bold animate-slide-in">404 - Page Not Found</h1>
-      <p className="text-muted-foreground animate-fade-in">The page you're looking for doesn't exist.</p>
-      <button 
-        onClick={() => window.location.href = '/'}
+      <p className="text-muted-foreground animate-fade-in">
+        The page you're looking for doesn't exist.
+      </p>
+      <button
+        onClick={() => (window.location.href = '/')}
         className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-all duration-200 hover:scale-105 active:scale-95 animate-scale-in"
       >
         Go Home

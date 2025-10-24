@@ -1,17 +1,17 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { useNotesStore } from "@/stores"
-import { Input } from "@/components/ui/input"
-import { Search, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { formatDistanceToNow } from "date-fns"
+import { useState } from 'react'
+import { useNotesStore } from '@/stores'
+import { Input } from '@/components/ui/input'
+import { Search, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { formatDistanceToNow } from 'date-fns'
 
 export function SearchBar() {
   const { searchNotes, selectNote } = useNotesStore()
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const [results, setResults] = useState<any[]>([])
 
@@ -28,7 +28,7 @@ export function SearchBar() {
   const handleSelectNote = (noteId: string) => {
     selectNote(noteId)
     setIsOpen(false)
-    setQuery("")
+    setQuery('')
     setResults([])
   }
 
@@ -49,7 +49,7 @@ export function SearchBar() {
             size="sm"
             className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
             onClick={() => {
-              setQuery("")
+              setQuery('')
               setResults([])
             }}
           >
@@ -78,7 +78,9 @@ export function SearchBar() {
                     className="w-full text-left p-3 rounded-lg hover:bg-accent transition-smooth border border-border"
                   >
                     <h3 className="font-medium mb-1">{note.title}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{note.content || "No content"}</p>
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                      {note.content || 'No content'}
+                    </p>
                     <span className="text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}
                     </span>

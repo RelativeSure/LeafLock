@@ -24,7 +24,7 @@ export const useAuthStore = create<AuthState>()(
       initialize: async () => {
         const storedUser = localStorage.getItem('user')
         const storedToken = localStorage.getItem('token')
-        
+
         if (storedUser && storedToken) {
           try {
             const userData = JSON.parse(storedUser)
@@ -44,7 +44,7 @@ export const useAuthStore = create<AuthState>()(
       login: async (email: string, password: string) => {
         try {
           const response = await apiClient.login(email, password)
-          
+
           if (response.requiresMFA) {
             return { requiresMFA: true }
           }

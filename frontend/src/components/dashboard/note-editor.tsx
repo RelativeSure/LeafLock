@@ -1,11 +1,11 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-import { useEffect, useState } from "react"
-import { useNotesStore } from "@/stores"
-import { useCollaboration } from "@/lib/collaboration-context"
-import { useEncryption } from "@/lib/encryption-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+import { useEffect, useState } from 'react'
+import { useNotesStore } from '@/stores'
+import { useCollaboration } from '@/lib/collaboration-context'
+import { useEncryption } from '@/lib/encryption-context'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import {
   Lock,
   Unlock,
@@ -19,40 +19,46 @@ import {
   Plus,
   ShieldCheck,
   Pin,
-} from "lucide-react"
+} from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { SaveTemplateDialog } from "./save-template-dialog"
-import { ShareNoteDialog } from "./share-note-dialog"
-import { CollaborationBar } from "./collaboration-bar"
-import { EncryptionUnlockDialog } from "./encryption-unlock-dialog"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { RichTextEditor } from "./rich-text-editor"
-import { NoteStats } from "./note-stats"
-import { KeyboardShortcutsDialog } from "./keyboard-shortcuts-dialog"
+} from '@/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { SaveTemplateDialog } from './save-template-dialog'
+import { ShareNoteDialog } from './share-note-dialog'
+import { CollaborationBar } from './collaboration-bar'
+import { EncryptionUnlockDialog } from './encryption-unlock-dialog'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { RichTextEditor } from './rich-text-editor'
+import { NoteStats } from './note-stats'
+import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog'
 
 export function NoteEditor() {
   const { selectedNote, updateNote, moveToTrash, selectNote, tags, createTag } = useNotesStore()
   const { joinSession, leaveSession } = useCollaboration()
   const { isUnlocked, encryptText, decryptText } = useEncryption()
-  const [title, setTitle] = useState("")
-  const [_content, setContent] = useState("")
-  const [displayContent, setDisplayContent] = useState("")
+  const [title, setTitle] = useState('')
+  const [_content, setContent] = useState('')
+  const [displayContent, setDisplayContent] = useState('')
   const [noteTags, setNoteTags] = useState<string[]>([])
   const [isAddingTag, setIsAddingTag] = useState(false)
-  const [newTagName, setNewTagName] = useState("")
+  const [newTagName, setNewTagName] = useState('')
   const [isSaveTemplateOpen, setIsSaveTemplateOpen] = useState(false)
   const [isShareOpen, setIsShareOpen] = useState(false)
   const [isUnlockDialogOpen, setIsUnlockDialogOpen] = useState(false)
   const [isDecrypting, setIsDecrypting] = useState(false)
-  const [decryptError, setDecryptError] = useState("")
+  const [decryptError, setDecryptError] = useState('')
 
   const handleDelete = () => {
     if (selectedNote) {
@@ -66,7 +72,7 @@ export function NoteEditor() {
       try {
         await updateNote(selectedNote.id, { pinned: !selectedNote.pinned })
       } catch (error) {
-        console.error("Failed to toggle pin:", error)
+        console.error('Failed to toggle pin:', error)
       }
     }
   }
@@ -85,14 +91,14 @@ export function NoteEditor() {
         const encryptedContent = await encryptText(displayContent)
         await updateNote(selectedNote.id, { encrypted: true, content: encryptedContent })
       } catch (err) {
-        console.error("[v0] Failed to encrypt:", err)
+        console.error('[v0] Failed to encrypt:', err)
       }
     } else {
       // Disabling encryption
       try {
         await updateNote(selectedNote.id, { encrypted: false, content: displayContent })
       } catch (err) {
-        console.error("[v0] Failed to disable encryption:", err)
+        console.error('[v0] Failed to disable encryption:', err)
       }
     }
   }
@@ -101,23 +107,23 @@ export function NoteEditor() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!selectedNote) return
 
-      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
       const modifier = isMac ? e.metaKey : e.ctrlKey
 
-      if (modifier && e.key === "p") {
+      if (modifier && e.key === 'p') {
         e.preventDefault()
         handleTogglePin()
-      } else if (modifier && e.key === "e") {
+      } else if (modifier && e.key === 'e') {
         e.preventDefault()
         handleToggleEncryption()
-      } else if (modifier && e.key === "d") {
+      } else if (modifier && e.key === 'd') {
         e.preventDefault()
         handleDelete()
       }
     }
 
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [selectedNote])
 
   useEffect(() => {
@@ -130,7 +136,7 @@ export function NoteEditor() {
       if (selectedNote.encrypted && selectedNote.content) {
         if (isUnlocked) {
           setIsDecrypting(true)
-          setDecryptError("")
+          setDecryptError('')
           decryptText(selectedNote.content)
             .then((decrypted) => {
               setContent(decrypted)
@@ -138,16 +144,16 @@ export function NoteEditor() {
               setIsDecrypting(false)
             })
             .catch((err) => {
-              console.error("[v0] Decryption failed:", err)
-              setDecryptError("Failed to decrypt note. The password may be incorrect.")
-              setContent("")
-              setDisplayContent("")
+              console.error('[v0] Decryption failed:', err)
+              setDecryptError('Failed to decrypt note. The password may be incorrect.')
+              setContent('')
+              setDisplayContent('')
               setIsDecrypting(false)
             })
         } else {
           setIsUnlockDialogOpen(true)
-          setContent("")
-          setDisplayContent("")
+          setContent('')
+          setDisplayContent('')
         }
       } else {
         setContent(selectedNote.content)
@@ -173,7 +179,7 @@ export function NoteEditor() {
 
           await updateNote(selectedNote.id, { title, content: contentToSave, tags: noteTags })
         } catch (err) {
-          console.error("[v0] Failed to save note:", err)
+          console.error('[v0] Failed to save note:', err)
         }
       }, 500)
 
@@ -199,7 +205,7 @@ export function NoteEditor() {
     if (newTagName.trim()) {
       const tag = await createTag({ name: newTagName.trim() })
       handleAddTag(tag.name)
-      setNewTagName("")
+      setNewTagName('')
     }
   }
 
@@ -254,17 +260,17 @@ export function NoteEditor() {
       <div className="border-b border-border p-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-2 flex-1 flex-wrap">
           <Button
-            variant={selectedNote.pinned ? "default" : "outline"}
+            variant={selectedNote.pinned ? 'default' : 'outline'}
             size="sm"
             onClick={handleTogglePin}
             className="gap-2"
           >
             <Pin className="h-4 w-4" />
-            {selectedNote.pinned ? "Pinned" : "Pin"}
+            {selectedNote.pinned ? 'Pinned' : 'Pin'}
           </Button>
 
           <Button
-            variant={selectedNote.encrypted ? "default" : "outline"}
+            variant={selectedNote.encrypted ? 'default' : 'outline'}
             size="sm"
             onClick={handleToggleEncryption}
             className="gap-2"
@@ -300,7 +306,7 @@ export function NoteEditor() {
                     {tags.map((tag) => (
                       <Button
                         key={tag.id}
-                        variant={noteTags.includes(tag.name) ? "default" : "outline"}
+                        variant={noteTags.includes(tag.name) ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => handleAddTag(tag.name)}
                       >
@@ -319,7 +325,7 @@ export function NoteEditor() {
                       onChange={(e) => setNewTagName(e.target.value)}
                       placeholder="Tag name"
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") {
+                        if (e.key === 'Enter') {
                           handleCreateAndAddTag()
                         }
                       }}
@@ -337,7 +343,12 @@ export function NoteEditor() {
         <div className="flex items-center gap-2">
           <KeyboardShortcutsDialog />
 
-          <Button variant="outline" size="sm" className="gap-2 bg-transparent" onClick={() => setIsShareOpen(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 bg-transparent"
+            onClick={() => setIsShareOpen(true)}
+          >
             <Share2 className="h-4 w-4" />
             Share
           </Button>
@@ -410,7 +421,7 @@ export function NoteEditor() {
         <RichTextEditor
           content={displayContent}
           onChange={setDisplayContent}
-          placeholder={isDecrypting ? "Decrypting..." : "Start writing..."}
+          placeholder={isDecrypting ? 'Decrypting...' : 'Start writing...'}
           disabled={isDecrypting}
         />
 
@@ -429,7 +440,11 @@ export function NoteEditor() {
 
       <ShareNoteDialog open={isShareOpen} onOpenChange={setIsShareOpen} noteId={selectedNote.id} />
 
-      <EncryptionUnlockDialog open={isUnlockDialogOpen} onOpenChange={setIsUnlockDialogOpen} onUnlock={handleUnlock} />
+      <EncryptionUnlockDialog
+        open={isUnlockDialogOpen}
+        onOpenChange={setIsUnlockDialogOpen}
+        onUnlock={handleUnlock}
+      />
     </div>
   )
 }

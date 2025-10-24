@@ -1,23 +1,23 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { X, Cookie, ExternalLink } from "lucide-react"
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { X, Cookie, ExternalLink } from 'lucide-react'
 
 export function CookieConsent() {
   const [showBanner, setShowBanner] = useState(() => {
-    const consent = localStorage.getItem("cookie_consent")
+    const consent = localStorage.getItem('cookie_consent')
     return !consent
   })
 
   const handleAccept = () => {
-    localStorage.setItem("cookie_consent", "accepted")
+    localStorage.setItem('cookie_consent', 'accepted')
     setShowBanner(false)
   }
 
   const handleDecline = () => {
-    localStorage.setItem("cookie_consent", "declined")
+    localStorage.setItem('cookie_consent', 'declined')
     setShowBanner(false)
   }
 
@@ -32,8 +32,8 @@ export function CookieConsent() {
             <div>
               <h3 className="font-semibold text-sm mb-1">Cookie Notice</h3>
               <p className="text-xs text-muted-foreground">
-                We use essential cookies to store your data locally in your browser. No tracking or analytics cookies
-                are used.{" "}
+                We use essential cookies to store your data locally in your browser. No tracking or
+                analytics cookies are used.{' '}
                 <a
                   href="https://docs.leaflock.app/privacy"
                   target="_blank"
@@ -49,12 +49,22 @@ export function CookieConsent() {
               <Button onClick={handleAccept} size="sm" className="flex-1">
                 Accept
               </Button>
-              <Button onClick={handleDecline} size="sm" variant="outline" className="flex-1 bg-transparent">
+              <Button
+                onClick={handleDecline}
+                size="sm"
+                variant="outline"
+                className="flex-1 bg-transparent"
+              >
                 Decline
               </Button>
             </div>
           </div>
-          <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={handleDecline}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 flex-shrink-0"
+            onClick={handleDecline}
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>

@@ -1,8 +1,8 @@
-import { useState } from "react"
-import { useNotesStore } from "@/stores"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { useState } from 'react'
+import { useNotesStore } from '@/stores'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   FolderPlus,
   Plus,
@@ -17,21 +17,41 @@ import {
   Library,
   ExternalLink,
   HelpCircle,
-} from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { TemplatesDialog } from "./templates-dialog"
-import { SearchBar } from "./search-bar"
-import { ExportImportDialog } from "./export-import-dialog"
-import { TrashDialog } from "./trash-dialog"
+} from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { TemplatesDialog } from './templates-dialog'
+import { SearchBar } from './search-bar'
+import { ExportImportDialog } from './export-import-dialog'
+import { TrashDialog } from './trash-dialog'
 
 export function Sidebar() {
-  const { folders, tags, notes, selectedFolder, selectFolder, createFolder, deleteFolder, createNote, selectNote } =
-    useNotesStore()
+  const {
+    folders,
+    tags,
+    notes,
+    selectedFolder,
+    selectFolder,
+    createFolder,
+    deleteFolder,
+    createNote,
+    selectNote,
+  } = useNotesStore()
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
-  const [newFolderName, setNewFolderName] = useState("")
-  const [newFolderColor, setNewFolderColor] = useState("#3b82f6")
+  const [newFolderName, setNewFolderName] = useState('')
+  const [newFolderColor, setNewFolderColor] = useState('#3b82f6')
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false)
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false)
 
@@ -50,8 +70,8 @@ export function Sidebar() {
   const handleCreateFolder = () => {
     if (newFolderName.trim()) {
       createFolder({ name: newFolderName, color: newFolderColor })
-      setNewFolderName("")
-      setNewFolderColor("#3b82f6")
+      setNewFolderName('')
+      setNewFolderColor('#3b82f6')
       setIsCreateFolderOpen(false)
     }
   }
@@ -61,7 +81,7 @@ export function Sidebar() {
       const note = await createNote({})
       selectNote(note.id)
     } catch (error) {
-      console.error("Failed to create note:", error)
+      console.error('Failed to create note:', error)
     }
   }
 
@@ -74,14 +94,22 @@ export function Sidebar() {
         <SearchBar />
 
         <div className="flex gap-2">
-          <Button onClick={handleCreateNote} className="flex-1 transition-bounce hover-lift" size="sm">
+          <Button
+            onClick={handleCreateNote}
+            className="flex-1 transition-bounce hover-lift"
+            size="sm"
+          >
             <Plus className="h-4 w-4 mr-1" />
             New Note
           </Button>
 
           <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="transition-smooth hover-lift bg-transparent">
+              <Button
+                variant="outline"
+                size="sm"
+                className="transition-smooth hover-lift bg-transparent"
+              >
                 <FolderPlus className="h-4 w-4" />
               </Button>
             </DialogTrigger>
@@ -103,20 +131,27 @@ export function Sidebar() {
                 <div className="space-y-2">
                   <Label htmlFor="folder-color">Color</Label>
                   <div className="flex gap-2">
-                    {["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#6366f1"].map((color) => (
-                      <button
-                        key={color}
-                        type="button"
-                        onClick={() => setNewFolderColor(color)}
-                        className={`w-8 h-8 rounded-full border-2 transition-bounce hover:scale-110 ${
-                          newFolderColor === color ? "border-foreground scale-110" : "border-transparent"
-                        }`}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
+                    {['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'].map(
+                      (color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setNewFolderColor(color)}
+                          className={`w-8 h-8 rounded-full border-2 transition-bounce hover:scale-110 ${
+                            newFolderColor === color
+                              ? 'border-foreground scale-110'
+                              : 'border-transparent'
+                          }`}
+                          style={{ backgroundColor: color }}
+                        />
+                      )
+                    )}
                   </div>
                 </div>
-                <Button onClick={handleCreateFolder} className="w-full transition-bounce hover-lift">
+                <Button
+                  onClick={handleCreateFolder}
+                  className="w-full transition-bounce hover-lift"
+                >
                   Create Folder
                 </Button>
               </div>
@@ -132,7 +167,7 @@ export function Sidebar() {
           <button
             onClick={() => selectFolder(null)}
             className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-smooth ${
-              selectedFolder === null ? "bg-primary/10 text-primary" : "hover:bg-accent"
+              selectedFolder === null ? 'bg-primary/10 text-primary' : 'hover:bg-accent'
             }`}
           >
             <FileText className="h-4 w-4" />
@@ -160,22 +195,38 @@ export function Sidebar() {
               const isSelected = selectedFolder === folder.id
 
               return (
-                <div key={folder.id} className="stagger-item" style={{ animationDelay: `${index * 0.05}s` }}>
+                <div
+                  key={folder.id}
+                  className="stagger-item"
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                >
                   <div
                     className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-smooth group ${
-                      isSelected ? "bg-primary/10 text-primary" : "hover:bg-accent"
+                      isSelected ? 'bg-primary/10 text-primary' : 'hover:bg-accent'
                     }`}
                   >
                     <button
                       onClick={() => toggleFolder(folder.id)}
                       className="p-0.5 hover:bg-accent rounded transition-smooth"
                     >
-                      {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                      {isExpanded ? (
+                        <ChevronDown className="h-3 w-3" />
+                      ) : (
+                        <ChevronRight className="h-3 w-3" />
+                      )}
                     </button>
-                    <button onClick={() => selectFolder(folder.id)} className="flex items-center gap-2 flex-1">
-                      <Folder className="h-4 w-4 transition-smooth" style={{ color: folder.color }} />
+                    <button
+                      onClick={() => selectFolder(folder.id)}
+                      className="flex items-center gap-2 flex-1"
+                    >
+                      <Folder
+                        className="h-4 w-4 transition-smooth"
+                        style={{ color: folder.color }}
+                      />
                       <span className="truncate">{folder.name}</span>
-                      <span className="ml-auto text-xs text-muted-foreground">{folderNotes.length}</span>
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {folderNotes.length}
+                      </span>
                     </button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -209,7 +260,9 @@ export function Sidebar() {
 
           {/* Tags */}
           <div className="mt-4">
-            <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tags</div>
+            <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Tags
+            </div>
             {tags.map((tag, index) => {
               const tagNotes = activeNotes.filter((note) => note.tags.includes(tag.name))
 

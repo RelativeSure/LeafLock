@@ -1,14 +1,14 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { useTemplatesStore } from "@/stores"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
-import { FileText, Globe, TagIcon, X } from "lucide-react"
+import { useState } from 'react'
+import { useTemplatesStore } from '@/stores'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
+import { FileText, Globe, TagIcon, X } from 'lucide-react'
 
 interface SaveTemplateDialogProps {
   open: boolean
@@ -19,7 +19,7 @@ interface SaveTemplateDialogProps {
 
 export function SaveTemplateDialog({ open, onOpenChange, content, tags }: SaveTemplateDialogProps) {
   const { createTemplate } = useTemplatesStore()
-  const [name, setName] = useState("")
+  const [name, setName] = useState('')
   const [isPublic, setIsPublic] = useState(false)
   const [selectedTags, setSelectedTags] = useState<string[]>(tags)
 
@@ -31,7 +31,7 @@ export function SaveTemplateDialog({ open, onOpenChange, content, tags }: SaveTe
         tags: selectedTags,
         isPublic,
       })
-      setName("")
+      setName('')
       setIsPublic(false)
       setSelectedTags([])
       onOpenChange(false)
@@ -86,7 +86,9 @@ export function SaveTemplateDialog({ open, onOpenChange, content, tags }: SaveTe
               <Globe className="h-5 w-5 text-muted" />
               <div>
                 <p className="text-sm font-medium">Share Publicly</p>
-                <p className="text-xs text-muted-foreground">Make this template available to everyone</p>
+                <p className="text-xs text-muted-foreground">
+                  Make this template available to everyone
+                </p>
               </div>
             </div>
             <Switch checked={isPublic} onCheckedChange={setIsPublic} />

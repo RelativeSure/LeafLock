@@ -73,10 +73,10 @@ interface Tag {
 }
 
 interface UserSettings {
-  theme: "light" | "dark" | "system"
+  theme: 'light' | 'dark' | 'system'
   autoSave: boolean
   autoSaveInterval: number
-  defaultView: "list" | "grid"
+  defaultView: 'list' | 'grid'
   notificationsEnabled: boolean
   emailNotifications: boolean
   encryptionEnabled: boolean
@@ -92,10 +92,7 @@ class ApiClient {
     this.token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
   }
 
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -222,9 +219,12 @@ class ApiClient {
   }
 
   async regenerateBackupCodes(): Promise<string[]> {
-    const response = await this.request<{ backupCodes: string[] }>('/auth/mfa/backup-codes/regenerate', {
-      method: 'POST',
-    })
+    const response = await this.request<{ backupCodes: string[] }>(
+      '/auth/mfa/backup-codes/regenerate',
+      {
+        method: 'POST',
+      }
+    )
     return response.backupCodes
   }
 

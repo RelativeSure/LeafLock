@@ -1,18 +1,18 @@
-import { useState } from "react"
-import { useAuthStore } from "@/stores"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { UserPlus, Lock, Mail, User, Check, X } from "lucide-react"
+import { useState } from 'react'
+import { useAuthStore } from '@/stores'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { UserPlus, Lock, Mail, User, Check, X } from 'lucide-react'
 
 export function RegisterForm({ onToggleMode }: { onToggleMode: () => void }) {
   const { register } = useAuthStore()
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [error, setError] = useState("")
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   // Name validation
@@ -40,28 +40,28 @@ export function RegisterForm({ onToggleMode }: { onToggleMode: () => void }) {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
+    setError('')
 
     // Validate name
     if (!nameValid) {
-      setError("Name must be at least 2 characters")
+      setError('Name must be at least 2 characters')
       return
     }
 
     if (!nameHasValidChars) {
-      setError("Name can only contain letters, spaces, hyphens, and apostrophes")
+      setError('Name can only contain letters, spaces, hyphens, and apostrophes')
       return
     }
 
     // Validate email
     if (!emailValid) {
-      setError("Please enter a valid email address")
+      setError('Please enter a valid email address')
       return
     }
 
     // Validate password
     if (!allPasswordRequirementsMet) {
-      setError("Please meet all password requirements")
+      setError('Please meet all password requirements')
       return
     }
 
@@ -70,7 +70,7 @@ export function RegisterForm({ onToggleMode }: { onToggleMode: () => void }) {
     try {
       await register(email, password, name)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed")
+      setError(err instanceof Error ? err.message : 'Registration failed')
     } finally {
       setIsLoading(false)
     }
@@ -83,7 +83,7 @@ export function RegisterForm({ onToggleMode }: { onToggleMode: () => void }) {
       ) : (
         <X className="w-3 h-3 text-muted-foreground" />
       )}
-      <span className={valid ? "text-green-500" : "text-muted-foreground"}>{text}</span>
+      <span className={valid ? 'text-green-500' : 'text-muted-foreground'}>{text}</span>
     </div>
   )
 
@@ -94,7 +94,9 @@ export function RegisterForm({ onToggleMode }: { onToggleMode: () => void }) {
           <UserPlus className="w-6 h-6 text-primary" />
         </div>
         <CardTitle className="text-2xl text-center">Create an account</CardTitle>
-        <CardDescription className="text-center">Start taking secure, encrypted notes</CardDescription>
+        <CardDescription className="text-center">
+          Start taking secure, encrypted notes
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleRegister} className="space-y-4">
@@ -158,10 +160,19 @@ export function RegisterForm({ onToggleMode }: { onToggleMode: () => void }) {
             {password.length > 0 && (
               <div className="space-y-1 p-2 bg-muted/50 rounded-md">
                 <ValidationIndicator valid={passwordMinLength} text="At least 8 characters" />
-                <ValidationIndicator valid={passwordHasUppercase} text="One uppercase letter (A-Z)" />
-                <ValidationIndicator valid={passwordHasLowercase} text="One lowercase letter (a-z)" />
+                <ValidationIndicator
+                  valid={passwordHasUppercase}
+                  text="One uppercase letter (A-Z)"
+                />
+                <ValidationIndicator
+                  valid={passwordHasLowercase}
+                  text="One lowercase letter (a-z)"
+                />
                 <ValidationIndicator valid={passwordHasNumber} text="One number (0-9)" />
-                <ValidationIndicator valid={passwordHasSpecial} text="One special character (!@#$%...)" />
+                <ValidationIndicator
+                  valid={passwordHasSpecial}
+                  text="One special character (!@#$%...)"
+                />
               </div>
             )}
           </div>
@@ -187,15 +198,27 @@ export function RegisterForm({ onToggleMode }: { onToggleMode: () => void }) {
             )}
           </div>
 
-          {error && <div className="text-sm text-danger bg-danger/10 p-3 rounded-md animate-slide-in">{error}</div>}
+          {error && (
+            <div className="text-sm text-danger bg-danger/10 p-3 rounded-md animate-slide-in">
+              {error}
+            </div>
+          )}
 
-          <Button type="submit" className="w-full transition-bounce hover-lift" disabled={isLoading}>
-            {isLoading ? "Creating account..." : "Create account"}
+          <Button
+            type="submit"
+            className="w-full transition-bounce hover-lift"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Creating account...' : 'Create account'}
           </Button>
 
           <div className="text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <button type="button" onClick={onToggleMode} className="text-primary hover:underline transition-smooth">
+            Already have an account?{' '}
+            <button
+              type="button"
+              onClick={onToggleMode}
+              className="text-primary hover:underline transition-smooth"
+            >
               Sign in
             </button>
           </div>

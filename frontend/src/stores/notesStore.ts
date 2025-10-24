@@ -68,7 +68,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         folderId: note.folderId || selectedFolder,
         userId: user.id,
       })
-      
+
       set((state) => ({ notes: [newNote, ...state.notes], selectedNote: newNote }))
       return newNote
     } catch (error) {
@@ -80,7 +80,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   updateNote: async (id: string, updates: Partial<Note>) => {
     try {
       const updatedNote = await apiClient.updateNote(id, updates)
-      
+
       set((state) => ({
         notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
         selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
@@ -123,7 +123,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         ...folder,
         userId: user.id,
       })
-      
+
       set((state) => ({ folders: [...state.folders, newFolder] }))
       return newFolder
     } catch (error) {
@@ -147,10 +147,12 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   deleteFolder: async (id: string) => {
     try {
       await apiClient.deleteFolder(id)
-      
+
       // Move notes in this folder to root
       set((state) => ({
-        notes: state.notes.map((note) => (note.folderId === id ? { ...note, folderId: null } : note)),
+        notes: state.notes.map((note) =>
+          note.folderId === id ? { ...note, folderId: null } : note
+        ),
         folders: state.folders.filter((folder) => folder.id !== id),
         selectedFolder: state.selectedFolder === id ? null : state.selectedFolder,
       }))
@@ -173,7 +175,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         ...tag,
         userId: user.id,
       })
-      
+
       set((state) => ({ tags: [...state.tags, newTag] }))
       return newTag
     } catch (error) {
@@ -185,13 +187,16 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   deleteTag: async (id: string) => {
     try {
       await apiClient.deleteTag(id)
-      
+
       const { tags } = get()
       const tag = tags.find((t) => t.id === id)
       if (tag) {
         // Remove tag from all notes
         set((state) => ({
-          notes: state.notes.map((note) => ({ ...note, tags: note.tags.filter((t) => t !== tag.name) })),
+          notes: state.notes.map((note) => ({
+            ...note,
+            tags: note.tags.filter((t) => t !== tag.name),
+          })),
           tags: state.tags.filter((t) => t.id !== id),
         }))
       }
@@ -218,7 +223,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   moveToTrash: async (id: string) => {
     try {
       await apiClient.deleteNote(id) // Backend handles soft delete
-      
+
       set((state) => ({
         notes: state.notes.map((note) =>
           note.id === id
@@ -227,7 +232,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                 isTrashed: true,
                 trashedAt: new Date().toISOString(),
               }
-            : note,
+            : note
         ),
         selectedNote: state.selectedNote?.id === id ? null : state.selectedNote,
       }))
@@ -240,7 +245,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   restoreFromTrash: async (id: string) => {
     try {
       await apiClient.restoreNote(id)
-      
+
       set((state) => ({
         notes: state.notes.map((note) =>
           note.id === id
@@ -249,7 +254,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                 isTrashed: false,
                 trashedAt: undefined,
               }
-            : note,
+            : note
         ),
       }))
     } catch (error) {
@@ -263,7 +268,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       const { notes } = get()
       const trashedNotes = notes.filter((note) => note.isTrashed)
       await Promise.all(trashedNotes.map((note) => apiClient.permanentlyDeleteNote(note.id)))
-      
+
       set((state) => ({ notes: state.notes.filter((note) => !note.isTrashed) }))
     } catch (error) {
       console.error('Failed to empty trash:', error)

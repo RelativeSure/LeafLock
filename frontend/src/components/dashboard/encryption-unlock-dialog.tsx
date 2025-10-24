@@ -1,13 +1,19 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { useEncryption } from "@/lib/encryption-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Lock, Key, AlertCircle } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useState } from 'react'
+import { useEncryption } from '@/lib/encryption-context'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import { Lock, Key, AlertCircle } from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface EncryptionUnlockDialogProps {
   open: boolean
@@ -15,25 +21,29 @@ interface EncryptionUnlockDialogProps {
   onUnlock: () => void
 }
 
-export function EncryptionUnlockDialog({ open, onOpenChange, onUnlock }: EncryptionUnlockDialogProps) {
+export function EncryptionUnlockDialog({
+  open,
+  onOpenChange,
+  onUnlock,
+}: EncryptionUnlockDialogProps) {
   const { setEncryptionKey } = useEncryption()
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
 
   const handleUnlock = () => {
     if (!password.trim()) {
-      setError("Please enter your encryption password")
+      setError('Please enter your encryption password')
       return
     }
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters")
+      setError('Password must be at least 8 characters')
       return
     }
 
     setEncryptionKey(password)
-    setPassword("")
-    setError("")
+    setPassword('')
+    setError('')
     onUnlock()
     onOpenChange(false)
   }
@@ -55,8 +65,8 @@ export function EncryptionUnlockDialog({ open, onOpenChange, onUnlock }: Encrypt
           <Alert>
             <Key className="h-4 w-4" />
             <AlertDescription className="text-xs">
-              Your encryption password is never stored. It's used only to encrypt and decrypt your notes in your
-              browser.
+              Your encryption password is never stored. It's used only to encrypt and decrypt your
+              notes in your browser.
             </AlertDescription>
           </Alert>
 
@@ -71,10 +81,10 @@ export function EncryptionUnlockDialog({ open, onOpenChange, onUnlock }: Encrypt
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value)
-                  setError("")
+                  setError('')
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+                  if (e.key === 'Enter') {
                     handleUnlock()
                   }
                 }}

@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import { useCollaboration } from "@/lib/collaboration-context"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Users } from "lucide-react"
+import { useCollaboration } from '@/lib/collaboration-context'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Users } from 'lucide-react'
 
 interface CollaborationBarProps {
   noteId: string
@@ -27,8 +27,13 @@ export function CollaborationBar({ noteId }: CollaborationBarProps) {
           {activeUsers.slice(0, 5).map((user) => (
             <Tooltip key={user.id}>
               <TooltipTrigger>
-                <Avatar className="h-7 w-7 border-2 border-background" style={{ backgroundColor: user.color }}>
-                  <AvatarFallback className="text-white text-xs">{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+                <Avatar
+                  className="h-7 w-7 border-2 border-background"
+                  style={{ backgroundColor: user.color }}
+                >
+                  <AvatarFallback className="text-white text-xs">
+                    {user.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
               </TooltipTrigger>
               <TooltipContent>

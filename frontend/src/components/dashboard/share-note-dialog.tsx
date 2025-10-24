@@ -1,14 +1,14 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { useCollaboration } from "@/lib/collaboration-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Share2, UserPlus, X, Mail, Users } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { useState } from 'react'
+import { useCollaboration } from '@/lib/collaboration-context'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Share2, UserPlus, X, Mail, Users } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 
 interface ShareNoteDialogProps {
   open: boolean
@@ -18,8 +18,8 @@ interface ShareNoteDialogProps {
 
 export function ShareNoteDialog({ open, onOpenChange, noteId }: ShareNoteDialogProps) {
   const { shareNote, unshareNote, getSharedUsers, getSessionUsers } = useCollaboration()
-  const [email, setEmail] = useState("")
-  const [error, setError] = useState("")
+  const [email, setEmail] = useState('')
+  const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   const sharedUsers = getSharedUsers(noteId)
@@ -28,14 +28,14 @@ export function ShareNoteDialog({ open, onOpenChange, noteId }: ShareNoteDialogP
   const handleShare = async () => {
     if (!email.trim()) return
 
-    setError("")
+    setError('')
     setIsLoading(true)
 
     try {
       await shareNote(noteId, email)
-      setEmail("")
+      setEmail('')
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to share note")
+      setError(err instanceof Error ? err.message : 'Failed to share note')
     } finally {
       setIsLoading(false)
     }
@@ -69,7 +69,7 @@ export function ShareNoteDialog({ open, onOpenChange, noteId }: ShareNoteDialogP
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === 'Enter') {
                       handleShare()
                     }
                   }}
@@ -94,7 +94,9 @@ export function ShareNoteDialog({ open, onOpenChange, noteId }: ShareNoteDialogP
                 {activeUsers.map((user) => (
                   <div key={user.id} className="flex items-center gap-3 p-2 rounded-lg bg-surface">
                     <Avatar className="h-8 w-8" style={{ backgroundColor: user.color }}>
-                      <AvatarFallback className="text-white">{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+                      <AvatarFallback className="text-white">
+                        {user.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{user.name}</p>
@@ -114,7 +116,10 @@ export function ShareNoteDialog({ open, onOpenChange, noteId }: ShareNoteDialogP
               <Label>Shared with ({sharedUsers.length})</Label>
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {sharedUsers.map((user) => (
-                  <div key={user.id} className="flex items-center gap-3 p-2 rounded-lg bg-surface group">
+                  <div
+                    key={user.id}
+                    className="flex items-center gap-3 p-2 rounded-lg bg-surface group"
+                  >
                     <Avatar className="h-8 w-8">
                       <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
