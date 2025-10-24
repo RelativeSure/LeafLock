@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { UserPlus, Lock, Mail, User, Check, X } from 'lucide-react'
 
-export function RegisterForm({ onToggleMode }: { onToggleMode: () => void }) {
+export function RegisterForm({ onToggleMode, animatedTitle }: { onToggleMode: () => void; animatedTitle?: React.ReactNode }) {
   const { register } = useAuthStore()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -89,14 +89,21 @@ export function RegisterForm({ onToggleMode }: { onToggleMode: () => void }) {
 
   return (
     <Card className="w-full max-w-md animate-scale-in hover-lift">
-      <CardHeader className="space-y-1">
-        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4 mx-auto animate-bounce-in">
-          <UserPlus className="w-6 h-6 text-primary" />
+      <CardHeader className="space-y-4">
+        <div className="flex items-center justify-center mx-auto">
+          <h1 className="text-4xl font-semibold tracking-tight text-slate-100">
+            {animatedTitle ? null : 'LeafLock'}
+          </h1>
+          {animatedTitle}
         </div>
-        <CardTitle className="text-2xl text-center">Create an account</CardTitle>
-        <CardDescription className="text-center">
-          Start taking secure, encrypted notes
-        </CardDescription>
+        <div className="space-y-2">
+          <p className="text-center text-base text-slate-300 font-normal">
+            End-to-End Encrypted Note Taking
+          </p>
+          <p className="text-center text-sm text-slate-400 font-light">
+            Create your account to get started
+          </p>
+        </div>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleRegister} className="space-y-4">

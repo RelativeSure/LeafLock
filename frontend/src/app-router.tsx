@@ -21,6 +21,8 @@ import {
   DropdownMenuTrigger,
 } from './components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from './components/ui/avatar'
+import { InteractiveGridPattern } from './components/ui/interactive-grid-pattern'
+import { ShimmeringText } from './components/ui/shimmering-text'
 
 const RootLayout: React.FC = () => (
   <AppErrorBoundary>
@@ -76,14 +78,13 @@ const AuthComponent: React.FC = () => {
   const [mode, setMode] = React.useState<'login' | 'register'>('login')
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface via-background to-surface p-4 animate-in fade-in-50 duration-700">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center space-y-2 animate-fade-in">
-          <h1 className="text-4xl font-bold text-balance bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            LeafLock
-          </h1>
-        </div>
-
+    <div className="min-h-screen flex items-center justify-center p-4 animate-in fade-in-50 duration-700 relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      <InteractiveGridPattern
+        width={50}
+        height={50}
+        className="absolute inset-0 opacity-50"
+      />
+      <div className="w-full max-w-md relative z-10">
         {mode === 'login' ? (
           <LoginForm onToggleMode={() => setMode('register')} />
         ) : (
