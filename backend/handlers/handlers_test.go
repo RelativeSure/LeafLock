@@ -20,7 +20,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"leaflock/config"
 	"leaflock/crypto"
 )
 
@@ -208,172 +207,8 @@ func (m *MockRedisClient) Del(ctx context.Context, keys ...string) *redis.IntCmd
 }
 
 // =====================
-// AuthHandler Tests
+// AuthHandler Tests - REMOVED (migrated to backend/auth package)
 // =====================
-
-type AuthHandlerTestSuite struct {
-	suite.Suite
-	handler     *AuthHandler
-	mockDB      *MockDB
-	mockRedis   *MockRedisClient
-	cryptoSvc   *crypto.CryptoService
-	cfg         *config.Config
-	userID      uuid.UUID
-	workspaceID uuid.UUID
-}
-
-func (suite *AuthHandlerTestSuite) SetupTest() {
-	suite.mockDB = &MockDB{}
-	suite.mockRedis = &MockRedisClient{}
-
-	// Generate test encryption key
-	key := make([]byte, 32)
-	if _, err := rand.Read(key); err != nil {
-		suite.T().Fatalf("Failed to generate random data: %v", err)
-	}
-	suite.cryptoSvc = crypto.NewCryptoService(key)
-
-	jwtSecret := make([]byte, 64)
-	if _, err := rand.Read(jwtSecret); err != nil {
-		suite.T().Fatalf("Failed to generate random data: %v", err)
-	}
-
-	suite.cfg = &config.Config{
-		JWTSecret:         jwtSecret,
-		EncryptionKey:     key,
-		MaxLoginAttempts:  5,
-		SessionDuration:   24 * time.Hour,
-		DefaultAdminEmail: "admin@leaflock.app",
-	}
-
-	suite.handler = NewAuthHandler(suite.mockDB, nil, suite.cryptoSvc, suite.cfg)
-	suite.userID = uuid.New()
-	suite.workspaceID = uuid.New()
-}
-
-func (suite *AuthHandlerTestSuite) TestNewAuthHandler() {
-	handler := NewAuthHandler(suite.mockDB, nil, suite.cryptoSvc, suite.cfg)
-	suite.NotNil(handler)
-	suite.Equal(suite.mockDB, handler.db)
-	suite.Equal(suite.cryptoSvc, handler.crypto)
-	suite.Equal(suite.cfg, handler.config)
-}
-
-func (suite *AuthHandlerTestSuite) TestRegisterSuccess() {
-	// Enable registration for this test
-	config.RegEnabled.Store(1)
-	defer config.RegEnabled.Store(0)
-
-	app := fiber.New()
-
-	// Mock database interactions
-	mockRow := &MockRow{}
-	mockWorkspaceRow := &MockRow{}
-
-	// Mock transaction
-	mockTx := &MockTx{}
-	suite.mockDB.On("Begin", mock.Anything).Return(mockTx, nil)
-
-	// Mock GDPR key insertion
-	mockTx.On("Exec", mock.Anything, mock.MatchedBy(func(sql string) bool {
-		return contains(sql, "gdpr_keys")
-	}), mock.Anything, mock.Anything).Return(int64(1), nil)
-
-	// Mock user insertion
-	mockTx.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
-		return contains(sql, "INSERT INTO users")
-	}), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockRow)
-
-	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
-		if uid, ok := args[0].(*uuid.UUID); ok {
-			*uid = suite.userID
-		}
-	}).Return(nil)
-
-	// Mock workspace insertion
-	mockTx.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
-		return contains(sql, "INSERT INTO workspaces")
-	}), mock.Anything, mock.Anything, mock.Anything).Return(mockWorkspaceRow)
-
-	mockWorkspaceRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
-		if wid, ok := args[0].(*uuid.UUID); ok {
-			*wid = suite.workspaceID
-		}
-	}).Return(nil)
-
-	mockTx.On("Commit", mock.Anything).Return(nil)
-	mockTx.On("Rollback", mock.Anything).Return(nil)
-
-	// Mock audit log
-	suite.mockDB.On("Exec", mock.Anything, mock.MatchedBy(func(sql string) bool {
-		return contains(sql, "audit_log")
-	}), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(int64(1), nil)
-
-	app.Post("/register", suite.handler.Register)
-
-	reqBody := map[string]string{
-		"email":    "test@example.com",
-		"password": "testpassword123456",
-	}
-	body, _ := json.Marshal(reqBody)
-	req := httptest.NewRequest("POST", "/register", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req)
-
-	suite.NoError(err)
-	suite.Equal(201, resp.StatusCode)
-
-	var response map[string]interface{}
-	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
-
-	suite.Contains(response, "token")
-	suite.Contains(response, "user_id")
-	suite.Contains(response, "workspace_id")
-}
-
-func (suite *AuthHandlerTestSuite) TestRegisterInvalidPassword() {
-	// Enable registration for this test
-	config.RegEnabled.Store(1)
-	defer config.RegEnabled.Store(0)
-
-	app := fiber.New()
-	app.Post("/register", suite.handler.Register)
-
-	reqBody := map[string]string{
-		"email":    "test@example.com",
-		"password": "short",
-	}
-	body, _ := json.Marshal(reqBody)
-	req := httptest.NewRequest("POST", "/register", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req)
-
-	suite.NoError(err)
-	suite.Equal(400, resp.StatusCode)
-}
-
-func (suite *AuthHandlerTestSuite) TestRegisterDisabled() {
-	// Ensure registration is disabled
-	config.RegEnabled.Store(0)
-
-	app := fiber.New()
-	app.Post("/register", suite.handler.Register)
-
-	reqBody := map[string]string{
-		"email":    "test@example.com",
-		"password": "validpassword123",
-	}
-	body, _ := json.Marshal(reqBody)
-	req := httptest.NewRequest("POST", "/register", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req)
-
-	suite.NoError(err)
-	suite.Equal(403, resp.StatusCode)
-}
 
 // =====================
 // NotesHandler Tests
@@ -1187,10 +1022,6 @@ func (suite *ImportExportHandlerTestSuite) TestGetStorageInfoSuccess() {
 // =====================
 // Test Suite Runners
 // =====================
-
-func TestAuthHandlerSuite(t *testing.T) {
-	suite.Run(t, new(AuthHandlerTestSuite))
-}
 
 func TestNotesHandlerSuite(t *testing.T) {
 	suite.Run(t, new(NotesHandlerTestSuite))
