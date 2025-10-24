@@ -1,0 +1,204 @@
+"use client"
+
+import { useState } from "react"
+import { useTemplates } from "@/lib/templates-context"
+import { useNotes } from "@/lib/notes-context"
+import { useAuth } from "@/lib/auth-context"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
+import { FileText, Globe, Lock, Search, Trash2, Share2, Copy, TagIcon } from "lucide-react"
+import { formatDistanceToNow } from "date-fns"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+
+interface TemplatesDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
+  const { user } = useAuth()
+  const { templates, publicTemplates, deleteTemplate, shareTemplate } = useTemplates()
+  const { createNote, selectNote } = useNotes()
+  const [searchQuery, setSearchQuery] = useState("")
+  const [templateContent, setTemplateContent] = useState({ content: "", tags: [] })
+
+  const { useTemplate } = useTemplates()
+
+  const myTemplates = templates.filter((t) => t.userId === user?.id)
+  const communityTemplates = publicTemplates.filter((t) => t.userId !== user?.id)
+
+  const filterTemplates = (templateList: typeof templates) => {
+    if (!searchQuery) return templateList
+    const lowerQuery = searchQuery.toLowerCase()
+    return templateList.filter(
+      (t) => t.name.toLowerCase().includes(lowerQuery) || t.content.toLowerCase().includes(lowerQuery),
+    )
+  }
+
+  const handleUseTemplate = (templateId: string) => {
+    const { content, tags } = useTemplate(templateId)
+    setTemplateContent({ content, tags })
+    const note = createNote({ content, tags })
+    selectNote(note.id)
+    onOpenChange(false)
+  }
+
+  const handleToggleShare = (templateId: string, currentIsPublic: boolean) => {
+    shareTemplate(templateId, !currentIsPublic)
+  }
+
+  const TemplateCard = ({
+    template,
+    showActions = true,
+  }: { template: (typeof templates)[0]; showActions?: boolean }) => (
+    <div className="p-4 border border-border rounded-lg hover:bg-surface-hover transition-colors group">
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-medium text-sm mb-1 truncate">{template.name}</h3>
+          <p className="text-xs text-muted-foreground line-clamp-2">{template.content}</p>
+        </div>
+
+        {showActions && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100">
+                <span className="sr-only">Open menu</span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="1" />
+                  <circle cx="12" cy="5" r="1" />
+                  <circle cx="12" cy="19" r="1" />
+                </svg>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleToggleShare(template.id, template.isPublic)}>
+                {template.isPublic ? (
+                  <>
+                    <Lock className="h-4 w-4 mr-2" />
+                    Make Private
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share Publicly
+                  </>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => deleteTemplate(template.id)} className="text-danger">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between gap-2 mt-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          {template.isPublic && (
+            <Badge variant="secondary" className="text-xs">
+              <Globe className="h-3 w-3 mr-1" />
+              Public
+            </Badge>
+          )}
+          {template.tags.slice(0, 2).map((tag) => (
+            <Badge key={tag} variant="outline" className="text-xs">
+              <TagIcon className="h-2.5 w-2.5 mr-1" />
+              {tag}
+            </Badge>
+          ))}
+          {template.usageCount > 0 && <span className="text-xs text-muted-foreground">{template.usageCount} uses</span>}
+        </div>
+
+        <Button size="sm" variant="outline" onClick={() => handleUseTemplate(template.id)}>
+          <Copy className="h-3 w-3 mr-1" />
+          Use
+        </Button>
+      </div>
+
+      <div className="text-xs text-muted-foreground mt-2">
+        {formatDistanceToNow(new Date(template.createdAt), { addSuffix: true })}
+      </div>
+    </div>
+  )
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Templates
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+          <Input
+            placeholder="Search templates..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        <Tabs defaultValue="my-templates" className="flex-1 flex flex-col min-h-0">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="my-templates">My Templates ({myTemplates.length})</TabsTrigger>
+            <TabsTrigger value="community">Community ({communityTemplates.length})</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="my-templates" className="flex-1 mt-4 min-h-0">
+            <ScrollArea className="h-full">
+              {filterTemplates(myTemplates).length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                  <FileText className="h-12 w-12 mb-3 opacity-50" />
+                  <p className="text-sm">No templates yet</p>
+                  <p className="text-xs mt-1">Save a note as a template to get started</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-4">
+                  {filterTemplates(myTemplates).map((template) => (
+                    <TemplateCard key={template.id} template={template} />
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="community" className="flex-1 mt-4 min-h-0">
+            <ScrollArea className="h-full">
+              {filterTemplates(communityTemplates).length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                  <Globe className="h-12 w-12 mb-3 opacity-50" />
+                  <p className="text-sm">No community templates yet</p>
+                  <p className="text-xs mt-1">Share your templates to help others</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-4">
+                  {filterTemplates(communityTemplates).map((template) => (
+                    <TemplateCard key={template.id} template={template} showActions={false} />
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  )
+}

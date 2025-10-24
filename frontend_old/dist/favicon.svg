@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Background tile -->
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="#4F46E5"/>
+  <!-- Note fold (top-right corner) -->
+  <path d="M44 4h8a4 4 0 0 1 4 4v8L44 4Z" fill="#6366F1"/>
+  <!-- Lock shackle -->
+  <path d="M32 23c-5.5 0-10 4.5-10 10v3h6v-3c0-2.2 1.8-4 4-4s4 1.8 4 4v3h6v-3c0-5.5-4.5-10-10-10Z" fill="#FFFFFF"/>
+  <!-- Lock body -->
+  <rect x="20" y="33" width="24" height="18" rx="4" fill="#FFFFFF"/>
+  <!-- Keyhole -->
+  <path d="M32 38a3 3 0 1 0 0.001 0Z" fill="#111827"/>
+  <rect x="31" y="40.5" width="2" height="4.5" rx="1" fill="#111827"/>
+</svg>
+
