@@ -23,9 +23,7 @@ import {
   Users,
   Database,
   Activity,
-  CheckCircle,
-  XCircle,
-  Clock,
+  AlertTriangle,
   Globe,
   Lock,
   Eye,
@@ -38,7 +36,6 @@ import {
   BarChart3,
   Server,
   MemoryStick,
-  AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 

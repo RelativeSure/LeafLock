@@ -21,7 +21,6 @@ import {
   Upload,
   Trash2,
   AlertTriangle,
-  CheckCircle,
   Clock,
   Globe,
   Lock,
