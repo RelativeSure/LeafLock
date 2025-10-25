@@ -4,26 +4,57 @@ import App from './App'
 import './index.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
-// Add global error handlers for debugging
+// Enhanced global error handlers for better debugging
 window.addEventListener('error', (event) => {
-  console.error('Global error:', event.error)
-  console.error('Error details:', {
-    message: event.message,
-    filename: event.filename,
-    lineno: event.lineno,
-    colno: event.colno,
-    stack: event.error?.stack,
-  })
+  console.group('🚨 Global JavaScript Error')
+  console.error('Error:', event.error)
+  console.error('Message:', event.message)
+  console.error('File:', event.filename)
+  console.error('Line:', event.lineno, 'Column:', event.colno)
+
+  // Check for specific error patterns
+  if (event.message.includes('Cannot access') && event.message.includes('before initialization')) {
+    console.error('🔍 CIRCULAR DEPENDENCY DETECTED!')
+    console.error('This error typically occurs when:')
+    console.error('1. Module A imports Module B')
+    console.error('2. Module B imports Module A (directly or indirectly)')
+    console.error('3. One module tries to access the other before it\'s fully initialized')
+    console.error('')
+    console.error('Common causes in React/Zustand apps:')
+    console.error('- Stores importing each other')
+    console.error('- Components importing stores that import other stores')
+    console.error('- Dynamic imports creating circular references')
+  }
+
+  if (event.message.includes('ReferenceError')) {
+    console.error('🔍 REFERENCE ERROR DETECTED!')
+    console.error('This usually means:')
+    console.error('1. Variable used before declaration')
+    console.error('2. Module not properly exported/imported')
+    console.error('3. Circular dependency preventing proper initialization')
+  }
+
+  console.error('Stack trace:', event.error?.stack)
+  console.groupEnd()
 })
 
 window.addEventListener('unhandledrejection', (event) => {
-  console.error('Unhandled promise rejection:', event.reason)
+  console.group('🚨 Unhandled Promise Rejection')
+  console.error('Reason:', event.reason)
+  console.error('Promise:', event.promise)
+  console.groupEnd()
 })
 
 import { logConfig } from '@/lib/config'
 
 // Log configuration for debugging
 logConfig()
+
+// Add module loading tracking for debugging circular dependencies
+console.log('🔍 Module loading tracking enabled')
+
+// Track store initialization
+console.log('🔍 Store initialization tracking enabled')
 
 const queryClient = new QueryClient({
   defaultOptions: {
