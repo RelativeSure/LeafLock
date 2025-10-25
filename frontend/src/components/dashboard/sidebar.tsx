@@ -10,7 +10,7 @@ import {
   X,
   Library,
   CheckSquare,
-  TagPlus,
+  Tag,
 } from 'lucide-react'
 import {
   Dialog,
@@ -220,7 +220,7 @@ export function Sidebar() {
                 window.location.href = '/manage'
               }}
             >
-              <TagPlus className="h-4 w-4" />
+              <Tag className="h-4 w-4" />
             </Button>
           </div>
         </div>
