@@ -9,6 +9,7 @@ import { AppErrorBoundary } from './components/common/AppErrorBoundary'
 // Lazy load stores and components to prevent circular dependencies
 const LoginForm = React.lazy(() => import('./components/auth/login-form').then(m => ({ default: m.LoginForm })))
 const RegisterForm = React.lazy(() => import('./components/auth/register-form').then(m => ({ default: m.RegisterForm })))
+const ForgotPasswordForm = React.lazy(() => import('./components/auth/forgot-password-form').then(m => ({ default: m.ForgotPasswordForm })))
 const Sidebar = React.lazy(() => import('./components/dashboard/sidebar').then(m => ({ default: m.Sidebar })))
 const NoteEditor = React.lazy(() => import('./components/dashboard/note-editor').then(m => ({ default: m.NoteEditor })))
 const KeyboardShortcutsDialog = React.lazy(() => import('./components/dashboard/keyboard-shortcuts-dialog').then(m => ({ default: m.KeyboardShortcutsDialog })))
@@ -62,8 +63,8 @@ const indexRoute = createRoute({
 })
 
 // Auth routes
-const AuthComponent: React.FC<{ mode?: 'login' | 'register' }> = ({ mode: initialMode = 'login' }) => {
-  const [mode, setMode] = React.useState<'login' | 'register'>(initialMode)
+const AuthComponent: React.FC<{ mode?: 'login' | 'register' | 'forgot' }> = ({ mode: initialMode = 'login' }) => {
+  const [mode, setMode] = React.useState<'login' | 'register' | 'forgot'>(initialMode)
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 animate-in fade-in-50 duration-700 relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
@@ -76,8 +77,10 @@ const AuthComponent: React.FC<{ mode?: 'login' | 'register' }> = ({ mode: initia
         }>
           {mode === 'login' ? (
             <LoginForm onToggleMode={() => setMode('register')} />
-          ) : (
+          ) : mode === 'register' ? (
             <RegisterForm onToggleMode={() => setMode('login')} />
+          ) : (
+            <ForgotPasswordForm onToggleMode={() => setMode('login')} />
           )}
         </React.Suspense>
       </div>
@@ -101,6 +104,12 @@ const registerRoute = createRoute({
   getParentRoute: () => authRoute,
   path: 'register',
   component: () => <AuthComponent mode="register" />,
+})
+
+const forgotRoute = createRoute({
+  getParentRoute: () => authRoute,
+  path: 'forgot',
+  component: () => <AuthComponent mode="forgot" />,
 })
 
 // Dashboard route
@@ -328,7 +337,7 @@ const adminRoute = createRoute({
 export const router = createRouter({
   routeTree: rootRoute.addChildren([
     indexRoute,
-    authRoute.addChildren([loginRoute, registerRoute]),
+    authRoute.addChildren([loginRoute, registerRoute, forgotRoute]),
     dashboardRoute,
     settingsRoute,
     manageRoute,
