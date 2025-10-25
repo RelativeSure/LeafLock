@@ -7,12 +7,13 @@ import (
 	"fmt"
 	"strings"
 
+	appcrypto "leaflock/crypto"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/argon2"
-	appcrypto "leaflock/crypto"
 )
 
 const (
@@ -127,17 +128,22 @@ func (mm *MFAManager) VerifyBackupCode(ctx context.Context, userID uuid.UUID, co
 		}
 	}
 
-	// Mark as used
-	usedCodes = append(usedCodes, codeHash)
+	// Mark as used atomically to prevent race conditions
 	updateQuery := `
 		UPDATE users
-		SET mfa_backup_codes_used = $1
-		WHERE id = $2
+		SET mfa_backup_codes_used = array_append(mfa_backup_codes_used, $1)
+		WHERE id = $2 AND NOT ($1 = ANY(mfa_backup_codes_used))
 	`
 
-	_, err = mm.db.Exec(ctx, updateQuery, usedCodes, userID)
+	result, err := mm.db.Exec(ctx, updateQuery, codeHash, userID)
 	if err != nil {
 		return false, fmt.Errorf("failed to mark backup code as used: %w", err)
+	}
+
+	// Check if the update actually affected a row
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		return false, fmt.Errorf("backup code already used")
 	}
 
 	return true, nil

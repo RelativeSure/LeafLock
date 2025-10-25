@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"crypto/sha256"
+	"log"
 	"strings"
 
 	"leaflock/utils"
@@ -40,6 +42,22 @@ func (h *Handler) Register(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
 			Error: "Invalid request body",
 			Code:  ErrCodeValidationFailed,
+		})
+	}
+
+	// Check if registration is enabled
+	var registrationEnabled bool
+	query := `
+		SELECT COALESCE(
+			(SELECT value::boolean FROM app_settings WHERE key = 'registration_enabled'),
+			true
+		) as enabled
+	`
+	err := h.service.db.QueryRow(c.Context(), query).Scan(&registrationEnabled)
+	if err != nil || !registrationEnabled {
+		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{
+			Error: "User registration is currently disabled",
+			Code:  ErrCodeRegistrationDisabled,
 		})
 	}
 
@@ -413,9 +431,40 @@ func (h *Handler) RequestPasswordReset(c *fiber.Ctx) error {
 	}
 
 	// Look up user by email (same logic as login)
-	// TODO: Implement email lookup and token generation
-	// For now, always return success to prevent email enumeration
-	// Note: Client IP and User-Agent tracking will be added when TODO is implemented
+	emailBytes := []byte(strings.ToLower(strings.TrimSpace(req.Email)))
+	searchHash := sha256.Sum256(append(emailBytes, []byte("search-salt")...))
+
+	// Check if user exists
+	var userID uuid.UUID
+	query := `
+		SELECT id FROM users
+		WHERE email_search_hash = $1 AND deleted_at IS NULL
+	`
+	err := h.service.db.QueryRow(c.Context(), query, searchHash[:]).Scan(&userID)
+	if err != nil {
+		// User not found - return success to prevent email enumeration
+		return c.JSON(fiber.Map{
+			"message": "If the email exists, a password reset link has been sent",
+		})
+	}
+
+	// Get client info for security tracking
+	ipAddress := utils.ClientIP(c)
+	userAgent := c.Get("User-Agent")
+
+	// Create reset token
+	token, err := h.service.password.CreateResetToken(c.Context(), userID, ipAddress, userAgent)
+	if err != nil {
+		// Log error but don't expose it to prevent information disclosure
+		return c.JSON(fiber.Map{
+			"message": "If the email exists, a password reset link has been sent",
+		})
+	}
+
+	// TODO: Send email with reset link
+	// For now, we'll log the token for development purposes
+	// In production, this should be sent via email
+	log.Printf("Password reset token for user %s: %s", userID.String(), token)
 
 	return c.JSON(fiber.Map{
 		"message": "If the email exists, a password reset link has been sent",
@@ -499,9 +548,21 @@ func (h *Handler) ConfirmPasswordReset(c *fiber.Ctx) error {
 // @Success 200 {object} map[string]bool
 // @Router /auth/registration [get]
 func (h *Handler) GetRegistrationStatus(c *fiber.Ctx) error {
-	// This would check the registration toggle
-	// For now, we'll return true
+	// Check registration setting from app_settings table
+	var enabled bool
+	query := `
+		SELECT COALESCE(
+			(SELECT value::boolean FROM app_settings WHERE key = 'registration_enabled'),
+			true
+		) as enabled
+	`
+	err := h.service.db.QueryRow(c.Context(), query).Scan(&enabled)
+	if err != nil {
+		// If there's an error, default to enabled for backward compatibility
+		enabled = true
+	}
+
 	return c.JSON(fiber.Map{
-		"enabled": true,
+		"enabled": enabled,
 	})
 }

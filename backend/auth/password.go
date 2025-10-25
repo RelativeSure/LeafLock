@@ -5,14 +5,17 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"time"
 
+	appcrypto "leaflock/crypto"
+	"leaflock/utils"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/argon2"
-	appcrypto "leaflock/crypto"
 )
 
 const (
@@ -276,6 +279,11 @@ func (pm *PasswordManager) CompletePasswordReset(ctx context.Context, token, new
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	// Log password reset completion
+	pm.auditLog(ctx, userID, "password_reset_completed", map[string]interface{}{
+		"user_id": userID.String(),
+	})
+
 	return nil
 }
 
@@ -304,4 +312,38 @@ func (pm *PasswordManager) CleanupExpiredTokens(ctx context.Context) error {
 		return fmt.Errorf("failed to cleanup expired tokens: %w", err)
 	}
 	return nil
+}
+
+// auditLog logs an audit event for security tracking
+func (pm *PasswordManager) auditLog(ctx context.Context, userID uuid.UUID, action string, metadata map[string]interface{}) {
+	// Get client info from context
+	ipAddress := utils.GetClientIPFromContext(ctx)
+	userAgent := utils.GetUserAgentFromContext(ctx)
+
+	// Encrypt IP and User-Agent
+	ipEncrypted, err := pm.crypto.EncryptBytes([]byte(ipAddress))
+	if err != nil {
+		return // Fail silently for audit logging
+	}
+
+	uaEncrypted, err := pm.crypto.EncryptBytes([]byte(userAgent))
+	if err != nil {
+		return // Fail silently for audit logging
+	}
+
+	// Encrypt metadata if provided
+	var metadataEncrypted []byte
+	if metadata != nil {
+		metadataBytes, err := json.Marshal(metadata)
+		if err == nil {
+			metadataEncrypted, _ = pm.crypto.EncryptBytes(metadataBytes)
+		}
+	}
+
+	// Insert audit log
+	query := `
+		INSERT INTO audit_log (user_id, action, resource_type, ip_address_encrypted, user_agent_encrypted, metadata_encrypted)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`
+	_, _ = pm.db.Exec(ctx, query, userID, action, "auth", ipEncrypted, uaEncrypted, metadataEncrypted)
 }
