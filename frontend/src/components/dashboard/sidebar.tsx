@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { TemplatesDialog } from './templates-dialog'
-// import { SearchBar } from './search-bar'
+import { SearchBar } from './search-bar'
 // import { ExportImportDialog } from './export-import-dialog'
 // import { TrashDialog } from './trash-dialog'
 
@@ -103,8 +103,7 @@ export function Sidebar() {
     <div className="w-64 border-r border-border bg-card flex flex-col h-full">
       {/* Search */}
       <div className="p-4 border-b border-border space-y-3">
-        {/* <SearchBar /> */}
-        <div className="text-sm text-muted-foreground">Search temporarily disabled</div>
+        <SearchBar />
 
         <div className="flex gap-2">
           <Button
