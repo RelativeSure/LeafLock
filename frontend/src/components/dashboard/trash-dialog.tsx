@@ -38,9 +38,10 @@ export function TrashDialog() {
   const loadTrashedNotes = async () => {
     try {
       const notes = await getTrashedNotes()
-      setTrashedNotes(notes)
+      setTrashedNotes(Array.isArray(notes) ? notes : [])
     } catch (error) {
       console.error('Failed to load trashed notes:', error)
+      setTrashedNotes([])
     }
   }
 
@@ -117,7 +118,7 @@ export function TrashDialog() {
           <>
             <ScrollArea className="max-h-[400px]">
               <div className="space-y-2">
-                {trashedNotes.map((note) => (
+                {(trashedNotes || []).map((note) => (
                   <div
                     key={note.id}
                     className="p-3 rounded-lg border border-border hover:bg-accent transition-smooth"

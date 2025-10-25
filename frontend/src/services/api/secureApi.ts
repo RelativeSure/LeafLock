@@ -352,7 +352,8 @@ class ApiClient {
   }
 
   async getTrash(): Promise<Note[]> {
-    return this.request<Note[]>('/notes/trash')
+    const response = await this.request<{ notes: Note[] }>('/notes/trash')
+    return response.notes || []
   }
 
   async restoreNote(id: string): Promise<void> {
