@@ -303,7 +303,8 @@ class ApiClient {
 
   // Notes methods
   async getNotes(): Promise<Note[]> {
-    return this.request<Note[]>('/notes')
+    const response = await this.request<{ notes: Note[] }>('/notes')
+    return response.notes || []
   }
 
   async getNote(id: string): Promise<Note> {
@@ -378,7 +379,8 @@ class ApiClient {
 
   // Tags methods
   async getTags(): Promise<Tag[]> {
-    return this.request<Tag[]>('/tags')
+    const response = await this.request<{ tags: Tag[] }>('/tags')
+    return response.tags || []
   }
 
   async createTag(tag: Partial<Tag>): Promise<Tag> {
@@ -413,7 +415,8 @@ class ApiClient {
 
   // Folders methods
   async getFolders(): Promise<Folder[]> {
-    return this.request<Folder[]>('/folders')
+    const response = await this.request<{ folders: Folder[] }>('/folders')
+    return response.folders || []
   }
 
   async updateFolder(id: string, folder: Partial<Folder>): Promise<Folder> {
@@ -438,7 +441,8 @@ class ApiClient {
 
   // Templates methods
   async getTemplates(): Promise<Template[]> {
-    return this.request<Template[]>('/templates')
+    const response = await this.request<{ templates: Template[] }>('/templates')
+    return response.templates || []
   }
 
   async getTemplate(id: string): Promise<Template> {
