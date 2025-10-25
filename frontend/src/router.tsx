@@ -5,6 +5,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { EncryptionProvider } from './lib/encryption-context'
 import { Toaster } from './components/ui/sonner'
 import { AppErrorBoundary } from './components/common/AppErrorBoundary'
+
 // Lazy load stores and components to prevent circular dependencies
 const LoginForm = React.lazy(() => import('./components/auth/login-form').then(m => ({ default: m.LoginForm })))
 const RegisterForm = React.lazy(() => import('./components/auth/register-form').then(m => ({ default: m.RegisterForm })))
@@ -45,32 +46,12 @@ const rootRoute = createRootRoute({
   component: RootLayout,
 })
 
-// Landing page route
+// Index route
 const IndexComponent: React.FC = () => {
-  const { user, isLoading, initialize } = useAuthStore()
-
   React.useEffect(() => {
-    initialize()
-  }, [initialize])
-
-  React.useEffect(() => {
-    if (!isLoading) {
-      if (user) {
-        window.location.href = '/dashboard'
-      } else {
-        window.location.href = '/auth'
-      }
-    }
-  }, [user, isLoading])
-
-  return (
-    <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">
-      <div className="text-center space-y-4">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    </div>
-  )
+    window.location.href = '/auth'
+  }, [])
+  return null
 }
 
 const indexRoute = createRoute({
@@ -161,7 +142,6 @@ const DashboardComponent: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* <MainNavigation /> */}
           <ThemeToggle />
 
           <DropdownMenu>
@@ -233,151 +213,41 @@ const DashboardComponent: React.FC = () => {
   )
 }
 
-const settingsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: 'settings',
-  component: SettingsComponent,
-})
-
-const templatesRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: 'templates',
-  component: TemplatesComponent,
-})
-
-const tagsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: 'tags',
-  component: TagsComponent,
-})
-
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard',
   component: DashboardComponent,
 })
 
-// Templates route
-const TemplatesComponent: React.FC = () => {
-  const { user, isLoading } = useAuthStore()
-
-  return (
-    <ProtectedRoute
-      user={user}
-      isLoading={isLoading}
-      requiredRole="user"
-      fallbackRoute="/auth/login"
-    >
-      <div className="min-h-screen bg-background animate-in fade-in-50 duration-700">
-        <div className="container mx-auto p-6">
-          <h1 className="text-3xl font-bold">Templates</h1>
-          <p className="text-muted-foreground mt-2">Templates page coming soon...</p>
-        </div>
-      </div>
-    </ProtectedRoute>
-  )
-}
-
-// Tags route
-const TagsComponent: React.FC = () => {
-  const { user, isLoading } = useAuthStore()
-
-  return (
-    <ProtectedRoute
-      user={user}
-      isLoading={isLoading}
-      requiredRole="user"
-      fallbackRoute="/auth/login"
-    >
-      <div className="min-h-screen bg-background animate-in fade-in-50 duration-700">
-        <div className="container mx-auto p-6">
-          <h1 className="text-3xl font-bold">Tags</h1>
-          <p className="text-muted-foreground mt-2">Tags page coming soon...</p>
-        </div>
-      </div>
-    </ProtectedRoute>
-  )
-}
-
-// Settings route
-const SettingsComponent: React.FC = () => {
-  const { user, isLoading } = useAuthStore()
-
-  return (
-    <ProtectedRoute
-      user={user}
-      isLoading={isLoading}
-      requiredRole="user"
-      fallbackRoute="/auth/login"
-    >
-      <div className="min-h-screen bg-background animate-in fade-in-50 duration-700">
-        <SettingsPage />
-      </div>
-    </ProtectedRoute>
-  )
-}
-
-// Admin route
-const AdminComponent: React.FC = () => {
-  const { user, isLoading } = useAuthStore()
-
-  return (
-    <ProtectedRoute
-      user={user}
-      isLoading={isLoading}
-      requiredRole="admin"
-      fallbackRoute="/dashboard"
-    >
-      <div className="min-h-screen bg-background animate-in fade-in-50 duration-700">
-        <AdminPage />
-      </div>
-    </ProtectedRoute>
-  )
-}
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'settings',
+  component: SettingsPage,
+})
 
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'admin',
-  component: AdminComponent,
+  component: () => (
+    <ProtectedRoute requiredRole="admin">
+      <AdminPage />
+    </ProtectedRoute>
+  ),
 })
 
-// 404 route
-const NotFoundComponent: React.FC = () => (
-  <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-700">
-    <div className="text-center space-y-6">
-      <h1 className="text-2xl font-bold animate-slide-in">404 - Page Not Found</h1>
-      <p className="text-muted-foreground animate-fade-in">
-        The page you're looking for doesn't exist.
-      </p>
-      <button
-        onClick={() => (window.location.href = '/')}
-        className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-all duration-200 hover:scale-105 active:scale-95 animate-scale-in"
-      >
-        Go Home
-      </button>
-    </div>
-  </div>
-)
-
-const notFoundRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '*',
-  component: NotFoundComponent,
-})
-
-const routeTree = rootRoute.addChildren([
-  indexRoute,
-  authRoute,
-  dashboardRoute,
-  templatesRoute,
-  tagsRoute,
-  settingsRoute,
-  adminRoute,
-  notFoundRoute,
-])
-
+// Create the router
 export const router = createRouter({
-  routeTree,
+  routeTree: rootRoute.addChildren([
+    indexRoute,
+    authRoute,
+    dashboardRoute,
+    settingsRoute,
+    adminRoute,
+  ]),
 })
 
-export type AppRouterInstance = typeof router
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router
+  }
+}

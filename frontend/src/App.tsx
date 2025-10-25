@@ -15,7 +15,7 @@ const App: React.FC = () => {
   React.useEffect(() => {
     // Dynamically import router to break circular dependency
     if (!routerInstance) {
-      import('./app-router').then((module) => {
+      import('./router').then((module) => {
         routerInstance = module.router
         setRouter(routerInstance)
       })
