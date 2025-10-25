@@ -121,127 +121,128 @@ export function Sidebar() {
             </Button>
           </div>
         )}
-      {/* Search */}
-      <div className="p-4 border-b border-border space-y-3">
-        <AdvancedSearchBar />
 
-        <div className="flex gap-2">
-          <Button
-            onClick={handleCreateNote}
-            className="flex-1 transition-bounce hover-lift"
-            size="sm"
-            disabled={isLoading}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            New Note
-          </Button>
+        {/* Search */}
+        <div className="p-4 border-b border-border space-y-3">
+          <AdvancedSearchBar />
 
-          <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="transition-smooth hover-lift bg-transparent"
-              >
-                <FolderPlus className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="animate-scale-in">
-              <DialogHeader>
-                <DialogTitle>Create Folder</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="folder-name">Folder Name</Label>
-                  <Input
-                    id="folder-name"
-                    value={newFolderName}
-                    onChange={(e) => setNewFolderName(e.target.value)}
-                    placeholder="My Folder"
-                    className="transition-smooth"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="folder-color">Color</Label>
-                  <div className="flex gap-2">
-                    {['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'].map(
-                      (color) => (
-                        <button
-                          key={color}
-                          type="button"
-                          onClick={() => setNewFolderColor(color)}
-                          className={`w-8 h-8 rounded-full border-2 transition-bounce hover:scale-110 ${
-                            newFolderColor === color
-                              ? 'border-foreground scale-110'
-                              : 'border-transparent'
-                          }`}
-                          style={{ backgroundColor: color }}
-                        />
-                      )
-                    )}
-                  </div>
-                </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleCreateNote}
+              className="flex-1 transition-bounce hover-lift"
+              size="sm"
+              disabled={isLoading}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              New Note
+            </Button>
+
+            <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
+              <DialogTrigger asChild>
                 <Button
-                  onClick={handleCreateFolder}
-                  className="w-full transition-bounce hover-lift"
+                  variant="outline"
+                  size="sm"
+                  className="transition-smooth hover-lift bg-transparent"
                 >
-                  Create Folder
+                  <FolderPlus className="h-4 w-4" />
                 </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      {/* Notes List */}
-      <div className="flex-1 flex flex-col border-b border-border">
-        <div className="p-4 border-b border-border">
-          <h2 className="font-semibold text-sm">Notes</h2>
-        </div>
-        <ScrollArea className="flex-1">
-          <div className="p-2">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-32">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <NoteList />
-            )}
+              </DialogTrigger>
+              <DialogContent className="animate-scale-in">
+                <DialogHeader>
+                  <DialogTitle>Create Folder</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="folder-name">Folder Name</Label>
+                    <Input
+                      id="folder-name"
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      placeholder="My Folder"
+                      className="transition-smooth"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="folder-color">Color</Label>
+                    <div className="flex gap-2">
+                      {['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'].map(
+                        (color) => (
+                          <button
+                            key={color}
+                            type="button"
+                            onClick={() => setNewFolderColor(color)}
+                            className={`w-8 h-8 rounded-full border-2 transition-bounce hover:scale-110 ${
+                              newFolderColor === color
+                                ? 'border-foreground scale-110'
+                                : 'border-transparent'
+                            }`}
+                            style={{ backgroundColor: color }}
+                          />
+                        )
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleCreateFolder}
+                    className="w-full transition-bounce hover-lift"
+                  >
+                    Create Folder
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
-        </ScrollArea>
-      </div>
+        </div>
 
-      {/* Management Link */}
-      <div className="p-4 border-t border-border">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => window.location.href = '/manage'}
-          className="w-full gap-2 bg-transparent"
-        >
-          <FolderPlus className="h-4 w-4" />
-          Manage Folders & Tags
-        </Button>
-      </div>
+        {/* Notes List */}
+        <div className="flex-1 flex flex-col border-b border-border">
+          <div className="p-4 border-b border-border">
+            <h2 className="font-semibold text-sm">Notes</h2>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                </div>
+              ) : (
+                <NoteList />
+              )}
+            </div>
+          </ScrollArea>
+        </div>
 
-      <div className="p-4 border-t border-border space-y-2">
-        <div className="flex gap-2">
-          <TrashDialog />
+        {/* Management Link */}
+        <div className="p-4 border-t border-border">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsTemplatesOpen(true)}
-            className="flex-1 gap-2 bg-transparent"
-            disabled={isLoading}
+            onClick={() => window.location.href = '/manage'}
+            className="w-full gap-2 bg-transparent"
           >
-            <Library className="h-4 w-4" />
-            Templates
+            <FolderPlus className="h-4 w-4" />
+            Manage Folders & Tags
           </Button>
         </div>
-      </div>
 
-      {/* Templates Dialog */}
-      <TemplatesDialog open={isTemplatesOpen} onOpenChange={setIsTemplatesOpen} />
+        <div className="p-4 border-t border-border space-y-2">
+          <div className="flex gap-2">
+            <TrashDialog />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsTemplatesOpen(true)}
+              className="flex-1 gap-2 bg-transparent"
+              disabled={isLoading}
+            >
+              <Library className="h-4 w-4" />
+              Templates
+            </Button>
+          </div>
+        </div>
+
+        {/* Templates Dialog */}
+        <TemplatesDialog open={isTemplatesOpen} onOpenChange={setIsTemplatesOpen} />
       </div>
     </>
   )
