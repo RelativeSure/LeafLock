@@ -176,6 +176,10 @@ export function NoteEditor() {
               content: contentToSave,
               tags: noteTags
             })
+
+            // Update local state with encrypted values to keep UI in sync
+            setTitle(encryptedTitle)
+            setDisplayContent(contentToSave)
           } else {
             // If not unlocked, don't save
             return
