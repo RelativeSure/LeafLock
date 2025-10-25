@@ -4,7 +4,7 @@ import { Outlet, createRoute, createRouter, createRootRoute } from '@tanstack/re
 import { ThemeProvider } from './context/ThemeContext'
 import { Toaster } from './components/ui/sonner'
 import { AppErrorBoundary } from './components/common/AppErrorBoundary'
-import { useAuthStore } from './stores'
+import { useAuthStore, useNotesStore } from './stores'
 import { LoginForm } from './components/auth/login-form'
 import { RegisterForm } from './components/auth/register-form'
 import { Sidebar } from './components/dashboard/sidebar'
@@ -102,12 +102,20 @@ const authRoute = createRoute({
 // Dashboard route
 const DashboardComponent: React.FC = () => {
   const { user, isLoading, logout } = useAuthStore()
+  const { loadData } = useNotesStore()
 
   React.useEffect(() => {
     if (!isLoading && !user) {
       window.location.href = '/auth'
     }
   }, [user, isLoading])
+
+  // Load data when user is available
+  React.useEffect(() => {
+    if (user && !isLoading) {
+      loadData()
+    }
+  }, [user, isLoading, loadData])
 
   if (isLoading || !user) {
     return (

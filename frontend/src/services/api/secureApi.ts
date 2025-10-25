@@ -311,42 +311,36 @@ class ApiClient {
   }
 
   async createNote(note: Partial<Note>): Promise<Note> {
-    // Encrypt title and content before sending to backend
-    const titleEncrypted = note.title ? btoa(unescape(encodeURIComponent(note.title))) : ''
-    const contentEncrypted = note.content ? btoa(unescape(encodeURIComponent(note.content))) : ''
-
-    const encryptedNote = {
-      title_encrypted: titleEncrypted,
-      content_encrypted: contentEncrypted,
+    // For now, send plain text - encryption will be handled by the backend
+    const noteData = {
+      title: note.title || '',
+      content: note.content || '',
       folderId: note.folderId,
-      tags: note.tags,
-      encrypted: note.encrypted,
+      tags: note.tags || [],
+      encrypted: note.encrypted || false,
       userId: note.userId,
     }
 
     return this.request<Note>('/notes', {
       method: 'POST',
-      body: JSON.stringify(encryptedNote),
+      body: JSON.stringify(noteData),
     })
   }
 
   async updateNote(id: string, note: Partial<Note>): Promise<Note> {
-    // Encrypt title and content before sending to backend
-    const encryptedNote: any = { ...note }
-
-    if (note.title) {
-      encryptedNote.title_encrypted = btoa(unescape(encodeURIComponent(note.title)))
-      delete encryptedNote.title
-    }
-
-    if (note.content) {
-      encryptedNote.content_encrypted = btoa(unescape(encodeURIComponent(note.content)))
-      delete encryptedNote.content
+    // For now, send plain text - encryption will be handled by the backend
+    const noteData = {
+      title: note.title,
+      content: note.content,
+      folderId: note.folderId,
+      tags: note.tags,
+      encrypted: note.encrypted,
+      pinned: note.pinned,
     }
 
     return this.request<Note>(`/notes/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(encryptedNote),
+      body: JSON.stringify(noteData),
     })
   }
 
