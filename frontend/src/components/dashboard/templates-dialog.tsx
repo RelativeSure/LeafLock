@@ -27,8 +27,8 @@ export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
   const { createNote, selectNote } = useNotesStore()
   const [searchQuery, setSearchQuery] = useState('')
 
-  const myTemplates = templates.filter((t) => t.userId === user?.id)
-  const communityTemplates = publicTemplates.filter((t) => t.userId !== user?.id)
+  const myTemplates = (templates || []).filter((t) => t.userId === user?.id)
+  const communityTemplates = (publicTemplates || []).filter((t) => t.userId !== user?.id)
 
   const filterTemplates = (templateList: typeof templates) => {
     if (!searchQuery) return templateList

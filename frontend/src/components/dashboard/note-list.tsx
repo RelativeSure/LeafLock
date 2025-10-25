@@ -17,7 +17,7 @@ export function NoteList() {
   const { notes, selectedNote, selectedFolder, selectNote } = useNotesStore()
   const [sortBy, setSortBy] = useState<SortOption>('updated')
 
-  const activeNotes = notes.filter((note) => !note.isTrashed)
+  const activeNotes = (notes || []).filter((note) => !note.isTrashed)
   const filteredNotes = selectedFolder
     ? activeNotes.filter((note) => note.folderId === selectedFolder)
     : activeNotes

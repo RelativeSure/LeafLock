@@ -303,7 +303,7 @@ export function NoteEditor() {
                 <div className="space-y-2">
                   <Label>Existing Tags</Label>
                   <div className="flex flex-wrap gap-2">
-                    {tags.map((tag) => (
+                    {(tags || []).map((tag) => (
                       <Button
                         key={tag.id}
                         variant={noteTags.includes(tag.name) ? 'default' : 'outline'}

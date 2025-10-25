@@ -85,7 +85,7 @@ export function Sidebar() {
     }
   }
 
-  const activeNotes = notes.filter((note) => !note.isTrashed)
+  const activeNotes = (notes || []).filter((note) => !note.isTrashed)
 
   return (
     <div className="w-64 border-r border-border bg-card flex flex-col h-full">
@@ -189,7 +189,7 @@ export function Sidebar() {
             <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Folders
             </div>
-            {folders.map((folder, index) => {
+            {(folders || []).map((folder, index) => {
               const folderNotes = activeNotes.filter((note) => note.folderId === folder.id)
               const isExpanded = expandedFolders.has(folder.id)
               const isSelected = selectedFolder === folder.id
@@ -263,7 +263,7 @@ export function Sidebar() {
             <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Tags
             </div>
-            {tags.map((tag, index) => {
+            {(tags || []).map((tag, index) => {
               const tagNotes = activeNotes.filter((note) => note.tags.includes(tag.name))
 
               return (

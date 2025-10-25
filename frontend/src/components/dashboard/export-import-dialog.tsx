@@ -73,7 +73,7 @@ export function ExportImportDialog() {
         mfaEnabled: user.mfaEnabled,
       },
       // Content Data
-      notes: notes.map((note) => ({
+      notes: (notes || []).map((note) => ({
         ...note,
         // Include encryption status
         encrypted: note.encrypted || false,
