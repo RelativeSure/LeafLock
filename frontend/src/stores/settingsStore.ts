@@ -18,6 +18,9 @@ const defaultSettings: UserSettings = {
   emailNotifications: false,
   encryptionEnabled: true,
   language: 'en',
+  profilePicture: {
+    type: 'gravatar',
+  },
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({

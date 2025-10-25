@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Note, Folder, Tag } from '../types'
+import type { Note, Folder, Tag, NoteVersion } from '../types'
 import { apiClient } from '../services/api/secureApi'
 
 interface NotesState {
@@ -25,6 +25,13 @@ interface NotesState {
   restoreFromTrash: (id: string) => Promise<void>
   emptyTrash: () => Promise<void>
   getTrashedNotes: () => Promise<Note[]>
+  createNoteVersion: (noteId: string, changeDescription?: string) => Promise<NoteVersion>
+  getNoteVersions: (noteId: string) => Promise<NoteVersion[]>
+  restoreNoteVersion: (versionId: string) => Promise<void>
+  deleteNoteVersion: (versionId: string) => Promise<void>
+  moveNotesToFolder: (noteIds: string[], folderId: string) => Promise<void>
+  addTagsToNotes: (noteIds: string[], tagNames: string[]) => Promise<void>
+  removeTagsFromNotes: (noteIds: string[], tagNames: string[]) => Promise<void>
   loadData: () => Promise<void>
 }
 
@@ -288,6 +295,111 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     } catch (error) {
       console.error('Failed to get trashed notes:', error)
       return []
+    }
+  },
+
+  createNoteVersion: async (noteId: string, changeDescription?: string) => {
+    try {
+      const { notes } = get()
+      const note = notes.find(n => n.id === noteId)
+      if (!note) throw new Error('Note not found')
+
+      const version = await apiClient.createNoteVersion({
+        noteId,
+        title: note.title,
+        content: note.content,
+        changeDescription,
+      })
+
+      return version
+    } catch (error) {
+      console.error('Failed to create note version:', error)
+      throw error
+    }
+  },
+
+  getNoteVersions: async (noteId: string) => {
+    try {
+      return await apiClient.getNoteVersions(noteId)
+    } catch (error) {
+      console.error('Failed to get note versions:', error)
+      return []
+    }
+  },
+
+  restoreNoteVersion: async (versionId: string) => {
+    try {
+      const restoredNote = await apiClient.restoreNoteVersion(versionId)
+
+      set((state) => ({
+        notes: state.notes.map((note) =>
+          note.id === restoredNote.id ? restoredNote : note
+        ),
+        selectedNote: state.selectedNote?.id === restoredNote.id ? restoredNote : state.selectedNote,
+      }))
+    } catch (error) {
+      console.error('Failed to restore note version:', error)
+      throw error
+    }
+  },
+
+  deleteNoteVersion: async (versionId: string) => {
+    try {
+      await apiClient.deleteNoteVersion(versionId)
+    } catch (error) {
+      console.error('Failed to delete note version:', error)
+      throw error
+    }
+  },
+
+  moveNotesToFolder: async (noteIds: string[], folderId: string) => {
+    try {
+      await apiClient.moveNotesToFolder(noteIds, folderId)
+
+      set((state) => ({
+        notes: state.notes.map((note) =>
+          noteIds.includes(note.id)
+            ? { ...note, folderId: folderId || null }
+            : note
+        ),
+      }))
+    } catch (error) {
+      console.error('Failed to move notes to folder:', error)
+      throw error
+    }
+  },
+
+  addTagsToNotes: async (noteIds: string[], tagNames: string[]) => {
+    try {
+      await apiClient.addTagsToNotes(noteIds, tagNames)
+
+      set((state) => ({
+        notes: state.notes.map((note) =>
+          noteIds.includes(note.id)
+            ? { ...note, tags: [...new Set([...note.tags, ...tagNames])] }
+            : note
+        ),
+      }))
+    } catch (error) {
+      console.error('Failed to add tags to notes:', error)
+      throw error
+    }
+  },
+
+  removeTagsFromNotes: async (noteIds: string[], tagNames: string[]) => {
+    try {
+      await apiClient.removeTagsFromNotes(noteIds, tagNames)
+
+      set((state) => ({
+        notes: state.notes.map((note) =>
+          noteIds.includes(note.id)
+            ? { ...note, tags: note.tags.filter(tag => !tagNames.includes(tag)) }
+            : note
+        ),
+      }))
+    } catch (error) {
+      console.error('Failed to remove tags from notes:', error)
+      throw error
     }
   },
 }))

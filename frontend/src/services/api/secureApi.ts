@@ -76,6 +76,17 @@ interface Tag {
   userId: string
 }
 
+interface NoteVersion {
+  id: string
+  noteId: string
+  title: string
+  content: string
+  createdAt: string
+  createdBy: string
+  changeDescription?: string
+  versionNumber: number
+}
+
 interface UserSettings {
   theme: 'light' | 'dark' | 'system'
   autoSave: boolean
@@ -85,6 +96,10 @@ interface UserSettings {
   emailNotifications: boolean
   encryptionEnabled: boolean
   language: string
+  profilePicture: {
+    type: 'gravatar' | 'initials' | 'custom'
+    customUrl?: string
+  }
 }
 
 class ApiClient {
@@ -366,16 +381,6 @@ class ApiClient {
     })
   }
 
-  async getNoteVersions(id: string): Promise<any[]> {
-    return this.request<any[]>(`/notes/${id}/versions`)
-  }
-
-  async restoreNoteVersion(id: string, version: string): Promise<void> {
-    await this.request(`/notes/${id}/versions/${version}`, {
-      method: 'POST',
-    })
-  }
-
   // Tags methods
   async getTags(): Promise<Tag[]> {
     const response = await this.request<{ tags: Tag[] }>('/tags')
@@ -507,7 +512,56 @@ class ApiClient {
     })
   }
 
-  // Collaboration methods
+  // Version methods
+  async createNoteVersion(data: {
+    noteId: string
+    title: string
+    content: string
+    changeDescription?: string
+  }): Promise<NoteVersion> {
+    return this.request<NoteVersion>('/notes/versions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getNoteVersions(noteId: string): Promise<NoteVersion[]> {
+    return this.request<NoteVersion[]>(`/notes/${noteId}/versions`)
+  }
+
+  async restoreNoteVersion(versionId: string): Promise<Note> {
+    return this.request<Note>(`/notes/versions/${versionId}/restore`, {
+      method: 'POST',
+    })
+  }
+
+  async deleteNoteVersion(versionId: string): Promise<void> {
+    await this.request<void>(`/notes/versions/${versionId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  // Bulk operations
+  async moveNotesToFolder(noteIds: string[], folderId: string): Promise<void> {
+    await this.request<void>('/notes/bulk/move', {
+      method: 'POST',
+      body: JSON.stringify({ noteIds, folderId }),
+    })
+  }
+
+  async addTagsToNotes(noteIds: string[], tagNames: string[]): Promise<void> {
+    await this.request<void>('/notes/bulk/tags/add', {
+      method: 'POST',
+      body: JSON.stringify({ noteIds, tagNames }),
+    })
+  }
+
+  async removeTagsFromNotes(noteIds: string[], tagNames: string[]): Promise<void> {
+    await this.request<void>('/notes/bulk/tags/remove', {
+      method: 'POST',
+      body: JSON.stringify({ noteIds, tagNames }),
+    })
+  }
   async shareNote(noteId: string, userIds: string[]): Promise<void> {
     await this.request(`/notes/${noteId}/share`, {
       method: 'POST',

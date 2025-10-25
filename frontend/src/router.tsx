@@ -12,10 +12,11 @@ const RegisterForm = React.lazy(() => import('./components/auth/register-form').
 const Sidebar = React.lazy(() => import('./components/dashboard/sidebar').then(m => ({ default: m.Sidebar })))
 const NoteList = React.lazy(() => import('./components/dashboard/note-list').then(m => ({ default: m.NoteList })))
 const NoteEditor = React.lazy(() => import('./components/dashboard/note-editor').then(m => ({ default: m.NoteEditor })))
+const KeyboardShortcutsDialog = React.lazy(() => import('./components/dashboard/keyboard-shortcuts-dialog').then(m => ({ default: m.KeyboardShortcutsDialog })))
 
 import { ThemeToggle } from './components/theme-toggle'
 import { Button } from './components/ui/button'
-import { Leaf, Settings, LogOut, ShieldCheck } from 'lucide-react'
+import { Leaf, Settings, LogOut, ShieldCheck, Keyboard, HelpCircle, ExternalLink, FolderOpen } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,8 +24,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './components/ui/dropdown-menu'
-import { Avatar, AvatarFallback } from './components/ui/avatar'
-import { SettingsPage } from './components/settings/settings-page-minimal'
+import { UserAvatar } from './components/ui/user-avatar'
+import { SettingsPage } from './components/settings/settings-page'
+import { FoldersTagsPage } from './components/management/folders-tags-page'
 import { AdminPage } from './components/admin/admin-page'
 import { ProtectedRoute } from './components/common/ProtectedRoute'
 import { InteractiveGridPattern } from './components/ui/interactive-grid-pattern'
@@ -147,9 +149,7 @@ const DashboardComponent: React.FC = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-2 transition-smooth hover-lift">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback>{user?.name.charAt(0).toUpperCase()}</AvatarFallback>
-                </Avatar>
+                <UserAvatar user={user} size={32} />
                 <span className="hidden md:inline">{user?.name}</span>
               </Button>
             </DropdownMenuTrigger>
@@ -168,6 +168,33 @@ const DashboardComponent: React.FC = () => {
                 <ShieldCheck className="h-4 w-4 mr-2" />
                 Admin Dashboard
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => (window.location.href = '/manage')}
+                className="transition-smooth"
+              >
+                <FolderOpen className="h-4 w-4 mr-2" />
+                Folders & Tags
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  // Open keyboard shortcuts dialog
+                  const event = new CustomEvent('open-keyboard-shortcuts')
+                  window.dispatchEvent(event)
+                }}
+                className="transition-smooth"
+              >
+                <Keyboard className="h-4 w-4 mr-2" />
+                Keyboard Shortcuts
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => window.open('https://docs.leaflock.app', '_blank')}
+                className="transition-smooth"
+              >
+                <HelpCircle className="h-4 w-4 mr-2" />
+                Documentation
+                <ExternalLink className="h-3 w-3 ml-auto" />
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="transition-smooth">
                 <LogOut className="h-4 w-4 mr-2" />
@@ -180,15 +207,45 @@ const DashboardComponent: React.FC = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        <React.Suspense fallback={
-          <div className="w-64 border-r border-border flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        }>
-          <Sidebar />
-        </React.Suspense>
+        {/* Desktop Sidebar */}
+        <div className="hidden md:block">
+          <React.Suspense fallback={
+            <div className="w-64 border-r border-border flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          }>
+            <Sidebar />
+          </React.Suspense>
+        </div>
+
+        {/* Mobile Sidebar */}
+        <div className="md:hidden">
+          <React.Suspense fallback={
+            <div className="w-64 border-r border-border flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          }>
+            <Sidebar />
+          </React.Suspense>
+        </div>
+
         <div className="flex-1 flex border-r border-border">
-          <div className="w-80 border-r border-border flex flex-col animate-slide-in-left">
+          {/* Desktop Note List */}
+          <div className="hidden md:block w-80 border-r border-border flex flex-col animate-slide-in-left">
+            <div className="p-4 border-b border-border">
+              <h2 className="font-semibold">Notes</h2>
+            </div>
+            <React.Suspense fallback={
+              <div className="flex-1 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            }>
+              <NoteList />
+            </React.Suspense>
+          </div>
+
+          {/* Mobile Note List */}
+          <div className="md:hidden w-full flex flex-col">
             <div className="p-4 border-b border-border">
               <h2 className="font-semibold">Notes</h2>
             </div>
@@ -205,10 +262,17 @@ const DashboardComponent: React.FC = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           }>
-            <NoteEditor />
+            <div className="flex-1 flex flex-col">
+              <NoteEditor />
+            </div>
           </React.Suspense>
         </div>
       </div>
+
+      {/* Keyboard Shortcuts Dialog */}
+      <React.Suspense fallback={null}>
+        <KeyboardShortcutsDialog />
+      </React.Suspense>
     </div>
   )
 }
@@ -225,15 +289,43 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 })
 
+const manageRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'manage',
+  component: FoldersTagsPage,
+})
+
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'admin',
-  component: () => (
-    <ProtectedRoute requiredRole="admin">
+  component: AdminPageComponent,
+})
+
+const AdminPageComponent = () => {
+  const [authStore, setAuthStore] = React.useState<any>(null)
+  const [isLoading, setIsLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    // Dynamically import auth store to prevent circular dependency
+    import('./stores/authStore').then(({ useAuthStore }) => {
+      const store = useAuthStore.getState()
+      setAuthStore(store)
+      store.initialize().then(() => {
+        setIsLoading(false)
+      })
+    })
+  }, [])
+
+  return (
+    <ProtectedRoute
+      requiredRole="admin"
+      isLoading={isLoading}
+      user={authStore?.user}
+    >
       <AdminPage />
     </ProtectedRoute>
-  ),
-})
+  )
+}
 
 // Create the router
 export const router = createRouter({
@@ -242,6 +334,7 @@ export const router = createRouter({
     authRoute,
     dashboardRoute,
     settingsRoute,
+    manageRoute,
     adminRoute,
   ]),
 })

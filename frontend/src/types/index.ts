@@ -8,6 +8,17 @@ export interface User {
   createdAt: string
 }
 
+export interface NoteVersion {
+  id: string
+  noteId: string
+  title: string
+  content: string
+  createdAt: string
+  createdBy: string
+  changeDescription?: string
+  versionNumber: number
+}
+
 export interface Note {
   id: string
   title: string
@@ -61,6 +72,10 @@ export interface UserSettings {
   emailNotifications: boolean
   encryptionEnabled: boolean
   language: string
+  profilePicture: {
+    type: 'gravatar' | 'initials' | 'custom'
+    customUrl?: string
+  }
 }
 
 export interface CollaborationSession {

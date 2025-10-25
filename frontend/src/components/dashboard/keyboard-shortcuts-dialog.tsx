@@ -1,17 +1,24 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { Keyboard } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
 export function KeyboardShortcutsDialog() {
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    const handleOpenShortcuts = () => setOpen(true)
+    window.addEventListener('open-keyboard-shortcuts', handleOpenShortcuts)
+    return () => window.removeEventListener('open-keyboard-shortcuts', handleOpenShortcuts)
+  }, [])
+
   const shortcuts = [
     { keys: ['Cmd/Ctrl', 'N'], description: 'Create new note' },
     { keys: ['Cmd/Ctrl', 'K'], description: 'Search notes' },
@@ -30,16 +37,13 @@ export function KeyboardShortcutsDialog() {
   ]
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-2">
-          <Keyboard className="h-4 w-4" />
-          Shortcuts
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Keyboard Shortcuts</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Keyboard className="h-5 w-5" />
+            Keyboard Shortcuts
+          </DialogTitle>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           {shortcuts.map((shortcut, index) => (

@@ -39,9 +39,9 @@ import { ShareNoteDialog } from './share-note-dialog'
 import { CollaborationBar } from './collaboration-bar'
 import { EncryptionUnlockDialog } from './encryption-unlock-dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { RichTextEditor } from './rich-text-editor'
 import { NoteStats } from './note-stats'
 import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog'
+import { NoteLinkingUtils, BacklinksSection } from './note-linking-utils'
 
 export function NoteEditor() {
   const { selectedNote, updateNote, moveToTrash, selectNote, tags, createTag } = useNotesStore()
@@ -84,7 +84,11 @@ export function NoteEditor() {
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
       const modifier = isMac ? e.metaKey : e.ctrlKey
 
-      if (modifier && e.key === 'p') {
+      if (modifier && e.key === 's') {
+        e.preventDefault()
+        // Auto-save is handled by the store, just show feedback
+        console.log('Note saved')
+      } else if (modifier && e.key === 'p') {
         e.preventDefault()
         handleTogglePin()
       } else if (modifier && e.key === 'd') {
@@ -264,6 +268,12 @@ export function NoteEditor() {
             {selectedNote.pinned ? 'Pinned' : 'Pin'}
           </Button>
 
+          <VersionHistoryDialog noteId={selectedNote.id} noteTitle={selectedNote.title || 'Untitled'}>
+            <Button variant="outline" size="sm" className="gap-2">
+              <History className="h-4 w-4" />
+              <span className="hidden sm:inline">Versions</span>
+            </Button>
+          </VersionHistoryDialog>
 
           <Dialog open={isAddingTag} onOpenChange={setIsAddingTag}>
             <DialogTrigger asChild>
@@ -381,8 +391,8 @@ export function NoteEditor() {
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Note title..."
-          className="text-3xl font-bold border-none shadow-none px-0 mb-4 focus-visible:ring-0"
+          placeholder="Add Title"
+          className="text-3xl font-bold border-none shadow-none px-0 mb-4 focus-visible:ring-0 py-2"
           disabled={isDecrypting}
         />
 
@@ -401,16 +411,22 @@ export function NoteEditor() {
           </div>
         )}
 
-        <RichTextEditor
-          content={displayContent}
-          onChange={setDisplayContent}
-          placeholder={isDecrypting ? 'Decrypting...' : 'Start writing...'}
-          disabled={isDecrypting}
-        />
+        <div className="prose prose-sm max-w-none">
+          <NoteLinkingUtils
+            content={displayContent}
+            onNoteSelect={selectNote}
+          />
+        </div>
 
         <div className="mt-4 pt-4 border-t border-border">
           <NoteStats content={displayContent} />
         </div>
+
+        {/* Backlinks Section */}
+        <BacklinksSection
+          currentNoteId={selectedNote.id}
+          onNoteSelect={selectNote}
+        />
       </div>
 
       {/* Save Template Dialog */}

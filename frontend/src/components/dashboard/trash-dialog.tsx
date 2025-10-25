@@ -101,7 +101,7 @@ export function TrashDialog() {
           Trash ({trashedNotes.length})
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl mx-auto">
         <DialogHeader>
           <DialogTitle>Trash</DialogTitle>
           <DialogDescription>

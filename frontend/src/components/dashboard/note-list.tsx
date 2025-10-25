@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { BulkOperationsBar } from './bulk-operations-bar'
 import { useNotesStore } from '../../stores/notesStore'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
@@ -16,6 +17,8 @@ type SortOption = 'updated' | 'created' | 'title' | 'pinned'
 export function NoteList() {
   const { notes, selectedNote, selectedFolder, selectNote } = useNotesStore()
   const [sortBy, setSortBy] = useState<SortOption>('updated')
+  const [selectedNotes, setSelectedNotes] = useState<string[]>([])
+  const [isBulkMode, setIsBulkMode] = useState(false)
 
   const activeNotes = (notes || []).filter((note) => !note.isTrashed)
   const filteredNotes = selectedFolder
@@ -39,6 +42,32 @@ export function NoteList() {
     }
   })
 
+  const toggleBulkMode = () => {
+    setIsBulkMode(!isBulkMode)
+    setSelectedNotes([])
+  }
+
+  const toggleNoteSelection = (noteId: string) => {
+    setSelectedNotes(prev =>
+      prev.includes(noteId)
+        ? prev.filter(id => id !== noteId)
+        : [...prev, noteId]
+    )
+  }
+
+  const selectAllNotes = () => {
+    setSelectedNotes(sortedNotes.map(note => note.id))
+  }
+
+  const clearSelection = () => {
+    setSelectedNotes([])
+  }
+
+  const handleBulkClose = () => {
+    setSelectedNotes([])
+    setIsBulkMode(false)
+  }
+
   if (filteredNotes.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted-foreground">
@@ -54,42 +83,80 @@ export function NoteList() {
   return (
     <>
       <div className="px-4 py-2 border-b border-border">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
-              <ArrowUpDown className="h-4 w-4" />
-              Sort by:{' '}
-              {sortBy === 'updated'
-                ? 'Last Updated'
-                : sortBy === 'created'
-                  ? 'Date Created'
-                  : 'Title'}
+        <div className="flex items-center justify-between">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="gap-2">
+                <ArrowUpDown className="h-4 w-4" />
+                Sort by:{' '}
+                {sortBy === 'updated'
+                  ? 'Last Updated'
+                  : sortBy === 'created'
+                    ? 'Date Created'
+                    : 'Title'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => setSortBy('updated')}>Last Updated</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy('created')}>Date Created</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy('title')}>Title</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <div className="flex items-center gap-2">
+            {isBulkMode && (
+              <>
+                <Button variant="outline" size="sm" onClick={selectAllNotes}>
+                  Select All
+                </Button>
+                <Button variant="outline" size="sm" onClick={clearSelection}>
+                  Clear
+                </Button>
+              </>
+            )}
+            <Button
+              variant={isBulkMode ? "default" : "outline"}
+              size="sm"
+              onClick={toggleBulkMode}
+            >
+              {isBulkMode ? 'Exit Bulk' : 'Bulk Select'}
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => setSortBy('updated')}>Last Updated</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortBy('created')}>Date Created</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortBy('title')}>Title</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </div>
+        </div>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
           {sortedNotes.map((note, index) => {
             const isSelected = selectedNote?.id === note.id
+            const isBulkSelected = selectedNotes.includes(note.id)
 
             return (
-              <button
+              <div
                 key={note.id}
-                onClick={() => selectNote(note.id)}
-                className={`w-full text-left p-3 rounded-lg transition-smooth hover-lift stagger-item ${
+                className={`w-full p-3 rounded-lg transition-smooth hover-lift stagger-item ${
                   isSelected
                     ? 'bg-primary/10 border border-primary/20'
                     : 'hover:bg-surface-hover border border-transparent'
-                }`}
+                } ${isBulkSelected ? 'bg-primary/5 border-primary/10' : ''}`}
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
+                <div className="flex items-start gap-3">
+                  {isBulkMode && (
+                    <div className="flex items-center mt-1">
+                      <input
+                        type="checkbox"
+                        checked={isBulkSelected}
+                        onChange={() => toggleNoteSelection(note.id)}
+                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                      />
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => !isBulkMode && selectNote(note.id)}
+                    className="flex-1 text-left"
+                  >
                 <div className="flex items-start justify-between gap-2 mb-1">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     {note.pinned && <Pin className="h-3 w-3 text-primary flex-shrink-0 mt-0.5" />}
@@ -127,11 +194,19 @@ export function NoteList() {
                     {note.updatedAt ? formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true }) : 'Unknown'}
                   </span>
                 </div>
-              </button>
+                  </button>
+                </div>
+              </div>
             )
           })}
         </div>
       </ScrollArea>
+
+      {/* Bulk Operations Bar */}
+      <BulkOperationsBar
+        selectedNotes={selectedNotes}
+        onClose={handleBulkClose}
+      />
     </>
   )
 }
