@@ -81,7 +81,7 @@ export default defineConfig({
     // Optimize build performance and bundle size
     target: 'esnext',
     minify: 'esbuild', // Use esbuild instead of terser (faster and built-in)
-    cssCodeSplit: true,
+    cssCodeSplit: false, // Disable CSS code splitting to prevent circular deps
     sourcemap: false, // Disable sourcemaps for production for faster builds
     // Prevent circular dependencies by ensuring proper module resolution
     commonjsOptions: {
@@ -109,31 +109,8 @@ export default defineConfig({
         defaultHandler(warning)
       },
       output: {
-        // Aggressive chunk consolidation to prevent circular dependencies
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            // Bundle ALL critical dependencies together to prevent any circular deps
-            if (id.includes('react') || id.includes('react-dom') || id.includes('@tanstack') ||
-                id.includes('zustand') || id.includes('@radix-ui') || id.includes('lucide-react')) {
-              return 'core-bundle'
-            }
-
-            // Bundle crypto libraries separately (they're large)
-            if (id.includes('libsodium-wrappers') || id.includes('crypto-browserify')) {
-              return 'crypto-core'
-            }
-
-            // Bundle editor dependencies separately (they're large)
-            if (id.includes('@tiptap') || id.includes('tiptap') || id.includes('lowlight')) {
-              return 'editor-core'
-            }
-
-            // Bundle everything else as vendor
-            return 'vendor'
-          }
-
-          return undefined
-        },
+        // Disable chunk splitting entirely to prevent circular dependencies
+        manualChunks: undefined,
         // Optimize chunk loading with proper dependency order
         chunkFileNames: 'assets/js/[name]-[hash].js',
         entryFileNames: 'assets/js/[name]-[hash].js',
