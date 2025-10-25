@@ -581,10 +581,26 @@ func (h *Handler) GetRegistrationStatus(c *fiber.Ctx) error {
 // @Failure 400 {object} ErrorResponse
 // @Router /auth/debug-login [post]
 func (h *Handler) DebugLogin(c *fiber.Ctx) error {
-	// Only allow in development mode
-	if os.Getenv("ENVIRONMENT") == "production" {
+	// Only allow in development mode - check multiple indicators
+	environment := os.Getenv("ENVIRONMENT")
+	appEnv := os.Getenv("APP_ENV")
+	isProduction := environment == "production" || appEnv == "production" ||
+		strings.Contains(os.Getenv("RAILWAY_ENVIRONMENT"), "production") ||
+		os.Getenv("NODE_ENV") == "production"
+
+	if isProduction {
 		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{
 			Error: "Debug endpoint not available in production",
+			Code:  ErrCodeAccessDenied,
+		})
+	}
+
+	// Additional security: require debug token
+	debugToken := c.Get("X-Debug-Token")
+	expectedToken := os.Getenv("DEBUG_TOKEN")
+	if expectedToken != "" && debugToken != expectedToken {
+		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{
+			Error: "Invalid debug token",
 			Code:  ErrCodeAccessDenied,
 		})
 	}
@@ -668,10 +684,26 @@ func (h *Handler) DebugLogin(c *fiber.Ctx) error {
 // @Failure 403 {object} ErrorResponse
 // @Router /auth/debug-admin [get]
 func (h *Handler) DebugAdminInfo(c *fiber.Ctx) error {
-	// Only allow in development mode
-	if os.Getenv("ENVIRONMENT") == "production" {
+	// Only allow in development mode - check multiple indicators
+	environment := os.Getenv("ENVIRONMENT")
+	appEnv := os.Getenv("APP_ENV")
+	isProduction := environment == "production" || appEnv == "production" ||
+		strings.Contains(os.Getenv("RAILWAY_ENVIRONMENT"), "production") ||
+		os.Getenv("NODE_ENV") == "production"
+
+	if isProduction {
 		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{
 			Error: "Debug endpoint not available in production",
+			Code:  ErrCodeAccessDenied,
+		})
+	}
+
+	// Additional security: require debug token
+	debugToken := c.Get("X-Debug-Token")
+	expectedToken := os.Getenv("DEBUG_TOKEN")
+	if expectedToken != "" && debugToken != expectedToken {
+		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{
+			Error: "Invalid debug token",
 			Code:  ErrCodeAccessDenied,
 		})
 	}
@@ -734,10 +766,26 @@ func (h *Handler) DebugAdminInfo(c *fiber.Ctx) error {
 // @Failure 403 {object} ErrorResponse
 // @Router /auth/debug-encryption [get]
 func (h *Handler) DebugEncryptionKey(c *fiber.Ctx) error {
-	// Only allow in development mode
-	if os.Getenv("ENVIRONMENT") == "production" {
+	// Only allow in development mode - check multiple indicators
+	environment := os.Getenv("ENVIRONMENT")
+	appEnv := os.Getenv("APP_ENV")
+	isProduction := environment == "production" || appEnv == "production" ||
+		strings.Contains(os.Getenv("RAILWAY_ENVIRONMENT"), "production") ||
+		os.Getenv("NODE_ENV") == "production"
+
+	if isProduction {
 		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{
 			Error: "Debug endpoint not available in production",
+			Code:  ErrCodeAccessDenied,
+		})
+	}
+
+	// Additional security: require debug token
+	debugToken := c.Get("X-Debug-Token")
+	expectedToken := os.Getenv("DEBUG_TOKEN")
+	if expectedToken != "" && debugToken != expectedToken {
+		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{
+			Error: "Invalid debug token",
 			Code:  ErrCodeAccessDenied,
 		})
 	}
@@ -783,10 +831,26 @@ func (h *Handler) DebugEncryptionKey(c *fiber.Ctx) error {
 // @Failure 403 {object} ErrorResponse
 // @Router /auth/reset-admin [post]
 func (h *Handler) ResetAdminUser(c *fiber.Ctx) error {
-	// Only allow in development mode
-	if os.Getenv("ENVIRONMENT") == "production" {
+	// Only allow in development mode - check multiple indicators
+	environment := os.Getenv("ENVIRONMENT")
+	appEnv := os.Getenv("APP_ENV")
+	isProduction := environment == "production" || appEnv == "production" ||
+		strings.Contains(os.Getenv("RAILWAY_ENVIRONMENT"), "production") ||
+		os.Getenv("NODE_ENV") == "production"
+
+	if isProduction {
 		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{
 			Error: "Debug endpoint not available in production",
+			Code:  ErrCodeAccessDenied,
+		})
+	}
+
+	// Additional security: require debug token
+	debugToken := c.Get("X-Debug-Token")
+	expectedToken := os.Getenv("DEBUG_TOKEN")
+	if expectedToken != "" && debugToken != expectedToken {
+		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{
+			Error: "Invalid debug token",
 			Code:  ErrCodeAccessDenied,
 		})
 	}

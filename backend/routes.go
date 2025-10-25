@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -234,8 +235,8 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	api.Post("/auth/logout", authHandler.JWTMiddleware, authHandler.Logout)
 	api.Get("/auth/registration", rateLimits.LightweightLimiter, authHandler.GetRegistrationStatus)
 
-	// Debug routes (development only)
-	if config.Environment != "production" {
+	// Debug routes (development only) - double check for security
+	if config.Environment != "production" && os.Getenv("ENABLE_DEBUG_ENDPOINTS") == "true" {
 		api.Post("/auth/debug-login", authHandler.DebugLogin)
 		api.Get("/auth/debug-admin", authHandler.DebugAdminInfo)
 		api.Get("/auth/debug-encryption", authHandler.DebugEncryptionKey)
