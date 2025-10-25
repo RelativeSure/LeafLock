@@ -724,3 +724,52 @@ func (h *Handler) DebugAdminInfo(c *fiber.Ctx) error {
 		"last_login":  lastLogin,
 	})
 }
+
+// DebugEncryptionKey provides encryption key debugging information (development only)
+// @Summary Debug encryption key information
+// @Description Get encryption key debugging info for troubleshooting
+// @Tags Authentication
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} ErrorResponse
+// @Router /auth/debug-encryption [get]
+func (h *Handler) DebugEncryptionKey(c *fiber.Ctx) error {
+	// Only allow in development mode
+	if os.Getenv("ENVIRONMENT") == "production" {
+		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{
+			Error: "Debug endpoint not available in production",
+			Code:  ErrCodeAccessDenied,
+		})
+	}
+
+	// Test encryption/decryption with a known value
+	testValue := []byte("test-encryption-key")
+	encrypted, err := h.service.crypto.EncryptBytes(testValue)
+	if err != nil {
+		return c.JSON(map[string]interface{}{
+			"encryption_test": "failed",
+			"error":           err.Error(),
+		})
+	}
+
+	decrypted, err := h.service.crypto.DecryptBytes(encrypted)
+	if err != nil {
+		return c.JSON(map[string]interface{}{
+			"encryption_test": "failed",
+			"encrypt_success": true,
+			"decrypt_error":   err.Error(),
+		})
+	}
+
+	success := string(decrypted) == string(testValue)
+
+	return c.JSON(map[string]interface{}{
+		"encryption_test":   "passed",
+		"encrypt_success":   true,
+		"decrypt_success":   true,
+		"roundtrip_success": success,
+		"test_value":        string(testValue),
+		"decrypted_value":   string(decrypted),
+		"encrypted_length":  len(encrypted),
+	})
+}
