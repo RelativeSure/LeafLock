@@ -24,6 +24,11 @@ window.addEventListener('error', (event) => {
     console.error('- Stores importing each other')
     console.error('- Components importing stores that import other stores')
     console.error('- Dynamic imports creating circular references')
+    console.error('')
+    console.error('🔍 DEBUGGING INFO:')
+    console.error('Current URL:', window.location.href)
+    console.error('Loaded modules:', Object.keys(window))
+    console.error('React version:', React.version)
   }
 
   if (event.message.includes('ReferenceError')) {
