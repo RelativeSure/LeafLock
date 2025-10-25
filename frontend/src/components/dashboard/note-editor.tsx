@@ -45,7 +45,7 @@ import { NoteStats } from './note-stats'
 import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog'
 
 export function NoteEditor() {
-  const { selectedNote, updateNote, moveToTrash, selectNote, tags, createTag } = useNotesStore()()
+  const { selectedNote, updateNote, moveToTrash, selectNote, tags, createTag } = useNotesStore()
   const { joinSession, leaveSession } = useCollaboration()
   const { isUnlocked, encryptText, decryptText } = useEncryption()
   const [title, setTitle] = useState('')

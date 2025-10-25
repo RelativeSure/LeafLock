@@ -2,6 +2,7 @@ import React from 'react'
 import { Outlet, createRoute, createRouter, createRootRoute } from '@tanstack/react-router'
 
 import { ThemeProvider } from './context/ThemeContext'
+import { EncryptionProvider } from './lib/encryption-context'
 import { Toaster } from './components/ui/sonner'
 import { AppErrorBoundary } from './components/common/AppErrorBoundary'
 import { useAuthStore, useNotesStore } from './stores'
@@ -29,10 +30,12 @@ import { InteractiveGridPattern } from './components/ui/interactive-grid-pattern
 const RootLayout: React.FC = () => (
   <AppErrorBoundary>
     <ThemeProvider>
-      <div className="min-h-screen transition-all duration-300 ease-in-out">
-        <Outlet />
-      </div>
-      <Toaster />
+      <EncryptionProvider>
+        <div className="min-h-screen transition-all duration-300 ease-in-out">
+          <Outlet />
+        </div>
+        <Toaster />
+      </EncryptionProvider>
     </ThemeProvider>
   </AppErrorBoundary>
 )
@@ -101,8 +104,13 @@ const authRoute = createRoute({
 
 // Dashboard route
 const DashboardComponent: React.FC = () => {
-  const { user, isLoading, logout } = useAuthStore()
+  const { user, isLoading, logout, initialize } = useAuthStore()
   const { loadData } = useNotesStore()
+
+  // Initialize auth store if not already done
+  React.useEffect(() => {
+    initialize()
+  }, [initialize])
 
   React.useEffect(() => {
     if (!isLoading && !user) {
