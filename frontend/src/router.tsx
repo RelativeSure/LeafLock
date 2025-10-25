@@ -95,7 +95,6 @@ const AuthComponent: React.FC<{ mode?: 'login' | 'register' | 'forgot' }> = ({ m
 const authRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'auth',
-  component: AuthComponent,
 })
 
 const loginRoute = createRoute({
