@@ -72,29 +72,70 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     const user = JSON.parse(storedUser)
     const { selectedFolder } = get()
 
-    try {
-      const newNote = await apiClient.createNote({
-        ...note,
-        folderId: note.folderId || selectedFolder,
-        userId: user.id,
-      })
-
-      set((state) => ({ notes: [newNote, ...state.notes], selectedNote: newNote }))
-      return newNote
-    } catch (error) {
-      console.error('Failed to create note:', error)
-      throw error
+    // Create a local note first without saving to API
+    const localNote: Note = {
+      id: `local-${Date.now()}`,
+      title: note.title || '',
+      content: note.content || '',
+      userId: user.id,
+      folderId: note.folderId || selectedFolder,
+      tags: note.tags || [],
+      pinned: note.pinned || false,
+      encrypted: note.encrypted || false,
+      isTrashed: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      trashedAt: null,
     }
+
+    set((state) => ({ notes: [localNote, ...state.notes], selectedNote: localNote }))
+    return localNote
   },
 
   updateNote: async (id: string, updates: Partial<Note>) => {
     try {
-      const updatedNote = await apiClient.updateNote(id, updates)
+      let updatedNote: Note
 
-      set((state) => ({
-        notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
-        selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
-      }))
+      // If it's a local note (not saved to API yet), create it first
+      if (id.startsWith('local-')) {
+        const storedUser = localStorage.getItem('user')
+        if (!storedUser) throw new Error('No user logged in')
+        const user = JSON.parse(storedUser)
+
+        const currentNote = get().notes.find(note => note.id === id)
+        if (!currentNote) throw new Error('Note not found')
+
+        // Only create on API if there's actual content
+        if (updates.title?.trim() || updates.content?.trim()) {
+          updatedNote = await apiClient.createNote({
+            ...currentNote,
+            ...updates,
+            userId: user.id,
+          })
+
+          // Replace the local note with the API note
+          set((state) => ({
+            notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
+            selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
+          }))
+        } else {
+          // Just update locally if no content
+          updatedNote = { ...currentNote, ...updates, updatedAt: new Date().toISOString() }
+          set((state) => ({
+            notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
+            selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
+          }))
+        }
+      } else {
+        // Regular API update for existing notes
+        updatedNote = await apiClient.updateNote(id, updates)
+        set((state) => ({
+          notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
+          selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
+        }))
+      }
+
+      return updatedNote
     } catch (error) {
       console.error('Failed to update note:', error)
       throw error

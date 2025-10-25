@@ -1,6 +1,6 @@
 'use client'
 import { Moon, Sun } from 'lucide-react'
-import { useTheme } from 'next-themes'
+import { useTheme } from '../context/ThemeContext'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,

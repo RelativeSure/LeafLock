@@ -9,6 +9,8 @@ import {
   Menu,
   X,
   Library,
+  CheckSquare,
+  TagPlus,
 } from 'lucide-react'
 import {
   Dialog,
@@ -144,6 +146,7 @@ export function Sidebar() {
                   variant="outline"
                   size="sm"
                   className="transition-smooth hover-lift bg-transparent"
+                  title="Create Folder"
                 >
                   <FolderPlus className="h-4 w-4" />
                 </Button>
@@ -192,14 +195,38 @@ export function Sidebar() {
                 </div>
               </DialogContent>
             </Dialog>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="transition-smooth hover-lift bg-transparent"
+              title="Bulk Select"
+              onClick={() => {
+                // Toggle bulk mode - this will be handled by NoteList component
+                const event = new CustomEvent('toggle-bulk-mode')
+                window.dispatchEvent(event)
+              }}
+            >
+              <CheckSquare className="h-4 w-4" />
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="transition-smooth hover-lift bg-transparent"
+              title="Create Tag"
+              onClick={() => {
+                // Navigate to manage page for tag creation
+                window.location.href = '/manage'
+              }}
+            >
+              <TagPlus className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
         {/* Notes List */}
-        <div className="flex-1 flex flex-col border-b border-border">
-          <div className="p-4 border-b border-border">
-            <h2 className="font-semibold text-sm" data-testid="notes-heading">Notes</h2>
-          </div>
+        <div className="flex-1 flex flex-col">
           <ScrollArea className="flex-1">
             <div className="p-2">
               {isLoading ? (

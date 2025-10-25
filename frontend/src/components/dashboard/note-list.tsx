@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BulkOperationsBar } from './bulk-operations-bar'
 import { useNotesStore } from '../../stores/notesStore'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -52,6 +52,15 @@ export function NoteList() {
     setIsBulkMode(!isBulkMode)
     setSelectedNotes([])
   }
+
+  useEffect(() => {
+    const handleToggleBulkMode = () => {
+      toggleBulkMode()
+    }
+
+    window.addEventListener('toggle-bulk-mode', handleToggleBulkMode)
+    return () => window.removeEventListener('toggle-bulk-mode', handleToggleBulkMode)
+  }, [isBulkMode])
 
   const toggleNoteSelection = (noteId: string) => {
     setSelectedNotes(prev =>
