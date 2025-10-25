@@ -50,7 +50,7 @@ const rootRoute = createRootRoute({
 // Index route
 const IndexComponent: React.FC = () => {
   React.useEffect(() => {
-    window.location.href = '/auth'
+    window.location.href = '/auth/login'
   }, [])
   return null
 }
@@ -62,8 +62,8 @@ const indexRoute = createRoute({
 })
 
 // Auth routes
-const AuthComponent: React.FC = () => {
-  const [mode, setMode] = React.useState<'login' | 'register'>('login')
+const AuthComponent: React.FC<{ mode?: 'login' | 'register' }> = ({ mode: initialMode = 'login' }) => {
+  const [mode, setMode] = React.useState<'login' | 'register'>(initialMode)
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 animate-in fade-in-50 duration-700 relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
@@ -91,6 +91,18 @@ const authRoute = createRoute({
   component: AuthComponent,
 })
 
+const loginRoute = createRoute({
+  getParentRoute: () => authRoute,
+  path: 'login',
+  component: () => <AuthComponent mode="login" />,
+})
+
+const registerRoute = createRoute({
+  getParentRoute: () => authRoute,
+  path: 'register',
+  component: () => <AuthComponent mode="register" />,
+})
+
 // Dashboard route
 const DashboardComponent: React.FC = () => {
   const [authStore, setAuthStore] = React.useState<any>(null)
@@ -109,7 +121,7 @@ const DashboardComponent: React.FC = () => {
 
   React.useEffect(() => {
     if (!isLoading && authStore && !authStore.user) {
-      window.location.href = '/auth'
+      window.location.href = '/auth/login'
     }
   }, [authStore, isLoading])
 
@@ -142,7 +154,7 @@ const DashboardComponent: React.FC = () => {
 
   const handleLogout = () => {
     logout()
-    window.location.href = '/auth'
+    window.location.href = '/auth/login'
   }
 
   return (
@@ -316,7 +328,7 @@ const adminRoute = createRoute({
 export const router = createRouter({
   routeTree: rootRoute.addChildren([
     indexRoute,
-    authRoute,
+    authRoute.addChildren([loginRoute, registerRoute]),
     dashboardRoute,
     settingsRoute,
     manageRoute,
