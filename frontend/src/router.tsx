@@ -295,12 +295,6 @@ const manageRoute = createRoute({
   component: FoldersTagsPage,
 })
 
-const adminRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: 'admin',
-  component: AdminPageComponent,
-})
-
 const AdminPageComponent = () => {
   const [authStore, setAuthStore] = React.useState<any>(null)
   const [isLoading, setIsLoading] = React.useState(true)
@@ -326,6 +320,12 @@ const AdminPageComponent = () => {
     </ProtectedRoute>
   )
 }
+
+const adminRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'admin',
+  component: AdminPageComponent,
+})
 
 // Create the router
 export const router = createRouter({
