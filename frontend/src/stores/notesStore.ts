@@ -194,8 +194,15 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     } else {
       const { notes } = get()
       console.log('Current notes in store:', notes.length)
+      console.log('All note IDs:', notes.map(n => n.id))
       const note = notes.find((n) => n.id === id)
       console.log('Found note:', note)
+
+      if (!note) {
+        console.error('Note not found in store! Looking for:', id)
+        console.error('Available notes:', notes.length)
+      }
+
       set({ selectedNote: note || null })
       console.log('Selected note set to:', get().selectedNote)
 
@@ -547,3 +554,8 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     }
   },
 }))
+
+// Expose store globally for debugging
+if (typeof window !== 'undefined') {
+  ;(window as any).__NOTES_STORE__ = useNotesStore
+}
