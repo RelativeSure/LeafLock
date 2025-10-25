@@ -132,6 +132,7 @@ export function Sidebar() {
               className="flex-1 transition-bounce hover-lift"
               size="sm"
               disabled={isLoading}
+              data-testid="new-note-button"
             >
               <Plus className="h-4 w-4 mr-1" />
               New Note
@@ -197,7 +198,7 @@ export function Sidebar() {
         {/* Notes List */}
         <div className="flex-1 flex flex-col border-b border-border">
           <div className="p-4 border-b border-border">
-            <h2 className="font-semibold text-sm">Notes</h2>
+            <h2 className="font-semibold text-sm" data-testid="notes-heading">Notes</h2>
           </div>
           <ScrollArea className="flex-1">
             <div className="p-2">
@@ -234,6 +235,7 @@ export function Sidebar() {
               onClick={() => setIsTemplatesOpen(true)}
               className="flex-1 gap-2 bg-transparent"
               disabled={isLoading}
+              data-testid="templates-button"
             >
               <Library className="h-4 w-4" />
               Templates
