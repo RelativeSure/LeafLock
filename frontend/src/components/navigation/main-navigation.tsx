@@ -1,7 +1,6 @@
 'use client'
 
 import * as React from 'react'
-import { Link } from '@tanstack/react-router'
 import { useAuthStore } from '../../stores/authStore'
 import {
   FileText,
@@ -189,9 +188,9 @@ function ListItem({
   return (
     <li {...props}>
       <NavigationMenuLink asChild>
-        <Link href={href}>
+        <a href={href}>
           {content}
-        </Link>
+        </a>
       </NavigationMenuLink>
     </li>
   )
