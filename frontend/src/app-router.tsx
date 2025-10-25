@@ -12,7 +12,7 @@ import { Sidebar } from './components/dashboard/sidebar'
 import { NoteList } from './components/dashboard/note-list'
 import { NoteEditor } from './components/dashboard/note-editor'
 import { ThemeToggle } from './components/theme-toggle'
-import { MainNavigation } from './components/navigation/main-navigation'
+// import { MainNavigation } from './components/navigation/main-navigation'
 // import { TemplatesPage } from './components/templates/templates-page'
 // import { TagsPage } from './components/tags/tags-page'
 import { Button } from './components/ui/button'
@@ -169,7 +169,7 @@ const DashboardComponent: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <MainNavigation />
+          {/* <MainNavigation /> */}
           <ThemeToggle />
 
           <DropdownMenu>
