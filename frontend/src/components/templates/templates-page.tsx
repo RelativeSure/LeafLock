@@ -5,6 +5,7 @@ import { useTemplatesStore } from '../../stores/templatesStore'
 import { useAuthStore } from '../../stores/authStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { FileText, Plus, Search, Globe, Lock } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
@@ -92,7 +93,7 @@ export function TemplatesPage() {
                     <CardContent className="pt-0">
                       <div className="flex items-center justify-between">
                         <div className="flex flex-wrap gap-1">
-                          {(template.tags || []).slice(0, 2).map((tag) => (
+                          {(template.tags || []).slice(0, 2).map((tag: string) => (
                             <Badge key={tag} variant="secondary" className="text-xs">
                               {tag}
                             </Badge>
@@ -144,7 +145,7 @@ export function TemplatesPage() {
                     <CardContent className="pt-0">
                       <div className="flex items-center justify-between">
                         <div className="flex flex-wrap gap-1">
-                          {(template.tags || []).slice(0, 2).map((tag) => (
+                          {(template.tags || []).slice(0, 2).map((tag: string) => (
                             <Badge key={tag} variant="secondary" className="text-xs">
                               {tag}
                             </Badge>

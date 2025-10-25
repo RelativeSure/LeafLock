@@ -68,18 +68,11 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
 
     try {
       await moveNotesToFolder(selectedNotes, selectedFolder)
-      toast({
-        title: 'Notes moved',
-        description: `${selectedCount} note${selectedCount !== 1 ? 's' : ''} moved to folder.`,
-      })
+      toast.success(`${selectedCount} note${selectedCount !== 1 ? 's' : ''} moved to folder.`)
       setShowMoveDialog(false)
       onClose()
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to move notes.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to move notes.')
     }
   }
 
@@ -88,19 +81,12 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
 
     try {
       await addTagsToNotes(selectedNotes, selectedTags)
-      toast({
-        title: 'Tags added',
-        description: `Tags added to ${selectedCount} note${selectedCount !== 1 ? 's' : ''}.`,
-      })
+      toast.success(`Tags added to ${selectedCount} note${selectedCount !== 1 ? 's' : ''}.`)
       setShowTagDialog(false)
       setSelectedTags([])
       onClose()
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to add tags.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to add tags.')
     }
   }
 
@@ -109,37 +95,23 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
 
     try {
       await removeTagsFromNotes(selectedNotes, selectedTags)
-      toast({
-        title: 'Tags removed',
-        description: `Tags removed from ${selectedCount} note${selectedCount !== 1 ? 's' : ''}.`,
-      })
+      toast.success(`Tags removed from ${selectedCount} note${selectedCount !== 1 ? 's' : ''}.`)
       setShowTagDialog(false)
       setSelectedTags([])
       onClose()
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to remove tags.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to remove tags.')
     }
   }
 
   const handleDeleteNotes = async () => {
     try {
       await Promise.all(selectedNotes.map(noteId => moveToTrash(noteId)))
-      toast({
-        title: 'Notes deleted',
-        description: `${selectedCount} note${selectedCount !== 1 ? 's' : ''} moved to trash.`,
-      })
+      toast.success(`${selectedCount} note${selectedCount !== 1 ? 's' : ''} moved to trash.`)
       setShowDeleteDialog(false)
       onClose()
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete notes.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to delete notes.')
     }
   }
 
@@ -152,11 +124,7 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
       setSelectedTags(prev => [...prev, tag.name])
       setNewTagName('')
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create tag.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to create tag.')
     } finally {
       setIsCreatingTag(false)
     }

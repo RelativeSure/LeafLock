@@ -101,7 +101,7 @@ export default defineConfig({
             return
           }
           console.warn('🔍 CIRCULAR DEPENDENCY DETECTED:', warning.message)
-          console.warn('📦 Modules involved:', warning.cycle)
+          console.warn('📦 Modules involved:', (warning as any).cycle)
           console.warn('⚠️  This may cause "Cannot access before initialization" errors')
           return
         }

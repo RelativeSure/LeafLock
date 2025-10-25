@@ -4,6 +4,18 @@ import App from './App'
 import './index.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
+// Extend Window interface for debugging
+declare global {
+  interface Window {
+    leafLockError?: {
+      error: string
+      stack: string
+      timestamp: string
+      environment: string
+    }
+  }
+}
+
 // Enhanced global error handlers for better debugging
 window.addEventListener('error', (event) => {
   console.group('🚨 Global JavaScript Error')
@@ -126,7 +138,7 @@ try {
   // Also log to window for debugging
   window.leafLockError = {
     error: errorMessage,
-    stack: errorStack,
+    stack: errorStack || 'No stack trace available',
     timestamp: new Date().toISOString(),
     environment: import.meta.env.MODE,
   }

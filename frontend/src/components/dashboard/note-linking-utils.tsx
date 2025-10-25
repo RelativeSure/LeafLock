@@ -134,7 +134,7 @@ export function NoteLinkingUtils({ content, onNoteSelect }: NoteLinkingUtilsProp
   const [hoveredLink, setHoveredLink] = useState<string | null>(null)
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 })
   const [showPreview, setShowPreview] = useState(false)
-  const hoverTimeoutRef = useRef<NodeJS.Timeout>()
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Extract note links from content
   const extractNoteLinks = (text: string) => {
@@ -161,14 +161,14 @@ export function NoteLinkingUtils({ content, onNoteSelect }: NoteLinkingUtilsProp
   }
 
   // Handle link hover
-  const _handleLinkHover = (_event: React.MouseEvent, noteTitle: string) => {
+  const handleLinkHover = (event: React.MouseEvent, noteTitle: string) => {
     const note = findNoteByTitle(noteTitle)
     if (!note) return
 
     setHoveredLink(noteTitle)
     setPreviewPosition({
-      x: _event.clientX + 10,
-      y: _event.clientY - 10,
+      x: event.clientX + 10,
+      y: event.clientY - 10,
     })
     setShowPreview(true)
 
@@ -179,7 +179,7 @@ export function NoteLinkingUtils({ content, onNoteSelect }: NoteLinkingUtilsProp
   }
 
   // Handle link leave
-  const _handleLinkLeave = () => {
+  const handleLinkLeave = () => {
     hoverTimeoutRef.current = setTimeout(() => {
       setShowPreview(false)
       setHoveredLink(null)
@@ -187,7 +187,7 @@ export function NoteLinkingUtils({ content, onNoteSelect }: NoteLinkingUtilsProp
   }
 
   // Handle link click
-  const _handleLinkClick = (noteTitle: string) => {
+  const handleLinkClick = (noteTitle: string) => {
     const note = findNoteByTitle(noteTitle)
     if (note) {
       onNoteSelect(note.id)
@@ -198,7 +198,7 @@ export function NoteLinkingUtils({ content, onNoteSelect }: NoteLinkingUtilsProp
   const renderContentWithLinks = () => {
     const links = extractNoteLinks(content)
     if (links.length === 0) {
-      return content
+      return <div dangerouslySetInnerHTML={{ __html: content }} />
     }
 
     let result = ''
@@ -216,9 +216,6 @@ export function NoteLinkingUtils({ content, onNoteSelect }: NoteLinkingUtilsProp
         class="note-link ${isFound ? 'note-link-found' : 'note-link-not-found'}"
         data-note-title="${link.title}"
         style="color: ${isFound ? '#3b82f6' : '#ef4444'}; text-decoration: underline; cursor: pointer;"
-        onmouseenter="handleNoteLinkHover(event, '${link.title}')"
-        onmouseleave="handleNoteLinkLeave()"
-        onclick="handleNoteLinkClick('${link.title}')"
       >[[${link.title}]]</span>`
 
       lastIndex = link.end
@@ -227,7 +224,30 @@ export function NoteLinkingUtils({ content, onNoteSelect }: NoteLinkingUtilsProp
     // Add remaining text
     result += content.slice(lastIndex)
 
-    return result
+    return (
+      <div
+        dangerouslySetInnerHTML={{ __html: result }}
+        onMouseEnter={(e) => {
+          const target = e.target as HTMLElement
+          if (target.classList.contains('note-link')) {
+            const noteTitle = target.getAttribute('data-note-title')
+            if (noteTitle) {
+              handleLinkHover(e as any, noteTitle)
+            }
+          }
+        }}
+        onMouseLeave={handleLinkLeave}
+        onClick={(e) => {
+          const target = e.target as HTMLElement
+          if (target.classList.contains('note-link')) {
+            const noteTitle = target.getAttribute('data-note-title')
+            if (noteTitle) {
+              handleLinkClick(noteTitle)
+            }
+          }
+        }}
+      />
+    )
   }
 
   // Add global event handlers
@@ -275,10 +295,7 @@ export function NoteLinkingUtils({ content, onNoteSelect }: NoteLinkingUtilsProp
 
   return (
     <>
-      <div
-        dangerouslySetInnerHTML={{ __html: renderContentWithLinks() }}
-        className="note-content"
-      />
+      {renderContentWithLinks()}
 
       {showPreview && hoveredLink && (
         <div
@@ -289,7 +306,6 @@ export function NoteLinkingUtils({ content, onNoteSelect }: NoteLinkingUtilsProp
           }}
         >
           <NoteLinkPreview
-            noteTitle={hoveredLink}
             noteId={findNoteByTitle(hoveredLink)?.id || ''}
             onClose={() => setShowPreview(false)}
             onNavigate={onNoteSelect}

@@ -59,7 +59,7 @@ export const useAuthStore = create<AuthState>()(
             return { requiresMFA: true }
           }
 
-          set({ user: response.user })
+          set({ user: { ...response.user, isAdmin: response.user.role === 'admin' } })
 
           // Set up encryption key after successful login
           // For now, use a simple key derived from email + password
@@ -78,7 +78,7 @@ export const useAuthStore = create<AuthState>()(
       verifyMFA: async (code: string) => {
         try {
           const response = await apiClient.verifyMFA(code)
-          set({ user: response.user })
+          set({ user: { ...response.user, isAdmin: response.user.role === 'admin' } })
           return true
         } catch (error) {
           console.error('MFA verification failed:', error)
@@ -89,7 +89,7 @@ export const useAuthStore = create<AuthState>()(
       register: async (email: string, password: string, name: string) => {
         try {
           const response = await apiClient.register(email, password, name)
-          set({ user: response.user })
+          set({ user: { ...response.user, isAdmin: response.user.role === 'admin' } })
         } catch (error) {
           throw new Error(error instanceof Error ? error.message : 'Registration failed')
         }

@@ -66,11 +66,7 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
       const versionList = await getNoteVersions(noteId)
       setVersions(versionList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load version history.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to load version history.')
     } finally {
       setLoading(false)
     }
@@ -84,29 +80,18 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
 
   const handleCreateVersion = async () => {
     if (!changeDescription.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a description for this version.',
-        variant: 'destructive',
-      })
+      toast.error('Please enter a description for this version.')
       return
     }
 
     try {
       await createNoteVersion(noteId, changeDescription)
-      toast({
-        title: 'Version created',
-        description: 'A new version has been saved successfully.',
-      })
+      toast.success('A new version has been saved successfully.')
       setChangeDescription('')
       setShowCreateDialog(false)
       loadVersions()
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create version.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to create version.')
     }
   }
 
@@ -115,19 +100,12 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
 
     try {
       await restoreNoteVersion(versionToRestore.id)
-      toast({
-        title: 'Version restored',
-        description: `Restored to version from ${format(new Date(versionToRestore.createdAt), 'MMM d, yyyy')}.`,
-      })
+      toast.success(`Restored to version from ${format(new Date(versionToRestore.createdAt), 'MMM d, yyyy')}.`)
       setShowRestoreDialog(false)
       setVersionToRestore(null)
       setOpen(false)
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to restore version.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to restore version.')
     }
   }
 
@@ -136,19 +114,12 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
 
     try {
       await deleteNoteVersion(versionToDelete.id)
-      toast({
-        title: 'Version deleted',
-        description: 'Version has been permanently deleted.',
-      })
+      toast.success('Version has been permanently deleted.')
       setShowDeleteDialog(false)
       setVersionToDelete(null)
       loadVersions()
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete version.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to delete version.')
     }
   }
 
