@@ -42,6 +42,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { NoteStats } from './note-stats'
 import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog'
 import { NoteLinkingUtils, BacklinksSection } from './note-linking-utils'
+import { VersionHistoryDialog } from './version-history-dialog'
 
 export function NoteEditor() {
   const { selectedNote, updateNote, moveToTrash, selectNote, tags, createTag } = useNotesStore()

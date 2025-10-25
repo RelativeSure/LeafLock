@@ -10,7 +10,6 @@ import { AppErrorBoundary } from './components/common/AppErrorBoundary'
 const LoginForm = React.lazy(() => import('./components/auth/login-form').then(m => ({ default: m.LoginForm })))
 const RegisterForm = React.lazy(() => import('./components/auth/register-form').then(m => ({ default: m.RegisterForm })))
 const Sidebar = React.lazy(() => import('./components/dashboard/sidebar').then(m => ({ default: m.Sidebar })))
-const NoteList = React.lazy(() => import('./components/dashboard/note-list').then(m => ({ default: m.NoteList })))
 const NoteEditor = React.lazy(() => import('./components/dashboard/note-editor').then(m => ({ default: m.NoteEditor })))
 const KeyboardShortcutsDialog = React.lazy(() => import('./components/dashboard/keyboard-shortcuts-dialog').then(m => ({ default: m.KeyboardShortcutsDialog })))
 
@@ -229,42 +228,14 @@ const DashboardComponent: React.FC = () => {
           </React.Suspense>
         </div>
 
-        <div className="flex-1 flex border-r border-border">
-          {/* Desktop Note List */}
-          <div className="hidden md:block w-80 border-r border-border flex flex-col animate-slide-in-left">
-            <div className="p-4 border-b border-border">
-              <h2 className="font-semibold">Notes</h2>
-            </div>
-            <React.Suspense fallback={
-              <div className="flex-1 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            }>
-              <NoteList />
-            </React.Suspense>
-          </div>
-
-          {/* Mobile Note List */}
-          <div className="md:hidden w-full flex flex-col">
-            <div className="p-4 border-b border-border">
-              <h2 className="font-semibold">Notes</h2>
-            </div>
-            <React.Suspense fallback={
-              <div className="flex-1 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            }>
-              <NoteList />
-            </React.Suspense>
-          </div>
+        {/* Note Editor - Full Width */}
+        <div className="flex-1 flex flex-col">
           <React.Suspense fallback={
             <div className="flex-1 flex items-center justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           }>
-            <div className="flex-1 flex flex-col">
-              <NoteEditor />
-            </div>
+            <NoteEditor />
           </React.Suspense>
         </div>
       </div>
