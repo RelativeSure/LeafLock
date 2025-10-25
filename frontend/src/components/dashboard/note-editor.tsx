@@ -42,8 +42,9 @@ import { EncryptionUnlockDialog } from './encryption-unlock-dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { NoteStats } from './note-stats'
 import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog'
-import { NoteLinkingUtils, BacklinksSection } from './note-linking-utils'
+import { BacklinksSection } from './note-linking-utils'
 import { VersionHistoryDialog } from './version-history-dialog'
+import { RichTextEditor } from './rich-text-editor'
 
 export function NoteEditor() {
   const { selectedNote, updateNote, moveToTrash, selectNote, tags, createTag } = useNotesStore()
@@ -413,10 +414,11 @@ export function NoteEditor() {
           </div>
         )}
 
-        <div className="prose prose-sm max-w-none">
-          <NoteLinkingUtils
+        <div className="flex-1">
+          <RichTextEditor
             content={displayContent}
-            onNoteSelect={selectNote}
+            onChange={setDisplayContent}
+            placeholder="Start writing your note..."
           />
         </div>
 
