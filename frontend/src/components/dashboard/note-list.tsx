@@ -31,10 +31,16 @@ export function NoteList() {
     if (!a.pinned && b.pinned) return 1
 
     switch (sortBy) {
-      case 'updated':
-        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-      case 'created':
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      case 'updated': {
+        const aUpdatedTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
+        const bUpdatedTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
+        return isNaN(bUpdatedTime) ? (isNaN(aUpdatedTime) ? 0 : -1) : (isNaN(aUpdatedTime) ? 1 : bUpdatedTime - aUpdatedTime)
+      }
+      case 'created': {
+        const aCreatedTime = a.createdAt ? new Date(a.createdAt).getTime() : 0
+        const bCreatedTime = b.createdAt ? new Date(b.createdAt).getTime() : 0
+        return isNaN(bCreatedTime) ? (isNaN(aCreatedTime) ? 0 : -1) : (isNaN(aCreatedTime) ? 1 : bCreatedTime - aCreatedTime)
+      }
       case 'title':
         return a.title.localeCompare(b.title)
       default:
@@ -191,7 +197,14 @@ export function NoteList() {
                   </div>
 
                   <span className="text-xs text-muted-foreground flex-shrink-0">
-                    {note.updatedAt ? formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true }) : 'Unknown'}
+                    {note.updatedAt ? (() => {
+                      try {
+                        const date = new Date(note.updatedAt)
+                        return isNaN(date.getTime()) ? 'Unknown' : formatDistanceToNow(date, { addSuffix: true })
+                      } catch {
+                        return 'Unknown'
+                      }
+                    })() : 'Unknown'}
                   </span>
                 </div>
                   </button>
