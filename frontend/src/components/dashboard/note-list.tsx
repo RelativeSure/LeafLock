@@ -118,8 +118,8 @@ export function NoteList() {
                         {tag}
                       </span>
                     ))}
-                    {note.tags.length > 2 && (
-                      <span className="text-xs text-muted">+{note.tags.length - 2}</span>
+                    {(note.tags || []).length > 2 && (
+                      <span className="text-xs text-muted">+{(note.tags || []).length - 2}</span>
                     )}
                   </div>
 
