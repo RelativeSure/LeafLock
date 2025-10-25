@@ -72,7 +72,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['buffer', 'crypto-browserify', 'process'],
+    include: ['buffer', 'crypto-browserify', 'process', 'react', 'react-dom', '@tanstack/react-router', '@tanstack/store', 'zustand'],
     exclude: ['libsodium-wrappers'],
     // Force optimization of frequently used dependencies
     force: process.env.NODE_ENV === 'development',
@@ -88,6 +88,18 @@ export default defineConfig({
         if (warning.code === 'EVAL' && warning.id?.includes('vm-browserify')) {
           return
         }
+        // Enhanced circular dependency detection and logging
+        if (warning.code === 'CIRCULAR_DEPENDENCY') {
+          // Suppress TanStack Store circular dependency warnings (known issue)
+          if (warning.message.includes('@tanstack/store')) {
+            console.warn('⚠️  Suppressing known TanStack Store circular dependency')
+            return
+          }
+          console.warn('🔍 CIRCULAR DEPENDENCY DETECTED:', warning.message)
+          console.warn('📦 Modules involved:', warning.cycle)
+          console.warn('⚠️  This may cause "Cannot access before initialization" errors')
+          return
+        }
 
         defaultHandler(warning)
       },
@@ -95,32 +107,48 @@ export default defineConfig({
         // Enable code splitting for better caching
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('libsodium-wrappers')) {
+            // Ensure React and React-DOM are bundled together first to prevent circular deps
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react-core'
+            }
+
+            // Bundle Radix UI components separately
+            if (id.includes('@radix-ui')) {
+              return 'radix-ui'
+            }
+
+            // Bundle crypto libraries
+            if (id.includes('libsodium-wrappers') || id.includes('crypto-browserify')) {
               return 'crypto-core'
             }
 
+            // Bundle editor dependencies
             if (id.includes('@tiptap') || id.includes('tiptap') || id.includes('lowlight')) {
               return 'editor-core'
             }
 
-            // Bundle Radix UI with vendor to ensure React loads first
-            // This fixes the forwardRef error caused by chunk loading order
-            if (id.includes('@radix-ui') || id.includes('react') || id.includes('react-dom')) {
-              return 'vendor'
-            }
-
-            if (id.includes('@tanstack') || id.includes('zustand')) {
+            // Bundle data management libraries (excluding TanStack Store due to circular deps)
+            if (id.includes('zustand')) {
               return 'data-layer'
             }
 
+            // Bundle TanStack Store with React to avoid circular dependency issues
+            if (id.includes('@tanstack/store')) {
+              return 'react-core'
+            }
+
+            // Bundle icon libraries
             if (id.includes('lucide-react')) {
               return 'icons'
             }
+
+            // Bundle other vendor libraries
+            return 'vendor'
           }
 
           return undefined
         },
-        // Optimize chunk loading
+        // Optimize chunk loading with proper dependency order
         chunkFileNames: 'assets/js/[name]-[hash].js',
         entryFileNames: 'assets/js/[name]-[hash].js',
         assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
