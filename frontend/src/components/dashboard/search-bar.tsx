@@ -82,7 +82,7 @@ export function SearchBar() {
                       {note.content || 'No content'}
                     </p>
                     <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}
+                      {note.updatedAt ? formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true }) : 'Unknown'}
                     </span>
                   </button>
                 ))}

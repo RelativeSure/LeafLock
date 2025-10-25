@@ -124,7 +124,7 @@ export function NoteList() {
                   </div>
 
                   <span className="text-xs text-muted-foreground flex-shrink-0">
-                    {formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}
+                    {note.updatedAt ? formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true }) : 'Unknown'}
                   </span>
                 </div>
               </button>
