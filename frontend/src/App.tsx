@@ -7,16 +7,20 @@ import { ConfigDebug } from './components/debug/ConfigDebug'
 import { AppErrorBoundary } from './components/common/AppErrorBoundary'
 import { Toaster } from './components/ui/sonner'
 
-const App: React.FC = () => (
-  <AppErrorBoundary>
-    <ThemeProvider>
-      <EncryptionProvider>
-        <RouterProvider router={router} />
-        <Toaster />
-        <ConfigDebug />
-      </EncryptionProvider>
-    </ThemeProvider>
-  </AppErrorBoundary>
-)
+const App: React.FC = () => {
+  console.log('🎯 App component rendering...')
+
+  return (
+    <AppErrorBoundary>
+      <ThemeProvider>
+        <EncryptionProvider>
+          <RouterProvider router={router} />
+          <Toaster />
+          <ConfigDebug />
+        </EncryptionProvider>
+      </ThemeProvider>
+    </AppErrorBoundary>
+  )
+}
 
 export default App
