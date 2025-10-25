@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import type { Note, Folder, Tag } from '../types'
-import { useAuthStore } from './authStore'
 import { apiClient } from '../services/api/secureApi'
 
 interface NotesState {
@@ -38,6 +37,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   isLoading: false,
 
   loadData: async () => {
+    const { useAuthStore } = await import('./authStore')
     const { user } = useAuthStore.getState()
     if (!user) return
 

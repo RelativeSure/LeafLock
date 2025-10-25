@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import type { UserSettings } from '../types'
-import { useAuthStore } from './authStore'
 import { apiClient } from '../services/api/secureApi'
 
 interface SettingsState {
@@ -26,6 +25,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   isLoading: false,
 
   loadSettings: async () => {
+    const { useAuthStore } = await import('./authStore')
     const { user } = useAuthStore.getState()
     if (!user) return
 

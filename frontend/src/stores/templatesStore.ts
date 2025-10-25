@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import type { Template } from '../types'
-import { useAuthStore } from './authStore'
 import { apiClient } from '../services/api/secureApi'
 
 interface TemplatesState {
@@ -22,6 +21,7 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
   isLoading: false,
 
   loadTemplates: async () => {
+    const { useAuthStore } = await import('./authStore')
     const { user } = useAuthStore.getState()
     if (!user) return
 
