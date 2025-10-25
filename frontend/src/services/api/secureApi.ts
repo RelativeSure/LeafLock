@@ -312,13 +312,12 @@ class ApiClient {
   }
 
   async createNote(note: Partial<Note>): Promise<Note> {
-    // For now, send plain text - encryption will be handled by the backend
+    // Send encrypted data as expected by backend
     const noteData = {
-      title: note.title || '',
-      content: note.content || '',
+      title_encrypted: note.title || '',
+      content_encrypted: note.content || '',
       folderId: note.folderId,
       tags: note.tags || [],
-      encrypted: note.encrypted || false,
       userId: note.userId,
     }
 
@@ -329,13 +328,12 @@ class ApiClient {
   }
 
   async updateNote(id: string, note: Partial<Note>): Promise<Note> {
-    // For now, send plain text - encryption will be handled by the backend
+    // Send encrypted data as expected by backend
     const noteData = {
-      title: note.title,
-      content: note.content,
+      title_encrypted: note.title,
+      content_encrypted: note.content,
       folderId: note.folderId,
       tags: note.tags,
-      encrypted: note.encrypted,
       pinned: note.pinned,
     }
 

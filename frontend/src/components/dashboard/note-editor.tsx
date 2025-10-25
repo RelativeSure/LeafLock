@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import {
   Lock,
-  Unlock,
   TagIcon,
   Share2,
   MoreVertical,
@@ -77,31 +76,6 @@ export function NoteEditor() {
     }
   }
 
-  const handleToggleEncryption = async () => {
-    if (!selectedNote) return
-
-    if (!selectedNote.encrypted) {
-      // Enabling encryption
-      if (!isUnlocked) {
-        setIsUnlockDialogOpen(true)
-        return
-      }
-
-      try {
-        const encryptedContent = await encryptText(displayContent)
-        await updateNote(selectedNote.id, { encrypted: true, content: encryptedContent })
-      } catch (err) {
-        console.error('[v0] Failed to encrypt:', err)
-      }
-    } else {
-      // Disabling encryption
-      try {
-        await updateNote(selectedNote.id, { encrypted: false, content: displayContent })
-      } catch (err) {
-        console.error('[v0] Failed to disable encryption:', err)
-      }
-    }
-  }
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -113,9 +87,6 @@ export function NoteEditor() {
       if (modifier && e.key === 'p') {
         e.preventDefault()
         handleTogglePin()
-      } else if (modifier && e.key === 'e') {
-        e.preventDefault()
-        handleToggleEncryption()
       } else if (modifier && e.key === 'd') {
         e.preventDefault()
         handleDelete()
@@ -128,36 +99,47 @@ export function NoteEditor() {
 
   useEffect(() => {
     if (selectedNote) {
-      setTitle(selectedNote.title)
       setNoteTags(selectedNote.tags || [])
       // Don't auto-join collaboration session - only join when Share button is clicked
 
-      // Handle encrypted notes
-      if (selectedNote.encrypted && selectedNote.content) {
-        if (isUnlocked) {
-          setIsDecrypting(true)
-          setDecryptError('')
-          decryptText(selectedNote.content)
-            .then((decrypted) => {
-              setContent(decrypted)
-              setDisplayContent(decrypted)
-              setIsDecrypting(false)
-            })
-            .catch((err) => {
-              console.error('[v0] Decryption failed:', err)
-              setDecryptError('Failed to decrypt note. The password may be incorrect.')
+      // Always decrypt title and content since all notes are encrypted
+      if (isUnlocked) {
+        setIsDecrypting(true)
+        setDecryptError('')
+
+        const decryptData = async () => {
+          try {
+            // Decrypt title
+            const decryptedTitle = selectedNote.title ? await decryptText(selectedNote.title) : ''
+            setTitle(decryptedTitle)
+
+            // Decrypt content if it exists
+            if (selectedNote.content) {
+              const decryptedContent = await decryptText(selectedNote.content)
+              setContent(decryptedContent)
+              setDisplayContent(decryptedContent)
+            } else {
               setContent('')
               setDisplayContent('')
-              setIsDecrypting(false)
-            })
-        } else {
-          setIsUnlockDialogOpen(true)
-          setContent('')
-          setDisplayContent('')
+            }
+
+            setIsDecrypting(false)
+          } catch (err) {
+            console.error('[v0] Decryption failed:', err)
+            setDecryptError('Failed to decrypt note. The password may be incorrect.')
+            setTitle('')
+            setContent('')
+            setDisplayContent('')
+            setIsDecrypting(false)
+          }
         }
+
+        decryptData()
       } else {
-        setContent(selectedNote.content)
-        setDisplayContent(selectedNote.content)
+        setIsUnlockDialogOpen(true)
+        setTitle('')
+        setContent('')
+        setDisplayContent('')
       }
 
       return () => {
@@ -172,12 +154,25 @@ export function NoteEditor() {
         try {
           let contentToSave = displayContent
 
-          // Encrypt content if note is marked as encrypted
-          if (selectedNote.encrypted && isUnlocked) {
-            contentToSave = await encryptText(displayContent)
+          // Guard clause: only save if we have a valid selected note
+          if (!selectedNote?.id) {
+            return
           }
 
-          await updateNote(selectedNote.id, { title, content: contentToSave, tags: noteTags })
+          // Always encrypt title and content before saving
+          if (isUnlocked) {
+            const encryptedTitle = await encryptText(title)
+            contentToSave = await encryptText(displayContent)
+
+            await updateNote(selectedNote.id, {
+              title: encryptedTitle,
+              content: contentToSave,
+              tags: noteTags
+            })
+          } else {
+            // If not unlocked, don't save
+            return
+          }
         } catch (err) {
           console.error('[v0] Failed to save note:', err)
         }
@@ -269,24 +264,6 @@ export function NoteEditor() {
             {selectedNote.pinned ? 'Pinned' : 'Pin'}
           </Button>
 
-          <Button
-            variant={selectedNote.encrypted ? 'default' : 'outline'}
-            size="sm"
-            onClick={handleToggleEncryption}
-            className="gap-2"
-          >
-            {selectedNote.encrypted ? (
-              <>
-                <Lock className="h-4 w-4" />
-                Encrypted
-              </>
-            ) : (
-              <>
-                <Unlock className="h-4 w-4" />
-                Not Encrypted
-              </>
-            )}
-          </Button>
 
           <Dialog open={isAddingTag} onOpenChange={setIsAddingTag}>
             <DialogTrigger asChild>
