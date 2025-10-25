@@ -264,7 +264,7 @@ export function Sidebar() {
               Tags
             </div>
             {(tags || []).map((tag, index) => {
-              const tagNotes = activeNotes.filter((note) => note.tags.includes(tag.name))
+              const tagNotes = activeNotes.filter((note) => (note.tags || []).includes(tag.name))
 
               return (
                 <button

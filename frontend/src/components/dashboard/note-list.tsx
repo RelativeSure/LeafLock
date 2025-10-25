@@ -109,7 +109,7 @@ export function NoteList() {
 
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1 flex-wrap">
-                    {note.tags.slice(0, 2).map((tag) => (
+                    {(note.tags || []).slice(0, 2).map((tag) => (
                       <span
                         key={tag}
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent/50 text-xs transition-smooth hover:bg-accent"

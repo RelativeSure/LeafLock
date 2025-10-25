@@ -140,7 +140,7 @@ export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
               Public
             </Badge>
           )}
-          {template.tags.slice(0, 2).map((tag) => (
+          {(template.tags || []).slice(0, 2).map((tag) => (
             <Badge key={tag} variant="outline" className="text-xs">
               <TagIcon className="h-2.5 w-2.5 mr-1" />
               {tag}
