@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNotesStore } from '../../stores/notesStore'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   FolderPlus,
@@ -10,14 +9,6 @@ import {
   X,
   Library,
 } from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
 import { TemplatesDialog } from './templates-dialog'
 import { AdvancedSearchBar } from './advanced-search-bar'
 import { NoteList } from './note-list'
@@ -32,9 +23,6 @@ export function Sidebar() {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  const [newFolderName, setNewFolderName] = useState('')
-  const [newFolderColor, setNewFolderColor] = useState('#3b82f6')
-  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false)
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false)
 
   // Mobile detection and responsive behavior
@@ -124,61 +112,6 @@ export function Sidebar() {
             <Plus className="h-4 w-4 mr-1" />
             New Note
           </Button>
-
-          <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="transition-smooth hover-lift bg-transparent"
-              >
-                <FolderPlus className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="animate-scale-in">
-              <DialogHeader>
-                <DialogTitle>Create Folder</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="folder-name">Folder Name</Label>
-                  <Input
-                    id="folder-name"
-                    value={newFolderName}
-                    onChange={(e) => setNewFolderName(e.target.value)}
-                    placeholder="My Folder"
-                    className="transition-smooth"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="folder-color">Color</Label>
-                  <div className="flex gap-2">
-                    {['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'].map(
-                      (color) => (
-                        <button
-                          key={color}
-                          type="button"
-                          onClick={() => setNewFolderColor(color)}
-                          className={`w-8 h-8 rounded-full border-2 transition-bounce hover:scale-110 ${
-                            newFolderColor === color
-                              ? 'border-foreground scale-110'
-                              : 'border-transparent'
-                          }`}
-                          style={{ backgroundColor: color }}
-                        />
-                      )
-                    )}
-                  </div>
-                </div>
-                <Button
-                  onClick={handleCreateFolder}
-                  className="w-full transition-bounce hover-lift"
-                >
-                  Create Folder
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
 
