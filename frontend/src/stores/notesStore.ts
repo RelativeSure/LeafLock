@@ -112,16 +112,15 @@ export const useNotesStore = create<NotesState>((set, get) => ({
           isTemplate: false,
         }
 
-        console.log('About to update store state...')
-        console.log('Current notes count:', get().notes.length)
-        set((state) => {
-          console.log('Inside set function, current state notes:', state.notes.length)
-          const newState = { notes: [localNote, ...state.notes], selectedNote: localNote }
-          console.log('New state notes count:', newState.notes.length)
-          return newState
+        // Update store state with new note
+        const currentState = get()
+        set({
+          notes: [localNote, ...currentState.notes],
+          selectedNote: localNote
         })
-        console.log('Store state after creation:', get().notes.length)
+
         console.log('Note created successfully:', localNote.id)
+        console.log('Store state after creation:', get().notes.length)
         return localNote
       },
 
