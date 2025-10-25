@@ -773,3 +773,87 @@ func (h *Handler) DebugEncryptionKey(c *fiber.Ctx) error {
 		"encrypted_length":  len(encrypted),
 	})
 }
+
+// ResetAdminUser resets the admin user with current encryption key (development only)
+// @Summary Reset admin user
+// @Description Reset admin user with current encryption key to fix encryption mismatches
+// @Tags Authentication
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} ErrorResponse
+// @Router /auth/reset-admin [post]
+func (h *Handler) ResetAdminUser(c *fiber.Ctx) error {
+	// Only allow in development mode
+	if os.Getenv("ENVIRONMENT") == "production" {
+		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{
+			Error: "Debug endpoint not available in production",
+			Code:  ErrCodeAccessDenied,
+		})
+	}
+
+	// Get admin user ID
+	var adminUserID uuid.UUID
+	query := `SELECT id FROM users WHERE is_admin = true AND deleted_at IS NULL LIMIT 1`
+	err := h.service.db.QueryRow(c.Context(), query).Scan(&adminUserID)
+	if err != nil {
+		return c.JSON(map[string]interface{}{
+			"success": false,
+			"error":   "No admin user found",
+		})
+	}
+
+	// Delete the existing admin user and related data
+	tx, err := h.service.db.Begin(c.Context())
+	if err != nil {
+		return c.JSON(map[string]interface{}{
+			"success": false,
+			"error":   "Failed to begin transaction",
+		})
+	}
+	defer func() {
+		_ = tx.Rollback(c.Context())
+	}()
+
+	// Delete user data in correct order (foreign key constraints)
+	deleteQueries := []string{
+		`DELETE FROM audit_log WHERE user_id = $1`,
+		`DELETE FROM gdpr_keys WHERE email_hash IN (SELECT email_hash FROM users WHERE id = $1)`,
+		`DELETE FROM workspaces WHERE owner_id = $1`,
+		`DELETE FROM user_roles WHERE user_id = $1`,
+		`DELETE FROM users WHERE id = $1`,
+	}
+
+	for _, deleteQuery := range deleteQueries {
+		_, err = tx.Exec(c.Context(), deleteQuery, adminUserID)
+		if err != nil {
+			return c.JSON(map[string]interface{}{
+				"success": false,
+				"error":   fmt.Sprintf("Failed to delete user data: %v", err),
+			})
+		}
+	}
+
+	// Commit the deletion
+	err = tx.Commit(c.Context())
+	if err != nil {
+		return c.JSON(map[string]interface{}{
+			"success": false,
+			"error":   "Failed to commit deletion",
+		})
+	}
+
+	// Recreate admin user with current encryption key
+	err = h.service.EnsureDefaultAdmin(c.Context(), true, "mail@rasmusj.dk", "UW^kHWhgbvsAN7TV#B!ySeXG&mq%Zz")
+	if err != nil {
+		return c.JSON(map[string]interface{}{
+			"success": false,
+			"error":   fmt.Sprintf("Failed to recreate admin user: %v", err),
+		})
+	}
+
+	return c.JSON(map[string]interface{}{
+		"success": true,
+		"message": "Admin user reset successfully with current encryption key",
+		"email":   "mail@rasmusj.dk",
+	})
+}

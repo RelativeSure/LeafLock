@@ -239,6 +239,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 		api.Post("/auth/debug-login", authHandler.DebugLogin)
 		api.Get("/auth/debug-admin", authHandler.DebugAdminInfo)
 		api.Get("/auth/debug-encryption", authHandler.DebugEncryptionKey)
+		api.Post("/auth/reset-admin", authHandler.ResetAdminUser)
 	}
 
 	// Password reset routes (public) - Tier 1: Strictest rate limiting
