@@ -82,16 +82,8 @@ export function Sidebar() {
     }
   }
 
-  // Show loading state if store is loading
-  if (isLoading) {
-    return (
-      <div className="w-64 border-r border-border bg-card flex flex-col h-full">
-        <div className="flex items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </div>
-    )
-  }
+  // Always render the sidebar structure, even if loading
+  // This ensures tests can find the elements they're looking for
 
   return (
     <>
@@ -138,6 +130,7 @@ export function Sidebar() {
             onClick={handleCreateNote}
             className="flex-1 transition-bounce hover-lift"
             size="sm"
+            disabled={isLoading}
           >
             <Plus className="h-4 w-4 mr-1" />
             New Note
@@ -207,7 +200,13 @@ export function Sidebar() {
         </div>
         <ScrollArea className="flex-1">
           <div className="p-2">
-            <NoteList />
+            {isLoading ? (
+              <div className="flex items-center justify-center h-32">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <NoteList />
+            )}
           </div>
         </ScrollArea>
       </div>
@@ -233,6 +232,7 @@ export function Sidebar() {
             size="sm"
             onClick={() => setIsTemplatesOpen(true)}
             className="flex-1 gap-2 bg-transparent"
+            disabled={isLoading}
           >
             <Library className="h-4 w-4" />
             Templates
