@@ -101,7 +101,7 @@ export function NoteList() {
                 </div>
 
                 <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                  {note.content
+                  {(note.content || '')
                     .replace(/<[^>]*>/g, ' ')
                     .replace(/\s+/g, ' ')
                     .trim() || 'No content'}

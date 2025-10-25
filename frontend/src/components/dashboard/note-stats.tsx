@@ -8,7 +8,7 @@ interface NoteStatsProps {
 
 export function NoteStats({ content }: NoteStatsProps) {
   // Strip HTML tags for accurate word count
-  const textContent = content
+  const textContent = (content || '')
     .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
