@@ -113,14 +113,13 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         }
 
         // Update store state with new note
-        const currentState = get()
-        set({
-          notes: [localNote, ...currentState.notes],
+        set((state) => ({
+          notes: [localNote, ...state.notes],
           selectedNote: localNote
-        })
+        }))
 
         console.log('Note created successfully:', localNote.id)
-        console.log('Store state after creation:', get().notes.length)
+
         return localNote
       },
 
@@ -546,5 +545,5 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         localStorage.setItem('lastSeenNoteId', mostRecentNote.id)
       }
     }
-  }
+  },
 }))
