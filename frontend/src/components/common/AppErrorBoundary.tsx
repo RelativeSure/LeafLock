@@ -20,6 +20,10 @@ export class AppErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught error:', error, errorInfo)
+    // Also log to window for debugging
+    if (typeof window !== 'undefined') {
+      window.console.error('Error Boundary caught error:', error.message, error.stack)
+    }
   }
 
   public render() {
@@ -37,12 +41,14 @@ export class AppErrorBoundary extends Component<Props, State> {
             >
               Refresh Page
             </button>
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {this.state.error && (
               <details className="mt-6 text-left">
                 <summary className="cursor-pointer text-sm text-muted-foreground">
-                  Error Details (Development)
+                  Error Details
                 </summary>
                 <pre className="mt-2 p-4 bg-muted rounded-md text-xs overflow-auto">
+                  {this.state.error.message}
+                  {'\n\n'}
                   {this.state.error.stack}
                 </pre>
               </details>
