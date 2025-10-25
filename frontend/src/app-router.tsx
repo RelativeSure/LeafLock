@@ -105,7 +105,8 @@ const authRoute = createRoute({
 // Dashboard route
 const DashboardComponent: React.FC = () => {
   const { user, isLoading, logout, initialize } = useAuthStore()
-  const { loadData, isLoading: notesLoading } = useNotesStore()
+  const notesStore = useNotesStore()
+  const { loadData, isLoading: notesLoading } = notesStore
 
   // Initialize auth store if not already done
   React.useEffect(() => {
@@ -131,6 +132,18 @@ const DashboardComponent: React.FC = () => {
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           <p className="text-sm text-muted-foreground animate-pulse">Loading LeafLock...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Ensure store has proper data before rendering components
+  if (!notesStore.notes || !notesStore.folders || !notesStore.tags) {
+    return (
+      <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-sm text-muted-foreground animate-pulse">Loading data...</p>
         </div>
       </div>
     )
