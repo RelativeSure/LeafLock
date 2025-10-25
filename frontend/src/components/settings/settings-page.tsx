@@ -55,10 +55,7 @@ export function SettingsPage() {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
 
-    toast({
-      title: 'Export successful',
-      description: 'Your data has been exported successfully.',
-    })
+    toast.success('Your data has been exported successfully.')
 
     // Log the export activity
     console.log('Export activity:', { userId: user?.id, action: 'export_data' })
@@ -116,19 +113,12 @@ export function SettingsPage() {
         }
       }
 
-      toast({
-        title: 'Import successful',
-        description: 'Your data has been imported successfully.',
-      })
+      toast.success('Your data has been imported successfully.')
 
       // Log the import activity
       console.log('Import activity:', { userId: user?.id, action: 'import_data' })
     } catch (error) {
-      toast({
-        title: 'Import failed',
-        description: error instanceof Error ? error.message : 'Failed to import data',
-        variant: 'destructive',
-      })
+      toast.error(error instanceof Error ? error.message : 'Failed to import data')
     }
   }
 
@@ -148,16 +138,9 @@ export function SettingsPage() {
           customUrl: type === 'custom' ? settings.profilePicture.customUrl : undefined
         }
       })
-      toast({
-        title: 'Profile picture updated',
-        description: 'Your profile picture settings have been updated.',
-      })
+      toast.success('Your profile picture settings have been updated.')
     } catch (error) {
-      toast({
-        title: 'Update failed',
-        description: 'Failed to update profile picture settings.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to update profile picture settings.')
     } finally {
       setIsUpdatingProfile(false)
     }

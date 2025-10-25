@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"os"
 	"regexp"
 	"strings"
@@ -138,90 +137,6 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 
 	// API group
 	api := app.Group("/api/v1")
-
-	// Health check endpoints
-	api.Get("/health/live", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"status":    "live",
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"uptime":    time.Since(startTime).String(),
-		})
-	})
-
-	api.Get("/health/ready", func(c *fiber.Ctx) error {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
-
-		health := fiber.Map{
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"uptime":    time.Since(startTime).String(),
-		}
-
-		if readyState.IsFullyReady() {
-			var userCount int
-			if err := readyState.GetDB().QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&userCount); err != nil {
-				health["status"] = "unhealthy"
-				health["error"] = "database check failed"
-				return c.Status(fiber.StatusServiceUnavailable).JSON(health)
-			}
-
-			if err := readyState.GetRedis().Ping(ctx).Err(); err != nil {
-				health["status"] = "unhealthy"
-				health["error"] = "redis check failed"
-				return c.Status(fiber.StatusServiceUnavailable).JSON(health)
-			}
-
-			health["status"] = "ready"
-			health["user_count"] = userCount
-			return c.JSON(health)
-		}
-
-		health["status"] = "initializing"
-		health["admin_ready"] = readyState.IsAdminReady()
-		health["templates_ready"] = readyState.IsTemplatesReady()
-		health["allowlist_ready"] = readyState.IsAllowlistReady()
-		health["redis_ready"] = readyState.IsRedisReady()
-		return c.Status(fiber.StatusServiceUnavailable).JSON(health)
-	})
-
-	api.Get("/health", func(c *fiber.Ctx) error {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		health := fiber.Map{
-			"status":    "healthy",
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"version":   "1.0.0",
-			"uptime":    time.Since(startTime).String(),
-		}
-
-		var userCount int
-		dbHealthy := true
-		if err := db.QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&userCount); err != nil {
-			dbHealthy = false
-			health["database"] = "unhealthy"
-			health["database_error"] = err.Error()
-		} else {
-			health["database"] = "healthy"
-			health["user_count"] = userCount
-		}
-
-		redisHealthy := true
-		if err := rdb.Ping(ctx).Err(); err != nil {
-			redisHealthy = false
-			health["redis"] = "unhealthy"
-			health["redis_error"] = err.Error()
-		} else {
-			health["redis"] = "healthy"
-		}
-
-		if !dbHealthy || !redisHealthy {
-			health["status"] = "unhealthy"
-			return c.Status(fiber.StatusServiceUnavailable).JSON(health)
-		}
-
-		return c.JSON(health)
-	})
 
 	// Swagger documentation endpoints
 	api.Get("/docs", swaggerUIHandler)

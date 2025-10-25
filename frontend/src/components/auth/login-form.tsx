@@ -186,15 +186,26 @@ export function LoginForm({
             {isLoading ? 'Signing in...' : 'Sign in'}
           </Button>
 
-          <div className="text-center text-sm text-muted-foreground">
-            Don't have an account?{' '}
-            <button
-              type="button"
-              onClick={onToggleMode}
-              className="text-primary hover:underline transition-smooth"
-            >
-              Sign up
-            </button>
+          <div className="text-center text-sm text-muted-foreground space-y-2">
+            <div>
+              Don't have an account?{' '}
+              <button
+                type="button"
+                onClick={onToggleMode}
+                className="text-primary hover:underline transition-smooth"
+              >
+                Sign up
+              </button>
+            </div>
+            <div>
+              <button
+                type="button"
+                onClick={() => window.location.href = '/auth/forgot'}
+                className="text-primary hover:underline transition-smooth"
+              >
+                Forgot password?
+              </button>
+            </div>
           </div>
         </form>
       </CardContent>

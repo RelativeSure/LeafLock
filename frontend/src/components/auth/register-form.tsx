@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuthStore } from '../../stores/authStore'
+import { useRouter } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,6 +15,7 @@ export function RegisterForm({
   animatedTitle?: React.ReactNode
 }) {
   const { register } = useAuthStore()
+  const router = useRouter()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -75,6 +77,8 @@ export function RegisterForm({
 
     try {
       await register(email, password, name)
+      // Registration successful, redirect to dashboard
+      router.navigate({ to: '/dashboard' })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed')
     } finally {

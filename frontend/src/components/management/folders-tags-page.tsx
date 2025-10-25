@@ -58,32 +58,18 @@ export function FoldersTagsPage() {
       setNewFolderName('')
       setNewFolderColor('#3b82f6')
       setIsCreateFolderOpen(false)
-      toast({
-        title: 'Folder created',
-        description: `"${newFolderName}" has been created successfully.`,
-      })
+      toast.success(`"${newFolderName}" has been created successfully.`)
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create folder.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to create folder.')
     }
   }
 
   const handleDeleteFolder = async (folderId: string, folderName: string) => {
     try {
       await deleteFolder(folderId)
-      toast({
-        title: 'Folder deleted',
-        description: `"${folderName}" has been deleted.`,
-      })
+      toast.success(`"${folderName}" has been deleted.`)
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete folder.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to delete folder.')
     }
   }
 
@@ -95,32 +81,18 @@ export function FoldersTagsPage() {
       setNewTagName('')
       setNewTagColor('#3b82f6')
       setIsCreateTagOpen(false)
-      toast({
-        title: 'Tag created',
-        description: `"${newTagName}" has been created successfully.`,
-      })
+      toast.success(`"${newTagName}" has been created successfully.`)
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create tag.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to create tag.')
     }
   }
 
   const handleDeleteTag = async (tagId: string, tagName: string) => {
     try {
       await deleteTag(tagId)
-      toast({
-        title: 'Tag deleted',
-        description: `"${tagName}" has been deleted.`,
-      })
+      toast.success(`"${tagName}" has been deleted.`)
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete tag.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to delete tag.')
     }
   }
 

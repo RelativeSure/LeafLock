@@ -18,6 +18,7 @@ import {
   Plus,
   ShieldCheck,
   Pin,
+  History,
 } from 'lucide-react'
 import {
   DropdownMenu,

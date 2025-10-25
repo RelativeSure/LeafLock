@@ -127,6 +127,11 @@ export default defineConfig({
       '/api': {
         target: devProxyTarget,
         changeOrigin: true,
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log('[Proxy]', req.method, req.url, '->', devProxyTarget + req.url)
+          })
+        },
       },
     },
   },
