@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuthStore } from '@/stores'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,13 +13,21 @@ export function LoginForm({
   onToggleMode: () => void
   animatedTitle?: React.ReactNode
 }) {
-  const { login, verifyMFA } = useAuthStore()
+  const { login, verifyMFA, user } = useAuthStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [mfaCode, setMfaCode] = useState('')
   const [requiresMFA, setRequiresMFA] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  // Redirect to dashboard after successful login
+  useEffect(() => {
+    if (user) {
+      console.log('User logged in, redirecting to dashboard...')
+      window.location.href = '/dashboard'
+    }
+  }, [user])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,6 +56,7 @@ export function LoginForm({
       if (!success) {
         setError('Invalid MFA code')
       }
+      // If successful, the useEffect will handle the redirect
     } catch (err) {
       setError('MFA verification failed')
     } finally {
