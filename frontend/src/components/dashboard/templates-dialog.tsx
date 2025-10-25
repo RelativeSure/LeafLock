@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { useTemplatesStore, useNotesStore, useAuthStore } from '@/stores'
+import { useTemplatesStore } from '../../stores/templatesStore'
+import { useNotesStore } from '../../stores/notesStore'
+import { useAuthStore } from '../../stores/authStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'

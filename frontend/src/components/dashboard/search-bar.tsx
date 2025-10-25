@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useNotesStore } from '@/stores'
+import { useNotesStore } from '../../stores/notesStore'
 import { Input } from '@/components/ui/input'
 import { Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'

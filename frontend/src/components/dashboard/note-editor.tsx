@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState } from 'react'
-import { useNotesStore } from '@/stores'
+import { useNotesStore } from '../../stores/notesStore'
 import { useCollaboration } from '@/lib/collaboration-context'
 import { useEncryption } from '@/lib/encryption-context'
 import { Button } from '@/components/ui/button'

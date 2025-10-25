@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNotesStore } from '@/stores'
+import { useNotesStore } from '../../stores/notesStore'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,

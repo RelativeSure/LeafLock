@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNotesStore } from '@/stores'
+import { useNotesStore } from '../../stores/notesStore'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { FileText, Lock, TagIcon, Pin, ArrowUpDown } from 'lucide-react'

@@ -1,6 +1,8 @@
 'use client'
 
-import { useNotesStore, useTemplatesStore, useAuthStore } from '@/stores'
+import { useNotesStore } from '../../stores/notesStore'
+import { useTemplatesStore } from '../../stores/templatesStore'
+import { useAuthStore } from '../../stores/authStore'
 import { Button } from '@/components/ui/button'
 import { Download } from 'lucide-react'
 import { Label } from '@/components/ui/label'

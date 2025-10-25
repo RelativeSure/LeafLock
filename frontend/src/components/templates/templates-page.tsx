@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useTemplatesStore, useAuthStore } from '@/stores'
+import { useTemplatesStore } from '../../stores/templatesStore'
+import { useAuthStore } from '../../stores/authStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
