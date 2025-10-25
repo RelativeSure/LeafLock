@@ -83,6 +83,11 @@ export default defineConfig({
     minify: 'esbuild', // Use esbuild instead of terser (faster and built-in)
     cssCodeSplit: true,
     sourcemap: false, // Disable sourcemaps for production for faster builds
+    // Prevent circular dependencies by ensuring proper module resolution
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+    },
     rollupOptions: {
       onwarn(warning, defaultHandler) {
         if (warning.code === 'EVAL' && warning.id?.includes('vm-browserify')) {
@@ -104,45 +109,26 @@ export default defineConfig({
         defaultHandler(warning)
       },
       output: {
-        // Enable code splitting for better caching
+        // Aggressive chunk consolidation to prevent circular dependencies
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // Ensure React and React-DOM are bundled together first to prevent circular deps
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'react-core'
+            // Bundle ALL critical dependencies together to prevent any circular deps
+            if (id.includes('react') || id.includes('react-dom') || id.includes('@tanstack') ||
+                id.includes('zustand') || id.includes('@radix-ui') || id.includes('lucide-react')) {
+              return 'core-bundle'
             }
 
-            // Bundle Radix UI components separately
-            if (id.includes('@radix-ui')) {
-              return 'radix-ui'
-            }
-
-            // Bundle crypto libraries
+            // Bundle crypto libraries separately (they're large)
             if (id.includes('libsodium-wrappers') || id.includes('crypto-browserify')) {
               return 'crypto-core'
             }
 
-            // Bundle editor dependencies
+            // Bundle editor dependencies separately (they're large)
             if (id.includes('@tiptap') || id.includes('tiptap') || id.includes('lowlight')) {
               return 'editor-core'
             }
 
-            // Bundle data management libraries (excluding TanStack Store due to circular deps)
-            if (id.includes('zustand')) {
-              return 'data-layer'
-            }
-
-            // Bundle TanStack Store with React to avoid circular dependency issues
-            if (id.includes('@tanstack/store')) {
-              return 'react-core'
-            }
-
-            // Bundle icon libraries
-            if (id.includes('lucide-react')) {
-              return 'icons'
-            }
-
-            // Bundle other vendor libraries
+            // Bundle everything else as vendor
             return 'vendor'
           }
 
