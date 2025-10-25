@@ -35,7 +35,7 @@ import { Label } from '@/components/ui/label'
 import { TemplatesDialog } from './templates-dialog'
 import { SearchBar } from './search-bar'
 import { ExportImportDialog } from './export-import-dialog'
-// import { TrashDialog } from './trash-dialog'
+import { TrashDialog } from './trash-dialog'
 
 export function Sidebar() {
   console.log('Sidebar component rendering...')
@@ -314,7 +314,7 @@ export function Sidebar() {
 
       <div className="p-4 border-t border-border space-y-2">
         <div className="flex gap-2">
-          {/* <TrashDialog /> */}
+          <TrashDialog />
           <ExportImportDialog />
         </div>
 
