@@ -66,6 +66,10 @@ const indexRoute = createRoute({
 const AuthComponent: React.FC<{ mode?: 'login' | 'register' | 'forgot' }> = ({ mode: initialMode = 'login' }) => {
   const [mode, setMode] = React.useState<'login' | 'register' | 'forgot'>(initialMode)
 
+  React.useEffect(() => {
+    setMode(initialMode)
+  }, [initialMode])
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 animate-in fade-in-50 duration-700 relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       <InteractiveGridPattern width={50} height={50} className="absolute inset-0 opacity-50" />
