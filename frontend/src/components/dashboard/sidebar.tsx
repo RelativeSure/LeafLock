@@ -46,6 +46,7 @@ export function Sidebar() {
     folders,
     tags,
     notes,
+    selectedNote,
     selectedFolder,
     selectFolder,
     createFolder,
