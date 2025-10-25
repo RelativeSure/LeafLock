@@ -55,15 +55,13 @@ export function SettingsPage() {
     })
 
     // Log the export activity
-    ActivityLogger.logActivity({
-      action: 'export_data',
-      details: {
-        notesCount: notes?.length || 0,
-        foldersCount: folders?.length || 0,
-        tagsCount: tags?.length || 0,
-        templatesCount: templates?.length || 0,
-      },
-    })
+    ActivityLogger.log(
+      user?.id || 'unknown',
+      user?.name || 'unknown',
+      user?.email || 'unknown',
+      'export_data',
+      true
+    )
   }
 
   const handleImportNotes = async (file: File) => {
@@ -124,15 +122,13 @@ export function SettingsPage() {
       })
 
       // Log the import activity
-      ActivityLogger.logActivity({
-        action: 'import_data',
-        details: {
-          notesCount: data.notes?.length || 0,
-          foldersCount: data.folders?.length || 0,
-          tagsCount: data.tags?.length || 0,
-          templatesCount: data.templates?.length || 0,
-        },
-      })
+      ActivityLogger.log(
+        user?.id || 'unknown',
+        user?.name || 'unknown',
+        user?.email || 'unknown',
+        'import_data',
+        true
+      )
     } catch (error) {
       toast({
         title: 'Import failed',
