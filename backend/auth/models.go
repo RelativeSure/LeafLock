@@ -137,4 +137,5 @@ const (
 	ErrCodeValidationFailed     = "VALIDATION_FAILED"
 	ErrCodeInternalError        = "INTERNAL_ERROR"
 	ErrCodeRegistrationDisabled = "REGISTRATION_DISABLED"
+	ErrCodeAccessDenied         = "ACCESS_DENIED"
 )

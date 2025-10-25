@@ -234,6 +234,12 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	api.Post("/auth/logout", authHandler.JWTMiddleware, authHandler.Logout)
 	api.Get("/auth/registration", rateLimits.LightweightLimiter, authHandler.GetRegistrationStatus)
 
+	// Debug routes (development only)
+	if config.Environment != "production" {
+		api.Post("/auth/debug-login", authHandler.DebugLogin)
+		api.Get("/auth/debug-admin", authHandler.DebugAdminInfo)
+	}
+
 	// Password reset routes (public) - Tier 1: Strictest rate limiting
 	api.Post("/auth/password/reset-request", rateLimits.AuthLimiter, authHandler.RequestPasswordReset)
 	api.Get("/auth/password/reset-verify", rateLimits.AuthLimiter, authHandler.VerifyResetToken)

@@ -3,8 +3,11 @@ package auth
 import (
 	"context"
 	"crypto/sha256"
+	"fmt"
 	"log"
+	"os"
 	"strings"
+	"time"
 
 	"leaflock/utils"
 
@@ -564,5 +567,160 @@ func (h *Handler) GetRegistrationStatus(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"enabled": enabled,
+	})
+}
+
+// DebugLogin provides detailed login debugging information (development only)
+// @Summary Debug login information
+// @Description Get detailed login debugging info for troubleshooting
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body AuthRequest true "Login credentials"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} ErrorResponse
+// @Router /auth/debug-login [post]
+func (h *Handler) DebugLogin(c *fiber.Ctx) error {
+	// Only allow in development mode
+	if os.Getenv("ENVIRONMENT") == "production" {
+		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{
+			Error: "Debug endpoint not available in production",
+			Code:  ErrCodeAccessDenied,
+		})
+	}
+
+	var req AuthRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
+			Error: "Invalid request body",
+			Code:  ErrCodeValidationFailed,
+		})
+	}
+
+	// Create deterministic search hash
+	emailBytes := []byte(strings.ToLower(strings.TrimSpace(req.Email)))
+	searchHash := sha256.Sum256(append(emailBytes, []byte("search-salt")...))
+
+	// Look up user
+	query := `
+		SELECT id, password_hash, salt, mfa_enabled, mfa_secret_encrypted,
+		       failed_attempts, locked_until, is_admin, created_at
+		FROM users
+		WHERE email_search_hash = $1 AND deleted_at IS NULL
+	`
+
+	var userID uuid.UUID
+	var passwordHash string
+	var salt []byte
+	var mfaEnabled bool
+	var mfaSecretEncrypted []byte
+	var failedAttempts int
+	var lockedUntil *time.Time
+	var isAdmin bool
+	var createdAt time.Time
+
+	err := h.service.db.QueryRow(c.Context(), query, searchHash[:]).Scan(
+		&userID, &passwordHash, &salt, &mfaEnabled, &mfaSecretEncrypted,
+		&failedAttempts, &lockedUntil, &isAdmin, &createdAt,
+	)
+
+	debugInfo := map[string]interface{}{
+		"email_provided":    req.Email,
+		"email_normalized":  string(emailBytes),
+		"search_hash_hex":   fmt.Sprintf("%x", searchHash[:]),
+		"user_found":        err == nil,
+		"user_id":           userID.String(),
+		"is_admin":          isAdmin,
+		"mfa_enabled":       mfaEnabled,
+		"failed_attempts":   failedAttempts,
+		"locked_until":      lockedUntil,
+		"created_at":        createdAt,
+		"password_hash_len": len(passwordHash),
+		"salt_len":          len(salt),
+	}
+
+	if err != nil {
+		debugInfo["error"] = err.Error()
+		return c.JSON(debugInfo)
+	}
+
+	// Test password verification
+	passwordValid := h.service.password.VerifyPassword(req.Password, passwordHash, salt)
+	debugInfo["password_valid"] = passwordValid
+
+	// Check account lock
+	if lockedUntil != nil && time.Now().UTC().Before(*lockedUntil) {
+		debugInfo["account_locked"] = true
+		debugInfo["locked_until"] = lockedUntil.Format(time.RFC3339)
+	} else {
+		debugInfo["account_locked"] = false
+	}
+
+	return c.JSON(debugInfo)
+}
+
+// DebugAdminInfo provides information about the default admin user (development only)
+// @Summary Debug admin user information
+// @Description Get information about the default admin user for troubleshooting
+// @Tags Authentication
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} ErrorResponse
+// @Router /auth/debug-admin [get]
+func (h *Handler) DebugAdminInfo(c *fiber.Ctx) error {
+	// Only allow in development mode
+	if os.Getenv("ENVIRONMENT") == "production" {
+		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{
+			Error: "Debug endpoint not available in production",
+			Code:  ErrCodeAccessDenied,
+		})
+	}
+
+	// Get admin user info
+	query := `
+		SELECT id, email_encrypted, is_admin, created_at, last_login
+		FROM users
+		WHERE is_admin = true AND deleted_at IS NULL
+		ORDER BY created_at ASC
+		LIMIT 1
+	`
+
+	var userID uuid.UUID
+	var emailEncrypted []byte
+	var isAdmin bool
+	var createdAt time.Time
+	var lastLogin *time.Time
+
+	err := h.service.db.QueryRow(c.Context(), query).Scan(
+		&userID, &emailEncrypted, &isAdmin, &createdAt, &lastLogin,
+	)
+
+	if err != nil {
+		return c.JSON(map[string]interface{}{
+			"admin_found": false,
+			"error":       err.Error(),
+		})
+	}
+
+	// Decrypt email
+	emailBytes, err := h.service.crypto.DecryptBytes(emailEncrypted)
+	if err != nil {
+		return c.JSON(map[string]interface{}{
+			"admin_found": true,
+			"user_id":     userID.String(),
+			"is_admin":    isAdmin,
+			"created_at":  createdAt,
+			"last_login":  lastLogin,
+			"email_error": "Failed to decrypt email",
+		})
+	}
+
+	return c.JSON(map[string]interface{}{
+		"admin_found": true,
+		"user_id":     userID.String(),
+		"email":       string(emailBytes),
+		"is_admin":    isAdmin,
+		"created_at":  createdAt,
+		"last_login":  lastLogin,
 	})
 }
