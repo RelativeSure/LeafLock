@@ -1,22 +1,35 @@
 import React from 'react'
 import { RouterProvider } from '@tanstack/react-router'
-import { router } from './app-router'
 import { ThemeProvider } from './context/ThemeContext'
 import { EncryptionProvider } from './lib/encryption-context'
 import { ConfigDebug } from './components/debug/ConfigDebug'
 import { AppErrorBoundary } from './components/common/AppErrorBoundary'
 import { Toaster } from './components/ui/sonner'
 
-const App: React.FC = () => {
-  console.log('🎯 App component rendering...')
+// Lazy load router to prevent circular dependency
+let routerInstance: any = null
 
-  // Track store access for debugging
-  try {
-    console.log('🔍 Checking store availability...')
-    // This will help us see if stores are accessible at this point
-    console.log('Store check completed successfully')
-  } catch (error) {
-    console.error('❌ Store access error in App:', error)
+const App: React.FC = () => {
+  const [router, setRouter] = React.useState<any>(null)
+
+  React.useEffect(() => {
+    // Dynamically import router to break circular dependency
+    if (!routerInstance) {
+      import('./app-router').then((module) => {
+        routerInstance = module.router
+        setRouter(routerInstance)
+      })
+    } else {
+      setRouter(routerInstance)
+    }
+  }, [])
+
+  if (!router) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
   }
 
   return (
