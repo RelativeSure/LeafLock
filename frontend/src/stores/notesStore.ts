@@ -10,13 +10,14 @@ interface NotesState {
   selectedFolder: string | null
   isLoading: boolean
   createNote: (note: Partial<Note>) => Promise<Note>
-  updateNote: (id: string, updates: Partial<Note>) => Promise<void>
+  updateNote: (id: string, updates: Partial<Note>) => Promise<Note>
   deleteNote: (id: string) => Promise<void>
   selectNote: (id: string | null) => void
   createFolder: (folder: Partial<Folder>) => Promise<Folder>
   updateFolder: (id: string, updates: Partial<Folder>) => Promise<void>
   deleteFolder: (id: string) => Promise<void>
   selectFolder: (id: string | null) => void
+  selectTag: (tagName: string | null) => void
   createTag: (tag: Partial<Tag>) => Promise<Tag>
   deleteTag: (id: string) => Promise<void>
   searchNotes: (query: string) => Promise<Note[]>
@@ -65,12 +66,14 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     }
   },
 
-      createNote: async (note: Partial<Note>) => {
-        const storedUser = localStorage.getItem('user')
-        if (!storedUser) throw new Error('No user logged in')
+  createNote: async (note: Partial<Note>) => {
+    console.log('createNote called with:', note)
+    const storedUser = localStorage.getItem('user')
+    if (!storedUser) throw new Error('No user logged in')
 
-        const user = JSON.parse(storedUser)
-        const { selectedFolder, folders } = get()
+    const user = JSON.parse(storedUser)
+    const { selectedFolder, folders } = get()
+    console.log('User:', user.id, 'Selected folder:', selectedFolder, 'Folders:', folders.length)
 
         // If no folder is selected, assign to "Uncategorized" folder
         let folderId = note.folderId || selectedFolder
@@ -79,14 +82,16 @@ export const useNotesStore = create<NotesState>((set, get) => ({
           let uncategorizedFolder = folders.find(f => f.name === 'Uncategorized')
           if (!uncategorizedFolder) {
             // Create Uncategorized folder
-            uncategorizedFolder = await apiClient.createFolder({
+            const newFolder = await apiClient.createFolder({
               name: 'Uncategorized',
               color: '#6b7280', // Gray color
               userId: user.id,
             })
-            set((state) => ({ folders: [...state.folders, uncategorizedFolder] }))
+            set((state) => ({ folders: [...state.folders, newFolder] }))
+            folderId = newFolder.id
+          } else {
+            folderId = uncategorizedFolder.id
           }
-          folderId = uncategorizedFolder.id
         }
 
         // Create a local note first without saving to API
@@ -102,10 +107,13 @@ export const useNotesStore = create<NotesState>((set, get) => ({
           isTrashed: false,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          trashedAt: null,
+          trashedAt: undefined,
+          sharedWith: [],
+          isTemplate: false,
         }
 
         set((state) => ({ notes: [localNote, ...state.notes], selectedNote: localNote }))
+        console.log('Note created successfully:', localNote.id)
         return localNote
       },
 
@@ -239,6 +247,11 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   selectFolder: (id: string | null) => {
     set({ selectedFolder: id })
+  },
+
+  selectTag: (tagName: string | null) => {
+    // For now, just log the selected tag - filtering logic can be added later
+    console.log('Selected tag:', tagName)
   },
 
   createTag: async (tag: Partial<Tag>) => {
