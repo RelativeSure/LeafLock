@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { Link } from '@tanstack/react-router'
-import { useAuthStore } from '@/stores'
+import { useAuthStore } from '../../stores/authStore'
 import {
   FileText,
   Tag,
