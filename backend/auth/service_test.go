@@ -1,14 +1,8 @@
 package auth
 
 import (
-	"context"
 	"testing"
 )
-
-// Mock dependencies for testing
-type mockDB struct{}
-type mockRedis struct{}
-type mockCrypto struct{}
 
 func TestNewService(t *testing.T) {
 	// This is a basic test to ensure the service can be created
@@ -164,14 +158,6 @@ func TestSessionManager_HashToken(t *testing.T) {
 	if hash1 == hash3 {
 		t.Error("Different tokens should produce different hashes")
 	}
-}
-
-// Helper function to create test context
-func createTestContext() context.Context {
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "client_ip", "127.0.0.1")
-	ctx = context.WithValue(ctx, "user_agent", "test-agent")
-	return ctx
 }
 
 // Note: These are basic unit tests. For comprehensive testing, you would need:

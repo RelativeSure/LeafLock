@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"leaflock/auth"
-	_ "leaflock/auth" // Import auth handlers for Swagger
 	appconfig "leaflock/config"
 	appcrypto "leaflock/crypto"
 	appdb "leaflock/database"
