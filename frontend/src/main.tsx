@@ -115,3 +115,4 @@ try {
     </div>
   `
 }
+// Railway deployment trigger - Sat Oct 25 15:18:14 CEST 2025
