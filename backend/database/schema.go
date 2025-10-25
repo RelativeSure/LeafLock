@@ -48,6 +48,18 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 -- Add theme preference column for user customization
 ALTER TABLE users ADD COLUMN IF NOT EXISTS theme_preference VARCHAR(20) DEFAULT 'system';
 
+-- Add comprehensive user settings columns
+ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_save BOOLEAN DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_save_interval INTEGER DEFAULT 30;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS default_view VARCHAR(10) DEFAULT 'list';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS notifications_enabled BOOLEAN DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_notifications BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS encryption_enabled BOOLEAN DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS language VARCHAR(10) DEFAULT 'en';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS default_note_behavior VARCHAR(20) DEFAULT 'last-seen';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_type VARCHAR(20) DEFAULT 'gravatar';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_custom_url TEXT;
+
 -- Password reset tokens table for secure password recovery
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

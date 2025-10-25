@@ -96,6 +96,7 @@ interface UserSettings {
   emailNotifications: boolean
   encryptionEnabled: boolean
   language: string
+  defaultNoteBehavior: 'last-seen' | 'new-note'
   profilePicture: {
     type: 'gravatar' | 'initials' | 'custom'
     customUrl?: string
