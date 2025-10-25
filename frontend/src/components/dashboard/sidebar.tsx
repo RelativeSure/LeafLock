@@ -34,7 +34,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { TemplatesDialog } from './templates-dialog'
 import { SearchBar } from './search-bar'
-import { ExportImportDialog } from './export-import-dialog'
+// import { ExportImportDialog } from './export-import-dialog'
 import { TrashDialog } from './trash-dialog'
 
 export function Sidebar() {
@@ -291,7 +291,6 @@ export function Sidebar() {
       <div className="p-4 border-t border-border space-y-2">
         <div className="flex gap-2">
           <TrashDialog />
-          <ExportImportDialog />
         </div>
 
         <Button variant="ghost" className="w-full justify-start gap-2 text-sm" asChild>

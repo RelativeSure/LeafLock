@@ -1,449 +1,280 @@
-import { useState, useEffect } from 'react'
-import { useSettingsStore } from '@/stores'
+'use client'
+
+import { useNotesStore, useTemplatesStore, useSettingsStore, useAuthStore } from '@/stores'
+import { ActivityLogger } from '@/lib/activity-logger'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Download } from 'lucide-react'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Switch } from '@/components/ui/switch'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useToast } from '@/hooks/use-toast'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Settings as SettingsIcon,
-  User,
-  Bell,
-  Shield,
-  Palette,
-  Save,
-  Download,
-  Upload,
-  Trash2,
-  AlertTriangle,
-  Clock,
-  Globe,
-  Lock,
-  EyeOff,
-} from 'lucide-react'
-import { toast } from 'sonner'
+import { Separator } from '@/components/ui/separator'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 
 export function SettingsPage() {
-  const { settings, isLoading, loadSettings, updateSettings } = useSettingsStore()
-  const [isSaving, setIsSaving] = useState(false)
-  const [hasChanges, setHasChanges] = useState(false)
-  const [localSettings, setLocalSettings] = useState(settings)
+  const { notes, folders, tags, createNote, createFolder, createTag } = useNotesStore()
+  const { templates, createTemplate } = useTemplatesStore()
+  const { settings } = useSettingsStore()
+  const { user } = useAuthStore()
+  const { toast } = useToast()
 
-  useEffect(() => {
-    loadSettings()
-  }, [loadSettings])
+  const handleExportNotes = () => {
+    const data = {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      user: {
+        id: user?.id,
+        email: user?.email,
+        name: user?.name,
+      },
+      notes: (notes || []).map((note) => ({
+        ...note,
+        encrypted: note.encrypted || false,
+      })),
+      folders: folders || [],
+      tags: tags || [],
+      templates: templates || [],
+      settings: settings || {},
+    }
 
-  useEffect(() => {
-    setLocalSettings(settings)
-  }, [settings])
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: 'application/json',
+    })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `leaflock-backup-${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
 
-  const handleSettingChange = (key: string, value: any) => {
-    setLocalSettings((prev) => ({ ...prev, [key]: value }))
-    setHasChanges(true)
+    toast({
+      title: 'Export successful',
+      description: 'Your data has been exported successfully.',
+    })
+
+    // Log the export activity
+    ActivityLogger.logActivity({
+      action: 'export_data',
+      details: {
+        notesCount: notes?.length || 0,
+        foldersCount: folders?.length || 0,
+        tagsCount: tags?.length || 0,
+        templatesCount: templates?.length || 0,
+      },
+    })
   }
 
-  const handleSave = async () => {
-    setIsSaving(true)
+  const handleImportNotes = async (file: File) => {
     try {
-      await updateSettings(localSettings)
-      setHasChanges(false)
-      toast.success('Settings saved successfully')
+      const text = await file.text()
+      const data = JSON.parse(text)
+
+      if (!data.version || !data.notes) {
+        throw new Error('Invalid backup file format')
+      }
+
+      // Import folders
+      if (data.folders) {
+        for (const folder of data.folders) {
+          await createFolder({
+            name: folder.name,
+            color: folder.color,
+          })
+        }
+      }
+
+      // Import tags
+      if (data.tags) {
+        for (const tag of data.tags) {
+          await createTag({
+            name: tag.name,
+            color: tag.color,
+          })
+        }
+      }
+
+      // Import notes
+      for (const note of data.notes) {
+        await createNote({
+          title: note.title,
+          content: note.content,
+          folderId: note.folderId,
+          tags: note.tags || [],
+          encrypted: note.encrypted || false,
+        })
+      }
+
+      // Import templates
+      if (data.templates) {
+        for (const template of data.templates) {
+          await createTemplate({
+            name: template.name,
+            content: template.content,
+            tags: template.tags || [],
+            isPublic: template.isPublic || false,
+          })
+        }
+      }
+
+      toast({
+        title: 'Import successful',
+        description: 'Your data has been imported successfully.',
+      })
+
+      // Log the import activity
+      ActivityLogger.logActivity({
+        action: 'import_data',
+        details: {
+          notesCount: data.notes?.length || 0,
+          foldersCount: data.folders?.length || 0,
+          tagsCount: data.tags?.length || 0,
+          templatesCount: data.templates?.length || 0,
+        },
+      })
     } catch (error) {
-      toast.error('Failed to save settings')
-      console.error('Settings save error:', error)
-    } finally {
-      setIsSaving(false)
+      toast({
+        title: 'Import failed',
+        description: error instanceof Error ? error.message : 'Failed to import data',
+        variant: 'destructive',
+      })
     }
   }
 
-  const handleReset = () => {
-    setLocalSettings(settings)
-    setHasChanges(false)
-  }
-
-  const handleExportData = () => {
-    // TODO: Implement data export
-    toast.info('Data export feature coming soon')
-  }
-
-  const handleImportData = () => {
-    // TODO: Implement data import
-    toast.info('Data import feature coming soon')
-  }
-
-  const handleDeleteAccount = () => {
-    // TODO: Implement account deletion
-    toast.error('Account deletion feature coming soon')
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    )
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      handleImportNotes(file)
+    }
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <SettingsIcon className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">Settings</h1>
-            <p className="text-muted-foreground">Manage your LeafLock preferences</p>
-          </div>
-        </div>
-
-        {hasChanges && (
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleReset} disabled={isSaving}>
-              Reset
-            </Button>
-            <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <Clock className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </>
-              )}
-            </Button>
-          </div>
-        )}
+    <div className="container mx-auto p-6 max-w-4xl">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">Settings</h1>
+        <p className="text-muted-foreground mt-2">
+          Manage your account settings and data backup options.
+        </p>
       </div>
 
-      <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="general" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            General
-          </TabsTrigger>
-          <TabsTrigger value="appearance" className="flex items-center gap-2">
-            <Palette className="h-4 w-4" />
-            Appearance
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            Notifications
-          </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            Security
-          </TabsTrigger>
-          <TabsTrigger value="data" className="flex items-center gap-2">
-            <Download className="h-4 w-4" />
-            Data
-          </TabsTrigger>
+      <Tabs defaultValue="backup" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="backup">Backup & Restore</TabsTrigger>
+          <TabsTrigger value="account">Account</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
 
-        {/* General Settings */}
-        <TabsContent value="general" className="space-y-6">
+        <TabsContent value="backup" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                General Preferences
+                <Database className="h-5 w-5" />
+                Data Backup & Restore
               </CardTitle>
-              <CardDescription>Configure your basic LeafLock preferences</CardDescription>
+              <CardDescription>
+                Export your notes, folders, tags, and templates to a backup file, or restore from a previous backup.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="language">Language</Label>
-                  <Select
-                    value={localSettings.language}
-                    onValueChange={(value) => handleSettingChange('language', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="es">Español</SelectItem>
-                      <SelectItem value="fr">Français</SelectItem>
-                      <SelectItem value="de">Deutsch</SelectItem>
-                      <SelectItem value="ja">日本語</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Export Data</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Download a complete backup of your data including notes, folders, tags, and templates.
+                  </p>
+                  <Button onClick={handleExportNotes} className="w-full">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Backup
+                  </Button>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="defaultView">Default View</Label>
-                  <Select
-                    value={localSettings.defaultView}
-                    onValueChange={(value) => handleSettingChange('defaultView', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select default view" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="list">List View</SelectItem>
-                      <SelectItem value="grid">Grid View</SelectItem>
-                      <SelectItem value="compact">Compact View</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Import Data</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Restore your data from a previous backup file.
+                  </p>
+                  <div className="space-y-2">
+                    <Input
+                      type="file"
+                      accept=".json"
+                      onChange={handleFileUpload}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Select a .json backup file to restore
+                    </p>
+                  </div>
                 </div>
               </div>
 
               <Separator />
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="autoSave">Auto-save</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Automatically save notes as you type
-                    </p>
+                <h3 className="text-lg font-semibold">Data Summary</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-4 border rounded-lg">
+                    <div className="text-2xl font-bold text-primary">{notes?.length || 0}</div>
+                    <div className="text-sm text-muted-foreground">Notes</div>
                   </div>
-                  <Switch
-                    id="autoSave"
-                    checked={localSettings.autoSave}
-                    onCheckedChange={(checked) => handleSettingChange('autoSave', checked)}
-                  />
+                  <div className="text-center p-4 border rounded-lg">
+                    <div className="text-2xl font-bold text-primary">{folders?.length || 0}</div>
+                    <div className="text-sm text-muted-foreground">Folders</div>
+                  </div>
+                  <div className="text-center p-4 border rounded-lg">
+                    <div className="text-2xl font-bold text-primary">{tags?.length || 0}</div>
+                    <div className="text-sm text-muted-foreground">Tags</div>
+                  </div>
+                  <div className="text-center p-4 border rounded-lg">
+                    <div className="text-2xl font-bold text-primary">{templates?.length || 0}</div>
+                    <div className="text-sm text-muted-foreground">Templates</div>
+                  </div>
                 </div>
-
-                {localSettings.autoSave && (
-                  <div className="space-y-2">
-                    <Label htmlFor="autoSaveInterval">Auto-save interval (seconds)</Label>
-                    <Input
-                      id="autoSaveInterval"
-                      type="number"
-                      min="5"
-                      max="300"
-                      value={localSettings.autoSaveInterval}
-                      onChange={(e) =>
-                        handleSettingChange('autoSaveInterval', parseInt(e.target.value))
-                      }
-                      className="w-32"
-                    />
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Appearance Settings */}
-        <TabsContent value="appearance" className="space-y-6">
+        <TabsContent value="account" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Palette className="h-5 w-5" />
-                Appearance
-              </CardTitle>
-              <CardDescription>Customize the look and feel of LeafLock</CardDescription>
+              <CardTitle>Account Information</CardTitle>
+              <CardDescription>
+                Manage your account details and preferences.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="theme">Theme</Label>
-                <Select
-                  value={localSettings.theme}
-                  onValueChange={(value) => handleSettingChange('theme', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select theme" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="light">Light</SelectItem>
-                    <SelectItem value="dark">Dark</SelectItem>
-                    <SelectItem value="system">System</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Alert>
-                <Globe className="h-4 w-4" />
-                <AlertDescription>
-                  Theme changes are applied immediately. The system theme follows your operating
-                  system's preference.
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Notifications Settings */}
-        <TabsContent value="notifications" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                Notifications
-              </CardTitle>
-              <CardDescription>Configure how you receive notifications</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="notificationsEnabled">Enable Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive browser notifications for important events
-                    </p>
-                  </div>
-                  <Switch
-                    id="notificationsEnabled"
-                    checked={localSettings.notificationsEnabled}
-                    onCheckedChange={(checked) =>
-                      handleSettingChange('notificationsEnabled', checked)
-                    }
-                  />
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="name">Name</Label>
+                  <Input id="name" value={user?.name || ''} disabled />
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="emailNotifications">Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive email notifications for account activities
-                    </p>
-                  </div>
-                  <Switch
-                    id="emailNotifications"
-                    checked={localSettings.emailNotifications}
-                    onCheckedChange={(checked) =>
-                      handleSettingChange('emailNotifications', checked)
-                    }
-                  />
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" value={user?.email || ''} disabled />
                 </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Security Settings */}
         <TabsContent value="security" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                Security
+                Security Settings
               </CardTitle>
               <CardDescription>
-                Manage your security preferences and encryption settings
+                Manage your security preferences and encryption settings.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="encryptionEnabled">End-to-End Encryption</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Encrypt your notes with client-side encryption
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {localSettings.encryptionEnabled ? (
-                      <Badge variant="default" className="gap-1">
-                        <Lock className="h-3 w-3" />
-                        Enabled
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="gap-1">
-                        <EyeOff className="h-3 w-3" />
-                        Disabled
-                      </Badge>
-                    )}
-                    <Switch
-                      id="encryptionEnabled"
-                      checked={localSettings.encryptionEnabled}
-                      onCheckedChange={(checked) =>
-                        handleSettingChange('encryptionEnabled', checked)
-                      }
-                    />
-                  </div>
-                </div>
-
-                <Alert>
-                  <Shield className="h-4 w-4" />
-                  <AlertDescription>
-                    When encryption is enabled, your notes are encrypted in your browser before
-                    being sent to our servers. Only you can decrypt them with your password.
-                  </AlertDescription>
-                </Alert>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Data Settings */}
-        <TabsContent value="data" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Download className="h-5 w-5" />
-                Data Management
-              </CardTitle>
-              <CardDescription>Export, import, or manage your data</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="space-y-0.5">
-                    <Label>Export Data</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Download all your notes, templates, and settings
-                    </p>
-                  </div>
-                  <Button variant="outline" onClick={handleExportData}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                  </Button>
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="space-y-0.5">
-                    <Label>Import Data</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Import notes and settings from a backup file
-                    </p>
-                  </div>
-                  <Button variant="outline" onClick={handleImportData}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Import
-                  </Button>
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between p-4 border border-destructive/20 rounded-lg bg-destructive/5">
-                  <div className="space-y-0.5">
-                    <Label className="text-destructive">Delete Account</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Permanently delete your account and all data
-                    </p>
-                  </div>
-                  <Button variant="destructive" onClick={handleDeleteAccount}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete Account
-                  </Button>
-                </div>
-
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    Account deletion is permanent and cannot be undone. All your notes, templates,
-                    and settings will be permanently deleted.
-                  </AlertDescription>
-                </Alert>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Encryption Status</Label>
+                <p className="text-sm text-muted-foreground">
+                  Your notes are encrypted using AES-256 encryption for maximum security.
+                </p>
               </div>
             </CardContent>
           </Card>
