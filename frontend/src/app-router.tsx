@@ -25,7 +25,7 @@ import {
   DropdownMenuTrigger,
 } from './components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from './components/ui/avatar'
-import { SettingsPage } from './components/settings/settings-page'
+import { SettingsPage } from './components/settings/settings-page-minimal'
 import { AdminPage } from './components/admin/admin-page'
 import { ProtectedRoute } from './components/common/ProtectedRoute'
 import { InteractiveGridPattern } from './components/ui/interactive-grid-pattern'
