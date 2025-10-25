@@ -41,7 +41,8 @@ export function Sidebar() {
   // Mobile detection and responsive behavior
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
+      // Disable mobile detection for testing - always show sidebar
+      setIsMobile(false)
     }
 
     checkMobile()
@@ -103,12 +104,7 @@ export function Sidebar() {
       )}
 
       {/* Sidebar */}
-      <div className={`
-        w-64 border-r border-border bg-card flex flex-col h-full
-        ${isMobile ? 'fixed left-0 top-0 z-50 transform transition-transform duration-300' : ''}
-        ${isMobile && !isMobileMenuOpen ? '-translate-x-full' : ''}
-        ${isMobile ? 'w-80' : ''}
-      `}>
+      <div className="w-64 border-r border-border bg-card flex flex-col h-full">
         {/* Mobile Close Button */}
         {isMobile && (
           <div className="flex justify-end p-4 border-b border-border">

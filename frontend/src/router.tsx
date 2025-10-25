@@ -247,27 +247,14 @@ const DashboardComponent: React.FC = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Desktop Sidebar */}
-        <div className="hidden md:block">
-          <React.Suspense fallback={
-            <div className="w-64 border-r border-border flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          }>
-            <Sidebar />
-          </React.Suspense>
-        </div>
-
-        {/* Mobile Sidebar */}
-        <div className="md:hidden">
-          <React.Suspense fallback={
-            <div className="w-64 border-r border-border flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          }>
-            <Sidebar />
-          </React.Suspense>
-        </div>
+        {/* Single Sidebar */}
+        <React.Suspense fallback={
+          <div className="w-64 border-r border-border flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        }>
+          <Sidebar />
+        </React.Suspense>
 
         {/* Note Editor - Full Width */}
         <div className="flex-1 flex flex-col">
