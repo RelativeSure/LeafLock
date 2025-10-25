@@ -74,7 +74,14 @@ export function NoteLinkPreview({ noteId, onClose, onNavigate }: NoteLinkPreview
           <div className="flex-1 min-w-0">
             <CardTitle className="text-sm line-clamp-2">{note.title || 'Untitled'}</CardTitle>
             <CardDescription className="text-xs mt-1">
-              {note.updatedAt ? formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true }) : 'Unknown'}
+              {note.updatedAt ? (() => {
+                try {
+                  const date = new Date(note.updatedAt)
+                  return isNaN(date.getTime()) ? 'Unknown' : formatDistanceToNow(date, { addSuffix: true })
+                } catch {
+                  return 'Unknown'
+                }
+              })() : 'Unknown'}
             </CardDescription>
           </div>
           <Button
@@ -374,7 +381,14 @@ export function BacklinksSection({ currentNoteId, onNoteSelect }: BacklinksSecti
               <span className="text-sm font-medium">{note.title || 'Untitled'}</span>
             </div>
             <div className="text-xs text-muted-foreground ml-5">
-              {note.updatedAt ? formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true }) : 'Unknown'}
+              {note.updatedAt ? (() => {
+                try {
+                  const date = new Date(note.updatedAt)
+                  return isNaN(date.getTime()) ? 'Unknown' : formatDistanceToNow(date, { addSuffix: true })
+                } catch {
+                  return 'Unknown'
+                }
+              })() : 'Unknown'}
             </div>
           </button>
         ))}

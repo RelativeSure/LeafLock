@@ -115,7 +115,14 @@ export function AdvancedSearchBar() {
       }
 
       filteredNotes = filteredNotes.filter((note) =>
-        new Date(note.updatedAt) >= cutoff
+        (() => {
+          try {
+            const date = new Date(note.updatedAt)
+            return !isNaN(date.getTime()) && date >= cutoff
+          } catch {
+            return false
+          }
+        })()
       )
     }
 
@@ -132,9 +139,25 @@ export function AdvancedSearchBar() {
     filteredNotes.sort((a, b) => {
       switch (filters.sortBy) {
         case 'updated':
-          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          return (() => {
+          try {
+            const aTime = new Date(a.updatedAt).getTime()
+            const bTime = new Date(b.updatedAt).getTime()
+            return isNaN(aTime) ? (isNaN(bTime) ? 0 : 1) : (isNaN(bTime) ? -1 : bTime - aTime)
+          } catch {
+            return 0
+          }
+        })()
         case 'created':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          return (() => {
+          try {
+            const aTime = new Date(a.createdAt).getTime()
+            const bTime = new Date(b.createdAt).getTime()
+            return isNaN(aTime) ? (isNaN(bTime) ? 0 : 1) : (isNaN(bTime) ? -1 : bTime - aTime)
+          } catch {
+            return 0
+          }
+        })()
         case 'title':
           return a.title.localeCompare(b.title)
         case 'relevance':
@@ -148,7 +171,15 @@ export function AdvancedSearchBar() {
             if (aTitleMatch && !bTitleMatch) return -1
             if (!aTitleMatch && bTitleMatch) return 1
           }
-          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          return (() => {
+          try {
+            const aTime = new Date(a.updatedAt).getTime()
+            const bTime = new Date(b.updatedAt).getTime()
+            return isNaN(aTime) ? (isNaN(bTime) ? 0 : 1) : (isNaN(bTime) ? -1 : bTime - aTime)
+          } catch {
+            return 0
+          }
+        })()
       }
     })
 
@@ -471,7 +502,14 @@ export function AdvancedSearchBar() {
                                   </div>
 
                                   <span className="text-xs text-muted-foreground flex-shrink-0">
-                                    {formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}
+                                    {(() => {
+                                      try {
+                                        const date = new Date(note.updatedAt)
+                                        return isNaN(date.getTime()) ? 'Unknown' : formatDistanceToNow(date, { addSuffix: true })
+                                      } catch {
+                                        return 'Unknown'
+                                      }
+                                    })()}
                                   </span>
                                 </div>
                               </button>
