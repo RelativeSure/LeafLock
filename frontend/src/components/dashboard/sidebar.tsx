@@ -38,6 +38,8 @@ import { ExportImportDialog } from './export-import-dialog'
 import { TrashDialog } from './trash-dialog'
 
 export function Sidebar() {
+  console.log('Sidebar component rendering...')
+
   const {
     folders,
     tags,
@@ -50,10 +52,14 @@ export function Sidebar() {
     selectNote,
   } = useNotesStore()
 
+  console.log('Store values:', { folders, tags, notes })
+
   // Ensure all store values are arrays
   const safeFolders = Array.isArray(folders) ? folders : []
   const safeTags = Array.isArray(tags) ? tags : []
   const safeNotes = Array.isArray(notes) ? notes : []
+
+  console.log('Safe arrays:', { safeFolders, safeTags, safeNotes })
 
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const [newFolderName, setNewFolderName] = useState('')
@@ -195,12 +201,16 @@ export function Sidebar() {
             <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Folders
             </div>
-            {safeFolders.map((folder, index) => {
-              const folderNotes = activeNotes.filter((note) => note.folderId === folder.id)
-              const isExpanded = expandedFolders.has(folder.id)
-              const isSelected = selectedFolder === folder.id
+            {(() => {
+              console.log('About to map folders:', safeFolders)
+              try {
+                return safeFolders.map((folder, index) => {
+                  console.log('Mapping folder:', folder, 'at index:', index)
+                  const folderNotes = activeNotes.filter((note) => note.folderId === folder.id)
+                  const isExpanded = expandedFolders.has(folder.id)
+                  const isSelected = selectedFolder === folder.id
 
-              return (
+                  return (
                 <div
                   key={folder.id}
                   className="stagger-item"
@@ -261,7 +271,12 @@ export function Sidebar() {
                   </div>
                 </div>
               )
-            })}
+                })
+              } catch (error) {
+                console.error('Error mapping folders:', error)
+                return <div>Error loading folders</div>
+              }
+            })()}
           </div>
 
           {/* Tags */}
@@ -269,10 +284,14 @@ export function Sidebar() {
             <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Tags
             </div>
-            {safeTags.map((tag, index) => {
-              const tagNotes = activeNotes.filter((note) => (note.tags || []).includes(tag.name))
+            {(() => {
+              console.log('About to map tags:', safeTags)
+              try {
+                return safeTags.map((tag, index) => {
+                  console.log('Mapping tag:', tag, 'at index:', index)
+                  const tagNotes = activeNotes.filter((note) => (note.tags || []).includes(tag.name))
 
-              return (
+                  return (
                 <button
                   key={tag.id}
                   className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-accent transition-smooth stagger-item"
@@ -283,7 +302,12 @@ export function Sidebar() {
                   <span className="ml-auto text-xs text-muted-foreground">{tagNotes.length}</span>
                 </button>
               )
-            })}
+                })
+              } catch (error) {
+                console.error('Error mapping tags:', error)
+                return <div>Error loading tags</div>
+              }
+            })()}
           </div>
         </div>
       </ScrollArea>
