@@ -33,6 +33,7 @@ interface NotesState {
   addTagsToNotes: (noteIds: string[], tagNames: string[]) => Promise<void>
   removeTagsFromNotes: (noteIds: string[], tagNames: string[]) => Promise<void>
   loadData: () => Promise<void>
+  initializeDefaultNote: () => Promise<void>
 }
 
 export const useNotesStore = create<NotesState>((set, get) => ({
@@ -120,6 +121,11 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       const { notes } = get()
       const note = notes.find((n) => n.id === id)
       set({ selectedNote: note || null })
+
+      // Track last seen note for default behavior
+      if (note && !note.isTrashed) {
+        localStorage.setItem('lastSeenNoteId', note.id)
+      }
     }
   },
 
@@ -400,6 +406,62 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     } catch (error) {
       console.error('Failed to remove tags from notes:', error)
       throw error
+    }
+  },
+
+  initializeDefaultNote: async () => {
+    const { notes, selectedNote } = get()
+
+    // If a note is already selected, don't change it
+    if (selectedNote) return
+
+    // Get user settings to determine default behavior
+    const storedUser = localStorage.getItem('user')
+    if (!storedUser) return
+
+    try {
+      // Dynamically import settings store to avoid circular dependency
+      const { useSettingsStore } = await import('./settingsStore')
+      const settingsStore = useSettingsStore.getState()
+      const { settings } = settingsStore
+
+      if (settings.defaultNoteBehavior === 'last-seen') {
+        // Get last seen note from localStorage
+        const lastSeenNoteId = localStorage.getItem('lastSeenNoteId')
+        if (lastSeenNoteId) {
+          const lastSeenNote = notes.find(note => note.id === lastSeenNoteId && !note.isTrashed)
+          if (lastSeenNote) {
+            set({ selectedNote: lastSeenNote })
+            return
+          }
+        }
+
+        // If no last seen note or it doesn't exist, select the most recent note
+        const activeNotes = notes.filter(note => !note.isTrashed)
+        if (activeNotes.length > 0) {
+          const mostRecentNote = activeNotes.sort((a, b) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          )[0]
+          set({ selectedNote: mostRecentNote })
+          localStorage.setItem('lastSeenNoteId', mostRecentNote.id)
+        }
+      } else if (settings.defaultNoteBehavior === 'new-note') {
+        // Create a new note
+        const newNote = await get().createNote({})
+        set({ selectedNote: newNote })
+        localStorage.setItem('lastSeenNoteId', newNote.id)
+      }
+    } catch (error) {
+      console.error('Failed to initialize default note:', error)
+      // Fallback: select the most recent note
+      const activeNotes = notes.filter(note => !note.isTrashed)
+      if (activeNotes.length > 0) {
+        const mostRecentNote = activeNotes.sort((a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        )[0]
+        set({ selectedNote: mostRecentNote })
+        localStorage.setItem('lastSeenNoteId', mostRecentNote.id)
+      }
     }
   },
 }))

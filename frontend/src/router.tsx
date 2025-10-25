@@ -113,6 +113,20 @@ const DashboardComponent: React.FC = () => {
     }
   }, [authStore, isLoading])
 
+  // Load notes data when dashboard loads
+  React.useEffect(() => {
+    if (!isLoading && authStore && authStore.user) {
+      // Dynamically import notes store to prevent circular dependency
+      import('./stores/notesStore').then(({ useNotesStore }) => {
+        const store = useNotesStore.getState()
+        store.loadData().then(() => {
+          // Initialize default note after data is loaded
+          store.initializeDefaultNote()
+        })
+      })
+    }
+  }, [isLoading, authStore])
+
   if (isLoading || !authStore || !authStore.user) {
     return (
       <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">

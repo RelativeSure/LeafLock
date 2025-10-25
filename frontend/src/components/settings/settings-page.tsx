@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { UserAvatar } from '@/components/ui/user-avatar'
 import { useState } from 'react'
 
@@ -393,6 +394,27 @@ export function SettingsPage() {
                     checked={settings.emailNotifications}
                     onCheckedChange={(checked) => updateSettings({ emailNotifications: checked })}
                   />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Default Note Behavior</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Choose what happens when you open the dashboard
+                    </p>
+                  </div>
+                  <Select
+                    value={settings.defaultNoteBehavior}
+                    onValueChange={(value: 'last-seen' | 'new-note') => updateSettings({ defaultNoteBehavior: value })}
+                  >
+                    <SelectTrigger className="w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="last-seen">Last Seen Note</SelectItem>
+                      <SelectItem value="new-note">New Note</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardContent>
             </Card>

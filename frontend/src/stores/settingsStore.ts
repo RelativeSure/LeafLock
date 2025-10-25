@@ -18,6 +18,7 @@ const defaultSettings: UserSettings = {
   emailNotifications: false,
   encryptionEnabled: true,
   language: 'en',
+  defaultNoteBehavior: 'last-seen',
   profilePicture: {
     type: 'gravatar',
   },
