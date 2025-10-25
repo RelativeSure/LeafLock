@@ -52,6 +52,17 @@ export interface Tag {
   userId: string
 }
 
+export interface UserSettings {
+  theme: 'light' | 'dark' | 'system'
+  autoSave: boolean
+  autoSaveInterval: number
+  defaultView: 'list' | 'grid'
+  notificationsEnabled: boolean
+  emailNotifications: boolean
+  encryptionEnabled: boolean
+  language: string
+}
+
 export interface CollaborationSession {
   noteId: string
   users: {
@@ -72,15 +83,4 @@ export interface UserActivityLog {
   ipAddress?: string
   userAgent?: string
   mfaUsed: boolean
-}
-
-export interface UserSettings {
-  theme: 'light' | 'dark' | 'system'
-  autoSave: boolean
-  autoSaveInterval: number
-  defaultView: 'list' | 'grid'
-  notificationsEnabled: boolean
-  emailNotifications: boolean
-  encryptionEnabled: boolean
-  language: string
 }
