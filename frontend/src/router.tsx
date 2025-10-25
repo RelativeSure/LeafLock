@@ -245,28 +245,30 @@ const DashboardComponent: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Single Sidebar */}
-        <React.Suspense fallback={
-          <div className="w-64 border-r border-border flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        }>
-          <Sidebar />
-        </React.Suspense>
+          {/* Main Content - Responsive Layout */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* Sidebar - Responsive Width */}
+            <React.Suspense fallback={
+              <div className="w-48 xl:w-64 border-r border-border flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            }>
+              <div className="w-48 xl:w-64 flex-shrink-0">
+                <Sidebar />
+              </div>
+            </React.Suspense>
 
-        {/* Note Editor - Full Width */}
-        <div className="flex-1 flex flex-col">
-          <React.Suspense fallback={
-            <div className="flex-1 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            {/* Note Editor - Responsive */}
+            <div className="flex-1 flex flex-col min-w-0">
+              <React.Suspense fallback={
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              }>
+                <NoteEditor />
+              </React.Suspense>
             </div>
-          }>
-            <NoteEditor />
-          </React.Suspense>
-        </div>
-      </div>
+          </div>
 
       {/* Keyboard Shortcuts Dialog */}
       <React.Suspense fallback={null}>

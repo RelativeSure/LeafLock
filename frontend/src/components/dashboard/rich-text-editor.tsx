@@ -90,9 +90,9 @@ export function RichTextEditor({ content, onChange, placeholder, disabled }: Ric
   }
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden">
+    <div className="border border-border rounded-lg overflow-hidden h-full flex flex-col">
       {/* Toolbar */}
-      <div className="border-b border-border bg-muted/30 p-2 flex items-center gap-1 flex-wrap">
+      <div className="border-b border-border bg-muted/30 p-1 sm:p-2 flex items-center gap-1 flex-wrap flex-shrink-0">
         <Button
           variant="ghost"
           size="sm"
@@ -243,8 +243,10 @@ export function RichTextEditor({ content, onChange, placeholder, disabled }: Ric
         </Button>
       </div>
 
-      {/* Editor */}
-      <EditorContent editor={editor} className="px-6" />
+      {/* Editor - Responsive */}
+      <div className="flex-1 overflow-auto">
+        <EditorContent editor={editor} className="px-2 sm:px-6 py-4 min-h-[200px]" />
+      </div>
     </div>
   )
 }

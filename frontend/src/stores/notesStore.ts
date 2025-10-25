@@ -65,32 +65,49 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     }
   },
 
-  createNote: async (note: Partial<Note>) => {
-    const storedUser = localStorage.getItem('user')
-    if (!storedUser) throw new Error('No user logged in')
+      createNote: async (note: Partial<Note>) => {
+        const storedUser = localStorage.getItem('user')
+        if (!storedUser) throw new Error('No user logged in')
 
-    const user = JSON.parse(storedUser)
-    const { selectedFolder } = get()
+        const user = JSON.parse(storedUser)
+        const { selectedFolder, folders } = get()
 
-    // Create a local note first without saving to API
-    const localNote: Note = {
-      id: `local-${Date.now()}`,
-      title: note.title || '',
-      content: note.content || '',
-      userId: user.id,
-      folderId: note.folderId || selectedFolder,
-      tags: note.tags || [],
-      pinned: note.pinned || false,
-      encrypted: note.encrypted || false,
-      isTrashed: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      trashedAt: null,
-    }
+        // If no folder is selected, assign to "Uncategorized" folder
+        let folderId = note.folderId || selectedFolder
+        if (!folderId) {
+          // Find or create "Uncategorized" folder
+          let uncategorizedFolder = folders.find(f => f.name === 'Uncategorized')
+          if (!uncategorizedFolder) {
+            // Create Uncategorized folder
+            uncategorizedFolder = await apiClient.createFolder({
+              name: 'Uncategorized',
+              color: '#6b7280', // Gray color
+              userId: user.id,
+            })
+            set((state) => ({ folders: [...state.folders, uncategorizedFolder] }))
+          }
+          folderId = uncategorizedFolder.id
+        }
 
-    set((state) => ({ notes: [localNote, ...state.notes], selectedNote: localNote }))
-    return localNote
-  },
+        // Create a local note first without saving to API
+        const localNote: Note = {
+          id: `local-${Date.now()}`,
+          title: note.title || '',
+          content: note.content || '',
+          userId: user.id,
+          folderId: folderId,
+          tags: note.tags || [],
+          pinned: note.pinned || false,
+          encrypted: note.encrypted || false,
+          isTrashed: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          trashedAt: null,
+        }
+
+        set((state) => ({ notes: [localNote, ...state.notes], selectedNote: localNote }))
+        return localNote
+      },
 
   updateNote: async (id: string, updates: Partial<Note>) => {
     try {

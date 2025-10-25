@@ -11,6 +11,7 @@ import {
   Library,
   CheckSquare,
   Tag,
+  TagIcon,
 } from 'lucide-react'
 import {
   Dialog,
@@ -32,6 +33,11 @@ export function Sidebar() {
     selectNote,
     createFolder,
     isLoading,
+    folders,
+    tags,
+    selectedFolder,
+    selectFolder,
+    selectTag,
   } = useNotesStore()
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -109,8 +115,8 @@ export function Sidebar() {
         />
       )}
 
-      {/* Sidebar */}
-      <div className="w-64 border-r border-border bg-card flex flex-col h-full">
+          {/* Sidebar */}
+          <div className="w-full border-r border-border bg-card flex flex-col h-full">
         {/* Mobile Close Button */}
         {isMobile && (
           <div className="flex justify-end p-4 border-b border-border">
@@ -240,13 +246,69 @@ export function Sidebar() {
           </ScrollArea>
         </div>
 
+        {/* Folder & Tag Selection */}
+        <div className="p-4 border-b border-border">
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">Folders</h3>
+              <ScrollArea className="h-24">
+                <div className="space-y-1">
+                  <Button
+                    variant={selectedFolder === null ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => selectFolder(null)}
+                    className="w-full justify-start text-xs"
+                  >
+                    All Notes
+                  </Button>
+                  {folders.map((folder) => (
+                    <Button
+                      key={folder.id}
+                      variant={selectedFolder === folder.id ? "secondary" : "ghost"}
+                      size="sm"
+                      onClick={() => selectFolder(folder.id)}
+                      className="w-full justify-start text-xs"
+                    >
+                      <div
+                        className="w-2 h-2 rounded-full mr-2"
+                        style={{ backgroundColor: folder.color }}
+                      />
+                      {folder.name}
+                    </Button>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">Tags</h3>
+              <ScrollArea className="h-24">
+                <div className="space-y-1">
+                  {tags.map((tag) => (
+                    <Button
+                      key={tag.id}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => selectTag(tag.name)}
+                      className="w-full justify-start text-xs"
+                    >
+                      <TagIcon className="w-3 h-3 mr-2" />
+                      {tag.name}
+                    </Button>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+        </div>
+
         {/* Management Link */}
         <div className="p-4 border-t border-border">
           <Button
             variant="outline"
             size="sm"
             onClick={() => window.location.href = '/manage'}
-            className="w-full gap-2 bg-transparent"
+            className="w-full gap-2 bg-transparent mb-2"
           >
             <FolderPlus className="h-4 w-4" />
             Manage Folders & Tags
