@@ -5,9 +5,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { EncryptionProvider } from './lib/encryption-context'
 import { Toaster } from './components/ui/sonner'
 import { AppErrorBoundary } from './components/common/AppErrorBoundary'
-import { useAuthStore } from './stores'
-
-// Lazy load heavy components that import stores to prevent circular dependencies
+// Lazy load stores and components to prevent circular dependencies
 const LoginForm = React.lazy(() => import('./components/auth/login-form').then(m => ({ default: m.LoginForm })))
 const RegisterForm = React.lazy(() => import('./components/auth/register-form').then(m => ({ default: m.RegisterForm })))
 const Sidebar = React.lazy(() => import('./components/dashboard/sidebar').then(m => ({ default: m.Sidebar })))
@@ -113,20 +111,27 @@ const authRoute = createRoute({
 
 // Dashboard route
 const DashboardComponent: React.FC = () => {
-  const { user, isLoading, logout, initialize } = useAuthStore()
-
-  // Initialize auth store if not already done
-  React.useEffect(() => {
-    initialize()
-  }, [initialize])
+  const [authStore, setAuthStore] = React.useState<any>(null)
+  const [isLoading, setIsLoading] = React.useState(true)
 
   React.useEffect(() => {
-    if (!isLoading && !user) {
+    // Dynamically import auth store to prevent circular dependency
+    import('./stores/authStore').then(({ useAuthStore }) => {
+      const store = useAuthStore.getState()
+      setAuthStore(store)
+      store.initialize().then(() => {
+        setIsLoading(false)
+      })
+    })
+  }, [])
+
+  React.useEffect(() => {
+    if (!isLoading && authStore && !authStore.user) {
       window.location.href = '/auth'
     }
-  }, [user, isLoading])
+  }, [authStore, isLoading])
 
-  if (isLoading || !user) {
+  if (isLoading || !authStore || !authStore.user) {
     return (
       <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">
         <div className="flex flex-col items-center gap-4">
@@ -136,6 +141,8 @@ const DashboardComponent: React.FC = () => {
       </div>
     )
   }
+
+  const { user, logout } = authStore
 
   const handleLogout = () => {
     logout()
