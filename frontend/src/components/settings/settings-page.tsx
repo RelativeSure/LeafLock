@@ -1,7 +1,6 @@
 'use client'
 
 import { useNotesStore, useTemplatesStore, useSettingsStore, useAuthStore } from '@/stores'
-import { ActivityLogger } from '@/lib/activity-logger'
 import { Button } from '@/components/ui/button'
 import { Download } from 'lucide-react'
 import { Label } from '@/components/ui/label'
@@ -55,13 +54,7 @@ export function SettingsPage() {
     })
 
     // Log the export activity
-    ActivityLogger.log(
-      user?.id || 'unknown',
-      user?.name || 'unknown',
-      user?.email || 'unknown',
-      'export_data',
-      true
-    )
+    console.log('Export activity:', { userId: user?.id, action: 'export_data' })
   }
 
   const handleImportNotes = async (file: File) => {
@@ -122,13 +115,7 @@ export function SettingsPage() {
       })
 
       // Log the import activity
-      ActivityLogger.log(
-        user?.id || 'unknown',
-        user?.name || 'unknown',
-        user?.email || 'unknown',
-        'import_data',
-        true
-      )
+      console.log('Import activity:', { userId: user?.id, action: 'import_data' })
     } catch (error) {
       toast({
         title: 'Import failed',
