@@ -5,7 +5,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { EncryptionProvider } from './lib/encryption-context'
 import { Toaster } from './components/ui/sonner'
 import { AppErrorBoundary } from './components/common/AppErrorBoundary'
-import { useAuthStore, useNotesStore } from './stores'
+import { useAuthStore } from './stores'
 import { LoginForm } from './components/auth/login-form'
 import { RegisterForm } from './components/auth/register-form'
 import { Sidebar } from './components/dashboard/sidebar'
@@ -108,8 +108,6 @@ const authRoute = createRoute({
 // Dashboard route
 const DashboardComponent: React.FC = () => {
   const { user, isLoading, logout, initialize } = useAuthStore()
-  const notesStore = useNotesStore()
-  const { loadData, isLoading: notesLoading } = notesStore
 
   // Initialize auth store if not already done
   React.useEffect(() => {
@@ -122,31 +120,12 @@ const DashboardComponent: React.FC = () => {
     }
   }, [user, isLoading])
 
-  // Load data when user is available
-  React.useEffect(() => {
-    if (user && !isLoading) {
-      loadData()
-    }
-  }, [user, isLoading, loadData])
-
-  if (isLoading || !user || notesLoading) {
+  if (isLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           <p className="text-sm text-muted-foreground animate-pulse">Loading LeafLock...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Ensure store has proper data before rendering components
-  if (!notesStore.notes || !notesStore.folders || !notesStore.tags) {
-    return (
-      <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <p className="text-sm text-muted-foreground animate-pulse">Loading data...</p>
         </div>
       </div>
     )
