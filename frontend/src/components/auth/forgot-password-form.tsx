@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Mail, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -36,7 +36,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onToggle
     return (
       <Card className="w-full max-w-md mx-auto">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-white">Check your email</CardTitle>
+          <h1 className="text-2xl font-bold text-white">Check your email</h1>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-center text-slate-300">
@@ -72,7 +72,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onToggle
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold text-white">Reset your password</CardTitle>
+        <h1 className="text-2xl font-bold text-white">Reset your password</h1>
         <p className="text-sm text-slate-400">
           Enter your email address and we'll send you a link to reset your password.
         </p>
