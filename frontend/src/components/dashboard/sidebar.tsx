@@ -29,6 +29,7 @@ export function Sidebar() {
     createNote,
     selectNote,
     createFolder,
+    isLoading,
   } = useNotesStore()
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -79,6 +80,17 @@ export function Sidebar() {
     } catch (error) {
       console.error('Failed to create note:', error)
     }
+  }
+
+  // Show loading state if store is loading
+  if (isLoading) {
+    return (
+      <div className="w-64 border-r border-border bg-card flex flex-col h-full">
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    )
   }
 
   return (
