@@ -129,8 +129,8 @@ export function NoteEditor() {
   useEffect(() => {
     if (selectedNote) {
       setTitle(selectedNote.title)
-      setNoteTags(selectedNote.tags)
-      joinSession(selectedNote.id)
+      setNoteTags(selectedNote.tags || [])
+      // Don't auto-join collaboration session - only join when Share button is clicked
 
       // Handle encrypted notes
       if (selectedNote.encrypted && selectedNote.content) {
@@ -347,7 +347,13 @@ export function NoteEditor() {
             variant="outline"
             size="sm"
             className="gap-2 bg-transparent"
-            onClick={() => setIsShareOpen(true)}
+            onClick={() => {
+              setIsShareOpen(true)
+              // Join collaboration session when Share button is clicked
+              if (selectedNote) {
+                joinSession(selectedNote.id)
+              }
+            }}
           >
             <Share2 className="h-4 w-4" />
             Share
@@ -438,7 +444,17 @@ export function NoteEditor() {
         tags={noteTags}
       />
 
-      <ShareNoteDialog open={isShareOpen} onOpenChange={setIsShareOpen} noteId={selectedNote.id} />
+      <ShareNoteDialog
+        open={isShareOpen}
+        onOpenChange={(open) => {
+          setIsShareOpen(open)
+          // Leave collaboration session when Share dialog is closed
+          if (!open && selectedNote) {
+            leaveSession(selectedNote.id)
+          }
+        }}
+        noteId={selectedNote.id}
+      />
 
       <EncryptionUnlockDialog
         open={isUnlockDialogOpen}
