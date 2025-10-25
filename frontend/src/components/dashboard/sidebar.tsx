@@ -84,10 +84,23 @@ export function Sidebar() {
   const handleCreateNote = async () => {
     console.log('handleCreateNote called')
     console.log('createNote function:', typeof createNote)
+    console.log('createNote function details:', createNote)
     ;(window as any).handleCreateNoteCalled = true
+    ;(window as any).createNoteType = typeof createNote
+    ;(window as any).createNoteDetails = createNote
+
+    if (typeof createNote !== 'function') {
+      console.error('createNote is not a function!', createNote)
+      ;(window as any).errors = [...((window as any).errors || []), 'createNote is not a function']
+      return
+    }
+
     try {
+      console.log('About to call createNote...')
+      ;(window as any).aboutToCallCreateNote = true
       const note = await createNote({})
       console.log('Note created:', note)
+      ;(window as any).noteCreated = note
       selectNote(note.id)
     } catch (error) {
       console.error('Failed to create note:', error)

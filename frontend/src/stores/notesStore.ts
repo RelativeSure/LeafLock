@@ -112,9 +112,16 @@ export const useNotesStore = create<NotesState>((set, get) => ({
           isTemplate: false,
         }
 
-        set((state) => ({ notes: [localNote, ...state.notes], selectedNote: localNote }))
-        console.log('Note created successfully:', localNote.id)
+        console.log('About to update store state...')
+        console.log('Current notes count:', get().notes.length)
+        set((state) => {
+          console.log('Inside set function, current state notes:', state.notes.length)
+          const newState = { notes: [localNote, ...state.notes], selectedNote: localNote }
+          console.log('New state notes count:', newState.notes.length)
+          return newState
+        })
         console.log('Store state after creation:', get().notes.length)
+        console.log('Note created successfully:', localNote.id)
         return localNote
       },
 
@@ -182,12 +189,17 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   },
 
   selectNote: (id: string | null) => {
+    console.log('selectNote called with id:', id)
     if (id === null) {
+      console.log('Setting selectedNote to null')
       set({ selectedNote: null })
     } else {
       const { notes } = get()
+      console.log('Current notes in store:', notes.length)
       const note = notes.find((n) => n.id === id)
+      console.log('Found note:', note)
       set({ selectedNote: note || null })
+      console.log('Selected note set to:', get().selectedNote)
 
       // Track last seen note for default behavior
       if (note && !note.isTrashed) {
