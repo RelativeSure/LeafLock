@@ -1,6 +1,6 @@
 'use client'
 
-import { useNotesStore, useTemplatesStore, useSettingsStore, useAuthStore } from '@/stores'
+import { useNotesStore, useTemplatesStore, useAuthStore } from '@/stores'
 import { Button } from '@/components/ui/button'
 import { Download } from 'lucide-react'
 import { Label } from '@/components/ui/label'
@@ -13,7 +13,6 @@ import { Input } from '@/components/ui/input'
 export function SettingsPage() {
   const { notes, folders, tags, createNote, createFolder, createTag } = useNotesStore()
   const { templates, createTemplate } = useTemplatesStore()
-  const { settings } = useSettingsStore()
   const { user } = useAuthStore()
   const { toast } = useToast()
 
@@ -33,7 +32,6 @@ export function SettingsPage() {
       folders: folders || [],
       tags: tags || [],
       templates: templates || [],
-      settings: settings || {},
     }
 
     const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -177,7 +175,7 @@ export function SettingsPage() {
                   <p className="text-sm text-muted-foreground">
                     Restore your data from a previous backup file.
                   </p>
-                  <div className="space-y-2">
+                <div className="space-y-2">
                     <Input
                       type="file"
                       accept=".json"
@@ -207,7 +205,7 @@ export function SettingsPage() {
                   <div className="text-center p-4 border rounded-lg">
                     <div className="text-2xl font-bold text-primary">{tags?.length || 0}</div>
                     <div className="text-sm text-muted-foreground">Tags</div>
-                  </div>
+                </div>
                   <div className="text-center p-4 border rounded-lg">
                     <div className="text-2xl font-bold text-primary">{templates?.length || 0}</div>
                     <div className="text-sm text-muted-foreground">Templates</div>
@@ -255,7 +253,7 @@ export function SettingsPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Encryption Status</Label>
-                <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                   Your notes are encrypted using AES-256 encryption for maximum security.
                 </p>
               </div>
