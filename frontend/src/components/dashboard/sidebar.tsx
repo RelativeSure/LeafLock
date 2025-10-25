@@ -101,10 +101,12 @@ export function Sidebar() {
       const note = await createNote({})
       console.log('Note created:', note)
       ;(window as any).noteCreated = note
+      console.log('About to call selectNote with id:', note.id)
       selectNote(note.id)
+      console.log('selectNote called')
     } catch (error) {
       console.error('Failed to create note:', error)
-      ;(window as any).errors = [...((window as any).errors || []), error.message]
+      ;(window as any).errors = [...((window as any).errors || []), error instanceof Error ? error.message : String(error)]
     }
   }
 

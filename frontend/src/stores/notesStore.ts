@@ -547,5 +547,5 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         localStorage.setItem('lastSeenNoteId', mostRecentNote.id)
       }
     }
-  },
+  }
 }))
