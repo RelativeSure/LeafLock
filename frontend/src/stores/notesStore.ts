@@ -114,6 +114,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
         set((state) => ({ notes: [localNote, ...state.notes], selectedNote: localNote }))
         console.log('Note created successfully:', localNote.id)
+        console.log('Store state after creation:', get().notes.length)
         return localNote
       },
 

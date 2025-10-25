@@ -83,12 +83,15 @@ export function Sidebar() {
 
   const handleCreateNote = async () => {
     console.log('handleCreateNote called')
+    console.log('createNote function:', typeof createNote)
+    ;(window as any).handleCreateNoteCalled = true
     try {
       const note = await createNote({})
       console.log('Note created:', note)
       selectNote(note.id)
     } catch (error) {
       console.error('Failed to create note:', error)
+      ;(window as any).errors = [...((window as any).errors || []), error.message]
     }
   }
 
