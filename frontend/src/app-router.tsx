@@ -8,9 +8,9 @@ import { AppErrorBoundary } from './components/common/AppErrorBoundary'
 import { useAuthStore, useNotesStore } from './stores'
 import { LoginForm } from './components/auth/login-form'
 import { RegisterForm } from './components/auth/register-form'
-import { Sidebar } from './components/dashboard/sidebar'
-import { NoteList } from './components/dashboard/note-list'
-import { NoteEditor } from './components/dashboard/note-editor'
+// import { Sidebar } from './components/dashboard/sidebar'
+// import { NoteList } from './components/dashboard/note-list'
+// import { NoteEditor } from './components/dashboard/note-editor'
 import { ThemeToggle } from './components/theme-toggle'
 import { Button } from './components/ui/button'
 import { Leaf, Settings, LogOut, ShieldCheck } from 'lucide-react'
@@ -204,15 +204,20 @@ const DashboardComponent: React.FC = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        <Sidebar />
+        {/* Temporarily disable components to isolate the error */}
+        <div className="w-64 border-r border-border bg-card flex flex-col h-full p-4">
+          <h2 className="font-semibold mb-4">Sidebar (Disabled)</h2>
+          <p className="text-sm text-muted-foreground">Sidebar component temporarily disabled for debugging</p>
+        </div>
         <div className="flex-1 flex border-r border-border">
-          <div className="w-80 border-r border-border flex flex-col animate-slide-in-left">
-            <div className="p-4 border-b border-border">
-              <h2 className="font-semibold">Notes</h2>
-            </div>
-            <NoteList />
+          <div className="w-80 border-r border-border flex flex-col p-4">
+            <h2 className="font-semibold mb-4">Note List (Disabled)</h2>
+            <p className="text-sm text-muted-foreground">Note List component temporarily disabled for debugging</p>
           </div>
-          <NoteEditor />
+          <div className="flex-1 p-4">
+            <h2 className="font-semibold mb-4">Note Editor (Disabled)</h2>
+            <p className="text-sm text-muted-foreground">Note Editor component temporarily disabled for debugging</p>
+          </div>
         </div>
       </div>
     </div>
