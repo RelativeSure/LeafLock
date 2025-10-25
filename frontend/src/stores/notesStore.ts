@@ -37,9 +37,9 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   isLoading: false,
 
   loadData: async () => {
-    const { useAuthStore } = await import('./authStore')
-    const { user } = useAuthStore.getState()
-    if (!user) return
+    // Get user from localStorage to avoid circular dependency
+    const storedUser = localStorage.getItem('user')
+    if (!storedUser) return
 
     set({ isLoading: true })
     try {
@@ -58,9 +58,11 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   },
 
   createNote: async (note: Partial<Note>) => {
-    const { user } = useAuthStore.getState()
+    const storedUser = localStorage.getItem('user')
+    if (!storedUser) throw new Error('No user logged in')
+
+    const user = JSON.parse(storedUser)
     const { selectedFolder } = get()
-    if (!user) throw new Error('No user logged in')
 
     try {
       const newNote = await apiClient.createNote({
@@ -115,8 +117,10 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   },
 
   createFolder: async (folder: Partial<Folder>) => {
-    const { user } = useAuthStore.getState()
-    if (!user) throw new Error('No user logged in')
+    const storedUser = localStorage.getItem('user')
+    if (!storedUser) throw new Error('No user logged in')
+
+    const user = JSON.parse(storedUser)
 
     try {
       const newFolder = await apiClient.createFolder({
@@ -167,8 +171,10 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   },
 
   createTag: async (tag: Partial<Tag>) => {
-    const { user } = useAuthStore.getState()
-    if (!user) throw new Error('No user logged in')
+    const storedUser = localStorage.getItem('user')
+    if (!storedUser) throw new Error('No user logged in')
+
+    const user = JSON.parse(storedUser)
 
     try {
       const newTag = await apiClient.createTag({

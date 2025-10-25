@@ -21,9 +21,10 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
   isLoading: false,
 
   loadTemplates: async () => {
-    const { useAuthStore } = await import('./authStore')
-    const { user } = useAuthStore.getState()
-    if (!user) return
+    const storedUser = localStorage.getItem('user')
+    if (!storedUser) return
+
+    const user = JSON.parse(storedUser)
 
     set({ isLoading: true })
     try {
@@ -41,8 +42,10 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
   },
 
   createTemplate: async (template: Partial<Template>) => {
-    const { user } = useAuthStore.getState()
-    if (!user) throw new Error('No user logged in')
+    const storedUser = localStorage.getItem('user')
+    if (!storedUser) throw new Error('No user logged in')
+
+    const user = JSON.parse(storedUser)
 
     try {
       const newTemplate = await apiClient.createTemplate({

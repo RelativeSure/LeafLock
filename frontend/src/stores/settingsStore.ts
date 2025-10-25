@@ -25,9 +25,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   isLoading: false,
 
   loadSettings: async () => {
-    const { useAuthStore } = await import('./authStore')
-    const { user } = useAuthStore.getState()
-    if (!user) return
+    const storedUser = localStorage.getItem('user')
+    if (!storedUser) return
 
     set({ isLoading: true })
     try {
@@ -43,8 +42,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   },
 
   updateSettings: async (newSettings: Partial<UserSettings>) => {
-    const { user } = useAuthStore.getState()
-    if (!user) return
+    const storedUser = localStorage.getItem('user')
+    if (!storedUser) return
 
     try {
       const updatedSettings = await apiClient.updateSettings(newSettings)
