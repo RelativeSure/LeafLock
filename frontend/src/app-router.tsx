@@ -105,7 +105,7 @@ const authRoute = createRoute({
 // Dashboard route
 const DashboardComponent: React.FC = () => {
   const { user, isLoading, logout, initialize } = useAuthStore()
-  const { loadData } = useNotesStore()
+  const { loadData, isLoading: notesLoading } = useNotesStore()
 
   // Initialize auth store if not already done
   React.useEffect(() => {
@@ -125,7 +125,7 @@ const DashboardComponent: React.FC = () => {
     }
   }, [user, isLoading, loadData])
 
-  if (isLoading || !user) {
+  if (isLoading || !user || notesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">
         <div className="flex flex-col items-center gap-4">
