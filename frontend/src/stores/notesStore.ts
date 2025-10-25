@@ -137,7 +137,12 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         if (!currentNote) throw new Error('Note not found')
 
         // Only create on API if there's actual content
+        console.log('updateNote - local note updates:', updates)
+        console.log('updateNote - title check:', updates.title?.trim())
+        console.log('updateNote - content check:', updates.content?.trim())
+
         if (updates.title?.trim() || updates.content?.trim()) {
+          console.log('updateNote - Creating note on API with content')
           updatedNote = await apiClient.createNote({
             ...currentNote,
             ...updates,

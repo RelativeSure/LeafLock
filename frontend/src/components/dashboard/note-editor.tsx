@@ -393,7 +393,14 @@ export function NoteEditor() {
 
         <Input
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => {
+            const newTitle = e.target.value
+            setTitle(newTitle)
+            // Update the store immediately when user types
+            if (selectedNote) {
+              updateNote(selectedNote.id, { title: newTitle })
+            }
+          }}
           placeholder="Add Title"
           className="text-3xl font-bold border-none shadow-none px-0 mb-4 focus-visible:ring-0 py-2"
           disabled={isDecrypting}
@@ -417,7 +424,13 @@ export function NoteEditor() {
         <div className="flex-1 overflow-auto">
           <RichTextEditor
             content={displayContent}
-            onChange={setDisplayContent}
+            onChange={(newContent) => {
+              setDisplayContent(newContent)
+              // Update the store immediately when user types
+              if (selectedNote) {
+                updateNote(selectedNote.id, { content: newContent })
+              }
+            }}
             placeholder="Start writing your note..."
           />
         </div>
