@@ -13,8 +13,8 @@ import { NoteList } from './components/dashboard/note-list'
 import { NoteEditor } from './components/dashboard/note-editor'
 import { ThemeToggle } from './components/theme-toggle'
 import { MainNavigation } from './components/navigation/main-navigation'
-import { TemplatesPage } from './components/templates/templates-page'
-import { TagsPage } from './components/tags/tags-page'
+// import { TemplatesPage } from './components/templates/templates-page'
+// import { TagsPage } from './components/tags/tags-page'
 import { Button } from './components/ui/button'
 import { Leaf, Settings, LogOut, ShieldCheck } from 'lucide-react'
 import {
@@ -259,7 +259,10 @@ const TemplatesComponent: React.FC = () => {
       fallbackRoute="/auth/login"
     >
       <div className="min-h-screen bg-background animate-in fade-in-50 duration-700">
-        <TemplatesPage />
+        <div className="container mx-auto p-6">
+          <h1 className="text-3xl font-bold">Templates</h1>
+          <p className="text-muted-foreground mt-2">Templates page coming soon...</p>
+        </div>
       </div>
     </ProtectedRoute>
   )
@@ -277,7 +280,10 @@ const TagsComponent: React.FC = () => {
       fallbackRoute="/auth/login"
     >
       <div className="min-h-screen bg-background animate-in fade-in-50 duration-700">
-        <TagsPage />
+        <div className="container mx-auto p-6">
+          <h1 className="text-3xl font-bold">Tags</h1>
+          <p className="text-muted-foreground mt-2">Tags page coming soon...</p>
+        </div>
       </div>
     </ProtectedRoute>
   )
