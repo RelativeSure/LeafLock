@@ -167,6 +167,11 @@ export function NoteEditor() {
             return
           }
 
+          // Don't save while decrypting to avoid race conditions
+          if (isDecrypting) {
+            return
+          }
+
           // Skip saving if both title and content are empty
           const trimmedTitle = title.trim()
           const trimmedContent = displayContent.trim()
@@ -410,12 +415,7 @@ export function NoteEditor() {
         <Input
           value={title}
           onChange={(e) => {
-            const newTitle = e.target.value
-            setTitle(newTitle)
-            // Update the store immediately when user types
-            if (selectedNote) {
-              updateNote(selectedNote.id, { title: newTitle })
-            }
+            setTitle(e.target.value)
           }}
           placeholder="Add Title"
           className="text-3xl font-bold border-none shadow-none px-0 mb-4 focus-visible:ring-0 py-2"
@@ -440,13 +440,7 @@ export function NoteEditor() {
         <div className="flex-1 overflow-auto">
           <RichTextEditor
             content={displayContent}
-            onChange={(newContent) => {
-              setDisplayContent(newContent)
-              // Update the store immediately when user types
-              if (selectedNote) {
-                updateNote(selectedNote.id, { content: newContent })
-              }
-            }}
+            onChange={setDisplayContent}
             placeholder="Start writing your note..."
           />
         </div>

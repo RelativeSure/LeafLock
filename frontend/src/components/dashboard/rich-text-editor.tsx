@@ -74,7 +74,9 @@ export function RichTextEditor({ content, onChange, placeholder, disabled }: Ric
 
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content)
+      // Disable emitUpdate to prevent triggering onChange during programmatic updates
+      // This prevents spurious auto-saves when syncing editor with external content
+      editor.commands.setContent(content, false)
     }
   }, [content, editor])
 
