@@ -54,7 +54,7 @@ jobs:
         helm package helm/leaflock --destination helm-packages
 
     - name: Upload Helm chart artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
       with:
         name: helm-chart-${{ steps.version.outputs.chart_version }}
         path: helm-packages/*.tgz
