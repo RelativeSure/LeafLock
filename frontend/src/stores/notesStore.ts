@@ -84,8 +84,9 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     }
 
     // Create a local note WITHOUT trying to create folders on server
+    // Use crypto.randomUUID() for proper UUIDs
     const localNote: Note = {
-      id: `local-${Date.now()}`,
+      id: crypto.randomUUID(),
       title: note.title || '',
       content: note.content || '',
       userId: user.id,

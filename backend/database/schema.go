@@ -8,6 +8,33 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
+-- UUIDv7 function for time-ordered UUIDs (PostgreSQL 18+ native or custom implementation)
+CREATE OR REPLACE FUNCTION uuid_generate_v7()
+RETURNS UUID AS $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_uuidv7') THEN
+        -- Use native pg_uuidv7 if available
+        PERFORM uuid_generate_v7();
+    ELSE
+        -- Custom implementation for older PostgreSQL versions
+        DECLARE
+            unix_ts_ms BIGINT;
+            timestamp_bytes BYTEA;
+            random_bytes BYTEA;
+            combined BYTEA;
+        BEGIN
+            unix_ts_ms := EXTRACT(EPOCH FROM NOW()) * 1000;
+            timestamp_bytes := substring(int8send(unix_ts_ms::INT8) FROM 2 FOR 6);
+            random_bytes := gen_random_bytes(10);
+
+            -- Construct UUIDv7 format: timestamp (48 bits) + version (4 bits) + random (62 bits)
+            combined := timestamp_bytes || substring(random_bytes FROM 1);
+            return combined::UUID;
+        END;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Users table with encrypted fields
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -137,7 +164,7 @@ CREATE TABLE IF NOT EXISTS workspaces (
 
 -- Notes table with full encryption
 CREATE TABLE IF NOT EXISTS notes (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
     workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
     title_encrypted BYTEA NOT NULL, -- Encrypted title
     content_encrypted BYTEA NOT NULL, -- Encrypted content
