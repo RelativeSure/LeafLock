@@ -9,7 +9,6 @@ import {
   Menu,
   X,
   Library,
-  CheckSquare,
   Tag,
   TagIcon,
 } from 'lucide-react'
@@ -222,19 +221,6 @@ export function Sidebar() {
               </DialogContent>
             </Dialog>
 
-            <Button
-              variant="outline"
-              size="sm"
-              className="transition-smooth hover-lift bg-transparent"
-              title="Bulk Select"
-              onClick={() => {
-                // Toggle bulk mode - this will be handled by NoteList component
-                const event = new CustomEvent('toggle-bulk-mode')
-                window.dispatchEvent(event)
-              }}
-            >
-              <CheckSquare className="h-4 w-4" />
-            </Button>
 
             <Button
               variant="outline"

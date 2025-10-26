@@ -115,36 +115,39 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   updateNote: async (id: string, updates: Partial<Note>) => {
     try {
       let updatedNote: Note
+      const currentNote = get().notes.find(note => note.id === id)
 
-      // If it's a local note (not saved to API yet), create it first
+      if (!currentNote) {
+        throw new Error('Note not found')
+      }
+
+      // If it's a local note (not saved to API yet)
       if (id.startsWith('local-')) {
-        const storedUser = localStorage.getItem('user')
-        if (!storedUser) throw new Error('No user logged in')
-        const user = JSON.parse(storedUser)
+        // Just update locally for local notes - don't try to send to API
+        updatedNote = { ...currentNote, ...updates, updatedAt: new Date().toISOString() }
+        set((state) => ({
+          notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
+          selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
+        }))
+        return updatedNote
+      }
 
-        const currentNote = get().notes.find(note => note.id === id)
-        if (!currentNote) throw new Error('Note not found')
+      // Regular API update for existing notes
+      // Validate that we're not saving empty notes
+      const hasContent = updates.title?.trim() || updates.content?.trim()
+      const updatesMetadata = Object.keys(updates).some(key => !['title', 'content'].includes(key))
 
-        // Only create on API if there's actual content
-        console.log('updateNote - local note updates:', updates)
-        console.log('updateNote - title check:', updates.title?.trim())
-        console.log('updateNote - content check:', updates.content?.trim())
-
-        if (updates.title?.trim() || updates.content?.trim()) {
-          console.log('updateNote - Creating note on API with content')
-          updatedNote = await apiClient.createNote({
-            ...currentNote,
-            ...updates,
-            userId: user.id,
-          })
-
-          // Replace the local note with the API note
+      if (hasContent || updatesMetadata) {
+        // Only save to API if there's content OR if we're updating metadata
+        try {
+          updatedNote = await apiClient.updateNote(id, updates)
           set((state) => ({
             notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
             selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
           }))
-        } else {
-          // Just update locally if no content
+        } catch (error) {
+          // If API update fails (e.g. note not found on server), just update locally
+          console.warn('API update failed, updating locally:', error)
           updatedNote = { ...currentNote, ...updates, updatedAt: new Date().toISOString() }
           set((state) => ({
             notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
@@ -152,34 +155,12 @@ export const useNotesStore = create<NotesState>((set, get) => ({
           }))
         }
       } else {
-        // Regular API update for existing notes
-        // Validate that we're not saving empty notes
-        const hasContent = updates.title?.trim() || updates.content?.trim()
-        const updatesMetadata = Object.keys(updates).some(key => !['title', 'content'].includes(key))
-
-        if (hasContent || updatesMetadata) {
-          // Only save to API if there's content OR if we're updating metadata (tags, pinned, etc.)
-          updatedNote = await apiClient.updateNote(id, updates)
-          set((state) => ({
-            notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
-            selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
-          }))
-        } else {
-          // No content and no metadata updates - just update locally
-          const currentNote = get().notes.find(note => note.id === id)
-          if (!currentNote) {
-            throw new Error('Note not found')
-          }
-          updatedNote = { ...currentNote, ...updates, updatedAt: new Date().toISOString() }
-          set((state) => ({
-            notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
-            selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
-          }))
-        }
-      }
-
-      if (!updatedNote) {
-        throw new Error('Failed to update note')
+        // No content and no metadata updates - just update locally
+        updatedNote = { ...currentNote, ...updates, updatedAt: new Date().toISOString() }
+        set((state) => ({
+          notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
+          selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
+        }))
       }
 
       return updatedNote
