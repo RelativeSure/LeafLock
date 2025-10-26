@@ -9,7 +9,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   timeout: 60 * 1000,
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'https://frontend-leaflock-pr-363.up.railway.app',
     trace: 'on-first-retry',
     video: 'retain-on-failure',
   },

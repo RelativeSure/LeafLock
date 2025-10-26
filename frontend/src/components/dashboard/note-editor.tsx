@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNotesStore } from '../../stores/notesStore'
 import { useCollaboration } from '@/lib/collaboration-context'
 import { useEncryption } from '@/lib/encryption-context'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -66,6 +67,7 @@ export function NoteEditor() {
     if (selectedNote) {
       moveToTrash(selectedNote.id)
       selectNote(null)
+      toast.success('Note moved to trash', { duration: 2000 })
     }
   }
 
@@ -166,6 +168,16 @@ export function NoteEditor() {
             return
           }
 
+          // Skip saving if both title and content are empty
+          const trimmedTitle = title.trim()
+          const trimmedContent = displayContent.trim()
+
+          if (!trimmedTitle && !trimmedContent) {
+            // Don't save empty notes - show info toast
+            toast.info('Empty notes are not saved automatically', { duration: 2000 })
+            return
+          }
+
           // Always encrypt title and content before saving
           if (isUnlocked) {
             const encryptedTitle = await encryptText(title)
@@ -176,12 +188,17 @@ export function NoteEditor() {
               content: contentToSave,
               tags: noteTags
             })
+            // Show success toast only if note was saved to API
+            if (!selectedNote.id.startsWith('local-')) {
+              toast.success('Note saved', { duration: 2000 })
+            }
           } else {
             // If not unlocked, don't save
             return
           }
         } catch (err) {
           console.error('[v0] Failed to save note:', err)
+          toast.error('Failed to save note', { duration: 3000 })
         }
       }, 500)
 

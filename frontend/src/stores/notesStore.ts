@@ -164,11 +164,33 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         }
       } else {
         // Regular API update for existing notes
-        updatedNote = await apiClient.updateNote(id, updates)
-        set((state) => ({
-          notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
-          selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
-        }))
+        // Validate that we're not saving empty notes
+        const hasContent = updates.title?.trim() || updates.content?.trim()
+        const updatesMetadata = Object.keys(updates).some(key => !['title', 'content'].includes(key))
+
+        if (hasContent || updatesMetadata) {
+          // Only save to API if there's content OR if we're updating metadata (tags, pinned, etc.)
+          updatedNote = await apiClient.updateNote(id, updates)
+          set((state) => ({
+            notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
+            selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
+          }))
+        } else {
+          // No content and no metadata updates - just update locally
+          const currentNote = get().notes.find(note => note.id === id)
+          if (!currentNote) {
+            throw new Error('Note not found')
+          }
+          updatedNote = { ...currentNote, ...updates, updatedAt: new Date().toISOString() }
+          set((state) => ({
+            notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
+            selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
+          }))
+        }
+      }
+
+      if (!updatedNote) {
+        throw new Error('Failed to update note')
       }
 
       return updatedNote
@@ -193,13 +215,26 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   selectNote: (id: string | null) => {
     console.log('selectNote called with id:', id)
+
+    // Clean up empty local notes when switching away from them
+    const { notes, selectedNote } = get()
+    if (selectedNote && selectedNote.id.startsWith('local-')) {
+      // Check if the currently selected note is empty
+      const title = selectedNote.title || ''
+      const content = selectedNote.content || ''
+      if (!title.trim() && !content.trim()) {
+        // Remove the empty local note from the store
+        set({
+          notes: notes.filter(note => note.id !== selectedNote.id),
+          selectedNote: null
+        })
+      }
+    }
+
     if (id === null) {
       console.log('Setting selectedNote to null')
       set({ selectedNote: null })
     } else {
-      const { notes } = get()
-      console.log('Current notes in store:', notes.length)
-      console.log('All note IDs:', notes.map(n => n.id))
       const note = notes.find((n) => n.id === id)
       console.log('Found note:', note)
 

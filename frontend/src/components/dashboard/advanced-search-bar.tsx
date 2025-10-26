@@ -159,7 +159,7 @@ export function AdvancedSearchBar() {
           }
         })()
         case 'title':
-          return a.title.localeCompare(b.title)
+          return (a.title || '').localeCompare(b.title || '')
         case 'relevance':
         default:
           // Simple relevance: pinned first, then by title match, then by update date

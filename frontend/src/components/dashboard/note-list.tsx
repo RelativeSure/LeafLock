@@ -3,7 +3,7 @@ import { BulkOperationsBar } from './bulk-operations-bar'
 import { useNotesStore } from '../../stores/notesStore'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
-import { FileText, Lock, TagIcon, Pin, ArrowUpDown } from 'lucide-react'
+import { FileText, Lock, TagIcon, Pin, ArrowUpDown, Trash2, Copy } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import {
   DropdownMenu,
@@ -11,14 +11,48 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
 
 type SortOption = 'updated' | 'created' | 'title' | 'pinned'
 
 export function NoteList() {
-  const { notes, selectedNote, selectedFolder, selectNote } = useNotesStore()
+  const { notes, selectedNote, selectedFolder, selectNote, updateNote, moveToTrash } = useNotesStore()
   const [sortBy, setSortBy] = useState<SortOption>('updated')
   const [selectedNotes, setSelectedNotes] = useState<string[]>([])
   const [isBulkMode, setIsBulkMode] = useState(false)
+
+  const handleTogglePin = async (noteId: string, currentlyPinned: boolean) => {
+    try {
+      await updateNote(noteId, { pinned: !currentlyPinned })
+    } catch (error) {
+      console.error('Failed to toggle pin:', error)
+    }
+  }
+
+  const handleDuplicate = (noteId: string) => {
+    const noteToDuplicate = notes.find(n => n.id === noteId)
+    if (noteToDuplicate) {
+      // Handle duplication - for now just select the note
+      selectNote(noteId)
+    }
+  }
+
+  const handleDelete = async (noteId: string) => {
+    try {
+      await moveToTrash(noteId)
+      if (selectedNote?.id === noteId) {
+        selectNote(null)
+      }
+    } catch (error) {
+      console.error('Failed to delete note:', error)
+    }
+  }
 
   const activeNotes = (notes || []).filter((note) => !note.isTrashed)
   const filteredNotes = selectedFolder
@@ -42,7 +76,7 @@ export function NoteList() {
         return isNaN(bCreatedTime) ? (isNaN(aCreatedTime) ? 0 : -1) : (isNaN(aCreatedTime) ? 1 : bCreatedTime - aCreatedTime)
       }
       case 'title':
-        return a.title.localeCompare(b.title)
+        return (a.title || '').localeCompare(b.title || '')
       default:
         return 0
     }
@@ -96,8 +130,8 @@ export function NoteList() {
   }
 
   return (
-    <>
-      <div className="px-4 py-2 border-b border-border">
+    <div className="flex flex-col h-full">
+      <div className="px-4 py-2 border-b border-border flex-shrink-0">
         <div className="flex items-center justify-between">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -140,22 +174,23 @@ export function NoteList() {
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-2 space-y-1">
           {sortedNotes.map((note, index) => {
             const isSelected = selectedNote?.id === note.id
             const isBulkSelected = selectedNotes.includes(note.id)
 
             return (
-              <div
-                key={note.id}
-                className={`w-full p-3 rounded-lg transition-smooth hover-lift stagger-item ${
-                  isSelected
-                    ? 'bg-primary/10 border border-primary/20'
-                    : 'hover:bg-surface-hover border border-transparent'
-                } ${isBulkSelected ? 'bg-primary/5 border-primary/10' : ''}`}
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
+              <ContextMenu key={note.id}>
+                <ContextMenuTrigger asChild>
+                  <div
+                    className={`w-full p-3 rounded-lg transition-smooth hover-lift stagger-item ${
+                      isSelected
+                        ? 'bg-primary/10 border border-primary/20'
+                        : 'hover:bg-surface-hover border border-transparent'
+                    } ${isBulkSelected ? 'bg-primary/5 border-primary/10' : ''}`}
+                    style={{ animationDelay: `${index * 0.05}s` }}
+                  >
                 <div className="flex items-start gap-3">
                   {isBulkMode && (
                     <div className="flex items-center mt-1">
@@ -219,6 +254,27 @@ export function NoteList() {
                   </button>
                 </div>
               </div>
+              </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem onClick={() => selectNote(note.id)}>
+                    Open
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem onClick={() => handleTogglePin(note.id, note.pinned)}>
+                    <Pin className="h-4 w-4 mr-2" />
+                    {note.pinned ? 'Unpin' : 'Pin'}
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={() => handleDuplicate(note.id)}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Duplicate
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem className="text-destructive" onClick={() => handleDelete(note.id)}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
             )
           })}
         </div>
@@ -229,6 +285,6 @@ export function NoteList() {
         selectedNotes={selectedNotes}
         onClose={handleBulkClose}
       />
-    </>
+    </div>
   )
 }
