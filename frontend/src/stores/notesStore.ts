@@ -75,53 +75,42 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     const { selectedFolder, folders } = get()
     console.log('User:', user.id, 'Selected folder:', selectedFolder, 'Folders:', folders.length)
 
-        // If no folder is selected, assign to "Uncategorized" folder
-        let folderId = note.folderId || selectedFolder
-        if (!folderId) {
-          // Find or create "Uncategorized" folder
-          let uncategorizedFolder = folders.find(f => f.name === 'Uncategorized')
-          if (!uncategorizedFolder) {
-            // Create Uncategorized folder
-            const newFolder = await apiClient.createFolder({
-              name: 'Uncategorized',
-              color: '#6b7280', // Gray color
-              userId: user.id,
-            })
-            set((state) => ({ folders: [...state.folders, newFolder] }))
-            folderId = newFolder.id
-          } else {
-            folderId = uncategorizedFolder.id
-          }
-        }
+    // Determine folder - use selected or existing, don't try to create uncategorized
+    let folderId = note.folderId || selectedFolder
 
-        // Create a local note first without saving to API
-        const localNote: Note = {
-          id: `local-${Date.now()}`,
-          title: note.title || '',
-          content: note.content || '',
-          userId: user.id,
-          folderId: folderId,
-          tags: note.tags || [],
-          pinned: note.pinned || false,
-          encrypted: note.encrypted || false,
-          isTrashed: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          trashedAt: undefined,
-          sharedWith: [],
-          isTemplate: false,
-        }
+    // If no folder selected and we have folders available, use the first one
+    if (!folderId && folders.length > 0) {
+      folderId = folders[0].id
+    }
 
-        // Update store state with new note
-        set((state) => ({
-          notes: [localNote, ...state.notes],
-          selectedNote: localNote
-        }))
+    // Create a local note WITHOUT trying to create folders on server
+    const localNote: Note = {
+      id: `local-${Date.now()}`,
+      title: note.title || '',
+      content: note.content || '',
+      userId: user.id,
+      folderId: folderId,
+      tags: note.tags || [],
+      pinned: note.pinned || false,
+      encrypted: note.encrypted || false,
+      isTrashed: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      trashedAt: undefined,
+      sharedWith: [],
+      isTemplate: false,
+    }
 
-        console.log('Note created successfully:', localNote.id)
+    // Update store state with new note
+    set((state) => ({
+      notes: [localNote, ...state.notes],
+      selectedNote: localNote
+    }))
 
-        return localNote
-      },
+    console.log('Note created successfully:', localNote.id)
+
+    return localNote
+  },
 
   updateNote: async (id: string, updates: Partial<Note>) => {
     try {
