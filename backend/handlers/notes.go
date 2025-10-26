@@ -605,6 +605,445 @@ func (h *NotesHandler) RestoreNoteVersion(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Note restored to version " + strconv.Itoa(versionNumber)})
 }
 
+// CompareNoteVersions godoc
+// @Summary Compare two note versions
+// @Description Get a comparison between two versions of a note
+// @Tags Notes
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Note ID"
+// @Param v1 query int true "First version number"
+// @Param v2 query int true "Second version number"
+// @Success 200 {object} map[string]interface{} "Version comparison data"
+// @Failure 400 {object} map[string]interface{} "Invalid parameters"
+// @Failure 404 {object} map[string]interface{} "Version not found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes/{id}/versions/compare [get]
+func (h *NotesHandler) CompareNoteVersions(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	v1, err := strconv.Atoi(c.Query("v1"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid v1 parameter"})
+	}
+
+	v2, err := strconv.Atoi(c.Query("v2"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid v2 parameter"})
+	}
+
+	ctx := context.Background()
+
+	// Get both versions
+	rows, err := h.db.Query(ctx, `
+		SELECT nv.version_number, nv.title_encrypted, nv.content_encrypted, nv.created_at, u.email as created_by_email
+		FROM note_versions nv
+		JOIN notes n ON nv.note_id = n.id
+		JOIN workspaces w ON n.workspace_id = w.id
+		JOIN users u ON nv.created_by = u.id
+		WHERE n.id = $1 AND nv.version_number IN ($2, $3) AND w.owner_id = $4 AND n.deleted_at IS NULL
+		ORDER BY nv.version_number ASC`,
+		noteID, v1, v2, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch versions"})
+	}
+	defer rows.Close()
+
+	var versions []map[string]interface{}
+	for rows.Next() {
+		var versionNumber int
+		var titleEnc, contentEnc []byte
+		var createdAt time.Time
+		var createdByEmail string
+
+		err := rows.Scan(&versionNumber, &titleEnc, &contentEnc, &createdAt, &createdByEmail)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to read version data"})
+		}
+
+		versions = append(versions, map[string]interface{}{
+			"version_number":    versionNumber,
+			"title_encrypted":   base64.StdEncoding.EncodeToString(titleEnc),
+			"content_encrypted": base64.StdEncoding.EncodeToString(contentEnc),
+			"created_at":        createdAt.Format(time.RFC3339),
+			"created_by":        createdByEmail,
+		})
+	}
+
+	if len(versions) != 2 {
+		return c.Status(404).JSON(fiber.Map{"error": "One or both versions not found"})
+	}
+
+	return c.JSON(fiber.Map{
+		"v1": versions[0],
+		"v2": versions[1],
+	})
+}
+
+// DeleteNoteVersion godoc
+// @Summary Delete a specific note version
+// @Description Delete a specific version from note history
+// @Tags Notes
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Note ID"
+// @Param versionId path string true "Version ID to delete"
+// @Success 200 {object} map[string]interface{} "Version deleted successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid parameters"
+// @Failure 404 {object} map[string]interface{} "Version not found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes/{id}/versions/{versionId} [delete]
+func (h *NotesHandler) DeleteNoteVersion(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	versionID, err := uuid.Parse(c.Params("versionId"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid version ID"})
+	}
+
+	ctx := context.Background()
+
+	// Delete the version
+	result, err := h.db.Exec(ctx, `
+		DELETE FROM note_versions nv
+		USING notes n, workspaces w
+		WHERE nv.id = $1 AND nv.note_id = $2 AND nv.note_id = n.id
+		AND n.workspace_id = w.id AND w.owner_id = $3 AND n.deleted_at IS NULL`,
+		versionID, noteID, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete version"})
+	}
+
+	if result.RowsAffected() == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "Version not found"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Version deleted successfully"})
+}
+
+// UpdateRetentionPolicy godoc
+// @Summary Update note version retention policy
+// @Description Update how many versions to keep for a note (10, 20, or 50)
+// @Tags Notes
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Note ID"
+// @Param retention body map[string]int true "Retention policy (retention_policy: 10|20|50)"
+// @Success 200 {object} map[string]interface{} "Retention policy updated"
+// @Failure 400 {object} map[string]interface{} "Invalid parameters"
+// @Failure 404 {object} map[string]interface{} "Note not found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes/{id}/retention [put]
+func (h *NotesHandler) UpdateRetentionPolicy(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	var req struct {
+		RetentionPolicy int `json:"retention_policy"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	// Validate retention policy value
+	if req.RetentionPolicy != 10 && req.RetentionPolicy != 20 && req.RetentionPolicy != 50 {
+		return c.Status(400).JSON(fiber.Map{"error": "Retention policy must be 10, 20, or 50"})
+	}
+
+	ctx := context.Background()
+
+	// Update retention policy
+	result, err := h.db.Exec(ctx, `
+		UPDATE notes n
+		SET retention_policy = $1
+		FROM workspaces w
+		WHERE n.id = $2 AND n.workspace_id = w.id AND w.owner_id = $3 AND n.deleted_at IS NULL`,
+		req.RetentionPolicy, noteID, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to update retention policy"})
+	}
+
+	if result.RowsAffected() == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+	}
+
+	// Clean up excess versions if needed
+	_, err = h.db.Exec(ctx, `
+		DELETE FROM note_versions
+		WHERE note_id = $1 AND id NOT IN (
+			SELECT id FROM note_versions
+			WHERE note_id = $1
+			ORDER BY created_at DESC
+			LIMIT $2
+		)`,
+		noteID, req.RetentionPolicy)
+
+	if err != nil {
+		// Log error but don't fail the request
+	}
+
+	return c.JSON(fiber.Map{
+		"message":          "Retention policy updated successfully",
+		"retention_policy": req.RetentionPolicy,
+	})
+}
+
+// BulkDeleteNotes godoc
+// @Summary Bulk soft delete notes
+// @Description Soft delete multiple notes at once (move to trash)
+// @Tags Notes
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param noteIds body []string true "Array of note IDs to delete"
+// @Success 200 {object} map[string]interface{} "Bulk delete results"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes/bulk/delete [post]
+func (h *NotesHandler) BulkDeleteNotes(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+
+	var req struct {
+		NoteIDs []string `json:"note_ids"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if len(req.NoteIDs) == 0 {
+		return c.Status(400).JSON(fiber.Map{"error": "No note IDs provided"})
+	}
+
+	ctx := context.Background()
+	successful := 0
+	failed := 0
+	errors := []string{}
+
+	// Process in chunks of 50 for performance
+	chunkSize := 50
+	for i := 0; i < len(req.NoteIDs); i += chunkSize {
+		end := i + chunkSize
+		if end > len(req.NoteIDs) {
+			end = len(req.NoteIDs)
+		}
+		chunk := req.NoteIDs[i:end]
+
+		// Convert strings to UUIDs
+		noteUUIDs := make([]uuid.UUID, 0, len(chunk))
+		for _, idStr := range chunk {
+			id, err := uuid.Parse(idStr)
+			if err != nil {
+				failed++
+				errors = append(errors, "Invalid UUID: "+idStr)
+				continue
+			}
+			noteUUIDs = append(noteUUIDs, id)
+		}
+
+		// Bulk soft delete
+		for _, noteID := range noteUUIDs {
+			result, err := h.db.Exec(ctx, `
+				UPDATE notes n
+				SET deleted_at = NOW()
+				FROM workspaces w
+				WHERE n.id = $1 AND n.workspace_id = w.id AND w.owner_id = $2 AND n.deleted_at IS NULL`,
+				noteID, userID)
+
+			if err != nil {
+				failed++
+				errors = append(errors, "Failed to delete note: "+noteID.String())
+				continue
+			}
+
+			if result.RowsAffected() > 0 {
+				successful++
+			} else {
+				failed++
+			}
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"message":    "Bulk delete completed",
+		"successful": successful,
+		"failed":     failed,
+		"total":      len(req.NoteIDs),
+		"errors":     errors,
+	})
+}
+
+// BulkRestoreNotes godoc
+// @Summary Bulk restore notes from trash
+// @Description Restore multiple notes from trash at once
+// @Tags Notes
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param noteIds body []string true "Array of note IDs to restore"
+// @Success 200 {object} map[string]interface{} "Bulk restore results"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes/bulk/restore [post]
+func (h *NotesHandler) BulkRestoreNotes(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+
+	var req struct {
+		NoteIDs []string `json:"note_ids"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if len(req.NoteIDs) == 0 {
+		return c.Status(400).JSON(fiber.Map{"error": "No note IDs provided"})
+	}
+
+	ctx := context.Background()
+	successful := 0
+	failed := 0
+	errors := []string{}
+
+	// Process in chunks
+	chunkSize := 50
+	for i := 0; i < len(req.NoteIDs); i += chunkSize {
+		end := i + chunkSize
+		if end > len(req.NoteIDs) {
+			end = len(req.NoteIDs)
+		}
+		chunk := req.NoteIDs[i:end]
+
+		// Convert and restore
+		for _, idStr := range chunk {
+			noteID, err := uuid.Parse(idStr)
+			if err != nil {
+				failed++
+				errors = append(errors, "Invalid UUID: "+idStr)
+				continue
+			}
+
+			result, err := h.db.Exec(ctx, `
+				UPDATE notes n
+				SET deleted_at = NULL
+				FROM workspaces w
+				WHERE n.id = $1 AND n.workspace_id = w.id AND w.owner_id = $2 AND n.deleted_at IS NOT NULL`,
+				noteID, userID)
+
+			if err != nil {
+				failed++
+				errors = append(errors, "Failed to restore note: "+noteID.String())
+				continue
+			}
+
+			if result.RowsAffected() > 0 {
+				successful++
+			} else {
+				failed++
+			}
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"message":    "Bulk restore completed",
+		"successful": successful,
+		"failed":     failed,
+		"total":      len(req.NoteIDs),
+		"errors":     errors,
+	})
+}
+
+// BulkPermanentlyDeleteNotes godoc
+// @Summary Bulk permanently delete notes
+// @Description Permanently delete multiple notes from trash (cannot be recovered)
+// @Tags Notes
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param noteIds body []string true "Array of note IDs to permanently delete"
+// @Success 200 {object} map[string]interface{} "Bulk permanent delete results"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes/bulk/permanent-delete [post]
+func (h *NotesHandler) BulkPermanentlyDeleteNotes(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+
+	var req struct {
+		NoteIDs []string `json:"note_ids"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if len(req.NoteIDs) == 0 {
+		return c.Status(400).JSON(fiber.Map{"error": "No note IDs provided"})
+	}
+
+	ctx := context.Background()
+	successful := 0
+	failed := 0
+	errors := []string{}
+
+	// Process in chunks
+	chunkSize := 50
+	for i := 0; i < len(req.NoteIDs); i += chunkSize {
+		end := i + chunkSize
+		if end > len(req.NoteIDs) {
+			end = len(req.NoteIDs)
+		}
+		chunk := req.NoteIDs[i:end]
+
+		// Convert and permanently delete
+		for _, idStr := range chunk {
+			noteID, err := uuid.Parse(idStr)
+			if err != nil {
+				failed++
+				errors = append(errors, "Invalid UUID: "+idStr)
+				continue
+			}
+
+			result, err := h.db.Exec(ctx, `
+				DELETE FROM notes
+				USING workspaces w
+				WHERE notes.id = $1 AND notes.workspace_id = w.id AND w.owner_id = $2 AND notes.deleted_at IS NOT NULL`,
+				noteID, userID)
+
+			if err != nil {
+				failed++
+				errors = append(errors, "Failed to delete note: "+noteID.String())
+				continue
+			}
+
+			if result.RowsAffected() > 0 {
+				successful++
+			} else {
+				failed++
+			}
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"message":    "Bulk permanent delete completed",
+		"successful": successful,
+		"failed":     failed,
+		"total":      len(req.NoteIDs),
+		"errors":     errors,
+	})
+}
+
 // PermanentlyDeleteNote godoc
 // @Summary Permanently delete a note
 // @Description Permanently delete a note from trash (cannot be recovered)

@@ -18,7 +18,7 @@ import (
 )
 
 // MigrationSchemaVersion tracks the current schema version
-const MigrationSchemaVersion = "2025.10.09.001" // Updated for password_reset_tokens table
+const MigrationSchemaVersion = "2025.10.26.001" // Updated for note versioning enhancements, note links, and mobile/bulk features
 
 // Database interface for dependency injection and testing
 type Database interface {

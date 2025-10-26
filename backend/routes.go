@@ -134,6 +134,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	importExportHandler := handlers.NewImportExportHandler(db, crypto)
 	shareLinksHandler := handlers.NewShareLinksHandler(db, crypto, rdb)
 	announcementsHandler := handlers.NewAnnouncementsHandler(db)
+	noteLinksHandler := handlers.NewNoteLinksHandler(db)
 
 	// API group
 	api := app.Group("/api/v1")
@@ -182,14 +183,25 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	// Note: Specific routes MUST come before generic /:id routes to avoid route shadowing
 	protected.Get("/notes", rateLimits.StandardCRUDLimiter, notesHandler.GetNotes)
 	protected.Get("/notes/trash", rateLimits.StandardCRUDLimiter, notesHandler.GetTrash)
+	protected.Get("/notes/search-for-linking", rateLimits.StandardCRUDLimiter, noteLinksHandler.GetAllNotesForLinking)
+	protected.Post("/notes/bulk/delete", rateLimits.StandardCRUDLimiter, notesHandler.BulkDeleteNotes)
+	protected.Post("/notes/bulk/restore", rateLimits.StandardCRUDLimiter, notesHandler.BulkRestoreNotes)
+	protected.Post("/notes/bulk/permanent-delete", rateLimits.StandardCRUDLimiter, notesHandler.BulkPermanentlyDeleteNotes)
 	protected.Post("/notes", rateLimits.StandardCRUDLimiter, notesHandler.CreateNote)
 	protected.Get("/notes/:id", rateLimits.StandardCRUDLimiter, notesHandler.GetNote)
 	protected.Put("/notes/:id", rateLimits.StandardCRUDLimiter, notesHandler.UpdateNote)
 	protected.Delete("/notes/:id", rateLimits.StandardCRUDLimiter, notesHandler.DeleteNote)
 	protected.Post("/notes/:id/restore", rateLimits.StandardCRUDLimiter, notesHandler.RestoreNote)
 	protected.Get("/notes/:id/versions", rateLimits.StandardCRUDLimiter, notesHandler.GetNoteVersions)
+	protected.Get("/notes/:id/versions/compare", rateLimits.StandardCRUDLimiter, notesHandler.CompareNoteVersions)
+	protected.Delete("/notes/:id/versions/:versionId", rateLimits.StandardCRUDLimiter, notesHandler.DeleteNoteVersion)
 	protected.Post("/notes/:id/versions/:version", rateLimits.StandardCRUDLimiter, notesHandler.RestoreNoteVersion)
+	protected.Put("/notes/:id/retention", rateLimits.StandardCRUDLimiter, notesHandler.UpdateRetentionPolicy)
 	protected.Delete("/notes/:id/permanent", rateLimits.StandardCRUDLimiter, notesHandler.PermanentlyDeleteNote)
+	protected.Post("/notes/:id/links", rateLimits.StandardCRUDLimiter, noteLinksHandler.CreateNoteLink)
+	protected.Get("/notes/:id/links", rateLimits.StandardCRUDLimiter, noteLinksHandler.GetNoteLinks)
+	protected.Get("/notes/:id/backlinks", rateLimits.StandardCRUDLimiter, noteLinksHandler.GetNoteBacklinks)
+	protected.Delete("/notes/:id/links/:linkId", rateLimits.StandardCRUDLimiter, noteLinksHandler.DeleteNoteLink)
 
 	// Tags routes - Tier 4: Standard CRUD
 	protected.Get("/tags", rateLimits.StandardCRUDLimiter, tagsHandler.GetTags)

@@ -454,5 +454,28 @@ CREATE INDEX IF NOT EXISTS idx_share_links_note ON share_links(note_id);
 CREATE INDEX IF NOT EXISTS idx_share_links_created_by ON share_links(created_by);
 CREATE INDEX IF NOT EXISTS idx_share_links_expires ON share_links(expires_at) WHERE expires_at IS NOT NULL AND is_active = true;
 
+-- Add retention_policy column to notes table for version management (default: 20 versions)
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS retention_policy INT DEFAULT 20;
+
+-- Add change_description column to note_versions for better version tracking
+ALTER TABLE note_versions ADD COLUMN IF NOT EXISTS change_description TEXT;
+
+-- Add index on note_versions for performance (latest versions first)
+CREATE INDEX IF NOT EXISTS idx_note_versions_created_at ON note_versions(note_id, created_at DESC);
+
+-- Note links table for internal note connections ([[note]] syntax)
+CREATE TABLE IF NOT EXISTS note_links (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    source_note_id UUID REFERENCES notes(id) ON DELETE CASCADE NOT NULL,
+    target_note_id UUID REFERENCES notes(id) ON DELETE CASCADE NOT NULL,
+    link_text TEXT, -- Display text for the link (e.g., "My Note Title")
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(source_note_id, target_note_id) -- Prevent duplicate links
+);
+
+-- Note links indexes for fast backlink lookups and graph queries
+CREATE INDEX IF NOT EXISTS idx_note_links_source ON note_links(source_note_id);
+CREATE INDEX IF NOT EXISTS idx_note_links_target ON note_links(target_note_id);
+
 -- Note: Cleanup jobs run automatically via background service every 24 hours
 `

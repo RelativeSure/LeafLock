@@ -7,7 +7,6 @@ import {
   FolderPlus,
   Plus,
   Menu,
-  X,
   Library,
   Tag,
   TagIcon,
@@ -19,6 +18,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from '@/components/ui/sheet'
 import { Label } from '@/components/ui/label'
 import { TemplatesDialog } from './templates-dialog'
 import { AdvancedSearchBar } from './advanced-search-bar'
@@ -49,8 +53,8 @@ export function Sidebar() {
   // Mobile detection and responsive behavior
   useEffect(() => {
     const checkMobile = () => {
-      // Disable mobile detection for testing - always show sidebar
-      setIsMobile(false)
+      // Mobile breakpoint: < 768px (md breakpoint)
+      setIsMobile(window.innerWidth < 768)
     }
 
     checkMobile()
@@ -81,249 +85,203 @@ export function Sidebar() {
   }
 
   const handleCreateNote = async () => {
-    console.log('handleCreateNote called')
-    console.log('createNote function:', typeof createNote)
-    console.log('createNote function details:', createNote)
-    ;(window as any).handleCreateNoteCalled = true
-    ;(window as any).createNoteType = typeof createNote
-    ;(window as any).createNoteDetails = createNote
-
-    if (typeof createNote !== 'function') {
-      console.error('createNote is not a function!', createNote)
-      ;(window as any).errors = [...((window as any).errors || []), 'createNote is not a function']
-      return
-    }
-
     try {
-      console.log('About to call createNote...')
-      ;(window as any).aboutToCallCreateNote = true
       const note = await createNote({})
-      console.log('Note created:', note)
-      ;(window as any).noteCreated = note
-      console.log('About to call selectNote with id:', note.id)
-      selectNote(note.id)
-      console.log('selectNote called')
+      if (note?.id) {
+        selectNote(note.id)
+      }
     } catch (error) {
       console.error('Failed to create note:', error)
-      ;(window as any).errors = [...((window as any).errors || []), error instanceof Error ? error.message : String(error)]
     }
   }
 
-  // Always render the sidebar structure, even if loading
-  // This ensures tests can find the elements they're looking for
+  const sidebarContent = (
+    <div className="w-full border-r border-border bg-card flex flex-col h-full overflow-hidden">
+      <div className="p-4 border-b border-border space-y-3">
+        <AdvancedSearchBar />
 
-  return (
-    <>
-      {/* Mobile Menu Button */}
-      {isMobile && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setIsMobileMenuOpen(true)}
-          className="fixed top-4 left-4 z-50 md:hidden"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
-      )}
+        <div className="flex gap-2">
+          <Button
+            onClick={handleCreateNote}
+            className="flex-1 transition-bounce hover-lift"
+            size="sm"
+            disabled={isLoading}
+            data-testid="new-note-button"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            New Note
+          </Button>
 
-      {/* Mobile Overlay */}
-      {isMobile && isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-          {/* Sidebar */}
-          <div className="w-full border-r border-border bg-card flex flex-col h-full overflow-hidden">
-        {/* Mobile Close Button */}
-        {isMobile && (
-          <div className="flex justify-end p-4 border-b border-border">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-        )}
-
-        {/* Search */}
-        <div className="p-4 border-b border-border space-y-3">
-          <AdvancedSearchBar />
-
-          <div className="flex gap-2">
-            <Button
-              onClick={handleCreateNote}
-              className="flex-1 transition-bounce hover-lift"
-              size="sm"
-              disabled={isLoading}
-              data-testid="new-note-button"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              New Note
-            </Button>
-
-            <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="transition-smooth hover-lift bg-transparent"
-                  title="Create Folder"
-                >
-                  <FolderPlus className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="animate-scale-in">
-                <DialogHeader>
-                  <DialogTitle>Create Folder</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="folder-name">Folder Name</Label>
-                    <Input
-                      id="folder-name"
-                      value={newFolderName}
-                      onChange={(e) => setNewFolderName(e.target.value)}
-                      placeholder="My Folder"
-                      className="transition-smooth"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="folder-color">Color</Label>
-                    <div className="flex gap-2">
-                      {['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'].map(
-                        (color) => (
-                          <button
-                            key={color}
-                            type="button"
-                            onClick={() => setNewFolderColor(color)}
-                            className={`w-8 h-8 rounded-full border-2 transition-bounce hover:scale-110 ${
-                              newFolderColor === color
-                                ? 'border-foreground scale-110'
-                                : 'border-transparent'
-                            }`}
-                            style={{ backgroundColor: color }}
-                          />
-                        )
-                      )}
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handleCreateFolder}
-                    className="w-full transition-bounce hover-lift"
-                  >
-                    Create Folder
-                  </Button>
+          <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="transition-smooth hover-lift bg-transparent"
+                title="Create Folder"
+              >
+                <FolderPlus className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="animate-scale-in">
+              <DialogHeader>
+                <DialogTitle>Create Folder</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="folder-name">Folder Name</Label>
+                  <Input
+                    id="folder-name"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    placeholder="My Folder"
+                    className="transition-smooth"
+                  />
                 </div>
-              </DialogContent>
-            </Dialog>
+                <div className="space-y-2">
+                  <Label htmlFor="folder-color">Color</Label>
+                  <div className="flex gap-2">
+                    {['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'].map(
+                      (color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setNewFolderColor(color)}
+                          className={`w-8 h-8 rounded-full border-2 transition-bounce hover:scale-110 ${
+                            newFolderColor === color
+                              ? 'border-foreground scale-110'
+                              : 'border-transparent'
+                          }`}
+                          style={{ backgroundColor: color }}
+                        />
+                      )
+                    )}
+                  </div>
+                </div>
+                <Button
+                  onClick={handleCreateFolder}
+                  className="w-full transition-bounce hover-lift"
+                >
+                  Create Folder
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
 
+          <Button
+            variant="outline"
+            size="sm"
+            className="transition-smooth hover-lift bg-transparent"
+            title="Create Tag"
+            onClick={() => {
+              window.location.href = '/manage'
+            }}
+          >
+            <Tag className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              className="transition-smooth hover-lift bg-transparent"
-              title="Create Tag"
-              onClick={() => {
-                // Navigate to manage page for tag creation
-                window.location.href = '/manage'
-              }}
-            >
-              <Tag className="h-4 w-4" />
-            </Button>
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-32">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
           </div>
-        </div>
+        ) : (
+          <NoteList />
+        )}
+      </div>
 
-        {/* Notes List */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-            </div>
-          ) : (
-            <NoteList />
-          )}
-        </div>
-
-        {/* Folder & Tag Selection */}
-        <div className="border-b border-border flex-shrink-0">
-          <div className="space-y-3 p-4">
-            <div className="min-h-[80px] max-h-[120px] overflow-hidden">
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">Folders</h3>
-              <ScrollArea className="flex-1">
-                <div className="space-y-1 pr-4">
+      <div className="border-b border-border flex-shrink-0">
+        <div className="space-y-3 p-4">
+          <div className="min-h-[80px] max-h-[120px] overflow-hidden">
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Folders</h3>
+            <ScrollArea className="flex-1">
+              <div className="space-y-1 pr-4">
+                <Button
+                  variant={selectedFolder === null ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => selectFolder(null)}
+                  className="w-full justify-start text-xs"
+                >
+                  All Notes
+                </Button>
+                {folders.map((folder) => (
                   <Button
-                    variant={selectedFolder === null ? "secondary" : "ghost"}
+                    key={folder.id}
+                    variant={selectedFolder === folder.id ? 'secondary' : 'ghost'}
                     size="sm"
-                    onClick={() => selectFolder(null)}
+                    onClick={() => selectFolder(folder.id)}
                     className="w-full justify-start text-xs"
                   >
-                    All Notes
+                    <div
+                      className="w-2 h-2 rounded-full mr-2"
+                      style={{ backgroundColor: folder.color }}
+                    />
+                    {folder.name}
                   </Button>
-                  {folders.map((folder) => (
-                    <Button
-                      key={folder.id}
-                      variant={selectedFolder === folder.id ? "secondary" : "ghost"}
-                      size="sm"
-                      onClick={() => selectFolder(folder.id)}
-                      className="w-full justify-start text-xs"
-                    >
-                      <div
-                        className="w-2 h-2 rounded-full mr-2"
-                        style={{ backgroundColor: folder.color }}
-                      />
-                      {folder.name}
-                    </Button>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
 
-            <div className="min-h-[80px] max-h-[120px] overflow-hidden">
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">Tags</h3>
-              <ScrollArea className="flex-1">
-                <div className="space-y-1 pr-4">
-                  {tags.map((tag) => (
-                    <Button
-                      key={tag.id}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => selectTag(tag.name)}
-                      className="w-full justify-start text-xs"
-                    >
-                      <TagIcon className="w-3 h-3 mr-2" />
-                      {tag.name}
-                    </Button>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
+          <div className="min-h-[80px] max-h-[120px] overflow-hidden">
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Tags</h3>
+            <ScrollArea className="flex-1">
+              <div className="space-y-1 pr-4">
+                {tags.map((tag) => (
+                  <Button
+                    key={tag.id}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => selectTag(tag.name)}
+                    className="w-full justify-start text-xs"
+                  >
+                    <TagIcon className="w-3 h-3 mr-2" />
+                    {tag.name}
+                  </Button>
+                ))}
+              </div>
+            </ScrollArea>
           </div>
         </div>
-
-        <div className="p-4 border-t border-border space-y-2">
-          <div className="flex gap-2">
-            <TrashDialog />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsTemplatesOpen(true)}
-              className="flex-1 gap-2 bg-transparent"
-              disabled={isLoading}
-              data-testid="templates-button"
-            >
-              <Library className="h-4 w-4" />
-              Templates
-            </Button>
-          </div>
-        </div>
-
-        {/* Templates Dialog */}
-        <TemplatesDialog open={isTemplatesOpen} onOpenChange={setIsTemplatesOpen} />
       </div>
-    </>
+
+      <div className="p-4 border-t border-border space-y-2">
+        <div className="flex gap-2">
+          <TrashDialog />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsTemplatesOpen(true)}
+            className="flex-1 gap-2 bg-transparent"
+            disabled={isLoading}
+            data-testid="templates-button"
+          >
+            <Library className="h-4 w-4" />
+            Templates
+          </Button>
+        </div>
+      </div>
+
+      <TemplatesDialog open={isTemplatesOpen} onOpenChange={setIsTemplatesOpen} />
+    </div>
   )
+
+  if (isMobile) {
+    return (
+      <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="sm" className="fixed top-4 left-4 z-50 md:hidden">
+            <Menu className="h-5 w-5" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="p-0 w-80 max-w-[85vw]">
+          {sidebarContent}
+        </SheetContent>
+      </Sheet>
+    )
+  }
+
+  return sidebarContent
 }

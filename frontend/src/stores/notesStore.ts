@@ -30,6 +30,11 @@ interface NotesState {
   getNoteVersions: (noteId: string) => Promise<NoteVersion[]>
   restoreNoteVersion: (versionId: string) => Promise<void>
   deleteNoteVersion: (versionId: string) => Promise<void>
+  compareNoteVersions: (noteId: string, v1: number, v2: number) => Promise<{ v1: NoteVersion; v2: NoteVersion }>
+  updateRetentionPolicy: (noteId: string, policy: number) => Promise<void>
+  bulkDeleteNotes: (noteIds: string[]) => Promise<{ successful: number; failed: number; errors: string[] }>
+  bulkRestoreNotes: (noteIds: string[]) => Promise<{ successful: number; failed: number; errors: string[] }>
+  bulkPermanentlyDeleteNotes: (noteIds: string[]) => Promise<{ successful: number; failed: number; errors: string[] }>
   moveNotesToFolder: (noteIds: string[], folderId: string) => Promise<void>
   addTagsToNotes: (noteIds: string[], tagNames: string[]) => Promise<void>
   removeTagsFromNotes: (noteIds: string[], tagNames: string[]) => Promise<void>
@@ -541,6 +546,68 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     }
   },
 
+  compareNoteVersions: async (noteId: string, v1: number, v2: number) => {
+    try {
+      return await apiClient.compareNoteVersions(noteId, v1, v2)
+    } catch (error) {
+      console.error('Failed to compare note versions:', error)
+      throw error
+    }
+  },
+
+  updateRetentionPolicy: async (noteId: string, policy: number) => {
+    try {
+      await apiClient.updateRetentionPolicy(noteId, policy)
+      // Update local note with new retention policy if needed
+      set((state) => ({
+        notes: state.notes.map((note) =>
+          note.id === noteId
+            ? { ...note, retentionPolicy: policy }
+            : note
+        ),
+      }))
+    } catch (error) {
+      console.error('Failed to update retention policy:', error)
+      throw error
+    }
+  },
+
+  bulkDeleteNotes: async (noteIds: string[]) => {
+    try {
+      const result = await apiClient.bulkDeleteNotes(noteIds)
+      // Refresh notes after bulk operation
+      await get().loadData()
+      return result
+    } catch (error) {
+      console.error('Failed to bulk delete notes:', error)
+      throw error
+    }
+  },
+
+  bulkRestoreNotes: async (noteIds: string[]) => {
+    try {
+      const result = await apiClient.bulkRestoreNotes(noteIds)
+      // Refresh notes after bulk operation
+      await get().loadData()
+      return result
+    } catch (error) {
+      console.error('Failed to bulk restore notes:', error)
+      throw error
+    }
+  },
+
+  bulkPermanentlyDeleteNotes: async (noteIds: string[]) => {
+    try {
+      const result = await apiClient.bulkPermanentlyDeleteNotes(noteIds)
+      // Refresh notes after bulk operation
+      await get().loadData()
+      return result
+    } catch (error) {
+      console.error('Failed to bulk permanently delete notes:', error)
+      throw error
+    }
+  },
+
   moveNotesToFolder: async (noteIds: string[], folderId: string) => {
     try {
       await apiClient.moveNotesToFolder(noteIds, folderId)
@@ -645,6 +712,52 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         set({ selectedNote: mostRecentNote })
         localStorage.setItem('lastSeenNoteId', mostRecentNote.id)
       }
+    }
+  },
+
+  // Note links methods
+  createNoteLink: async (sourceNoteId: string, targetNoteId: string, linkText?: string) => {
+    try {
+      return await apiClient.createNoteLink(sourceNoteId, targetNoteId, linkText)
+    } catch (error) {
+      console.error('Failed to create note link:', error)
+      throw error
+    }
+  },
+
+  getNoteLinks: async (noteId: string) => {
+    try {
+      return await apiClient.getNoteLinks(noteId)
+    } catch (error) {
+      console.error('Failed to get note links:', error)
+      throw error
+    }
+  },
+
+  getNoteBacklinks: async (noteId: string) => {
+    try {
+      return await apiClient.getNoteBacklinks(noteId)
+    } catch (error) {
+      console.error('Failed to get note backlinks:', error)
+      throw error
+    }
+  },
+
+  deleteNoteLink: async (noteId: string, linkId: string) => {
+    try {
+      await apiClient.deleteNoteLink(noteId, linkId)
+    } catch (error) {
+      console.error('Failed to delete note link:', error)
+      throw error
+    }
+  },
+
+  searchNotesForLinking: async (query: string = '') => {
+    try {
+      return await apiClient.searchNotesForLinking(query)
+    } catch (error) {
+      console.error('Failed to search notes for linking:', error)
+      throw error
     }
   },
 }))

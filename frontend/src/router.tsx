@@ -171,26 +171,26 @@ const DashboardComponent: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col animate-in fade-in-50 duration-700">
-      {/* Header */}
-      <header className="border-b border-border bg-card px-6 py-3 flex items-center justify-between animate-slide-in">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center hover-glow transition-smooth">
-            <Leaf className="w-5 h-5 text-primary-foreground" />
+      {/* Header - Mobile optimized */}
+      <header className="border-b border-border bg-card px-3 md:px-6 py-2 md:py-3 flex items-center justify-between animate-slide-in">
+        <div className="flex items-center gap-2 md:gap-3">
+          <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-primary flex items-center justify-center hover-glow transition-smooth">
+            <Leaf className="w-4 h-4 md:w-5 md:h-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">LeafLock</h1>
-            <p className="text-sm text-muted-foreground">Dashboard</p>
+            <h1 className="text-lg md:text-xl font-bold">LeafLock</h1>
+            <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">Dashboard</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           <ThemeToggle />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="gap-2 transition-smooth hover-lift">
-                <UserAvatar user={user} size={32} />
-                <span className="hidden md:inline">{user?.name}</span>
+              <Button variant="ghost" size="sm" className="gap-2 transition-smooth hover-lift">
+                <UserAvatar user={user} size={28} />
+                <span className="hidden md:inline text-sm">{user?.name}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="animate-scale-in">
@@ -247,18 +247,18 @@ const DashboardComponent: React.FC = () => {
 
           {/* Main Content - Responsive Layout */}
           <div className="flex-1 flex overflow-hidden">
-            {/* Sidebar - Responsive Width */}
+            {/* Sidebar - Hidden width on mobile, visible on desktop */}
             <React.Suspense fallback={
-              <div className="w-48 xl:w-64 border-r border-border flex items-center justify-center">
+              <div className="hidden md:flex w-48 xl:w-64 border-r border-border items-center justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             }>
-              <div className="w-48 xl:w-64 flex-shrink-0">
+              <div className="w-0 md:w-48 xl:w-64 md:flex-shrink-0">
                 <Sidebar />
               </div>
             </React.Suspense>
 
-            {/* Note Editor - Responsive */}
+            {/* Note Editor - Full width on mobile, flex-1 on desktop */}
             <div className="flex-1 flex flex-col min-w-0">
               <React.Suspense fallback={
                 <div className="flex-1 flex items-center justify-center">

@@ -55,7 +55,6 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
     moveNotesToFolder,
     addTagsToNotes,
     removeTagsFromNotes,
-    moveToTrash,
     createTag
   } = useNotesStore()
   const { toast } = useToast()
@@ -106,12 +105,28 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
 
   const handleDeleteNotes = async () => {
     try {
-      await Promise.all(selectedNotes.map(noteId => moveToTrash(noteId)))
-      toast.success(`${selectedCount} note${selectedCount !== 1 ? 's' : ''} moved to trash.`)
+      // Use new bulk delete API
+      const result = await useNotesStore.getState().bulkDeleteNotes(selectedNotes)
+
+      if (result.successful > 0) {
+        toast({
+          title: 'Success',
+          description: `${result.successful} note${result.successful !== 1 ? 's' : ''} moved to trash.${result.failed > 0 ? ` ${result.failed} failed.` : ''}`,
+        })
+      }
+
+      if (result.errors.length > 0) {
+        console.error('Bulk delete errors:', result.errors)
+      }
+
       setShowDeleteDialog(false)
       onClose()
     } catch (error) {
-      toast.error('Failed to delete notes.')
+      toast({
+        title: 'Error',
+        description: 'Failed to delete notes.',
+        variant: 'destructive',
+      })
     }
   }
 

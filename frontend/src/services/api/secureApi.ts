@@ -555,7 +555,60 @@ class ApiClient {
     })
   }
 
+  async compareNoteVersions(
+    noteId: string,
+    v1: number,
+    v2: number
+  ): Promise<{ v1: NoteVersion; v2: NoteVersion }> {
+    return this.request<{ v1: NoteVersion; v2: NoteVersion }>(
+      `/notes/${noteId}/versions/compare?v1=${v1}&v2=${v2}`
+    )
+  }
+
+  async updateRetentionPolicy(noteId: string, policy: number): Promise<void> {
+    await this.request<void>(`/notes/${noteId}/retention`, {
+      method: 'PUT',
+      body: JSON.stringify({ retention_policy: policy }),
+    })
+  }
+
   // Bulk operations
+  async bulkDeleteNotes(
+    noteIds: string[]
+  ): Promise<{ successful: number; failed: number; errors: string[] }> {
+    return this.request<{ successful: number; failed: number; errors: string[] }>(
+      '/notes/bulk/delete',
+      {
+        method: 'POST',
+        body: JSON.stringify({ note_ids: noteIds }),
+      }
+    )
+  }
+
+  async bulkRestoreNotes(
+    noteIds: string[]
+  ): Promise<{ successful: number; failed: number; errors: string[] }> {
+    return this.request<{ successful: number; failed: number; errors: string[] }>(
+      '/notes/bulk/restore',
+      {
+        method: 'POST',
+        body: JSON.stringify({ note_ids: noteIds }),
+      }
+    )
+  }
+
+  async bulkPermanentlyDeleteNotes(
+    noteIds: string[]
+  ): Promise<{ successful: number; failed: number; errors: string[] }> {
+    return this.request<{ successful: number; failed: number; errors: string[] }>(
+      '/notes/bulk/permanent-delete',
+      {
+        method: 'POST',
+        body: JSON.stringify({ note_ids: noteIds }),
+      }
+    )
+  }
+
   async moveNotesToFolder(noteIds: string[], folderId: string): Promise<void> {
     await this.request<void>('/notes/bulk/move', {
       method: 'POST',
@@ -595,6 +648,32 @@ class ApiClient {
 
   async getSharedNotes(): Promise<Note[]> {
     return this.request<Note[]>('/collaborations')
+  }
+
+  // Note links methods
+  async createNoteLink(sourceNoteId: string, targetNoteId: string, linkText?: string): Promise<any> {
+    return this.request(`/notes/${sourceNoteId}/links`, {
+      method: 'POST',
+      body: JSON.stringify({ target_note_id: targetNoteId, link_text: linkText }),
+    })
+  }
+
+  async getNoteLinks(noteId: string): Promise<{ links: any[] }> {
+    return this.request(`/notes/${noteId}/links`)
+  }
+
+  async getNoteBacklinks(noteId: string): Promise<{ backlinks: any[] }> {
+    return this.request(`/notes/${noteId}/backlinks`)
+  }
+
+  async deleteNoteLink(noteId: string, linkId: string): Promise<void> {
+    await this.request(`/notes/${noteId}/links/${linkId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async searchNotesForLinking(query: string = ''): Promise<{ notes: any[] }> {
+    return this.request(`/notes/search-for-linking?q=${encodeURIComponent(query)}`)
   }
 
   // Share links methods
