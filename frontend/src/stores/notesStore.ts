@@ -113,18 +113,23 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     return localNote
   },
 
-  updateNote: async (id: string, updates: Partial<Note>) => {
+  updateNote: async (id: string, updates: Partial<Note>): Promise<Note> => {
     try {
+      if (!id) {
+        console.warn('updateNote called without id')
+        throw new Error('Note ID is required')
+      }
+
       let updatedNote: Note
       const currentNote = get().notes.find(note => note.id === id)
 
       if (!currentNote) {
         // If note doesn't exist and it's a local note, create it
-        if (id.startsWith('local-')) {
+        if (id && (typeof id === 'string' && id.startsWith('local-'))) {
           const storedUser = localStorage.getItem('user')
           if (!storedUser) {
             console.warn('Note not found and no user logged in')
-            return
+            throw new Error('No user logged in')
           }
           const user = JSON.parse(storedUser)
 
@@ -162,11 +167,11 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         }
 
         console.warn('Note not found:', id)
-        return
+        throw new Error('Note not found')
       }
 
       // If it's a local note (not saved to API yet)
-      if (id.startsWith('local-')) {
+      if (id && typeof id === 'string' && id.startsWith('local-')) {
         // Just update locally for local notes - don't try to send to API
         updatedNote = { ...currentNote, ...updates, updatedAt: new Date().toISOString() }
         set((state) => ({
@@ -210,8 +215,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       return updatedNote
     } catch (error) {
       console.error('Failed to update note:', error)
-      // Don't throw error, just warn
-      return
+      throw error
     }
   },
 
