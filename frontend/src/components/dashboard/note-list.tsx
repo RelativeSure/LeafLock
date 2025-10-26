@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BulkOperationsBar } from './bulk-operations-bar'
 import { useNotesStore } from '../../stores/notesStore'
-import { useEncryption } from '@/lib/encryption-context'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -20,68 +19,19 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
+import { useDecryptedNotes } from '@/hooks/use-decrypted-notes'
 
 type SortOption = 'updated' | 'created' | 'title' | 'pinned'
 
-interface DecryptedNoteCache {
-  [noteId: string]: {
-    title: string
-    content: string
-    timestamp: number
-  }
-}
-
 export function NoteList() {
-  const { notes, selectedNote, selectedFolder, selectNote, updateNote, moveToTrash } = useNotesStore()
-  const { isUnlocked, decryptText } = useEncryption()
+  const { notes, selectedNote, selectedFolder, selectNote, updateNote, moveToTrash } =
+    useNotesStore()
   const [sortBy, setSortBy] = useState<SortOption>('updated')
   const [selectedNotes, setSelectedNotes] = useState<string[]>([])
   const [isBulkMode, setIsBulkMode] = useState(false)
-  const [decryptedCache, setDecryptedCache] = useState<DecryptedNoteCache>({})
 
   const activeNotes = (notes || []).filter((note) => !note.isTrashed)
-
-  // Decrypt notes for display
-  useEffect(() => {
-    const decryptNotes = async () => {
-      if (!isUnlocked) {
-        setDecryptedCache({})
-        return
-      }
-
-      const newCache: DecryptedNoteCache = {}
-
-      for (const note of activeNotes) {
-        // Skip if already cached and note hasn't been updated
-        const cached = decryptedCache[note.id]
-        if (cached && cached.timestamp === new Date(note.updatedAt).getTime()) {
-          newCache[note.id] = cached
-          continue
-        }
-
-        try {
-          const title = note.title ? await decryptText(note.title) : ''
-          const content = note.content ? await decryptText(note.content) : ''
-          newCache[note.id] = {
-            title,
-            content,
-            timestamp: new Date(note.updatedAt).getTime()
-          }
-        } catch (error) {
-          // If decryption fails, show placeholder
-          newCache[note.id] = {
-            title: note.title || 'Untitled',
-            content: note.content || '',
-            timestamp: new Date(note.updatedAt).getTime()
-          }
-        }
-      }
-
-      setDecryptedCache(newCache)
-    }
-
-    decryptNotes()
-  }, [notes, isUnlocked])
+  const { decryptedNotes, isUnlocked, isDecrypting } = useDecryptedNotes(activeNotes)
 
   const handleTogglePin = async (noteId: string, currentlyPinned: boolean) => {
     try {
@@ -92,7 +42,7 @@ export function NoteList() {
   }
 
   const handleDuplicate = (noteId: string) => {
-    const noteToDuplicate = notes.find(n => n.id === noteId)
+    const noteToDuplicate = notes.find((n) => n.id === noteId)
     if (noteToDuplicate) {
       // Handle duplication - for now just select the note
       selectNote(noteId)
@@ -123,12 +73,24 @@ export function NoteList() {
       case 'updated': {
         const aUpdatedTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
         const bUpdatedTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
-        return isNaN(bUpdatedTime) ? (isNaN(aUpdatedTime) ? 0 : -1) : (isNaN(aUpdatedTime) ? 1 : bUpdatedTime - aUpdatedTime)
+        return isNaN(bUpdatedTime)
+          ? isNaN(aUpdatedTime)
+            ? 0
+            : -1
+          : isNaN(aUpdatedTime)
+            ? 1
+            : bUpdatedTime - aUpdatedTime
       }
       case 'created': {
         const aCreatedTime = a.createdAt ? new Date(a.createdAt).getTime() : 0
         const bCreatedTime = b.createdAt ? new Date(b.createdAt).getTime() : 0
-        return isNaN(bCreatedTime) ? (isNaN(aCreatedTime) ? 0 : -1) : (isNaN(aCreatedTime) ? 1 : bCreatedTime - aCreatedTime)
+        return isNaN(bCreatedTime)
+          ? isNaN(aCreatedTime)
+            ? 0
+            : -1
+          : isNaN(aCreatedTime)
+            ? 1
+            : bCreatedTime - aCreatedTime
       }
       case 'title':
         return (a.title || '').localeCompare(b.title || '')
@@ -152,15 +114,13 @@ export function NoteList() {
   }, [isBulkMode])
 
   const toggleNoteSelection = (noteId: string) => {
-    setSelectedNotes(prev =>
-      prev.includes(noteId)
-        ? prev.filter(id => id !== noteId)
-        : [...prev, noteId]
+    setSelectedNotes((prev) =>
+      prev.includes(noteId) ? prev.filter((id) => id !== noteId) : [...prev, noteId]
     )
   }
 
   const selectAllNotes = () => {
-    setSelectedNotes(sortedNotes.map(note => note.id))
+    setSelectedNotes(sortedNotes.map((note) => note.id))
   }
 
   const clearSelection = () => {
@@ -218,11 +178,7 @@ export function NoteList() {
                 </Button>
               </>
             )}
-            <Button
-              variant={isBulkMode ? "default" : "outline"}
-              size="sm"
-              onClick={toggleBulkMode}
-            >
+            <Button variant={isBulkMode ? 'default' : 'outline'} size="sm" onClick={toggleBulkMode}>
               {isBulkMode ? 'Exit Bulk' : 'Bulk Select'}
             </Button>
           </div>
@@ -234,6 +190,7 @@ export function NoteList() {
           {sortedNotes.map((note, index) => {
             const isSelected = selectedNote?.id === note.id
             const isBulkSelected = selectedNotes.includes(note.id)
+            const decrypted = decryptedNotes[note.id]
 
             return (
               <ContextMenu key={note.id}>
@@ -246,89 +203,111 @@ export function NoteList() {
                     } ${isBulkSelected ? 'bg-primary/5 border-primary/10' : ''}`}
                     style={{ animationDelay: `${index * 0.05}s` }}
                   >
-                <div className="flex items-start gap-3">
-                  {isBulkMode && (
-                    <div className="flex items-center mt-1">
-                      <input
-                        type="checkbox"
-                        checked={isBulkSelected}
-                        onChange={() => toggleNoteSelection(note.id)}
-                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                      />
-                    </div>
-                  )}
+                    <div className="flex items-start gap-3">
+                      {isBulkMode && (
+                        <div className="flex items-center mt-1">
+                          <input
+                            type="checkbox"
+                            checked={isBulkSelected}
+                            onChange={() => toggleNoteSelection(note.id)}
+                            className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                          />
+                        </div>
+                      )}
 
-                  <button
-                    onClick={() => !isBulkMode && selectNote(note.id)}
-                    className="flex-1 text-left"
-                  >
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    {note.pinned && <Pin className="h-3 w-3 text-primary flex-shrink-0 mt-0.5" />}
-                    {decryptedCache[note.id] ? (
-                      <h3 className="font-medium text-sm line-clamp-1">
-                        {decryptedCache[note.id].title || 'Untitled'}
-                      </h3>
-                    ) : (
-                      <Skeleton className="h-4 w-32" />
-                    )}
-                  </div>
-                  {note.encrypted && (
-                    <Lock className="h-3 w-3 text-muted flex-shrink-0 mt-0.5 animate-pulse" />
-                  )}
-                </div>
-
-                {decryptedCache[note.id] ? (
-                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                    {(decryptedCache[note.id].content || '')
-                      .replace(/<[^>]*>/g, ' ')
-                      .replace(/\s+/g, ' ')
-                      .trim() || 'No content'}
-                  </p>
-                ) : (
-                  <div className="space-y-1 mb-2">
-                    <Skeleton className="h-3 w-full" />
-                    <Skeleton className="h-3 w-3/4" />
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1 flex-wrap">
-                    {(note.tags || []).slice(0, 2).map((tag) => (
-                      <span
-                        key={tag}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent/50 text-xs transition-smooth hover:bg-accent"
+                      <button
+                        onClick={() => !isBulkMode && selectNote(note.id)}
+                        className="flex-1 text-left"
                       >
-                        <TagIcon className="h-2.5 w-2.5" />
-                        {tag}
-                      </span>
-                    ))}
-                    {(note.tags || []).length > 2 && (
-                      <span className="text-xs text-muted">+{(note.tags || []).length - 2}</span>
-                    )}
-                  </div>
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {note.pinned && (
+                              <Pin className="h-3 w-3 text-primary flex-shrink-0 mt-0.5" />
+                            )}
+                            {isUnlocked ? (
+                              decrypted ? (
+                                <h3 className="font-medium text-sm line-clamp-1">
+                                  {decrypted.title || 'Untitled'}
+                                </h3>
+                              ) : isDecrypting ? (
+                                <Skeleton className="h-4 w-32" />
+                              ) : (
+                                <h3 className="font-medium text-sm line-clamp-1">Untitled</h3>
+                              )
+                            ) : (
+                              <h3 className="font-medium text-sm line-clamp-1">Locked</h3>
+                            )}
+                          </div>
+                          {note.encrypted && (
+                            <Lock className="h-3 w-3 text-muted flex-shrink-0 mt-0.5 animate-pulse" />
+                          )}
+                        </div>
 
-                  <span className="text-xs text-muted-foreground flex-shrink-0">
-                    {note.updatedAt ? (() => {
-                      try {
-                        const date = new Date(note.updatedAt)
-                        return isNaN(date.getTime()) ? 'Unknown' : formatDistanceToNow(date, { addSuffix: true })
-                      } catch {
-                        return 'Unknown'
-                      }
-                    })() : 'Unknown'}
-                  </span>
-                </div>
-                  </button>
-                </div>
-              </div>
-              </ContextMenuTrigger>
+                        {isUnlocked ? (
+                          decrypted ? (
+                            <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                              {(decrypted.content || '')
+                                .replace(/<[^>]*>/g, ' ')
+                                .replace(/\s+/g, ' ')
+                                .trim() || 'No content'}
+                            </p>
+                          ) : isDecrypting ? (
+                            <div className="space-y-1 mb-2">
+                              <Skeleton className="h-3 w-full" />
+                              <Skeleton className="h-3 w-3/4" />
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                              No content
+                            </p>
+                          )
+                        ) : (
+                          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                            Unlock to preview content
+                          </p>
+                        )}
+
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {(note.tags || []).slice(0, 2).map((tag) => (
+                              <span
+                                key={tag}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent/50 text-xs transition-smooth hover:bg-accent"
+                              >
+                                <TagIcon className="h-2.5 w-2.5" />
+                                {tag}
+                              </span>
+                            ))}
+                            {(note.tags || []).length > 2 && (
+                              <span className="text-xs text-muted">
+                                +{(note.tags || []).length - 2}
+                              </span>
+                            )}
+                          </div>
+
+                          <span className="text-xs text-muted-foreground flex-shrink-0">
+                            {note.updatedAt
+                              ? (() => {
+                                  try {
+                                    const date = new Date(note.updatedAt)
+                                    return isNaN(date.getTime())
+                                      ? 'Unknown'
+                                      : formatDistanceToNow(date, { addSuffix: true })
+                                  } catch {
+                                    return 'Unknown'
+                                  }
+                                })()
+                              : 'Unknown'}
+                          </span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </ContextMenuTrigger>
                 <ContextMenuContent>
-                  <ContextMenuItem onClick={() => selectNote(note.id)}>
-                    Open
-                  </ContextMenuItem>
+                  <ContextMenuItem onClick={() => selectNote(note.id)}>Open</ContextMenuItem>
                   <ContextMenuSeparator />
-                  <ContextMenuItem onClick={() => handleTogglePin(note.id, note.pinned)}>
+                  <ContextMenuItem onClick={() => handleTogglePin(note.id, Boolean(note.pinned))}>
                     <Pin className="h-4 w-4 mr-2" />
                     {note.pinned ? 'Unpin' : 'Pin'}
                   </ContextMenuItem>
@@ -337,7 +316,10 @@ export function NoteList() {
                     Duplicate
                   </ContextMenuItem>
                   <ContextMenuSeparator />
-                  <ContextMenuItem className="text-destructive" onClick={() => handleDelete(note.id)}>
+                  <ContextMenuItem
+                    className="text-destructive"
+                    onClick={() => handleDelete(note.id)}
+                  >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete
                   </ContextMenuItem>
@@ -349,10 +331,7 @@ export function NoteList() {
       </ScrollArea>
 
       {/* Bulk Operations Bar */}
-      <BulkOperationsBar
-        selectedNotes={selectedNotes}
-        onClose={handleBulkClose}
-      />
+      <BulkOperationsBar selectedNotes={selectedNotes} onClose={handleBulkClose} />
     </div>
   )
 }

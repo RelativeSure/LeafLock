@@ -2,15 +2,7 @@
 
 import * as React from 'react'
 import { useAuthStore } from '../../stores/authStore'
-import {
-  FileText,
-  Tag,
-  Settings,
-  ShieldCheck,
-  BookOpen,
-  Github,
-  ChevronDown
-} from 'lucide-react'
+import { FileText, Tag, Settings, ShieldCheck, BookOpen, Github, ChevronDown } from 'lucide-react'
 
 import {
   NavigationMenu,
@@ -42,7 +34,12 @@ const components: { title: string; href: string; description: string; icon: Reac
   },
 ]
 
-const adminComponents: { title: string; href: string; description: string; icon: React.ReactNode }[] = [
+const adminComponents: {
+  title: string
+  href: string
+  description: string
+  icon: React.ReactNode
+}[] = [
   {
     title: 'Admin Dashboard',
     href: '/admin',
@@ -51,20 +48,21 @@ const adminComponents: { title: string; href: string; description: string; icon:
   },
 ]
 
-const externalLinks: { title: string; href: string; description: string; icon: React.ReactNode }[] = [
-  {
-    title: 'Documentation',
-    href: 'https://docs.leaflock.app',
-    description: 'Learn how to use LeafLock effectively.',
-    icon: <BookOpen className="h-4 w-4" />,
-  },
-  {
-    title: 'GitHub',
-    href: 'https://github.com/RelativeSure/LeafLock',
-    description: 'View source code and contribute to the project.',
-    icon: <Github className="h-4 w-4" />,
-  },
-]
+const externalLinks: { title: string; href: string; description: string; icon: React.ReactNode }[] =
+  [
+    {
+      title: 'Documentation',
+      href: 'https://docs.leaflock.app',
+      description: 'Learn how to use LeafLock effectively.',
+      icon: <BookOpen className="h-4 w-4" />,
+    },
+    {
+      title: 'GitHub',
+      href: 'https://github.com/RelativeSure/LeafLock',
+      description: 'View source code and contribute to the project.',
+      icon: <Github className="h-4 w-4" />,
+    },
+  ]
 
 export function MainNavigation() {
   const { user } = useAuthStore()
@@ -153,7 +151,7 @@ function ListItem({
   icon,
   external = false,
   ...props
-}: React.ComponentPropsWithoutRef<"li"> & {
+}: React.ComponentPropsWithoutRef<'li'> & {
   href: string
   icon?: React.ReactNode
   external?: boolean
@@ -163,13 +161,9 @@ function ListItem({
       <div className="flex items-center gap-2 text-sm font-medium leading-none">
         {icon}
         {title}
-        {external && (
-          <span className="text-xs text-muted-foreground">↗</span>
-        )}
+        {external && <span className="text-xs text-muted-foreground">↗</span>}
       </div>
-      <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-        {children}
-      </p>
+      <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">{children}</p>
     </div>
   )
 
@@ -188,9 +182,7 @@ function ListItem({
   return (
     <li {...props}>
       <NavigationMenuLink asChild>
-        <a href={href}>
-          {content}
-        </a>
+        <a href={href}>{content}</a>
       </NavigationMenuLink>
     </li>
   )

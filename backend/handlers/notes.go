@@ -3,11 +3,13 @@ package handlers
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"golang.org/x/crypto/argon2"
 
 	"leaflock/crypto"
@@ -31,14 +33,16 @@ func NewNotesHandler(db database.Database, cryptoService *crypto.CryptoService) 
 
 // CreateNoteRequest represents a request to create a note
 type CreateNoteRequest struct {
-	TitleEncrypted   string `json:"title_encrypted" validate:"required"`
-	ContentEncrypted string `json:"content_encrypted" validate:"required"`
+	TitleEncrypted    string `json:"title_encrypted" validate:"required"`
+	ContentEncrypted  string `json:"content_encrypted" validate:"required"`
+	EncryptionVersion int    `json:"encryption_version"`
 }
 
 // UpdateNoteRequest represents a request to update a note
 type UpdateNoteRequest struct {
-	TitleEncrypted   string `json:"title_encrypted" validate:"required"`
-	ContentEncrypted string `json:"content_encrypted" validate:"required"`
+	TitleEncrypted    string `json:"title_encrypted" validate:"required"`
+	ContentEncrypted  string `json:"content_encrypted" validate:"required"`
+	EncryptionVersion int    `json:"encryption_version"`
 }
 
 // GetNotes godoc
@@ -86,11 +90,12 @@ func (h *NotesHandler) GetNotes(c *fiber.Ctx) error {
 		}
 
 		notes = append(notes, fiber.Map{
-			"id":                id,
-			"title_encrypted":   base64.StdEncoding.EncodeToString(titleEnc),
-			"content_encrypted": base64.StdEncoding.EncodeToString(contentEnc),
-			"created_at":        createdAt,
-			"updated_at":        updatedAt,
+			"id":                 id,
+			"title_encrypted":    base64.StdEncoding.EncodeToString(titleEnc),
+			"content_encrypted":  base64.StdEncoding.EncodeToString(contentEnc),
+			"created_at":         createdAt,
+			"updated_at":         updatedAt,
+			"encryption_version": defaultEncryptionVersion,
 		})
 	}
 
@@ -132,11 +137,12 @@ func (h *NotesHandler) GetNote(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"id":                id,
-		"title_encrypted":   base64.StdEncoding.EncodeToString(titleEnc),
-		"content_encrypted": base64.StdEncoding.EncodeToString(contentEnc),
-		"created_at":        createdAt,
-		"updated_at":        updatedAt,
+		"id":                 id,
+		"title_encrypted":    base64.StdEncoding.EncodeToString(titleEnc),
+		"content_encrypted":  base64.StdEncoding.EncodeToString(contentEnc),
+		"created_at":         createdAt,
+		"updated_at":         updatedAt,
+		"encryption_version": defaultEncryptionVersion,
 	})
 }
 
@@ -183,12 +189,17 @@ func (h *NotesHandler) CreateNote(c *fiber.Ctx) error {
 	contentHash := argon2.IDKey(contentEnc, []byte("integrity"), 1, 64*1024, 4, 32)
 
 	// Create note
-	var noteID uuid.UUID
+	var (
+		noteID    uuid.UUID
+		createdAt time.Time
+		updatedAt time.Time
+	)
+
 	err = h.db.QueryRow(ctx, `
-		INSERT INTO notes (workspace_id, title_encrypted, content_encrypted, content_hash, created_by)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id`,
-		workspaceID, titleEnc, contentEnc, contentHash, userID).Scan(&noteID)
+        INSERT INTO notes (workspace_id, title_encrypted, content_encrypted, content_hash, created_by)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, created_at, updated_at`,
+		workspaceID, titleEnc, contentEnc, contentHash, userID).Scan(&noteID, &createdAt, &updatedAt)
 
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create note"})
@@ -198,10 +209,21 @@ func (h *NotesHandler) CreateNote(c *fiber.Ctx) error {
 	metrics.IncrementNoteOperation("create")
 	metrics.IncrementDatabaseQuery("insert")
 
-	return c.Status(201).JSON(fiber.Map{
-		"id":      noteID,
-		"message": "Note created successfully",
-	})
+	version := req.EncryptionVersion
+	if version == 0 {
+		version = defaultEncryptionVersion
+	}
+
+	noteResponse := fiber.Map{
+		"id":                 noteID,
+		"title_encrypted":    base64.StdEncoding.EncodeToString(titleEnc),
+		"content_encrypted":  base64.StdEncoding.EncodeToString(contentEnc),
+		"created_at":         createdAt,
+		"updated_at":         updatedAt,
+		"encryption_version": version,
+	}
+
+	return c.Status(201).JSON(fiber.Map{"note": noteResponse})
 }
 
 // UpdateNote godoc
@@ -256,14 +278,19 @@ func (h *NotesHandler) UpdateNote(c *fiber.Ctx) error {
 	}()
 
 	// Get current version and content to save as history
-	var currentVersion int
-	var currentTitle, currentContent, currentHash []byte
+	var (
+		currentVersion int
+		currentTitle   []byte
+		currentContent []byte
+		currentHash    []byte
+		createdAt      time.Time
+	)
 	err = tx.QueryRow(ctx, `
-		SELECT version, title_encrypted, content_encrypted, content_hash
-		FROM notes n
-		JOIN workspaces w ON n.workspace_id = w.id
-		WHERE n.id = $1 AND w.owner_id = $2 AND n.deleted_at IS NULL`,
-		noteID, userID).Scan(&currentVersion, &currentTitle, &currentContent, &currentHash)
+        SELECT n.version, n.title_encrypted, n.content_encrypted, n.content_hash, n.created_at
+        FROM notes n
+        JOIN workspaces w ON n.workspace_id = w.id
+        WHERE n.id = $1 AND w.owner_id = $2 AND n.deleted_at IS NULL`,
+		noteID, userID).Scan(&currentVersion, &currentTitle, &currentContent, &currentHash, &createdAt)
 
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
@@ -280,19 +307,20 @@ func (h *NotesHandler) UpdateNote(c *fiber.Ctx) error {
 	}
 
 	// Update note with new content and increment version
-	result, err := tx.Exec(ctx, `
-		UPDATE notes
-		SET title_encrypted = $1, content_encrypted = $2, content_hash = $3, version = version + 1, updated_at = NOW()
-		FROM workspaces w
-		WHERE notes.id = $4 AND notes.workspace_id = w.id AND w.owner_id = $5 AND notes.deleted_at IS NULL`,
-		titleEnc, contentEnc, contentHash, noteID, userID)
+	var updatedAt time.Time
+	err = tx.QueryRow(ctx, `
+        UPDATE notes
+        SET title_encrypted = $1, content_encrypted = $2, content_hash = $3, version = version + 1, updated_at = NOW()
+        FROM workspaces w
+        WHERE notes.id = $4 AND notes.workspace_id = w.id AND w.owner_id = $5 AND notes.deleted_at IS NULL
+        RETURNING notes.updated_at`,
+		titleEnc, contentEnc, contentHash, noteID, userID).Scan(&updatedAt)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+		}
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to update note"})
-	}
-
-	if result.RowsAffected() == 0 {
-		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
 	}
 
 	// Commit transaction
@@ -305,7 +333,21 @@ func (h *NotesHandler) UpdateNote(c *fiber.Ctx) error {
 	metrics.IncrementNoteOperation("update")
 	metrics.IncrementDatabaseQuery("update")
 
-	return c.JSON(fiber.Map{"message": "Note updated successfully"})
+	version := req.EncryptionVersion
+	if version == 0 {
+		version = defaultEncryptionVersion
+	}
+
+	noteResponse := fiber.Map{
+		"id":                 noteID,
+		"title_encrypted":    base64.StdEncoding.EncodeToString(titleEnc),
+		"content_encrypted":  base64.StdEncoding.EncodeToString(contentEnc),
+		"created_at":         createdAt,
+		"updated_at":         updatedAt,
+		"encryption_version": version,
+	}
+
+	return c.JSON(fiber.Map{"note": noteResponse})
 }
 
 // DeleteNote godoc
@@ -396,11 +438,12 @@ func (h *NotesHandler) GetTrash(c *fiber.Ctx) error {
 		}
 
 		trashedNotes = append(trashedNotes, fiber.Map{
-			"id":                id,
-			"title_encrypted":   base64.StdEncoding.EncodeToString(titleEnc),
-			"content_encrypted": base64.StdEncoding.EncodeToString(contentEnc),
-			"deleted_at":        deletedAt,
-			"updated_at":        updatedAt,
+			"id":                 id,
+			"title_encrypted":    base64.StdEncoding.EncodeToString(titleEnc),
+			"content_encrypted":  base64.StdEncoding.EncodeToString(contentEnc),
+			"deleted_at":         deletedAt,
+			"updated_at":         updatedAt,
+			"encryption_version": defaultEncryptionVersion,
 		})
 	}
 

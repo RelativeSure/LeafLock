@@ -35,6 +35,7 @@ export interface Note {
   isTrashed: boolean
   trashedAt?: string
   pinned?: boolean
+  encryptionVersion?: number
 }
 
 export interface Folder {

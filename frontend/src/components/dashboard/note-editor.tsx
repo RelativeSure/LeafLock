@@ -50,7 +50,7 @@ import { RichTextEditor } from './rich-text-editor'
 export function NoteEditor() {
   const { selectedNote, updateNote, moveToTrash, selectNote, tags, createTag } = useNotesStore()
   const { joinSession, leaveSession } = useCollaboration()
-  const { isUnlocked, encryptText, decryptText } = useEncryption()
+  const { isUnlocked, encryptText, decryptText, encryptionVersion } = useEncryption()
   const [title, setTitle] = useState('')
   const [_content, setContent] = useState('')
   const [displayContent, setDisplayContent] = useState('')
@@ -80,7 +80,6 @@ export function NoteEditor() {
       }
     }
   }
-
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -160,8 +159,6 @@ export function NoteEditor() {
     if (selectedNote && displayContent !== undefined) {
       const timeoutId = setTimeout(async () => {
         try {
-          let contentToSave = displayContent
-
           // Guard clause: only save if we have a valid selected note
           if (!selectedNote?.id) {
             return
@@ -185,12 +182,14 @@ export function NoteEditor() {
           // Always encrypt title and content before saving
           if (isUnlocked) {
             const encryptedTitle = await encryptText(title)
-            contentToSave = await encryptText(displayContent)
+            const encryptedContent = await encryptText(displayContent)
 
             await updateNote(selectedNote.id, {
               title: encryptedTitle,
-              content: contentToSave,
-              tags: noteTags
+              content: encryptedContent,
+              tags: noteTags,
+              encrypted: true,
+              encryptionVersion,
             })
             // Show success toast only if note was saved to API
             if (!selectedNote.id.startsWith('local-')) {
@@ -292,7 +291,10 @@ export function NoteEditor() {
             {selectedNote.pinned ? 'Pinned' : 'Pin'}
           </Button>
 
-          <VersionHistoryDialog noteId={selectedNote.id} noteTitle={selectedNote.title || 'Untitled'}>
+          <VersionHistoryDialog
+            noteId={selectedNote.id}
+            noteTitle={selectedNote.title || 'Untitled'}
+          >
             <Button variant="outline" size="sm" className="gap-2">
               <History className="h-4 w-4" />
               <span className="hidden sm:inline">Versions</span>
@@ -450,10 +452,7 @@ export function NoteEditor() {
         </div>
 
         {/* Backlinks Section */}
-        <BacklinksSection
-          currentNoteId={selectedNote.id}
-          onNoteSelect={selectNote}
-        />
+        <BacklinksSection currentNoteId={selectedNote.id} onNoteSelect={selectNote} />
       </div>
 
       {/* Save Template Dialog */}

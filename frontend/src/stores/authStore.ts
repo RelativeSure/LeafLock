@@ -2,10 +2,12 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User } from '../types'
 import { apiClient } from '../services/api/secureApi'
+import { deriveKey, setStoredKey, setStoredSalt } from '@/lib/encryption-utils'
 
 interface AuthState {
   user: User | null
   isLoading: boolean
+  pendingEncryption: { password: string; salt?: string | null } | null
   login: (email: string, password: string) => Promise<{ requiresMFA: boolean }>
   verifyMFA: (code: string) => Promise<boolean>
   logout: () => void
@@ -20,6 +22,7 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       isLoading: true,
+      pendingEncryption: null,
 
       initialize: async () => {
         console.log('Auth store initializing...')
@@ -52,18 +55,27 @@ export const useAuthStore = create<AuthState>()(
           const response = await apiClient.login(email, password)
 
           if (response.requiresMFA) {
+            if (response.encryptionSalt) {
+              setStoredSalt(response.encryptionSalt)
+            }
+            set({ pendingEncryption: { password, salt: response.encryptionSalt } })
             return { requiresMFA: true }
           }
 
           set({ user: { ...response.user, isAdmin: response.user.role === 'admin' } })
 
-          // Set up encryption key after successful login
-          // For now, use a simple key derived from email + password
-          // In production, this should be more secure
-          const encryptionKey = btoa(email + password).substring(0, 32)
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('encryptionKey', encryptionKey)
+          if (response.encryptionSalt) {
+            setStoredSalt(response.encryptionSalt)
+            try {
+              const derivedKey = await deriveKey(password, response.encryptionSalt)
+              setStoredKey(derivedKey)
+            } catch (deriveError) {
+              console.error('Failed to derive encryption key:', deriveError)
+              setStoredKey(null)
+            }
           }
+
+          set({ pendingEncryption: null })
 
           return { requiresMFA: false }
         } catch (error) {
@@ -75,6 +87,24 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await apiClient.verifyMFA(code)
           set({ user: { ...response.user, isAdmin: response.user.role === 'admin' } })
+
+          const { pendingEncryption } = get()
+          const salt = response.encryptionSalt || pendingEncryption?.salt
+          if (salt) {
+            setStoredSalt(salt)
+          }
+
+          if (pendingEncryption?.password && salt) {
+            try {
+              const derivedKey = await deriveKey(pendingEncryption.password, salt)
+              setStoredKey(derivedKey)
+            } catch (deriveError) {
+              console.error('Failed to derive encryption key after MFA verification:', deriveError)
+              setStoredKey(null)
+            }
+          }
+
+          set({ pendingEncryption: null })
           return true
         } catch (error) {
           console.error('MFA verification failed:', error)
@@ -86,6 +116,19 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await apiClient.register(email, password, name)
           set({ user: { ...response.user, isAdmin: response.user.role === 'admin' } })
+
+          if (response.encryptionSalt) {
+            setStoredSalt(response.encryptionSalt)
+            try {
+              const derivedKey = await deriveKey(password, response.encryptionSalt)
+              setStoredKey(derivedKey)
+            } catch (deriveError) {
+              console.error('Failed to derive encryption key after registration:', deriveError)
+              setStoredKey(null)
+            }
+          }
+
+          set({ pendingEncryption: null })
         } catch (error) {
           throw new Error(error instanceof Error ? error.message : 'Registration failed')
         }
@@ -116,7 +159,8 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         apiClient.logout()
-        set({ user: null })
+        set({ user: null, pendingEncryption: null })
+        setStoredKey(null)
       },
     }),
     {

@@ -80,6 +80,7 @@
     "diff": "^8.0.2",
     "embla-carousel-react": "8.5.1",
     "input-otp": "1.4.1",
+    "libsodium-wrappers-sumo": "^0.7.15",
     "lowlight": "3.3.0",
     "lucide-react": "^0.454.0",
     "motion": "^12.23.24",

@@ -21,17 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Checkbox,
-} from '@/components/ui/checkbox'
-import {
-  Move,
-  Tag,
-  Trash2,
-  X,
-  Folder,
-  FileText,
-} from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Move, Tag, Trash2, X, Folder, FileText } from 'lucide-react'
 import type { Note as _Note, Folder as _FolderType } from '@/types'
 
 interface BulkOperationsBarProps {
@@ -55,11 +46,11 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
     moveNotesToFolder,
     addTagsToNotes,
     removeTagsFromNotes,
-    createTag
+    createTag,
   } = useNotesStore()
   const { toast } = useToast()
 
-  const selectedNotesData = notes.filter(note => selectedNotes.includes(note.id))
+  const selectedNotesData = notes.filter((note) => selectedNotes.includes(note.id))
   const selectedCount = selectedNotes.length
 
   const handleMoveToFolder = async () => {
@@ -109,8 +100,7 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
       const result = await useNotesStore.getState().bulkDeleteNotes(selectedNotes)
 
       if (result.successful > 0) {
-        toast({
-          title: 'Success',
+        toast.success('Notes updated', {
           description: `${result.successful} note${result.successful !== 1 ? 's' : ''} moved to trash.${result.failed > 0 ? ` ${result.failed} failed.` : ''}`,
         })
       }
@@ -122,11 +112,7 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
       setShowDeleteDialog(false)
       onClose()
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete notes.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to delete notes.')
     }
   }
 
@@ -136,7 +122,7 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
     setIsCreatingTag(true)
     try {
       const tag = await createTag({ name: newTagName.trim() })
-      setSelectedTags(prev => [...prev, tag.name])
+      setSelectedTags((prev) => [...prev, tag.name])
       setNewTagName('')
     } catch (error) {
       toast.error('Failed to create tag.')
@@ -146,10 +132,8 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
   }
 
   const toggleTagSelection = (tagName: string) => {
-    setSelectedTags(prev =>
-      prev.includes(tagName)
-        ? prev.filter(t => t !== tagName)
-        : [...prev, tagName]
+    setSelectedTags((prev) =>
+      prev.includes(tagName) ? prev.filter((t) => t !== tagName) : [...prev, tagName]
     )
   }
 
@@ -165,12 +149,7 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
               <Badge variant="secondary" className="text-sm">
                 {selectedCount} selected
               </Badge>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-                className="h-6 w-6 p-0"
-              >
+              <Button variant="ghost" size="sm" onClick={onClose} className="h-6 w-6 p-0">
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -245,7 +224,10 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
               <label className="text-sm font-medium">Notes to Move</label>
               <div className="max-h-32 overflow-y-auto space-y-1">
                 {selectedNotesData.map((note) => (
-                  <div key={note.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div
+                    key={note.id}
+                    className="flex items-center gap-2 text-sm text-muted-foreground"
+                  >
                     <FileText className="h-3 w-3" />
                     {note.title || 'Untitled'}
                   </div>
@@ -319,7 +301,10 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
               <label className="text-sm font-medium">Notes to Update</label>
               <div className="max-h-24 overflow-y-auto space-y-1">
                 {selectedNotesData.map((note) => (
-                  <div key={note.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div
+                    key={note.id}
+                    className="flex items-center gap-2 text-sm text-muted-foreground"
+                  >
                     <FileText className="h-3 w-3" />
                     {note.title || 'Untitled'}
                   </div>
@@ -339,10 +324,7 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
             >
               Remove Tags
             </Button>
-            <Button
-              onClick={handleAddTags}
-              disabled={selectedTags.length === 0}
-            >
+            <Button onClick={handleAddTags} disabled={selectedTags.length === 0}>
               Add Tags
             </Button>
           </DialogFooter>
@@ -355,8 +337,8 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
           <DialogHeader>
             <DialogTitle>Delete Notes</DialogTitle>
             <DialogDescription>
-              Are you sure you want to move {selectedCount} note{selectedCount !== 1 ? 's' : ''} to trash?
-              This action can be undone from the trash.
+              Are you sure you want to move {selectedCount} note{selectedCount !== 1 ? 's' : ''} to
+              trash? This action can be undone from the trash.
             </DialogDescription>
           </DialogHeader>
 
@@ -364,7 +346,10 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
             <label className="text-sm font-medium">Notes to Delete</label>
             <div className="max-h-32 overflow-y-auto space-y-1">
               {selectedNotesData.map((note) => (
-                <div key={note.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div
+                  key={note.id}
+                  className="flex items-center gap-2 text-sm text-muted-foreground"
+                >
                   <FileText className="h-3 w-3" />
                   {note.title || 'Untitled'}
                 </div>

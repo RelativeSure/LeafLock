@@ -21,19 +21,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Search,
-  X,
-  Filter,
-  Calendar,
-  Folder,
-  Tag,
-  Clock,
-  Pin,
-  Lock,
-  FileText,
-} from 'lucide-react'
+import { Search, X, Filter, Calendar, Folder, Tag, Clock, Pin, Lock, FileText } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { useDecryptedNotes } from '@/hooks/use-decrypted-notes'
 
 interface SearchFilters {
   query: string
@@ -62,29 +52,33 @@ export function AdvancedSearchBar() {
   })
 
   const activeNotes = (notes || []).filter((note) => !note.isTrashed)
+  const { decryptedNotes, isUnlocked, isDecrypting } = useDecryptedNotes(activeNotes)
 
   const performSearch = () => {
+    if (!isUnlocked) {
+      setResults([])
+      return
+    }
+
     let filteredNotes = [...activeNotes]
 
     // Text search
     if (filters.query.trim()) {
       const query = filters.query.toLowerCase()
       filteredNotes = filteredNotes.filter((note) => {
-        const titleMatch = note.title.toLowerCase().includes(query)
-        const contentMatch = filters.includeContent &&
-          note.content.toLowerCase().includes(query)
-        const tagMatch = note.tags.some((tag: string) =>
-          tag.toLowerCase().includes(query)
-        )
+        const decrypted = decryptedNotes[note.id]
+        const titleText = decrypted?.title || ''
+        const contentText = decrypted?.content || ''
+        const titleMatch = titleText.toLowerCase().includes(query)
+        const contentMatch = filters.includeContent && contentText.toLowerCase().includes(query)
+        const tagMatch = note.tags.some((tag: string) => tag.toLowerCase().includes(query))
         return titleMatch || contentMatch || tagMatch
       })
     }
 
     // Folder filter
     if (filters.folderId) {
-      filteredNotes = filteredNotes.filter((note) =>
-        note.folderId === filters.folderId
-      )
+      filteredNotes = filteredNotes.filter((note) => note.folderId === filters.folderId)
     }
 
     // Tag filter
@@ -140,46 +134,52 @@ export function AdvancedSearchBar() {
       switch (filters.sortBy) {
         case 'updated':
           return (() => {
-          try {
-            const aTime = new Date(a.updatedAt).getTime()
-            const bTime = new Date(b.updatedAt).getTime()
-            return isNaN(aTime) ? (isNaN(bTime) ? 0 : 1) : (isNaN(bTime) ? -1 : bTime - aTime)
-          } catch {
-            return 0
-          }
-        })()
+            try {
+              const aTime = new Date(a.updatedAt).getTime()
+              const bTime = new Date(b.updatedAt).getTime()
+              return isNaN(aTime) ? (isNaN(bTime) ? 0 : 1) : isNaN(bTime) ? -1 : bTime - aTime
+            } catch {
+              return 0
+            }
+          })()
         case 'created':
           return (() => {
-          try {
-            const aTime = new Date(a.createdAt).getTime()
-            const bTime = new Date(b.createdAt).getTime()
-            return isNaN(aTime) ? (isNaN(bTime) ? 0 : 1) : (isNaN(bTime) ? -1 : bTime - aTime)
-          } catch {
-            return 0
-          }
-        })()
-        case 'title':
-          return (a.title || '').localeCompare(b.title || '')
+            try {
+              const aTime = new Date(a.createdAt).getTime()
+              const bTime = new Date(b.createdAt).getTime()
+              return isNaN(aTime) ? (isNaN(bTime) ? 0 : 1) : isNaN(bTime) ? -1 : bTime - aTime
+            } catch {
+              return 0
+            }
+          })()
+        case 'title': {
+          const aTitle = decryptedNotes[a.id]?.title || ''
+          const bTitle = decryptedNotes[b.id]?.title || ''
+          return aTitle.localeCompare(bTitle)
+        }
         case 'relevance':
         default:
           // Simple relevance: pinned first, then by title match, then by update date
           if (a.pinned && !b.pinned) return -1
           if (!a.pinned && b.pinned) return 1
           if (filters.query.trim()) {
-            const aTitleMatch = a.title.toLowerCase().includes(filters.query.toLowerCase())
-            const bTitleMatch = b.title.toLowerCase().includes(filters.query.toLowerCase())
+            const aTitle = decryptedNotes[a.id]?.title || ''
+            const bTitle = decryptedNotes[b.id]?.title || ''
+            const queryLower = filters.query.toLowerCase()
+            const aTitleMatch = aTitle.toLowerCase().includes(queryLower)
+            const bTitleMatch = bTitle.toLowerCase().includes(queryLower)
             if (aTitleMatch && !bTitleMatch) return -1
             if (!aTitleMatch && bTitleMatch) return 1
           }
           return (() => {
-          try {
-            const aTime = new Date(a.updatedAt).getTime()
-            const bTime = new Date(b.updatedAt).getTime()
-            return isNaN(aTime) ? (isNaN(bTime) ? 0 : 1) : (isNaN(bTime) ? -1 : bTime - aTime)
-          } catch {
-            return 0
-          }
-        })()
+            try {
+              const aTime = new Date(a.updatedAt).getTime()
+              const bTime = new Date(b.updatedAt).getTime()
+              return isNaN(aTime) ? (isNaN(bTime) ? 0 : 1) : isNaN(bTime) ? -1 : bTime - aTime
+            } catch {
+              return 0
+            }
+          })()
       }
     })
 
@@ -193,7 +193,7 @@ export function AdvancedSearchBar() {
     }, 0)
 
     return () => clearTimeout(timeoutId)
-  }, [filters, activeNotes])
+  }, [filters, activeNotes, decryptedNotes, isUnlocked])
 
   const handleSelectNote = (noteId: string) => {
     selectNote(noteId)
@@ -215,18 +215,19 @@ export function AdvancedSearchBar() {
 
   const addTagFilter = (tagName: string) => {
     if (!filters.tags.includes(tagName)) {
-      setFilters(prev => ({ ...prev, tags: [...prev.tags, tagName] }))
+      setFilters((prev) => ({ ...prev, tags: [...prev.tags, tagName] }))
     }
   }
 
   const removeTagFilter = (tagName: string) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      tags: prev.tags.filter(tag => tag !== tagName)
+      tags: prev.tags.filter((tag) => tag !== tagName),
     }))
   }
 
-  const hasActiveFilters = filters.folderId ||
+  const hasActiveFilters =
+    filters.folderId ||
     filters.tags.length > 0 ||
     filters.dateRange !== 'all' ||
     filters.encryptedOnly ||
@@ -240,15 +241,22 @@ export function AdvancedSearchBar() {
           placeholder="Search notes..."
           className="pl-9 pr-20 bg-background"
           value={filters.query}
-          onChange={(e) => setFilters(prev => ({ ...prev, query: e.target.value }))}
+          onChange={(e) => setFilters((prev) => ({ ...prev, query: e.target.value }))}
           onFocus={() => setIsOpen(true)}
         />
         <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1">
           {hasActiveFilters && (
             <Badge variant="secondary" className="text-xs">
-              {[filters.folderId && 'Folder', filters.tags.length && `${filters.tags.length} tags`,
-                filters.dateRange !== 'all' && filters.dateRange, filters.encryptedOnly && 'Encrypted',
-                filters.pinnedOnly && 'Pinned'].filter(Boolean).length} filters
+              {
+                [
+                  filters.folderId && 'Folder',
+                  filters.tags.length && `${filters.tags.length} tags`,
+                  filters.dateRange !== 'all' && filters.dateRange,
+                  filters.encryptedOnly && 'Encrypted',
+                  filters.pinnedOnly && 'Pinned',
+                ].filter(Boolean).length
+              }{' '}
+              filters
             </Badge>
           )}
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -282,9 +290,9 @@ export function AdvancedSearchBar() {
                         <Select
                           value={filters.folderId || 'all'}
                           onValueChange={(value) =>
-                            setFilters(prev => ({
+                            setFilters((prev) => ({
                               ...prev,
-                              folderId: value === 'all' ? null : value
+                              folderId: value === 'all' ? null : value,
                             }))
                           }
                         >
@@ -320,16 +328,13 @@ export function AdvancedSearchBar() {
                               </button>
                             </Badge>
                           ))}
-                          <Select
-                            onValueChange={(value) => addTagFilter(value)}
-                            value=""
-                          >
+                          <Select onValueChange={(value) => addTagFilter(value)} value="">
                             <SelectTrigger>
                               <SelectValue placeholder="Add tag filter" />
                             </SelectTrigger>
                             <SelectContent>
                               {(tags || [])
-                                .filter(tag => !filters.tags.includes(tag.name))
+                                .filter((tag) => !filters.tags.includes(tag.name))
                                 .map((tag) => (
                                   <SelectItem key={tag.id} value={tag.name}>
                                     {tag.name}
@@ -349,7 +354,7 @@ export function AdvancedSearchBar() {
                         <Select
                           value={filters.dateRange}
                           onValueChange={(value: any) =>
-                            setFilters(prev => ({ ...prev, dateRange: value }))
+                            setFilters((prev) => ({ ...prev, dateRange: value }))
                           }
                         >
                           <SelectTrigger>
@@ -374,7 +379,10 @@ export function AdvancedSearchBar() {
                               type="checkbox"
                               checked={filters.includeContent}
                               onChange={(e) =>
-                                setFilters(prev => ({ ...prev, includeContent: e.target.checked }))
+                                setFilters((prev) => ({
+                                  ...prev,
+                                  includeContent: e.target.checked,
+                                }))
                               }
                               className="rounded"
                             />
@@ -385,7 +393,7 @@ export function AdvancedSearchBar() {
                               type="checkbox"
                               checked={filters.encryptedOnly}
                               onChange={(e) =>
-                                setFilters(prev => ({ ...prev, encryptedOnly: e.target.checked }))
+                                setFilters((prev) => ({ ...prev, encryptedOnly: e.target.checked }))
                               }
                               className="rounded"
                             />
@@ -397,7 +405,7 @@ export function AdvancedSearchBar() {
                               type="checkbox"
                               checked={filters.pinnedOnly}
                               onChange={(e) =>
-                                setFilters(prev => ({ ...prev, pinnedOnly: e.target.checked }))
+                                setFilters((prev) => ({ ...prev, pinnedOnly: e.target.checked }))
                               }
                               className="rounded"
                             />
@@ -416,7 +424,7 @@ export function AdvancedSearchBar() {
                         <Select
                           value={filters.sortBy}
                           onValueChange={(value: any) =>
-                            setFilters(prev => ({ ...prev, sortBy: value }))
+                            setFilters((prev) => ({ ...prev, sortBy: value }))
                           }
                         >
                           <SelectTrigger>
@@ -431,12 +439,7 @@ export function AdvancedSearchBar() {
                         </Select>
                       </div>
 
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={clearFilters}
-                        className="w-full"
-                      >
+                      <Button variant="outline" size="sm" onClick={clearFilters} className="w-full">
                         Clear Filters
                       </Button>
                     </CardContent>
@@ -447,16 +450,29 @@ export function AdvancedSearchBar() {
                 <div className="lg:col-span-2">
                   <Card>
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-sm">
-                        Results ({results.length})
-                      </CardTitle>
+                      <CardTitle className="text-sm">Results ({results.length})</CardTitle>
                       <CardDescription>
-                        {filters.query ? `Searching for "${filters.query}"` : 'All notes'}
+                        {!isUnlocked
+                          ? 'Unlock your notes to search content.'
+                          : filters.query
+                            ? `Searching for "${filters.query}"`
+                            : 'All notes'}
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
                       <ScrollArea className="max-h-[400px]">
-                        {results.length === 0 ? (
+                        {!isUnlocked ? (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Lock className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                            <p>Encrypted notes are locked</p>
+                            <p className="text-sm">Unlock to enable search functionality</p>
+                          </div>
+                        ) : isDecrypting ? (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <FileText className="h-12 w-12 mx-auto mb-2 animate-pulse opacity-50" />
+                            <p>Decrypting notes…</p>
+                          </div>
+                        ) : results.length === 0 ? (
                           <div className="text-center py-8 text-muted-foreground">
                             <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
                             <p>No notes found</p>
@@ -464,56 +480,70 @@ export function AdvancedSearchBar() {
                           </div>
                         ) : (
                           <div className="space-y-2">
-                            {results.map((note) => (
-                              <button
-                                key={note.id}
-                                onClick={() => handleSelectNote(note.id)}
-                                className="w-full text-left p-3 rounded-lg hover:bg-accent transition-smooth border border-border"
-                              >
-                                <div className="flex items-start justify-between gap-2 mb-1">
-                                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                                    {note.pinned && <Pin className="h-3 w-3 text-primary flex-shrink-0 mt-0.5" />}
-                                    <h3 className="font-medium text-sm line-clamp-1">{note.title}</h3>
-                                  </div>
-                                  <div className="flex items-center gap-1 flex-shrink-0">
-                                    {note.encrypted && (
-                                      <Lock className="h-3 w-3 text-muted animate-pulse" />
-                                    )}
-                                  </div>
-                                </div>
+                            {results.map((note) => {
+                              const decrypted = decryptedNotes[note.id]
+                              const title = decrypted?.title || ''
+                              const content = decrypted?.content || ''
 
-                                <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                                  {(note.content || '')
-                                    .replace(/<[^>]*>/g, ' ')
-                                    .replace(/\s+/g, ' ')
-                                    .trim() || 'No content'}
-                                </p>
-
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-1 flex-wrap">
-                                    {(note.tags || []).slice(0, 2).map((tag: string) => (
-                                      <Badge key={tag} variant="outline" className="text-xs">
-                                        {tag}
-                                      </Badge>
-                                    ))}
-                                    {(note.tags || []).length > 2 && (
-                                      <span className="text-xs text-muted">+{(note.tags || []).length - 2}</span>
-                                    )}
+                              return (
+                                <button
+                                  key={note.id}
+                                  onClick={() => handleSelectNote(note.id)}
+                                  className="w-full text-left p-3 rounded-lg hover:bg-accent transition-smooth border border-border"
+                                >
+                                  <div className="flex items-start justify-between gap-2 mb-1">
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                      {note.pinned && (
+                                        <Pin className="h-3 w-3 text-primary flex-shrink-0 mt-0.5" />
+                                      )}
+                                      <h3 className="font-medium text-sm line-clamp-1">
+                                        {title || 'Untitled'}
+                                      </h3>
+                                    </div>
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                      {note.encrypted && (
+                                        <Lock className="h-3 w-3 text-muted animate-pulse" />
+                                      )}
+                                    </div>
                                   </div>
 
-                                  <span className="text-xs text-muted-foreground flex-shrink-0">
-                                    {(() => {
-                                      try {
-                                        const date = new Date(note.updatedAt)
-                                        return isNaN(date.getTime()) ? 'Unknown' : formatDistanceToNow(date, { addSuffix: true })
-                                      } catch {
-                                        return 'Unknown'
-                                      }
-                                    })()}
-                                  </span>
-                                </div>
-                              </button>
-                            ))}
+                                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                                    {(content || '')
+                                      .replace(/<[^>]*>/g, ' ')
+                                      .replace(/\s+/g, ' ')
+                                      .trim() || 'No content'}
+                                  </p>
+
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-1 flex-wrap">
+                                      {(note.tags || []).slice(0, 2).map((tag: string) => (
+                                        <Badge key={tag} variant="outline" className="text-xs">
+                                          {tag}
+                                        </Badge>
+                                      ))}
+                                      {(note.tags || []).length > 2 && (
+                                        <span className="text-xs text-muted">
+                                          +{(note.tags || []).length - 2}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    <span className="text-xs text-muted-foreground flex-shrink-0">
+                                      {(() => {
+                                        try {
+                                          const date = new Date(note.updatedAt)
+                                          return isNaN(date.getTime())
+                                            ? 'Unknown'
+                                            : formatDistanceToNow(date, { addSuffix: true })
+                                        } catch {
+                                          return 'Unknown'
+                                        }
+                                      })()}
+                                    </span>
+                                  </div>
+                                </button>
+                              )
+                            })}
                           </div>
                         )}
                       </ScrollArea>

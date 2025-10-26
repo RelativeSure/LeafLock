@@ -7,16 +7,39 @@ import { Toaster } from './components/ui/sonner'
 import { AppErrorBoundary } from './components/common/AppErrorBoundary'
 
 // Lazy load stores and components to prevent circular dependencies
-const LoginForm = React.lazy(() => import('./components/auth/login-form').then(m => ({ default: m.LoginForm })))
-const RegisterForm = React.lazy(() => import('./components/auth/register-form').then(m => ({ default: m.RegisterForm })))
-const ForgotPasswordForm = React.lazy(() => import('./components/auth/forgot-password-form').then(m => ({ default: m.ForgotPasswordForm })))
-const Sidebar = React.lazy(() => import('./components/dashboard/sidebar').then(m => ({ default: m.Sidebar })))
-const NoteEditor = React.lazy(() => import('./components/dashboard/note-editor').then(m => ({ default: m.NoteEditor })))
-const KeyboardShortcutsDialog = React.lazy(() => import('./components/dashboard/keyboard-shortcuts-dialog').then(m => ({ default: m.KeyboardShortcutsDialog })))
+const LoginForm = React.lazy(() =>
+  import('./components/auth/login-form').then((m) => ({ default: m.LoginForm }))
+)
+const RegisterForm = React.lazy(() =>
+  import('./components/auth/register-form').then((m) => ({ default: m.RegisterForm }))
+)
+const ForgotPasswordForm = React.lazy(() =>
+  import('./components/auth/forgot-password-form').then((m) => ({ default: m.ForgotPasswordForm }))
+)
+const Sidebar = React.lazy(() =>
+  import('./components/dashboard/sidebar').then((m) => ({ default: m.Sidebar }))
+)
+const NoteEditor = React.lazy(() =>
+  import('./components/dashboard/note-editor').then((m) => ({ default: m.NoteEditor }))
+)
+const KeyboardShortcutsDialog = React.lazy(() =>
+  import('./components/dashboard/keyboard-shortcuts-dialog').then((m) => ({
+    default: m.KeyboardShortcutsDialog,
+  }))
+)
 
 import { ThemeToggle } from './components/theme-toggle'
 import { Button } from './components/ui/button'
-import { Leaf, Settings, LogOut, ShieldCheck, Keyboard, HelpCircle, ExternalLink, FolderOpen } from 'lucide-react'
+import {
+  Leaf,
+  Settings,
+  LogOut,
+  ShieldCheck,
+  Keyboard,
+  HelpCircle,
+  ExternalLink,
+  FolderOpen,
+} from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,7 +86,9 @@ const indexRoute = createRoute({
 })
 
 // Auth routes
-const AuthComponent: React.FC<{ mode?: 'login' | 'register' | 'forgot' }> = ({ mode: initialMode = 'login' }) => {
+const AuthComponent: React.FC<{ mode?: 'login' | 'register' | 'forgot' }> = ({
+  mode: initialMode = 'login',
+}) => {
   const [mode, setMode] = React.useState<'login' | 'register' | 'forgot'>(initialMode)
 
   React.useEffect(() => {
@@ -74,11 +99,13 @@ const AuthComponent: React.FC<{ mode?: 'login' | 'register' | 'forgot' }> = ({ m
     <div className="min-h-screen flex items-center justify-center p-4 animate-in fade-in-50 duration-700 relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       <InteractiveGridPattern width={50} height={50} className="absolute inset-0 opacity-50" />
       <div className="w-full max-w-md relative z-10">
-        <React.Suspense fallback={
-          <div className="flex items-center justify-center p-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        }>
+        <React.Suspense
+          fallback={
+            <div className="flex items-center justify-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          }
+        >
           {mode === 'login' ? (
             <LoginForm onToggleMode={() => setMode('register')} />
           ) : mode === 'register' ? (
@@ -245,30 +272,34 @@ const DashboardComponent: React.FC = () => {
         </div>
       </header>
 
-          {/* Main Content - Responsive Layout */}
-          <div className="flex-1 flex overflow-hidden">
-            {/* Sidebar - Hidden width on mobile, visible on desktop */}
-            <React.Suspense fallback={
-              <div className="hidden md:flex w-48 xl:w-64 border-r border-border items-center justify-center">
+      {/* Main Content - Responsive Layout */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar - Hidden width on mobile, visible on desktop */}
+        <React.Suspense
+          fallback={
+            <div className="hidden md:flex w-48 xl:w-64 border-r border-border items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          }
+        >
+          <div className="w-0 md:w-48 xl:w-64 md:flex-shrink-0">
+            <Sidebar />
+          </div>
+        </React.Suspense>
+
+        {/* Note Editor - Full width on mobile, flex-1 on desktop */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <React.Suspense
+            fallback={
+              <div className="flex-1 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
-            }>
-              <div className="w-0 md:w-48 xl:w-64 md:flex-shrink-0">
-                <Sidebar />
-              </div>
-            </React.Suspense>
-
-            {/* Note Editor - Full width on mobile, flex-1 on desktop */}
-            <div className="flex-1 flex flex-col min-w-0">
-              <React.Suspense fallback={
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              }>
-                <NoteEditor />
-              </React.Suspense>
-            </div>
-          </div>
+            }
+          >
+            <NoteEditor />
+          </React.Suspense>
+        </div>
+      </div>
 
       {/* Keyboard Shortcuts Dialog */}
       <React.Suspense fallback={null}>
@@ -312,11 +343,7 @@ const AdminPageComponent = () => {
   }, [])
 
   return (
-    <ProtectedRoute
-      requiredRole="admin"
-      isLoading={isLoading}
-      user={authStore?.user}
-    >
+    <ProtectedRoute requiredRole="admin" isLoading={isLoading} user={authStore?.user}>
       <AdminPage />
     </ProtectedRoute>
   )

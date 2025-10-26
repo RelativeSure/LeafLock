@@ -1,72 +1,121 @@
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
+
+import {
+  deriveKey,
+  encryptTextWithKey,
+  decryptTextWithKey,
+  ensureEncryptionReady,
+  getStoredKey,
+  setStoredKey,
+  getStoredSalt,
+  ENCRYPTION_VERSION,
+} from '@/lib/encryption-utils'
 
 interface EncryptionContextType {
   isUnlocked: boolean
+  encryptionVersion: number
   encryptText: (text: string) => Promise<string>
-  decryptText: (text: string) => Promise<string>
-  setEncryptionKey: (key: string) => void
+  decryptText: (payload: string) => Promise<string>
+  setEncryptionKey: (password: string) => Promise<void>
+  clearEncryptionKey: () => void
 }
 
 const EncryptionContext = createContext<EncryptionContextType | undefined>(undefined)
 
 export function EncryptionProvider({ children }: { children: React.ReactNode }) {
   const [isUnlocked, setIsUnlocked] = useState(false)
-  const [encryptionKey, setEncryptionKey] = useState<string | null>(null)
+  const [keyBase64, setKeyBase64] = useState<string | null>(null)
 
-  // Initialize encryption key from localStorage on mount
-  React.useEffect(() => {
-    const storedKey = localStorage.getItem('encryptionKey')
-    if (storedKey) {
-      setEncryptionKey(storedKey)
-      setIsUnlocked(true)
+  useEffect(() => {
+    let cancelled = false
+
+    const initialize = async () => {
+      try {
+        await ensureEncryptionReady()
+        if (cancelled) return
+
+        const storedKey = getStoredKey()
+        if (storedKey) {
+          setKeyBase64(storedKey)
+          setIsUnlocked(true)
+        }
+      } catch (error) {
+        console.error('Failed to initialize encryption:', error)
+      }
+    }
+
+    initialize()
+
+    const handleKeyUpdated = () => {
+      if (cancelled) return
+      const storedKey = getStoredKey()
+      setKeyBase64(storedKey)
+      setIsUnlocked(Boolean(storedKey))
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('encryption-key-updated', handleKeyUpdated)
+    }
+
+    return () => {
+      cancelled = true
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('encryption-key-updated', handleKeyUpdated)
+      }
     }
   }, [])
 
   const encryptText = useCallback(
     async (text: string): Promise<string> => {
-      if (!encryptionKey) {
+      if (!keyBase64) {
         throw new Error('Encryption key not set')
       }
-
-      // Simple base64 encoding for now - in production, use proper encryption
-      // This is a placeholder implementation
-      const encoded = btoa(unescape(encodeURIComponent(text)))
-      return encoded
+      return encryptTextWithKey(text, keyBase64)
     },
-    [encryptionKey]
+    [keyBase64]
   )
 
   const decryptText = useCallback(
-    async (text: string): Promise<string> => {
-      if (!encryptionKey) {
+    async (payload: string): Promise<string> => {
+      if (!keyBase64) {
         throw new Error('Encryption key not set')
       }
-
-      try {
-        // Simple base64 decoding for now - in production, use proper decryption
-        const decoded = decodeURIComponent(escape(atob(text)))
-        return decoded
-      } catch (error) {
-        console.error('Decryption error:', error)
-        return text // Return original text if decryption fails
-      }
+      return decryptTextWithKey(payload, keyBase64)
     },
-    [encryptionKey]
+    [keyBase64]
   )
 
-  const handleSetEncryptionKey = useCallback((key: string) => {
-    setEncryptionKey(key)
+  const handleSetEncryptionKey = useCallback(async (password: string) => {
+    if (!password || !password.trim()) {
+      throw new Error('Encryption password is required')
+    }
+
+    const salt = getStoredSalt()
+    if (!salt) {
+      throw new Error('Encryption salt not found. Please log in again.')
+    }
+
+    const derivedKey = await deriveKey(password, salt)
+    setStoredKey(derivedKey)
+    setKeyBase64(derivedKey)
     setIsUnlocked(true)
-    localStorage.setItem('encryptionKey', key)
+  }, [])
+
+  const clearEncryptionKey = useCallback(() => {
+    setStoredKey(null)
+    setKeyBase64(null)
+    setIsUnlocked(false)
   }, [])
 
   return (
     <EncryptionContext.Provider
       value={{
         isUnlocked,
+        encryptionVersion: ENCRYPTION_VERSION,
         encryptText,
         decryptText,
         setEncryptionKey: handleSetEncryptionKey,
+        clearEncryptionKey,
       }}
     >
       {children}

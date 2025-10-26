@@ -5,7 +5,15 @@ import { useTemplatesStore } from '../../stores/templatesStore'
 import { useAuthStore } from '../../stores/authStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { Button } from '@/components/ui/button'
-import { Download, User, Shield, Settings as SettingsIcon, Database, FolderPlus, Tag as TagIcon } from 'lucide-react'
+import {
+  Download,
+  User,
+  Shield,
+  Settings as SettingsIcon,
+  Database,
+  FolderPlus,
+  Tag as TagIcon,
+} from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -13,7 +21,13 @@ import { Separator } from '@/components/ui/separator'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { UserAvatar } from '@/components/ui/user-avatar'
 import { useState } from 'react'
 
@@ -135,8 +149,8 @@ export function SettingsPage() {
       await updateSettings({
         profilePicture: {
           type,
-          customUrl: type === 'custom' ? settings.profilePicture.customUrl : undefined
-        }
+          customUrl: type === 'custom' ? settings.profilePicture.customUrl : undefined,
+        },
       })
       toast.success('Your profile picture settings have been updated.')
     } catch (error) {
@@ -150,35 +164,33 @@ export function SettingsPage() {
     <div className="container mx-auto p-6 max-w-6xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground mt-2">
-          Manage your account settings and preferences.
-        </p>
+        <p className="text-muted-foreground mt-2">Manage your account settings and preferences.</p>
       </div>
 
       <Tabs defaultValue="profile" className="flex gap-6 h-full">
         {/* Vertical Tabs List - Sidebar */}
         <div className="w-64 flex-shrink-0 border-r pr-4">
           <TabsList className="flex-col h-fit w-full">
-          <TabsTrigger value="profile" className="w-full justify-start gap-2">
-            <User className="h-4 w-4" />
-            Profile
-          </TabsTrigger>
-          <TabsTrigger value="backup" className="w-full justify-start gap-2">
-            <Database className="h-4 w-4" />
-            Backup & Restore
-          </TabsTrigger>
-          <TabsTrigger value="security" className="w-full justify-start gap-2">
-            <Shield className="h-4 w-4" />
-            Security
-          </TabsTrigger>
-          <TabsTrigger value="preferences" className="w-full justify-start gap-2">
-            <SettingsIcon className="h-4 w-4" />
-            Preferences
-          </TabsTrigger>
-          <TabsTrigger value="manage" className="w-full justify-start gap-2">
-            <FolderPlus className="h-4 w-4" />
-            Manage Folders & Tags
-          </TabsTrigger>
+            <TabsTrigger value="profile" className="w-full justify-start gap-2">
+              <User className="h-4 w-4" />
+              Profile
+            </TabsTrigger>
+            <TabsTrigger value="backup" className="w-full justify-start gap-2">
+              <Database className="h-4 w-4" />
+              Backup & Restore
+            </TabsTrigger>
+            <TabsTrigger value="security" className="w-full justify-start gap-2">
+              <Shield className="h-4 w-4" />
+              Security
+            </TabsTrigger>
+            <TabsTrigger value="preferences" className="w-full justify-start gap-2">
+              <SettingsIcon className="h-4 w-4" />
+              Preferences
+            </TabsTrigger>
+            <TabsTrigger value="manage" className="w-full justify-start gap-2">
+              <FolderPlus className="h-4 w-4" />
+              Manage Folders & Tags
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -188,9 +200,7 @@ export function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Profile Information</CardTitle>
-                <CardDescription>
-                  Manage your profile picture and account details.
-                </CardDescription>
+                <CardDescription>Manage your profile picture and account details.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Profile Picture */}
@@ -201,7 +211,9 @@ export function SettingsPage() {
                     <div className="space-y-2">
                       <div className="flex gap-2">
                         <Button
-                          variant={settings.profilePicture.type === 'gravatar' ? 'default' : 'outline'}
+                          variant={
+                            settings.profilePicture.type === 'gravatar' ? 'default' : 'outline'
+                          }
                           size="sm"
                           onClick={() => handleProfilePictureChange('gravatar')}
                           disabled={isUpdatingProfile}
@@ -209,7 +221,9 @@ export function SettingsPage() {
                           Gravatar
                         </Button>
                         <Button
-                          variant={settings.profilePicture.type === 'initials' ? 'default' : 'outline'}
+                          variant={
+                            settings.profilePicture.type === 'initials' ? 'default' : 'outline'
+                          }
                           size="sm"
                           onClick={() => handleProfilePictureChange('initials')}
                           disabled={isUpdatingProfile}
@@ -220,8 +234,7 @@ export function SettingsPage() {
                       <p className="text-sm text-muted-foreground">
                         {settings.profilePicture.type === 'gravatar'
                           ? 'Using Gravatar based on your email address'
-                          : 'Using your name initials'
-                        }
+                          : 'Using your name initials'}
                       </p>
                     </div>
                   </div>
@@ -252,7 +265,8 @@ export function SettingsPage() {
                   Data Backup & Restore
                 </CardTitle>
                 <CardDescription>
-                  Export your notes, folders, tags, and templates to a backup file, or restore from a previous backup.
+                  Export your notes, folders, tags, and templates to a backup file, or restore from
+                  a previous backup.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -260,7 +274,8 @@ export function SettingsPage() {
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold">Export Data</h3>
                     <p className="text-sm text-muted-foreground">
-                      Download a complete backup of your data including notes, folders, tags, and templates.
+                      Download a complete backup of your data including notes, folders, tags, and
+                      templates.
                     </p>
                     <Button onClick={handleExportNotes} className="w-full">
                       <Download className="h-4 w-4 mr-2" />
@@ -305,7 +320,9 @@ export function SettingsPage() {
                       <div className="text-sm text-muted-foreground">Tags</div>
                     </div>
                     <div className="text-center p-4 border rounded-lg">
-                      <div className="text-2xl font-bold text-primary">{templates?.length || 0}</div>
+                      <div className="text-2xl font-bold text-primary">
+                        {templates?.length || 0}
+                      </div>
                       <div className="text-sm text-muted-foreground">Templates</div>
                     </div>
                   </div>
@@ -355,17 +372,13 @@ export function SettingsPage() {
                   <SettingsIcon className="h-5 w-5" />
                   Application Preferences
                 </CardTitle>
-                <CardDescription>
-                  Customize your application experience.
-                </CardDescription>
+                <CardDescription>Customize your application experience.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label>Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Enable desktop notifications
-                    </p>
+                    <p className="text-sm text-muted-foreground">Enable desktop notifications</p>
                   </div>
                   <Switch
                     checked={settings.notificationsEnabled}
@@ -394,7 +407,9 @@ export function SettingsPage() {
                   </div>
                   <Select
                     value={settings.defaultNoteBehavior}
-                    onValueChange={(value: 'last-seen' | 'new-note') => updateSettings({ defaultNoteBehavior: value })}
+                    onValueChange={(value: 'last-seen' | 'new-note') =>
+                      updateSettings({ defaultNoteBehavior: value })
+                    }
                   >
                     <SelectTrigger className="w-48">
                       <SelectValue />
@@ -416,9 +431,7 @@ export function SettingsPage() {
                   <FolderPlus className="h-5 w-5" />
                   Folder Management
                 </CardTitle>
-                <CardDescription>
-                  Create, edit, and organize your folders.
-                </CardDescription>
+                <CardDescription>Create, edit, and organize your folders.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -426,7 +439,10 @@ export function SettingsPage() {
                   <div className="border rounded-lg p-3 space-y-2 max-h-96 overflow-y-auto">
                     {folders && folders.length > 0 ? (
                       folders.map((folder) => (
-                        <div key={folder.id} className="flex items-center gap-2 p-2 hover:bg-accent rounded">
+                        <div
+                          key={folder.id}
+                          className="flex items-center gap-2 p-2 hover:bg-accent rounded"
+                        >
                           <div
                             className="w-3 h-3 rounded-full"
                             style={{ backgroundColor: folder.color }}
@@ -448,9 +464,7 @@ export function SettingsPage() {
                   <TagIcon className="h-5 w-5" />
                   Tag Management
                 </CardTitle>
-                <CardDescription>
-                  Manage your note tags.
-                </CardDescription>
+                <CardDescription>Manage your note tags.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">

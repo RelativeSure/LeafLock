@@ -20,9 +20,10 @@ export function TemplatesPage() {
 
   const filterTemplates = (templateList: any[]) => {
     if (!searchQuery) return templateList
-    return templateList.filter((template) =>
-      template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      template.content.toLowerCase().includes(searchQuery.toLowerCase())
+    return templateList.filter(
+      (template) =>
+        template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        template.content.toLowerCase().includes(searchQuery.toLowerCase())
     )
   }
 
@@ -62,14 +63,14 @@ export function TemplatesPage() {
         <Card>
           <CardHeader>
             <CardTitle>My Templates</CardTitle>
-            <CardDescription>
-              Templates you've created ({myTemplates.length})
-            </CardDescription>
+            <CardDescription>Templates you've created ({myTemplates.length})</CardDescription>
           </CardHeader>
           <CardContent>
             {filterTemplates(myTemplates).length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {searchQuery ? 'No templates match your search.' : 'You haven\'t created any templates yet.'}
+                {searchQuery
+                  ? 'No templates match your search.'
+                  : "You haven't created any templates yet."}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -105,7 +106,9 @@ export function TemplatesPage() {
                           )}
                         </div>
                         <span className="text-xs text-muted-foreground">
-                          {template.createdAt ? formatDistanceToNow(new Date(template.createdAt), { addSuffix: true }) : 'Unknown'}
+                          {template.createdAt
+                            ? formatDistanceToNow(new Date(template.createdAt), { addSuffix: true })
+                            : 'Unknown'}
                         </span>
                       </div>
                     </CardContent>
@@ -127,7 +130,9 @@ export function TemplatesPage() {
           <CardContent>
             {filterTemplates(communityTemplates).length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {searchQuery ? 'No templates match your search.' : 'No community templates available.'}
+                {searchQuery
+                  ? 'No templates match your search.'
+                  : 'No community templates available.'}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -157,7 +162,9 @@ export function TemplatesPage() {
                           )}
                         </div>
                         <span className="text-xs text-muted-foreground">
-                          {template.createdAt ? formatDistanceToNow(new Date(template.createdAt), { addSuffix: true }) : 'Unknown'}
+                          {template.createdAt
+                            ? formatDistanceToNow(new Date(template.createdAt), { addSuffix: true })
+                            : 'Unknown'}
                         </span>
                       </div>
                     </CardContent>

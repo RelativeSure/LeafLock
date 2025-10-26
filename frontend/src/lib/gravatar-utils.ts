@@ -22,7 +22,7 @@ export function getGravatarUrl(
   const params = new URLSearchParams({
     s: size.toString(),
     d: defaultImage,
-    r: 'pg' // Rating: G, PG, R, X (we use PG for safety)
+    r: 'pg', // Rating: G, PG, R, X (we use PG for safety)
   })
 
   return `${baseUrl}/${hash}?${params.toString()}`

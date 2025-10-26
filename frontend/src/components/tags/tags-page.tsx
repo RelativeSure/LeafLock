@@ -19,9 +19,7 @@ export function TagsPage() {
 
   const filterTags = (tagList: any[]) => {
     if (!searchQuery) return tagList
-    return tagList.filter((tag) =>
-      tag.name.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    return tagList.filter((tag) => tag.name.toLowerCase().includes(searchQuery.toLowerCase()))
   }
 
   const handleCreateTag = async () => {
@@ -55,9 +53,7 @@ export function TagsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Create New Tag</CardTitle>
-            <CardDescription>
-              Add a new tag to organize your notes.
-            </CardDescription>
+            <CardDescription>Add a new tag to organize your notes.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -131,7 +127,7 @@ export function TagsPage() {
           <CardContent>
             {filterTags(tags || []).length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {searchQuery ? 'No tags match your search.' : 'You haven\'t created any tags yet.'}
+                {searchQuery ? 'No tags match your search.' : "You haven't created any tags yet."}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -166,7 +162,9 @@ export function TagsPage() {
                             Used in {usageCount} note{usageCount !== 1 ? 's' : ''}
                           </div>
                           <span className="text-xs text-muted-foreground">
-                            {tag.createdAt ? formatDistanceToNow(new Date(tag.createdAt), { addSuffix: true }) : 'Unknown'}
+                            {tag.createdAt
+                              ? formatDistanceToNow(new Date(tag.createdAt), { addSuffix: true })
+                              : 'Unknown'}
                           </span>
                         </div>
                       </CardContent>

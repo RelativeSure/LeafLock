@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -27,6 +28,8 @@ type Service struct {
 	mfa       *MFAManager
 	jwtSecret string
 }
+
+const defaultEncryptionVersion = 1
 
 // NewService creates a new auth service
 func NewService(db *pgxpool.Pool, rdb *redis.Client, crypto *appcrypto.CryptoService, jwtSecret string) *Service {
@@ -289,10 +292,13 @@ func (s *Service) Login(ctx context.Context, email, password, mfaCode string) (*
 			return nil, fmt.Errorf("failed to create MFA session: %w", err)
 		}
 
+		saltEncoded := base64.StdEncoding.EncodeToString(salt)
 		return &AuthResponse{
-			MFARequired:  true,
-			SessionToken: sessionToken,
-			UserID:       userID.String(),
+			MFARequired:       true,
+			SessionToken:      sessionToken,
+			UserID:            userID.String(),
+			EncryptionSalt:    saltEncoded,
+			EncryptionVersion: defaultEncryptionVersion,
 		}, nil
 	}
 
@@ -473,6 +479,12 @@ func (s *Service) createAuthResponse(ctx context.Context, userID uuid.UUID, isAd
 
 	// Store token in session for logout
 	_ = sessionToken // Session token is managed internally
+
+	var saltBytes []byte
+	if err := s.db.QueryRow(ctx, `SELECT salt FROM users WHERE id = $1`, userID).Scan(&saltBytes); err == nil {
+		response.EncryptionSalt = base64.StdEncoding.EncodeToString(saltBytes)
+		response.EncryptionVersion = defaultEncryptionVersion
+	}
 
 	return response, nil
 }

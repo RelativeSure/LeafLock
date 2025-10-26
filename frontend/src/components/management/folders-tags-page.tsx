@@ -97,17 +97,25 @@ export function FoldersTagsPage() {
   }
 
   const colorOptions = [
-    '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#6366f1',
-    '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#8b5cf6', '#64748b'
+    '#3b82f6',
+    '#8b5cf6',
+    '#10b981',
+    '#f59e0b',
+    '#ef4444',
+    '#6366f1',
+    '#ec4899',
+    '#06b6d4',
+    '#84cc16',
+    '#f97316',
+    '#8b5cf6',
+    '#64748b',
   ]
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Folders & Tags</h1>
-        <p className="text-muted-foreground mt-2">
-          Organize your notes with folders and tags.
-        </p>
+        <p className="text-muted-foreground mt-2">Organize your notes with folders and tags.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -120,9 +128,7 @@ export function FoldersTagsPage() {
                   <Folder className="h-5 w-5" />
                   Folders
                 </CardTitle>
-                <CardDescription>
-                  Organize your notes into folders
-                </CardDescription>
+                <CardDescription>Organize your notes into folders</CardDescription>
               </div>
               <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
                 <DialogTrigger asChild>
@@ -190,10 +196,7 @@ export function FoldersTagsPage() {
                     className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <FolderOpen
-                        className="h-5 w-5"
-                        style={{ color: folder.color }}
-                      />
+                      <FolderOpen className="h-5 w-5" style={{ color: folder.color }} />
                       <div>
                         <div className="font-medium">{folder.name}</div>
                         <div className="text-sm text-muted-foreground">
@@ -245,9 +248,7 @@ export function FoldersTagsPage() {
                   <Tag className="h-5 w-5" />
                   Tags
                 </CardTitle>
-                <CardDescription>
-                  Label your notes with tags
-                </CardDescription>
+                <CardDescription>Label your notes with tags</CardDescription>
               </div>
               <Dialog open={isCreateTagOpen} onOpenChange={setIsCreateTagOpen}>
                 <DialogTrigger asChild>
@@ -259,9 +260,7 @@ export function FoldersTagsPage() {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Create Tag</DialogTitle>
-                    <DialogDescription>
-                      Create a new tag to label your notes.
-                    </DialogDescription>
+                    <DialogDescription>Create a new tag to label your notes.</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -315,10 +314,7 @@ export function FoldersTagsPage() {
                     className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <Hash
-                        className="h-5 w-5"
-                        style={{ color: tag.color }}
-                      />
+                      <Hash className="h-5 w-5" style={{ color: tag.color }} />
                       <div>
                         <div className="font-medium">{tag.name}</div>
                         <div className="text-sm text-muted-foreground">

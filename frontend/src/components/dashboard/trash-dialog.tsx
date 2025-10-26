@@ -131,7 +131,9 @@ export function TrashDialog() {
                         </p>
                         <span className="text-xs text-muted-foreground">
                           Deleted{' '}
-                          {note.trashedAt ? formatDistanceToNow(new Date(note.trashedAt), { addSuffix: true }) : 'Unknown'}
+                          {note.trashedAt
+                            ? formatDistanceToNow(new Date(note.trashedAt), { addSuffix: true })
+                            : 'Unknown'}
                         </span>
                       </div>
                       <div className="flex gap-1">

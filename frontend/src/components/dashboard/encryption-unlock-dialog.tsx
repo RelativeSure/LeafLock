@@ -29,8 +29,9 @@ export function EncryptionUnlockDialog({
   const { setEncryptionKey } = useEncryption()
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleUnlock = () => {
+  const handleUnlock = async () => {
     if (!password.trim()) {
       setError('Please enter your encryption password')
       return
@@ -41,11 +42,19 @@ export function EncryptionUnlockDialog({
       return
     }
 
-    setEncryptionKey(password)
-    setPassword('')
-    setError('')
-    onUnlock()
-    onOpenChange(false)
+    try {
+      setIsSubmitting(true)
+      await setEncryptionKey(password)
+      setPassword('')
+      setError('')
+      onUnlock()
+      onOpenChange(false)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to unlock encrypted notes.'
+      setError(message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -102,8 +111,8 @@ export function EncryptionUnlockDialog({
           )}
 
           <div className="flex gap-2">
-            <Button onClick={handleUnlock} className="flex-1">
-              Unlock
+            <Button onClick={handleUnlock} className="flex-1" disabled={isSubmitting}>
+              {isSubmitting ? 'Unlocking…' : 'Unlock'}
             </Button>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel

@@ -11,7 +11,13 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Slider } from '@/components/ui/slider'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import {
   Dialog,
@@ -66,7 +72,9 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
   const [activeTab, setActiveTab] = useState('timeline')
   const [compareV1, setCompareV1] = useState<string>('')
   const [compareV2, setCompareV2] = useState<string>('')
-  const [comparisonData, setComparisonData] = useState<{ v1: NoteVersion; v2: NoteVersion } | null>(null)
+  const [comparisonData, setComparisonData] = useState<{ v1: NoteVersion; v2: NoteVersion } | null>(
+    null
+  )
   const [retentionPolicy, setRetentionPolicy] = useState(20)
   const [isSavingRetention, setIsSavingRetention] = useState(false)
 
@@ -76,7 +84,7 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
     restoreNoteVersion,
     deleteNoteVersion,
     compareNoteVersions,
-    updateRetentionPolicy
+    updateRetentionPolicy,
   } = useNotesStore()
   const { toast } = useToast()
 
@@ -84,7 +92,11 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
     setLoading(true)
     try {
       const versionList = await getNoteVersions(noteId)
-      setVersions(versionList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+      setVersions(
+        versionList.sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+      )
 
       // Set default comparison values
       if (versionList.length >= 2) {
@@ -92,11 +104,7 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
         setCompareV2(versionList[1].versionNumber.toString())
       }
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load version history.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to load version history.')
     } finally {
       setLoading(false)
     }
@@ -110,29 +118,20 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
 
   const handleCreateVersion = async () => {
     if (!changeDescription.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a description for this version.',
-        variant: 'destructive',
-      })
+      toast.error('Please enter a description for this version.')
       return
     }
 
     try {
       await createNoteVersion(noteId, changeDescription)
-      toast({
-        title: 'Success',
+      toast.success('Version saved', {
         description: 'A new version has been saved successfully.',
       })
       setChangeDescription('')
       setShowCreateDialog(false)
       loadVersions()
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create version.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to create version.')
     }
   }
 
@@ -141,19 +140,14 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
 
     try {
       await restoreNoteVersion(versionToRestore.id)
-      toast({
-        title: 'Success',
+      toast.success('Version restored', {
         description: `Restored to version from ${format(new Date(versionToRestore.createdAt), 'MMM d, yyyy')}.`,
       })
       setShowRestoreDialog(false)
       setVersionToRestore(null)
       setOpen(false)
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to restore version.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to restore version.')
     }
   }
 
@@ -162,29 +156,20 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
 
     try {
       await deleteNoteVersion(versionToDelete.id)
-      toast({
-        title: 'Success',
+      toast.success('Version deleted', {
         description: 'Version has been permanently deleted.',
       })
       setShowDeleteDialog(false)
       setVersionToDelete(null)
       loadVersions()
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete version.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to delete version.')
     }
   }
 
   const handleCompare = async () => {
     if (!compareV1 || !compareV2) {
-      toast({
-        title: 'Error',
-        description: 'Please select two versions to compare.',
-        variant: 'destructive',
-      })
+      toast.error('Please select two versions to compare.')
       return
     }
 
@@ -192,11 +177,7 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
       const result = await compareNoteVersions(noteId, parseInt(compareV1), parseInt(compareV2))
       setComparisonData(result)
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to compare versions.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to compare versions.')
     }
   }
 
@@ -204,16 +185,11 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
     setIsSavingRetention(true)
     try {
       await updateRetentionPolicy(noteId, retentionPolicy)
-      toast({
-        title: 'Success',
+      toast.success('Retention policy updated', {
         description: `Retention policy updated to ${retentionPolicy} versions.`,
       })
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update retention policy.',
-        variant: 'destructive',
-      })
+      toast.error('Failed to update retention policy.')
     } finally {
       setIsSavingRetention(false)
     }
@@ -237,14 +213,20 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
         {changes.map((change: Change, index: number) => {
           if (change.added) {
             return (
-              <span key={index} className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+              <span
+                key={index}
+                className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+              >
                 {change.value}
               </span>
             )
           }
           if (change.removed) {
             return (
-              <span key={index} className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 line-through">
+              <span
+                key={index}
+                className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 line-through"
+              >
                 {change.value}
               </span>
             )
@@ -258,18 +240,14 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          {children}
-        </DialogTrigger>
+        <DialogTrigger asChild>{children}</DialogTrigger>
         <DialogContent className="max-w-5xl max-h-[85vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <History className="h-5 w-5" />
               Version History
             </DialogTitle>
-            <DialogDescription>
-              View and manage versions for "{noteTitle}"
-            </DialogDescription>
+            <DialogDescription>View and manage versions for "{noteTitle}"</DialogDescription>
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -341,7 +319,9 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
                                       </span>
                                       <span className="flex items-center gap-1">
                                         <Clock className="h-3 w-3" />
-                                        {formatDistanceToNow(new Date(version.createdAt), { addSuffix: true })}
+                                        {formatDistanceToNow(new Date(version.createdAt), {
+                                          addSuffix: true,
+                                        })}
                                       </span>
                                       <span className="flex items-center gap-1">
                                         <User className="h-3 w-3" />
@@ -563,9 +543,7 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreateVersion}>
-              Create Version
-            </Button>
+            <Button onClick={handleCreateVersion}>Create Version</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -576,14 +554,13 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
           <AlertDialogHeader>
             <AlertDialogTitle>Restore Version</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to restore this version? This will replace the current content of the note.
+              Are you sure you want to restore this version? This will replace the current content
+              of the note.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRestoreVersion}>
-              Restore Version
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleRestoreVersion}>Restore Version</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -594,12 +571,16 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Version</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to permanently delete this version? This action cannot be undone.
+              Are you sure you want to permanently delete this version? This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteVersion} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleDeleteVersion}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Delete Version
             </AlertDialogAction>
           </AlertDialogFooter>

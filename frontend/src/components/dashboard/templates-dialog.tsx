@@ -160,7 +160,9 @@ export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
       </div>
 
       <div className="text-xs text-muted-foreground mt-2">
-        {template.createdAt ? formatDistanceToNow(new Date(template.createdAt), { addSuffix: true }) : 'Unknown'}
+        {template.createdAt
+          ? formatDistanceToNow(new Date(template.createdAt), { addSuffix: true })
+          : 'Unknown'}
       </div>
     </div>
   )

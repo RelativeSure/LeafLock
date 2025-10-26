@@ -118,13 +118,15 @@ type PasswordResetConfirm struct {
 
 // AuthResponse represents successful authentication
 type AuthResponse struct {
-	Token        string    `json:"token"`
-	UserID       string    `json:"user_id"`
-	WorkspaceID  string    `json:"workspace_id,omitempty"`
-	MFARequired  bool      `json:"mfa_required,omitempty"`
-	SessionToken string    `json:"session_token,omitempty"` // For MFA flow
-	IsAdmin      bool      `json:"is_admin"`
-	ExpiresAt    time.Time `json:"expires_at"`
+	Token             string    `json:"token"`
+	UserID            string    `json:"user_id"`
+	WorkspaceID       string    `json:"workspace_id,omitempty"`
+	MFARequired       bool      `json:"mfa_required,omitempty"`
+	SessionToken      string    `json:"session_token,omitempty"` // For MFA flow
+	IsAdmin           bool      `json:"is_admin"`
+	ExpiresAt         time.Time `json:"expires_at"`
+	EncryptionSalt    string    `json:"encryption_salt,omitempty"`
+	EncryptionVersion int       `json:"encryption_version,omitempty"`
 }
 
 // ErrorResponse represents an error response

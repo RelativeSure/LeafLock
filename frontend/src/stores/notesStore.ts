@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Note, Folder, Tag, NoteVersion } from '../types'
 import { apiClient } from '../services/api/secureApi'
+import { ENCRYPTION_VERSION, encryptTextWithStoredKey } from '@/lib/encryption-utils'
 
 interface NotesState {
   notes: Note[]
@@ -20,7 +21,6 @@ interface NotesState {
   selectTag: (tagName: string | null) => void
   createTag: (tag: Partial<Tag>) => Promise<Tag>
   deleteTag: (id: string) => Promise<void>
-  searchNotes: (query: string) => Promise<Note[]>
   filterByTag: (tagName: string) => Note[]
   moveToTrash: (id: string) => Promise<void>
   restoreFromTrash: (id: string) => Promise<void>
@@ -30,11 +30,21 @@ interface NotesState {
   getNoteVersions: (noteId: string) => Promise<NoteVersion[]>
   restoreNoteVersion: (versionId: string) => Promise<void>
   deleteNoteVersion: (versionId: string) => Promise<void>
-  compareNoteVersions: (noteId: string, v1: number, v2: number) => Promise<{ v1: NoteVersion; v2: NoteVersion }>
+  compareNoteVersions: (
+    noteId: string,
+    v1: number,
+    v2: number
+  ) => Promise<{ v1: NoteVersion; v2: NoteVersion }>
   updateRetentionPolicy: (noteId: string, policy: number) => Promise<void>
-  bulkDeleteNotes: (noteIds: string[]) => Promise<{ successful: number; failed: number; errors: string[] }>
-  bulkRestoreNotes: (noteIds: string[]) => Promise<{ successful: number; failed: number; errors: string[] }>
-  bulkPermanentlyDeleteNotes: (noteIds: string[]) => Promise<{ successful: number; failed: number; errors: string[] }>
+  bulkDeleteNotes: (
+    noteIds: string[]
+  ) => Promise<{ successful: number; failed: number; errors: string[] }>
+  bulkRestoreNotes: (
+    noteIds: string[]
+  ) => Promise<{ successful: number; failed: number; errors: string[] }>
+  bulkPermanentlyDeleteNotes: (
+    noteIds: string[]
+  ) => Promise<{ successful: number; failed: number; errors: string[] }>
   moveNotesToFolder: (noteIds: string[], folderId: string) => Promise<void>
   addTagsToNotes: (noteIds: string[], tagNames: string[]) => Promise<void>
   removeTagsFromNotes: (noteIds: string[], tagNames: string[]) => Promise<void>
@@ -71,192 +81,80 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     }
   },
 
-  createNote: async (note: Partial<Note>) => {
-    console.log('createNote called with:', note)
+  createNote: async (note: Partial<Note>): Promise<Note> => {
     const storedUser = localStorage.getItem('user')
     if (!storedUser) throw new Error('No user logged in')
 
     const user = JSON.parse(storedUser)
-    const { selectedFolder, folders } = get()
-    console.log('User:', user.id, 'Selected folder:', selectedFolder, 'Folders:', folders.length)
+    const { selectedFolder } = get()
+    const folderId = note.folderId ?? selectedFolder ?? null
 
-    // Determine folder - use selected or existing, don't try to create uncategorized
-    let folderId = note.folderId || selectedFolder
+    const titlePayload = await encryptTextWithStoredKey(note.title ?? '')
+    const contentPayload = await encryptTextWithStoredKey(note.content ?? '')
 
-    // If no folder selected and we have folders available, use the first one
-    if (!folderId && folders.length > 0) {
-      folderId = folders[0].id
-    }
-
-    // Create a local note WITHOUT trying to create folders on server
-    // Use crypto.randomUUID() for proper UUIDs
-    const localNote: Note = {
-      id: crypto.randomUUID(),
-      title: note.title || '',
-      content: note.content || '',
+    const createdNote = await apiClient.createNote({
+      title: titlePayload,
+      content: contentPayload,
+      folderId,
+      tags: note.tags ?? [],
+      pinned: note.pinned ?? false,
+      encrypted: true,
+      encryptionVersion: ENCRYPTION_VERSION,
       userId: user.id,
-      folderId: folderId,
-      tags: note.tags || [],
-      pinned: note.pinned || false,
-      encrypted: note.encrypted || false,
-      isTrashed: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      trashedAt: undefined,
-      sharedWith: [],
-      isTemplate: false,
-    }
+    })
 
-    // Update store state with new note
     set((state) => ({
-      notes: [localNote, ...state.notes],
-      selectedNote: localNote
+      notes: [createdNote, ...state.notes.filter((existing) => existing.id !== createdNote.id)],
+      selectedNote: createdNote,
     }))
 
-    console.log('Note created successfully:', localNote.id)
-
-    return localNote
+    return createdNote
   },
 
   updateNote: async (id: string, updates: Partial<Note>): Promise<Note> => {
-    try {
-      if (!id) {
-        console.warn('updateNote called without id')
-        throw new Error('Note ID is required')
-      }
-
-      let updatedNote: Note
-      const currentNote = get().notes.find(note => note.id === id)
-
-      if (!currentNote) {
-        // If note doesn't exist and it's a local note, create it
-        if (id && (typeof id === 'string' && id.startsWith('local-'))) {
-          const storedUser = localStorage.getItem('user')
-          if (!storedUser) {
-            console.warn('Note not found and no user logged in')
-            throw new Error('No user logged in')
-          }
-          const user = JSON.parse(storedUser)
-
-          // Create a new local note
-          const newLocalNote: Note = {
-            id: id,
-            title: updates.title || '',
-            content: updates.content || '',
-            userId: user.id,
-            folderId: updates.folderId || null,
-            tags: updates.tags || [],
-            pinned: updates.pinned || false,
-            encrypted: updates.encrypted || false,
-            isTrashed: false,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            trashedAt: undefined,
-            sharedWith: [],
-            isTemplate: false,
-          }
-
-          // Add to store
-          set((state) => ({
-            notes: [newLocalNote, ...state.notes],
-            selectedNote: state.selectedNote?.id === id ? newLocalNote : state.selectedNote,
-          }))
-
-          updatedNote = { ...newLocalNote, ...updates, updatedAt: new Date().toISOString() }
-          set((state) => ({
-            notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
-            selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
-          }))
-
-          return updatedNote
-        }
-
-        console.warn('Note not found:', id)
-        throw new Error('Note not found')
-      }
-
-      // If it's a local note (not saved to API yet)
-      if (id && typeof id === 'string' && (id.startsWith('local-') || !id.includes('-'))) {
-        // Check if note now has content - if so, save to API
-        const hasContent = updates.title?.trim() || updates.content?.trim()
-        const updatesMetadata = Object.keys(updates).some(key => !['title', 'content'].includes(key))
-
-        if (hasContent || updatesMetadata) {
-          try {
-            // Save to API to get server-generated ID
-            const serverNote = await apiClient.createNote({
-              ...currentNote,
-              ...updates,
-            })
-
-            // Replace local note with server note
-            set((state) => ({
-              notes: state.notes.map((note) => (note.id === id ? serverNote : note)),
-              selectedNote: state.selectedNote?.id === id ? serverNote : state.selectedNote,
-            }))
-
-            return serverNote
-          } catch (error) {
-            console.warn('API create failed for local note, keeping local:', error)
-            // Fall back to local update
-            updatedNote = { ...currentNote, ...updates, updatedAt: new Date().toISOString() }
-            set((state) => ({
-              notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
-              selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
-            }))
-            return updatedNote
-          }
-        } else {
-          // No content yet - just update locally
-          updatedNote = { ...currentNote, ...updates, updatedAt: new Date().toISOString() }
-          set((state) => ({
-            notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
-            selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
-          }))
-          return updatedNote
-        }
-      }
-
-      // Regular API update for existing notes
-      // Validate that we're not saving empty notes
-      const hasContent = updates.title?.trim() || updates.content?.trim()
-      const updatesMetadata = Object.keys(updates).some(key => !['title', 'content'].includes(key))
-
-      if (hasContent || updatesMetadata) {
-        // Only save to API if there's content OR if we're updating metadata
-        try {
-          updatedNote = await apiClient.updateNote(id, updates)
-          set((state) => ({
-            notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
-            selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
-          }))
-        } catch (error) {
-          // If API update fails (e.g. note not found on server), just update locally
-          console.warn('API update failed, updating locally:', error)
-          updatedNote = { ...currentNote, ...updates, updatedAt: new Date().toISOString() }
-          set((state) => ({
-            notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
-            selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
-          }))
-        }
-      } else {
-        // No content and no metadata updates - just update locally
-        updatedNote = { ...currentNote, ...updates, updatedAt: new Date().toISOString() }
-        set((state) => ({
-          notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
-          selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
-        }))
-      }
-
-      if (!updatedNote) {
-        throw new Error('Failed to update note: no updated note returned')
-      }
-
-      return updatedNote
-    } catch (error) {
-      console.error('Failed to update note:', error)
-      throw error
+    if (!id) {
+      throw new Error('Note ID is required')
     }
+
+    const currentNote = get().notes.find((note) => note.id === id)
+    if (!currentNote) {
+      throw new Error('Note not found')
+    }
+
+    const shouldEncrypt = updates.encrypted !== true
+
+    let titlePayload = updates.title
+    let contentPayload = updates.content
+
+    if (typeof updates.title === 'string' && shouldEncrypt) {
+      titlePayload = await encryptTextWithStoredKey(updates.title)
+    }
+
+    if (typeof updates.content === 'string' && shouldEncrypt) {
+      contentPayload = await encryptTextWithStoredKey(updates.content)
+    }
+
+    const encryptionVersion =
+      updates.encryptionVersion ?? currentNote.encryptionVersion ?? ENCRYPTION_VERSION
+
+    const payload: Partial<Note> = {
+      title: titlePayload ?? currentNote.title,
+      content: contentPayload ?? currentNote.content,
+      tags: updates.tags ?? currentNote.tags,
+      folderId: updates.folderId ?? currentNote.folderId,
+      pinned: updates.pinned ?? currentNote.pinned,
+      encrypted: true,
+      encryptionVersion,
+    }
+
+    const updatedNote = await apiClient.updateNote(id, payload)
+
+    set((state) => ({
+      notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
+      selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
+    }))
+
+    return updatedNote
   },
 
   deleteNote: async (id: string) => {
@@ -273,42 +171,18 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   },
 
   selectNote: (id: string | null) => {
-    console.log('selectNote called with id:', id)
-
-    // Clean up empty local notes when switching away from them
-    const { notes, selectedNote } = get()
-    if (selectedNote && selectedNote.id.startsWith('local-')) {
-      // Check if the currently selected note is empty
-      const title = selectedNote.title || ''
-      const content = selectedNote.content || ''
-      if (!title.trim() && !content.trim()) {
-        // Remove the empty local note from the store
-        set({
-          notes: notes.filter(note => note.id !== selectedNote.id),
-          selectedNote: null
-        })
-      }
-    }
+    const { notes } = get()
 
     if (id === null) {
-      console.log('Setting selectedNote to null')
       set({ selectedNote: null })
-    } else {
-      const note = notes.find((n) => n.id === id)
-      console.log('Found note:', note)
+      return
+    }
 
-      if (!note) {
-        console.error('Note not found in store! Looking for:', id)
-        console.error('Available notes:', notes.length)
-      }
+    const note = notes.find((n) => n.id === id) || null
+    set({ selectedNote: note })
 
-      set({ selectedNote: note || null })
-      console.log('Selected note set to:', get().selectedNote)
-
-      // Track last seen note for default behavior
-      if (note && !note.isTrashed) {
-        localStorage.setItem('lastSeenNoteId', note.id)
-      }
+    if (note && !note.isTrashed) {
+      localStorage.setItem('lastSeenNoteId', note.id)
     }
   },
 
@@ -413,15 +287,6 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     }
   },
 
-  searchNotes: async (query: string) => {
-    try {
-      return await apiClient.searchNotes(query)
-    } catch (error) {
-      console.error('Failed to search notes:', error)
-      return []
-    }
-  },
-
   filterByTag: (tagName: string) => {
     const { notes } = get()
     return notes.filter((note) => !note.isTrashed && note.tags.includes(tagName))
@@ -495,7 +360,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   createNoteVersion: async (noteId: string, changeDescription?: string) => {
     try {
       const { notes } = get()
-      const note = notes.find(n => n.id === noteId)
+      const note = notes.find((n) => n.id === noteId)
       if (!note) throw new Error('Note not found')
 
       const version = await apiClient.createNoteVersion({
@@ -526,10 +391,9 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       const restoredNote = await apiClient.restoreNoteVersion(versionId)
 
       set((state) => ({
-        notes: state.notes.map((note) =>
-          note.id === restoredNote.id ? restoredNote : note
-        ),
-        selectedNote: state.selectedNote?.id === restoredNote.id ? restoredNote : state.selectedNote,
+        notes: state.notes.map((note) => (note.id === restoredNote.id ? restoredNote : note)),
+        selectedNote:
+          state.selectedNote?.id === restoredNote.id ? restoredNote : state.selectedNote,
       }))
     } catch (error) {
       console.error('Failed to restore note version:', error)
@@ -561,9 +425,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       // Update local note with new retention policy if needed
       set((state) => ({
         notes: state.notes.map((note) =>
-          note.id === noteId
-            ? { ...note, retentionPolicy: policy }
-            : note
+          note.id === noteId ? { ...note, retentionPolicy: policy } : note
         ),
       }))
     } catch (error) {
@@ -614,9 +476,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
       set((state) => ({
         notes: state.notes.map((note) =>
-          noteIds.includes(note.id)
-            ? { ...note, folderId: folderId || null }
-            : note
+          noteIds.includes(note.id) ? { ...note, folderId: folderId || null } : note
         ),
       }))
     } catch (error) {
@@ -649,7 +509,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       set((state) => ({
         notes: state.notes.map((note) =>
           noteIds.includes(note.id)
-            ? { ...note, tags: note.tags.filter(tag => !tagNames.includes(tag)) }
+            ? { ...note, tags: note.tags.filter((tag) => !tagNames.includes(tag)) }
             : note
         ),
       }))
@@ -679,7 +539,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         // Get last seen note from localStorage
         const lastSeenNoteId = localStorage.getItem('lastSeenNoteId')
         if (lastSeenNoteId) {
-          const lastSeenNote = notes.find(note => note.id === lastSeenNoteId && !note.isTrashed)
+          const lastSeenNote = notes.find((note) => note.id === lastSeenNoteId && !note.isTrashed)
           if (lastSeenNote) {
             set({ selectedNote: lastSeenNote })
             return
@@ -687,10 +547,10 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         }
 
         // If no last seen note or it doesn't exist, select the most recent note
-        const activeNotes = notes.filter(note => !note.isTrashed)
+        const activeNotes = notes.filter((note) => !note.isTrashed)
         if (activeNotes.length > 0) {
-          const mostRecentNote = activeNotes.sort((a, b) =>
-            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          const mostRecentNote = activeNotes.sort(
+            (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
           )[0]
           set({ selectedNote: mostRecentNote })
           localStorage.setItem('lastSeenNoteId', mostRecentNote.id)
@@ -704,10 +564,10 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     } catch (error) {
       console.error('Failed to initialize default note:', error)
       // Fallback: select the most recent note
-      const activeNotes = notes.filter(note => !note.isTrashed)
+      const activeNotes = notes.filter((note) => !note.isTrashed)
       if (activeNotes.length > 0) {
-        const mostRecentNote = activeNotes.sort((a, b) =>
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        const mostRecentNote = activeNotes.sort(
+          (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
         )[0]
         set({ selectedNote: mostRecentNote })
         localStorage.setItem('lastSeenNoteId', mostRecentNote.id)
@@ -748,15 +608,6 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       await apiClient.deleteNoteLink(noteId, linkId)
     } catch (error) {
       console.error('Failed to delete note link:', error)
-      throw error
-    }
-  },
-
-  searchNotesForLinking: async (query: string = '') => {
-    try {
-      return await apiClient.searchNotesForLinking(query)
-    } catch (error) {
-      console.error('Failed to search notes for linking:', error)
       throw error
     }
   },

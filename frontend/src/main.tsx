@@ -30,7 +30,7 @@ window.addEventListener('error', (event) => {
     console.error('This error typically occurs when:')
     console.error('1. Module A imports Module B')
     console.error('2. Module B imports Module A (directly or indirectly)')
-    console.error('3. One module tries to access the other before it\'s fully initialized')
+    console.error("3. One module tries to access the other before it's fully initialized")
     console.error('')
     console.error('Common causes in React/Zustand apps:')
     console.error('- Stores importing each other')

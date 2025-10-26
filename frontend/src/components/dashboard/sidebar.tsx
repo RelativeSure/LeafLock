@@ -3,14 +3,7 @@ import { useNotesStore } from '../../stores/notesStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import {
-  FolderPlus,
-  Plus,
-  Menu,
-  Library,
-  Tag,
-  TagIcon,
-} from 'lucide-react'
+import { FolderPlus, Plus, Menu, Library, Tag, TagIcon } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -18,11 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { Label } from '@/components/ui/label'
 import { TemplatesDialog } from './templates-dialog'
 import { AdvancedSearchBar } from './advanced-search-bar'

@@ -72,7 +72,16 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['buffer', 'crypto-browserify', 'process', 'react', 'react-dom', '@tanstack/react-router', '@tanstack/store', 'zustand'],
+    include: [
+      'buffer',
+      'crypto-browserify',
+      'process',
+      'react',
+      'react-dom',
+      '@tanstack/react-router',
+      '@tanstack/store',
+      'zustand',
+    ],
     exclude: ['libsodium-wrappers'],
     // Force optimization of frequently used dependencies
     force: process.env.NODE_ENV === 'development',
@@ -128,7 +137,7 @@ export default defineConfig({
         target: devProxyTarget,
         changeOrigin: true,
         configure: (proxy, _options) => {
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
+          proxy.on('proxyReq', (_proxyReq, req, _res) => {
             console.log('[Proxy]', req.method, req.url, '->', devProxyTarget + req.url)
           })
         },
@@ -139,6 +148,6 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.ts'],
     globals: true,
-    exclude: ['**/node_modules/**', '**/dist/**', '**/tests/e2e/**'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/tests/e2e/**', 'tests/**/*.spec.ts'],
   },
 })

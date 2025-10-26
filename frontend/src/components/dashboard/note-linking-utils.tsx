@@ -5,14 +5,10 @@ import { useNotesStore } from '../../stores/notesStore'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import {
-  FileText,
-  Link,
-  ExternalLink,
-  X,
-} from 'lucide-react'
+import { FileText, Link, ExternalLink, X } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import type { Note } from '@/types'
+import { useDecryptedNotes } from '@/hooks/use-decrypted-notes'
 
 interface NoteLinkPreviewProps {
   noteId: string
@@ -24,11 +20,12 @@ export function NoteLinkPreview({ noteId, onClose, onNavigate }: NoteLinkPreview
   const { notes } = useNotesStore()
   const [note, setNote] = useState<Note | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const { decryptedNotes, isUnlocked, isDecrypting } = useDecryptedNotes(notes)
 
   useEffect(() => {
     // Use setTimeout to avoid synchronous setState in effect
     const timeoutId = setTimeout(() => {
-      const foundNote = notes.find(n => n.id === noteId)
+      const foundNote = notes.find((n) => n.id === noteId)
       setNote(foundNote || null)
       setIsLoading(false)
     }, 0)
@@ -61,35 +58,61 @@ export function NoteLinkPreview({ noteId, onClose, onNavigate }: NoteLinkPreview
     )
   }
 
-  const contentPreview = note.content
-    ?.replace(/<[^>]*>/g, ' ')
-    ?.replace(/\s+/g, ' ')
-    ?.trim()
-    ?.substring(0, 150) || 'No content'
+  if (!isUnlocked) {
+    return (
+      <Card className="max-w-md">
+        <CardContent className="p-4">
+          <div className="text-center py-4 text-muted-foreground">
+            <p className="text-sm">Unlock your notes to preview linked content.</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (isDecrypting) {
+    return (
+      <Card className="max-w-md">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const decrypted = decryptedNotes[note.id]
+  const title = decrypted?.title || 'Untitled'
+  const contentPreview =
+    (decrypted?.content || '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .substring(0, 150) || 'No content'
 
   return (
     <Card className="max-w-md">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-sm line-clamp-2">{note.title || 'Untitled'}</CardTitle>
+            <CardTitle className="text-sm line-clamp-2">{title}</CardTitle>
             <CardDescription className="text-xs mt-1">
-              {note.updatedAt ? (() => {
-                try {
-                  const date = new Date(note.updatedAt)
-                  return isNaN(date.getTime()) ? 'Unknown' : formatDistanceToNow(date, { addSuffix: true })
-                } catch {
-                  return 'Unknown'
-                }
-              })() : 'Unknown'}
+              {note.updatedAt
+                ? (() => {
+                    try {
+                      const date = new Date(note.updatedAt)
+                      return isNaN(date.getTime())
+                        ? 'Unknown'
+                        : formatDistanceToNow(date, { addSuffix: true })
+                    } catch {
+                      return 'Unknown'
+                    }
+                  })()
+                : 'Unknown'}
             </CardDescription>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="h-6 w-6 p-0 ml-2"
-          >
+          <Button variant="ghost" size="sm" onClick={onClose} className="h-6 w-6 p-0 ml-2">
             <X className="h-3 w-3" />
           </Button>
         </div>
@@ -116,12 +139,7 @@ export function NoteLinkPreview({ noteId, onClose, onNavigate }: NoteLinkPreview
         )}
 
         <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onNavigate(noteId)}
-            className="gap-2"
-          >
+          <Button variant="outline" size="sm" onClick={() => onNavigate(noteId)} className="gap-2">
             <ExternalLink className="h-3 w-3" />
             Open Note
           </Button>
@@ -138,6 +156,7 @@ interface NoteLinkingUtilsProps {
 
 export function NoteLinkingUtils({ content, onNoteSelect }: NoteLinkingUtilsProps) {
   const { notes } = useNotesStore()
+  const { decryptedNotes, isUnlocked } = useDecryptedNotes(notes)
   const [hoveredLink, setHoveredLink] = useState<string | null>(null)
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 })
   const [showPreview, setShowPreview] = useState(false)
@@ -162,9 +181,9 @@ export function NoteLinkingUtils({ content, onNoteSelect }: NoteLinkingUtilsProp
 
   // Find note by title (case-insensitive)
   const findNoteByTitle = (title: string) => {
-    return notes.find(note =>
-      note.title?.toLowerCase() === title.toLowerCase()
-    )
+    if (!isUnlocked) return undefined
+    const normalized = title.toLowerCase()
+    return notes.find((note) => decryptedNotes[note.id]?.title?.toLowerCase() === normalized)
   }
 
   // Handle link hover
@@ -335,7 +354,7 @@ export function BacklinksSection({ currentNoteId, onNoteSelect }: BacklinksSecti
   useEffect(() => {
     // Use setTimeout to avoid synchronous setState in effect
     const timeoutId = setTimeout(() => {
-      const currentNote = notes.find(n => n.id === currentNoteId)
+      const currentNote = notes.find((n) => n.id === currentNoteId)
       if (!currentNote) {
         setBacklinks([])
         return
@@ -347,7 +366,7 @@ export function BacklinksSection({ currentNoteId, onNoteSelect }: BacklinksSecti
         return
       }
 
-      const links = notes.filter(note => {
+      const links = notes.filter((note) => {
         if (note.id === currentNoteId) return false
 
         const content = note.content || ''
@@ -381,14 +400,18 @@ export function BacklinksSection({ currentNoteId, onNoteSelect }: BacklinksSecti
               <span className="text-sm font-medium">{note.title || 'Untitled'}</span>
             </div>
             <div className="text-xs text-muted-foreground ml-5">
-              {note.updatedAt ? (() => {
-                try {
-                  const date = new Date(note.updatedAt)
-                  return isNaN(date.getTime()) ? 'Unknown' : formatDistanceToNow(date, { addSuffix: true })
-                } catch {
-                  return 'Unknown'
-                }
-              })() : 'Unknown'}
+              {note.updatedAt
+                ? (() => {
+                    try {
+                      const date = new Date(note.updatedAt)
+                      return isNaN(date.getTime())
+                        ? 'Unknown'
+                        : formatDistanceToNow(date, { addSuffix: true })
+                    } catch {
+                      return 'Unknown'
+                    }
+                  })()
+                : 'Unknown'}
             </div>
           </button>
         ))}

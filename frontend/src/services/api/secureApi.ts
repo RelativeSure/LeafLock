@@ -2,6 +2,51 @@ import { config } from '@/lib/config'
 
 const API_BASE_URL = config.apiUrl
 
+const DEFAULT_NOTE_FIELDS = {
+  folderId: null,
+  tags: [] as string[],
+  sharedWith: [] as string[],
+  isTemplate: false,
+  isTrashed: false,
+  pinned: false,
+}
+
+function normalizeNoteResponse(note: any): Note {
+  if (!note) {
+    throw new Error('Invalid note payload received from API')
+  }
+
+  const createdAt = note.created_at || note.createdAt || new Date().toISOString()
+  const updatedAt = note.updated_at || note.updatedAt || createdAt
+  const deletedAt = note.deleted_at || note.trashed_at || null
+  const tags = Array.isArray(note.tags) ? [...note.tags] : [...DEFAULT_NOTE_FIELDS.tags]
+  const sharedWith = Array.isArray(note.shared_with)
+    ? [...note.shared_with]
+    : Array.isArray(note.sharedWith)
+      ? [...note.sharedWith]
+      : [...DEFAULT_NOTE_FIELDS.sharedWith]
+  const pinned = typeof note.pinned === 'boolean' ? note.pinned : DEFAULT_NOTE_FIELDS.pinned
+  const userId = note.user_id || note.userId || ''
+
+  return {
+    id: note.id,
+    title: note.title_encrypted ?? note.title ?? '',
+    content: note.content_encrypted ?? note.content ?? '',
+    folderId: note.folder_id ?? note.folderId ?? DEFAULT_NOTE_FIELDS.folderId,
+    tags,
+    encrypted: true,
+    createdAt,
+    updatedAt,
+    userId,
+    sharedWith,
+    isTemplate: note.is_template ?? note.isTemplate ?? DEFAULT_NOTE_FIELDS.isTemplate,
+    isTrashed: deletedAt != null,
+    trashedAt: deletedAt ?? undefined,
+    pinned,
+    encryptionVersion: note.encryption_version ?? note.encryptionVersion,
+  }
+}
+
 interface LoginResponse {
   token: string
   user: {
@@ -13,6 +58,8 @@ interface LoginResponse {
     createdAt: string
   }
   requiresMFA?: boolean
+  encryptionSalt?: string
+  encryptionVersion?: number
 }
 
 interface RegisterResponse {
@@ -25,6 +72,8 @@ interface RegisterResponse {
     mfaEnabled: boolean
     createdAt: string
   }
+  encryptionSalt?: string
+  encryptionVersion?: number
 }
 
 interface MFAStatusResponse {
@@ -47,6 +96,7 @@ interface Note {
   isTrashed: boolean
   trashedAt?: string
   pinned?: boolean
+  encryptionVersion?: number
 }
 
 interface Folder {
@@ -195,6 +245,8 @@ class ApiClient {
           createdAt: new Date().toISOString(),
         },
         requiresMFA: response.mfa_required,
+        encryptionSalt: response.encryption_salt,
+        encryptionVersion: response.encryption_version,
       }
 
       if (typeof window !== 'undefined') {
@@ -228,6 +280,8 @@ class ApiClient {
           mfaEnabled: false,
           createdAt: new Date().toISOString(),
         },
+        encryptionSalt: response.encryption_salt,
+        encryptionVersion: response.encryption_version,
       }
 
       if (typeof window !== 'undefined') {
@@ -270,6 +324,9 @@ class ApiClient {
           mfaEnabled: true,
           createdAt: storedUser.createdAt || new Date().toISOString(),
         },
+        requiresMFA: false,
+        encryptionSalt: response.encryption_salt,
+        encryptionVersion: response.encryption_version,
       }
 
       if (typeof window !== 'undefined') {
@@ -331,12 +388,16 @@ class ApiClient {
 
   // Notes methods
   async getNotes(): Promise<Note[]> {
-    const response = await this.request<{ notes: Note[] }>('/notes')
-    return response.notes || []
+    const response = await this.request<{ notes: any[] }>('/notes')
+    return (response.notes || []).map(normalizeNoteResponse)
   }
 
   async getNote(id: string): Promise<Note> {
-    return this.request<Note>(`/notes/${id}`)
+    const response = await this.request<any>(`/notes/${id}`)
+    if (response && typeof response === 'object' && 'note' in response) {
+      return normalizeNoteResponse(response.note)
+    }
+    return normalizeNoteResponse(response)
   }
 
   async createNote(note: Partial<Note>): Promise<Note> {
@@ -346,30 +407,44 @@ class ApiClient {
       content_encrypted: note.content || '',
       folderId: note.folderId,
       tags: note.tags || [],
-      userId: note.userId,
+      pinned: note.pinned,
+      encryption_version: note.encryptionVersion,
     }
 
-    return this.request<Note>('/notes', {
+    const response = await this.request<any>('/notes', {
       method: 'POST',
       body: JSON.stringify(noteData),
     })
+
+    if (response && typeof response === 'object' && 'note' in response) {
+      return normalizeNoteResponse(response.note)
+    }
+
+    return normalizeNoteResponse(response)
   }
 
   async updateNote(id: string, note: Partial<Note>): Promise<Note> {
     // Send encrypted data as expected by backend
     // Backend expects base64-encoded strings
     const noteData = {
-      title_encrypted: note.title ? btoa(unescape(encodeURIComponent(note.title))) : '',
-      content_encrypted: note.content ? btoa(unescape(encodeURIComponent(note.content))) : '',
+      title_encrypted: note.title || '',
+      content_encrypted: note.content || '',
       folderId: note.folderId,
       tags: note.tags,
       pinned: note.pinned,
+      encryption_version: note.encryptionVersion,
     }
 
-    return this.request<Note>(`/notes/${id}`, {
+    const response = await this.request<any>(`/notes/${id}`, {
       method: 'PUT',
       body: JSON.stringify(noteData),
     })
+
+    if (response && typeof response === 'object' && 'note' in response) {
+      return normalizeNoteResponse(response.note)
+    }
+
+    return normalizeNoteResponse(response)
   }
 
   async deleteNote(id: string): Promise<void> {
@@ -379,8 +454,8 @@ class ApiClient {
   }
 
   async getTrash(): Promise<Note[]> {
-    const response = await this.request<{ notes: Note[] }>('/notes/trash')
-    return response.notes || []
+    const response = await this.request<{ notes: any[] }>('/notes/trash')
+    return (response.notes || []).map(normalizeNoteResponse)
   }
 
   async restoreNote(id: string): Promise<void> {
@@ -518,14 +593,6 @@ class ApiClient {
     })
   }
 
-  // Search methods
-  async searchNotes(query: string): Promise<Note[]> {
-    return this.request<Note[]>('/search', {
-      method: 'POST',
-      body: JSON.stringify({ query }),
-    })
-  }
-
   // Version methods
   async createNoteVersion(data: {
     noteId: string
@@ -651,7 +718,11 @@ class ApiClient {
   }
 
   // Note links methods
-  async createNoteLink(sourceNoteId: string, targetNoteId: string, linkText?: string): Promise<any> {
+  async createNoteLink(
+    sourceNoteId: string,
+    targetNoteId: string,
+    linkText?: string
+  ): Promise<any> {
     return this.request(`/notes/${sourceNoteId}/links`, {
       method: 'POST',
       body: JSON.stringify({ target_note_id: targetNoteId, link_text: linkText }),
@@ -670,10 +741,6 @@ class ApiClient {
     await this.request(`/notes/${noteId}/links/${linkId}`, {
       method: 'DELETE',
     })
-  }
-
-  async searchNotesForLinking(query: string = ''): Promise<{ notes: any[] }> {
-    return this.request(`/notes/search-for-linking?q=${encodeURIComponent(query)}`)
   }
 
   // Share links methods

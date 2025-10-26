@@ -21,7 +21,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onToggle
 
     try {
       // TODO: Implement actual password reset API call
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000)) // Simulate API call
 
       setIsSubmitted(true)
       toast.success('Password reset link sent to your email')
@@ -54,12 +54,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onToggle
             >
               Try again
             </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full"
-              onClick={onToggleMode}
-            >
+            <Button type="button" variant="ghost" className="w-full" onClick={onToggleMode}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to login
             </Button>
@@ -104,12 +99,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onToggle
           </Button>
 
           <div className="text-center">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onToggleMode}
-              className="text-sm"
-            >
+            <Button type="button" variant="ghost" onClick={onToggleMode} className="text-sm">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to login
             </Button>

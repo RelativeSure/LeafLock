@@ -200,7 +200,7 @@ export function LoginForm({
             <div>
               <button
                 type="button"
-                onClick={() => window.location.href = '/auth/forgot'}
+                onClick={() => (window.location.href = '/auth/forgot')}
                 className="text-primary hover:underline transition-smooth"
               >
                 Forgot password?
