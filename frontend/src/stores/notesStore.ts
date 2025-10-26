@@ -212,6 +212,10 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         }))
       }
 
+      if (!updatedNote) {
+        throw new Error('Failed to update note: no updated note returned')
+      }
+
       return updatedNote
     } catch (error) {
       console.error('Failed to update note:', error)
