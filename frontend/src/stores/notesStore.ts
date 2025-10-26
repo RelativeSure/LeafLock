@@ -118,7 +118,50 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       const currentNote = get().notes.find(note => note.id === id)
 
       if (!currentNote) {
-        throw new Error('Note not found')
+        // If note doesn't exist and it's a local note, create it
+        if (id.startsWith('local-')) {
+          const storedUser = localStorage.getItem('user')
+          if (!storedUser) {
+            console.warn('Note not found and no user logged in')
+            return
+          }
+          const user = JSON.parse(storedUser)
+
+          // Create a new local note
+          const newLocalNote: Note = {
+            id: id,
+            title: updates.title || '',
+            content: updates.content || '',
+            userId: user.id,
+            folderId: updates.folderId || null,
+            tags: updates.tags || [],
+            pinned: updates.pinned || false,
+            encrypted: updates.encrypted || false,
+            isTrashed: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            trashedAt: undefined,
+            sharedWith: [],
+            isTemplate: false,
+          }
+
+          // Add to store
+          set((state) => ({
+            notes: [newLocalNote, ...state.notes],
+            selectedNote: state.selectedNote?.id === id ? newLocalNote : state.selectedNote,
+          }))
+
+          updatedNote = { ...newLocalNote, ...updates, updatedAt: new Date().toISOString() }
+          set((state) => ({
+            notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
+            selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
+          }))
+
+          return updatedNote
+        }
+
+        console.warn('Note not found:', id)
+        return
       }
 
       // If it's a local note (not saved to API yet)
@@ -166,7 +209,8 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       return updatedNote
     } catch (error) {
       console.error('Failed to update note:', error)
-      throw error
+      // Don't throw error, just warn
+      return
     }
   },
 
