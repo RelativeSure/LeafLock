@@ -36,7 +36,15 @@ export const useAuthStore = create<AuthState>()(
               await apiClient.healthCheck()
               console.log('Token validation successful')
             } catch (error) {
-              console.warn('Health check failed, but continuing with stored token:', error)
+              console.warn('Health check failed - token expired, clearing session')
+              // Clear expired session and redirect to login
+              localStorage.removeItem('user')
+              localStorage.removeItem('token')
+              set({ user: null })
+              // Redirect to login page
+              if (typeof window !== 'undefined' && window.location.pathname !== '/auth/login') {
+                window.location.href = '/auth/login'
+              }
             }
           } catch (error) {
             console.error('Error parsing stored user or token invalid:', error)

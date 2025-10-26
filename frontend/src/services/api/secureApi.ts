@@ -144,6 +144,18 @@ class ApiClient {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
+
+      // Handle 401 Unauthorized - token expired
+      if (response.status === 401) {
+        console.warn('401 Unauthorized - clearing expired session')
+        localStorage.removeItem('user')
+        localStorage.removeItem('token')
+        // Only redirect if we're not already on the login page
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/auth/')) {
+          window.location.href = '/auth/login'
+        }
+      }
+
       throw new Error(errorData.message || errorData.error || `HTTP ${response.status}`)
     }
 
