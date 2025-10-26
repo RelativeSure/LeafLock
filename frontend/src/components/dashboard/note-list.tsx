@@ -130,7 +130,7 @@ export function NoteList() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       <div className="px-4 py-2 border-b border-border flex-shrink-0">
         <div className="flex items-center justify-between">
           <DropdownMenu>

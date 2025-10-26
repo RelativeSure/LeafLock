@@ -5,7 +5,7 @@ import { useTemplatesStore } from '../../stores/templatesStore'
 import { useAuthStore } from '../../stores/authStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { Button } from '@/components/ui/button'
-import { Download, User, Shield, Settings as SettingsIcon, Database } from 'lucide-react'
+import { Download, User, Shield, Settings as SettingsIcon, Database, FolderPlus, Tag as TagIcon } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -173,6 +173,10 @@ export function SettingsPage() {
           <TabsTrigger value="preferences" className="w-full justify-start gap-2">
             <SettingsIcon className="h-4 w-4" />
             Preferences
+          </TabsTrigger>
+          <TabsTrigger value="manage" className="w-full justify-start gap-2">
+            <FolderPlus className="h-4 w-4" />
+            Manage Folders & Tags
           </TabsTrigger>
         </TabsList>
 
@@ -398,6 +402,74 @@ export function SettingsPage() {
                       <SelectItem value="new-note">New Note</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="manage" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FolderPlus className="h-5 w-5" />
+                  Folder Management
+                </CardTitle>
+                <CardDescription>
+                  Create, edit, and organize your folders.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Current Folders</Label>
+                  <div className="border rounded-lg p-3 space-y-2 max-h-96 overflow-y-auto">
+                    {folders && folders.length > 0 ? (
+                      folders.map((folder) => (
+                        <div key={folder.id} className="flex items-center gap-2 p-2 hover:bg-accent rounded">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: folder.color }}
+                          />
+                          <span className="flex-1">{folder.name}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No folders yet</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TagIcon className="h-5 w-5" />
+                  Tag Management
+                </CardTitle>
+                <CardDescription>
+                  Manage your note tags.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Current Tags</Label>
+                  <div className="border rounded-lg p-3 space-y-2 max-h-96 overflow-y-auto">
+                    {tags && tags.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {tags.map((tag) => (
+                          <span
+                            key={tag.id}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-accent text-sm"
+                          >
+                            <TagIcon className="h-3 w-3" />
+                            {tag.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No tags yet</p>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>

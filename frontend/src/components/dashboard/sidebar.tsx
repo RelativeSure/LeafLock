@@ -20,16 +20,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from '@/components/ui/drawer'
 import { Label } from '@/components/ui/label'
 import { TemplatesDialog } from './templates-dialog'
 import { AdvancedSearchBar } from './advanced-search-bar'
@@ -262,18 +252,14 @@ export function Sidebar() {
         </div>
 
         {/* Notes List */}
-        <div className="flex-1 flex flex-col min-h-0">
-          <ScrollArea className="flex-1 h-full">
-            <div className="p-2">
-              {isLoading ? (
-                <div className="flex items-center justify-center h-32">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                </div>
-              ) : (
-                <NoteList />
-              )}
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
             </div>
-          </ScrollArea>
+          ) : (
+            <NoteList />
+          )}
         </div>
 
         {/* Folder & Tag Selection */}
@@ -330,40 +316,6 @@ export function Sidebar() {
               </ScrollArea>
             </div>
           </div>
-        </div>
-
-        {/* Management Link */}
-        <div className="p-4 border-t border-border">
-          <Drawer>
-            <DrawerTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full gap-2 bg-transparent mb-2"
-              >
-                <FolderPlus className="h-4 w-4" />
-                Manage Folders & Tags
-              </Button>
-            </DrawerTrigger>
-            <DrawerContent>
-              <DrawerHeader>
-                <DrawerTitle>Manage Folders & Tags</DrawerTitle>
-                <DrawerDescription>
-                  Create and organize your folders and tags
-                </DrawerDescription>
-              </DrawerHeader>
-              <div className="p-4 space-y-6">
-                <p className="text-sm text-muted-foreground">
-                  Use this drawer to manage your folders and tags. This feature will be enhanced in a future update.
-                </p>
-              </div>
-              <DrawerFooter>
-                <DrawerClose asChild>
-                  <Button variant="outline">Close</Button>
-                </DrawerClose>
-              </DrawerFooter>
-            </DrawerContent>
-          </Drawer>
         </div>
 
         <div className="p-4 border-t border-border space-y-2">
