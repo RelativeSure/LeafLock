@@ -418,7 +418,7 @@ export function NoteEditor() {
             setTitle(e.target.value)
           }}
           placeholder="Add Title"
-          className="text-3xl font-bold border-none shadow-none px-0 mb-4 focus-visible:ring-0 py-2"
+          className="text-3xl font-bold mb-4"
           disabled={isDecrypting}
         />
 

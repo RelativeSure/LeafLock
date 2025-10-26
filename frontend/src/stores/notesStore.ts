@@ -171,14 +171,45 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       }
 
       // If it's a local note (not saved to API yet)
-      if (id && typeof id === 'string' && id.startsWith('local-')) {
-        // Just update locally for local notes - don't try to send to API
-        updatedNote = { ...currentNote, ...updates, updatedAt: new Date().toISOString() }
-        set((state) => ({
-          notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
-          selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
-        }))
-        return updatedNote
+      if (id && typeof id === 'string' && (id.startsWith('local-') || !id.includes('-'))) {
+        // Check if note now has content - if so, save to API
+        const hasContent = updates.title?.trim() || updates.content?.trim()
+        const updatesMetadata = Object.keys(updates).some(key => !['title', 'content'].includes(key))
+
+        if (hasContent || updatesMetadata) {
+          try {
+            // Save to API to get server-generated ID
+            const serverNote = await apiClient.createNote({
+              ...currentNote,
+              ...updates,
+            })
+
+            // Replace local note with server note
+            set((state) => ({
+              notes: state.notes.map((note) => (note.id === id ? serverNote : note)),
+              selectedNote: state.selectedNote?.id === id ? serverNote : state.selectedNote,
+            }))
+
+            return serverNote
+          } catch (error) {
+            console.warn('API create failed for local note, keeping local:', error)
+            // Fall back to local update
+            updatedNote = { ...currentNote, ...updates, updatedAt: new Date().toISOString() }
+            set((state) => ({
+              notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
+              selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
+            }))
+            return updatedNote
+          }
+        } else {
+          // No content yet - just update locally
+          updatedNote = { ...currentNote, ...updates, updatedAt: new Date().toISOString() }
+          set((state) => ({
+            notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
+            selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
+          }))
+          return updatedNote
+        }
       }
 
       // Regular API update for existing notes
