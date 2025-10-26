@@ -263,12 +263,12 @@ export function Sidebar() {
         </div>
 
         {/* Folder & Tag Selection */}
-        <div className="p-4 border-b border-border">
-          <div className="space-y-3">
-            <div>
+        <div className="border-b border-border flex-shrink-0">
+          <div className="space-y-3 p-4">
+            <div className="min-h-[80px] max-h-[120px] overflow-hidden">
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Folders</h3>
-              <ScrollArea className="h-24">
-                <div className="space-y-1">
+              <ScrollArea className="flex-1">
+                <div className="space-y-1 pr-4">
                   <Button
                     variant={selectedFolder === null ? "secondary" : "ghost"}
                     size="sm"
@@ -296,10 +296,10 @@ export function Sidebar() {
               </ScrollArea>
             </div>
 
-            <div>
+            <div className="min-h-[80px] max-h-[120px] overflow-hidden">
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Tags</h3>
-              <ScrollArea className="h-24">
-                <div className="space-y-1">
+              <ScrollArea className="flex-1">
+                <div className="space-y-1 pr-4">
                   {tags.map((tag) => (
                     <Button
                       key={tag.id}

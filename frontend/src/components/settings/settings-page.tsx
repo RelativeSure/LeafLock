@@ -155,9 +155,10 @@ export function SettingsPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="profile" className="flex gap-6">
-        {/* Vertical Tabs List */}
-        <TabsList className="flex-col h-fit w-64">
+      <Tabs defaultValue="profile" className="flex gap-6 h-full">
+        {/* Vertical Tabs List - Sidebar */}
+        <div className="w-64 flex-shrink-0 border-r pr-4">
+          <TabsList className="flex-col h-fit w-full">
           <TabsTrigger value="profile" className="w-full justify-start gap-2">
             <User className="h-4 w-4" />
             Profile
@@ -178,7 +179,8 @@ export function SettingsPage() {
             <FolderPlus className="h-4 w-4" />
             Manage Folders & Tags
           </TabsTrigger>
-        </TabsList>
+          </TabsList>
+        </div>
 
         {/* Tab Content */}
         <div className="flex-1">
