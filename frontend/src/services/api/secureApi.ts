@@ -357,9 +357,10 @@ class ApiClient {
 
   async updateNote(id: string, note: Partial<Note>): Promise<Note> {
     // Send encrypted data as expected by backend
+    // Backend expects base64-encoded strings
     const noteData = {
-      title_encrypted: note.title,
-      content_encrypted: note.content,
+      title_encrypted: note.title ? btoa(unescape(encodeURIComponent(note.title))) : '',
+      content_encrypted: note.content ? btoa(unescape(encodeURIComponent(note.content))) : '',
       folderId: note.folderId,
       tags: note.tags,
       pinned: note.pinned,

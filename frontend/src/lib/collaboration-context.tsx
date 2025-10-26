@@ -11,11 +11,11 @@ export function useCollaboration() {
     getSessionUsers: (_noteId: string): User[] => [],
     joinSession: (_noteId: string) => {
       // TODO: Implement collaboration session joining
-      console.log('Joining collaboration session for note:', _noteId)
+      // Don't log - collaboration is controlled by Share button only
     },
     leaveSession: (_noteId: string) => {
       // TODO: Implement collaboration session leaving
-      console.log('Leaving collaboration session for note:', _noteId)
+      // Don't log - collaboration is controlled by Share button only
     },
     shareNote: (_noteId: string, _email: string) => Promise.resolve(),
     unshareNote: (_noteId: string, _userId: string) => Promise.resolve(),

@@ -151,9 +151,8 @@ export function NoteEditor() {
         setDisplayContent('')
       }
 
-      return () => {
-        leaveSession(selectedNote.id)
-      }
+      // Don't automatically leave collaboration session
+      // Only leave when explicitly sharing or closing
     }
   }, [selectedNote, isUnlocked])
 
