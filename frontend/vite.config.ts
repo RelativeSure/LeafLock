@@ -131,7 +131,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 1600,
   },
   define: {
-    'process.env.NODE_ENV': JSON.stringify('production'),
+    'process.env.NODE_ENV': JSON.stringify('development'),
   },
   server: {
     host: devServerHost,
