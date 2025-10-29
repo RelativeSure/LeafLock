@@ -22,10 +22,16 @@ export function LoginForm({
   const [isLoading, setIsLoading] = useState(false)
 
   // Redirect to dashboard after successful login
+  // Use useRef to prevent multiple redirects
+  const hasRedirected = React.useRef(false)
   useEffect(() => {
-    if (user) {
+    if (user && !hasRedirected.current) {
+      hasRedirected.current = true
       console.log('User logged in, redirecting to dashboard...')
-      window.location.href = '/'
+      // Use setTimeout to ensure state updates complete before redirect
+      setTimeout(() => {
+        window.location.href = '/'
+      }, 0)
     }
   }, [user])
 

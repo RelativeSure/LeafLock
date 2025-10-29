@@ -16,16 +16,12 @@ const RegisterForm = React.lazy(() =>
 const ForgotPasswordForm = React.lazy(() =>
   import('./components/auth/forgot-password-form').then((m) => ({ default: m.ForgotPasswordForm }))
 )
-// Wrap lazy components to ensure proper ref handling with Suspense in React 19
-const Sidebar = React.memo(
-  React.lazy(() =>
-    import('./components/dashboard/sidebar').then((m) => ({ default: m.Sidebar }))
-  )
+// Lazy load components - React.lazy handles refs automatically for forwardRef components
+const Sidebar = React.lazy(() =>
+  import('./components/dashboard/sidebar').then((m) => ({ default: m.Sidebar }))
 )
-const NoteEditor = React.memo(
-  React.lazy(() =>
-    import('./components/dashboard/note-editor').then((m) => ({ default: m.NoteEditor }))
-  )
+const NoteEditor = React.lazy(() =>
+  import('./components/dashboard/note-editor').then((m) => ({ default: m.NoteEditor }))
 )
 const KeyboardShortcutsDialog = React.lazy(() =>
   import('./components/dashboard/keyboard-shortcuts-dialog').then((m) => ({
@@ -136,30 +132,46 @@ const forgotRoute = createRoute({
 const DashboardComponent: React.FC = () => {
   const [user, setUser] = React.useState<any>(null)
   const [isLoading, setIsLoading] = React.useState(true)
+  const userRef = React.useRef<any>(null)
 
   React.useEffect(() => {
     // Dynamically import auth store to prevent circular dependency
     let unsubscribe: (() => void) | undefined
     let mounted = true
-    let currentUserValue: any = null
     
     import('./stores/authStore').then(({ useAuthStore }) => {
       const store = useAuthStore.getState()
       store.initialize().then(() => {
         if (mounted) {
-          currentUserValue = store.user
-          setUser(currentUserValue)
+          const currentUser = store.user
+          userRef.current = currentUser
+          setUser(currentUser)
           setIsLoading(false)
         }
       })
       
-      // Subscribe to store changes - only update if user actually changed
-      unsubscribe = useAuthStore.subscribe((state) => {
-        if (mounted && state.user !== currentUserValue) {
-          currentUserValue = state.user
-          setUser(state.user)
-        }
-      })
+      // Use Zustand's selector API to only subscribe to user changes
+      // This prevents unnecessary updates when other store properties change
+      unsubscribe = useAuthStore.subscribe(
+        (state) => state.user,
+        (newUser, prevUser) => {
+          // Deep comparison to prevent unnecessary updates
+          if (mounted && newUser !== prevUser && newUser !== userRef.current) {
+            // Check if it's actually a different user (by ID) or if user became null
+            const isDifferentUser = 
+              !newUser || 
+              !userRef.current || 
+              newUser.id !== userRef.current.id ||
+              newUser.email !== userRef.current.email
+            
+            if (isDifferentUser) {
+              userRef.current = newUser
+              setUser(newUser)
+            }
+          }
+        },
+        { equalityFn: (a, b) => a === b }
+      )
     })
     
     return () => {
