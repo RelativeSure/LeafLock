@@ -77,8 +77,8 @@ export function RegisterForm({
 
     try {
       await register(email, password, name)
-      // Registration successful, redirect to dashboard
-      router.navigate({ to: '/dashboard' })
+      // Registration successful, redirect to dashboard (root route)
+      window.location.href = '/'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed')
     } finally {
