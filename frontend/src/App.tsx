@@ -3,8 +3,7 @@ import { RouterProvider } from '@tanstack/react-router'
 import { ThemeProvider } from './context/ThemeContext'
 import { EncryptionProvider } from './lib/encryption-context'
 import { ConfigDebug } from './components/debug/ConfigDebug'
-import { AppErrorBoundary } from './components/common/AppErrorBoundary'
-import { Toaster } from './components/ui/sonner'
+// Temporarily remove wrappers to isolate update loop
 
 // Lazy load router to prevent circular dependency
 let routerInstance: any = null
@@ -33,15 +32,12 @@ const App: React.FC = () => {
   }
 
   return (
-    <AppErrorBoundary>
-      <ThemeProvider>
-        <EncryptionProvider>
-          <RouterProvider router={router} />
-          <Toaster />
-          <ConfigDebug />
-        </EncryptionProvider>
-      </ThemeProvider>
-    </AppErrorBoundary>
+    <ThemeProvider>
+      <EncryptionProvider>
+        <RouterProvider router={router} />
+        <ConfigDebug />
+      </EncryptionProvider>
+    </ThemeProvider>
   )
 }
 
