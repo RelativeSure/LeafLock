@@ -195,7 +195,7 @@ export function NoteList() {
             return (
               <ContextMenu key={note.id}>
                 <ContextMenuTrigger asChild>
-                  <div
+                  <NoteListItemWrapper
                     className={`w-full p-3 rounded-lg transition-smooth hover-lift stagger-item ${
                       isSelected
                         ? 'bg-primary/10 border border-primary/20'
@@ -302,7 +302,7 @@ export function NoteList() {
                         </div>
                       </button>
                     </div>
-                  </div>
+                  </NoteListItemWrapper>
                 </ContextMenuTrigger>
                 <ContextMenuContent>
                   <ContextMenuItem onClick={() => selectNote(note.id)}>Open</ContextMenuItem>
