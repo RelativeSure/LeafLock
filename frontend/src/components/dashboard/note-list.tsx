@@ -194,21 +194,20 @@ export function NoteList() {
 
             return (
               <ContextMenu key={note.id}>
-                <ContextMenuTrigger asChild>
-                  <div
-                    className={`w-full p-3 rounded-lg transition-smooth hover-lift stagger-item cursor-pointer ${
-                      isSelected
-                        ? 'bg-primary/10 border border-primary/20'
-                        : 'hover:bg-surface-hover border border-transparent'
-                    } ${isBulkSelected ? 'bg-primary/5 border-primary/10' : ''}`}
-                    style={{ animationDelay: `${index * 0.05}s` }}
-                    onClick={(e) => {
-                      // Only select if not in bulk mode and click wasn't on checkbox
-                      if (!isBulkMode && !(e.target as HTMLElement).closest('input[type="checkbox"]')) {
-                        selectNote(note.id)
-                      }
-                    }}
-                  >
+                <ContextMenuTrigger
+                  className={`w-full p-3 rounded-lg transition-smooth hover-lift stagger-item cursor-pointer ${
+                    isSelected
+                      ? 'bg-primary/10 border border-primary/20'
+                      : 'hover:bg-surface-hover border border-transparent'
+                  } ${isBulkSelected ? 'bg-primary/5 border-primary/10' : ''}`}
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                  onClick={(e) => {
+                    // Only select if not in bulk mode and click wasn't on checkbox
+                    if (!isBulkMode && !(e.target as HTMLElement).closest('input[type="checkbox"]')) {
+                      selectNote(note.id)
+                    }
+                  }}
+                >
                     <div className="flex items-start gap-3">
                       {isBulkMode && (
                         <div className="flex items-center mt-1">
@@ -306,7 +305,6 @@ export function NoteList() {
                         </div>
                       </div>
                     </div>
-                  </div>
                 </ContextMenuTrigger>
                 <ContextMenuContent>
                   <ContextMenuItem onClick={() => selectNote(note.id)}>Open</ContextMenuItem>
