@@ -71,10 +71,20 @@ const rootRoute = createRootRoute({
   component: RootLayout,
 })
 
-// Index route
+// Index route - redirects to dashboard (which is now at root for authenticated users)
 const IndexComponent: React.FC = () => {
   React.useEffect(() => {
-    window.location.href = '/auth/login'
+    // Check if user is authenticated, if so go to dashboard, else login
+    import('./stores/authStore').then(({ useAuthStore }) => {
+      const store = useAuthStore.getState()
+      store.initialize().then(() => {
+        if (store.user) {
+          window.location.href = '/'
+        } else {
+          window.location.href = '/login'
+        }
+      })
+    })
   }, [])
   return null
 }
@@ -85,7 +95,7 @@ const indexRoute = createRoute({
   component: IndexComponent,
 })
 
-// Auth routes
+// Auth routes - clean URLs without /auth/ prefix
 const AuthComponent: React.FC<{ mode?: 'login' | 'register' | 'forgot' }> = ({
   mode: initialMode = 'login',
 }) => {
@@ -119,25 +129,21 @@ const AuthComponent: React.FC<{ mode?: 'login' | 'register' | 'forgot' }> = ({
   )
 }
 
-const authRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: 'auth',
-})
-
+// Auth routes - using clean URLs at root level
 const loginRoute = createRoute({
-  getParentRoute: () => authRoute,
+  getParentRoute: () => rootRoute,
   path: 'login',
   component: () => <AuthComponent mode="login" />,
 })
 
 const registerRoute = createRoute({
-  getParentRoute: () => authRoute,
+  getParentRoute: () => rootRoute,
   path: 'register',
   component: () => <AuthComponent mode="register" />,
 })
 
 const forgotRoute = createRoute({
-  getParentRoute: () => authRoute,
+  getParentRoute: () => rootRoute,
   path: 'forgot',
   component: () => <AuthComponent mode="forgot" />,
 })
@@ -160,7 +166,7 @@ const DashboardComponent: React.FC = () => {
 
   React.useEffect(() => {
     if (!isLoading && authStore && !authStore.user) {
-      window.location.href = '/auth/login'
+      window.location.href = '/login'
     }
   }, [authStore, isLoading])
 
@@ -193,7 +199,7 @@ const DashboardComponent: React.FC = () => {
 
   const handleLogout = () => {
     logout()
-    window.location.href = '/auth/login'
+    window.location.href = '/login'
   }
 
   return (
@@ -309,10 +315,16 @@ const DashboardComponent: React.FC = () => {
   )
 }
 
+// Dashboard route - now at root, using index for redirect logic
+// We'll create a separate dashboard route that handles authenticated access
+const DashboardRouteComponent: React.FC = () => {
+  return <DashboardComponent />
+}
+
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: 'dashboard',
-  component: DashboardComponent,
+  path: '/',
+  component: DashboardRouteComponent,
 })
 
 const settingsRoute = createRoute({
@@ -355,15 +367,18 @@ const adminRoute = createRoute({
   component: AdminPageComponent,
 })
 
-// Create the router
+// Create the router - note: dashboard route uses '/' so it needs special handling
+// We'll make index route redirect based on auth state, and authenticated users see dashboard
 export const router = createRouter({
   routeTree: rootRoute.addChildren([
-    indexRoute,
-    authRoute.addChildren([loginRoute, registerRoute, forgotRoute]),
-    dashboardRoute,
+    dashboardRoute, // Dashboard at root for authenticated users
+    loginRoute,
+    registerRoute,
+    forgotRoute,
     settingsRoute,
     manageRoute,
     adminRoute,
+    indexRoute, // Catch-all that redirects based on auth state
   ]),
 })
 

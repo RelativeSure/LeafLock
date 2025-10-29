@@ -42,7 +42,7 @@ export function ProtectedRoute({
             <Alert variant="destructive">
               <AlertDescription>You must be logged in to access this page.</AlertDescription>
             </Alert>
-            <Button onClick={() => (window.location.href = '/auth/login')} className="w-full">
+            <Button onClick={() => (window.location.href = '/login')} className="w-full">
               Go to Login
             </Button>
           </CardContent>
@@ -68,7 +68,7 @@ export function ProtectedRoute({
                 resource.
               </AlertDescription>
             </Alert>
-            <Button onClick={() => (window.location.href = fallbackRoute)} className="w-full">
+            <Button onClick={() => (window.location.href = fallbackRoute || '/')} className="w-full">
               Go Back
             </Button>
           </CardContent>
