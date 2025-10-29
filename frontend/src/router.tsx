@@ -55,6 +55,7 @@ import { FoldersTagsPage } from './components/management/folders-tags-page'
 import { AdminPage } from './components/admin/admin-page'
 import { ProtectedRoute } from './components/common/ProtectedRoute'
 import { InteractiveGridPattern } from './components/ui/interactive-grid-pattern'
+import { isOnAuthRoute, safeRedirectToLogin } from './lib/navigation'
 
 const RootLayout: React.FC = () => (
   <AppErrorBoundary>
@@ -152,11 +153,8 @@ const DashboardComponent: React.FC = () => {
 
   React.useEffect(() => {
     if (!isLoading && !user) {
-      // Avoid redirect churn if we're already on an auth page
-      const path = typeof window !== 'undefined' ? window.location.pathname : ''
-      const onAuthRoute = path === '/login' || path === '/register' || path === '/forgot'
-      if (!onAuthRoute) {
-        window.location.href = '/login'
+      if (typeof window === 'undefined' || !isOnAuthRoute()) {
+        safeRedirectToLogin()
       }
     }
   }, [user, isLoading])

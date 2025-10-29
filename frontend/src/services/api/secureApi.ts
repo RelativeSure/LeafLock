@@ -1,4 +1,5 @@
 import { config } from '@/lib/config'
+import { clearAuthStorage, safeRedirectToLogin, isOnAuthRoute } from '@/lib/navigation'
 
 const API_BASE_URL = config.apiUrl
 
@@ -153,8 +154,6 @@ interface UserSettings {
   }
 }
 
-let isHandlingUnauthorizedRedirect = false
-
 class ApiClient {
   private baseURL: string
   private token: string | null = null
@@ -210,26 +209,10 @@ class ApiClient {
       // Handle 401 Unauthorized - token expired
       if (response.status === 401) {
         console.warn('401 Unauthorized - clearing expired session')
-        localStorage.removeItem('user')
-        localStorage.removeItem('token')
-        if (typeof window !== 'undefined') {
-          const path = window.location.pathname
-          const onAuthRoute = path === '/login' || path === '/register' || path === '/forgot'
-          // Avoid redirect storms: don't redirect from auth routes and debounce redirects
-          if (!onAuthRoute && !isHandlingUnauthorizedRedirect) {
-            isHandlingUnauthorizedRedirect = true
-            // Small timeout to allow UI state to settle
-            setTimeout(() => {
-              try {
-                window.location.href = '/login'
-              } finally {
-                // Reset after some time to avoid permanent lock
-                setTimeout(() => {
-                  isHandlingUnauthorizedRedirect = false
-                }, 1500)
-              }
-            }, 50)
-          }
+        clearAuthStorage()
+        if (typeof window !== 'undefined' && !isOnAuthRoute()) {
+          // Small timeout to allow UI to settle before navigation
+          setTimeout(() => safeRedirectToLogin(), 50)
         }
       }
 
