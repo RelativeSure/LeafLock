@@ -22,7 +22,7 @@ import { Sidebar } from './components/dashboard/sidebar'
 import { NoteEditor } from './components/dashboard/note-editor'
 // Removed global KeyboardShortcutsDialog lazy import to avoid duplicate mounts
 
-import { ThemeToggle } from './components/theme-toggle'
+// ThemeToggle temporarily disabled to isolate post-login ref error
 import { Button } from './components/ui/button'
 import { Leaf } from 'lucide-react'
 // Dropdown menu temporarily removed to avoid ref issues during post-login render
@@ -182,7 +182,6 @@ const DashboardComponent: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 md:gap-3">
-          <ThemeToggle />
           <Button variant="ghost" size="sm" className="gap-2 transition-smooth hover-lift" onClick={handleLogout}>
             <UserAvatar user={user} size={28} />
             <span className="hidden md:inline text-sm">Logout</span>
