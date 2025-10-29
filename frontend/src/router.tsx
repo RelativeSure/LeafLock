@@ -150,28 +150,30 @@ const DashboardComponent: React.FC = () => {
         }
       })
       
-      // Use Zustand's selector API to only subscribe to user changes
-      // This prevents unnecessary updates when other store properties change
-      unsubscribe = useAuthStore.subscribe(
-        (state) => state.user,
-        (newUser, prevUser) => {
-          // Deep comparison to prevent unnecessary updates
-          if (mounted && newUser !== prevUser && newUser !== userRef.current) {
-            // Check if it's actually a different user (by ID) or if user became null
-            const isDifferentUser = 
-              !newUser || 
-              !userRef.current || 
-              newUser.id !== userRef.current.id ||
-              newUser.email !== userRef.current.email
-            
-            if (isDifferentUser) {
-              userRef.current = newUser
-              setUser(newUser)
-            }
-          }
-        },
-        { equalityFn: (a, b) => a === b }
-      )
+      // Subscribe to store changes - only update if user actually changed
+      // Prevent infinite loops by checking if user reference or data actually changed
+      unsubscribe = useAuthStore.subscribe((state) => {
+        if (!mounted) return
+        
+        const newUser = state.user
+        const prevUser = userRef.current
+        
+        // Skip if user hasn't actually changed
+        if (newUser === prevUser) return
+        
+        // Check if it's actually a different user (by ID/email) or if user became null
+        const isDifferentUser = 
+          !newUser || 
+          !prevUser || 
+          newUser.id !== prevUser.id ||
+          newUser.email !== prevUser.email
+        
+        // Only update state if user actually changed
+        if (isDifferentUser) {
+          userRef.current = newUser
+          setUser(newUser)
+        }
+      })
     })
     
     return () => {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import * as React from 'react'
 import { useAuthStore } from '../../stores/authStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
