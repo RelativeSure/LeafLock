@@ -1,5 +1,6 @@
 'use client'
 
+import * as React from 'react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { getGravatarUrl, getUserInitials } from '@/lib/gravatar-utils'
 import { useSettingsStore } from '@/stores/settingsStore'
@@ -11,7 +12,7 @@ interface UserAvatarProps {
   className?: string
 }
 
-export function UserAvatar({ user, size = 32, className }: UserAvatarProps) {
+export const UserAvatar = React.forwardRef<HTMLDivElement, UserAvatarProps>(({ user, size = 32, className }, ref) => {
   const { settings } = useSettingsStore()
 
   if (!user) {
@@ -54,8 +55,9 @@ export function UserAvatar({ user, size = 32, className }: UserAvatarProps) {
   }
 
   return (
-    <Avatar className={className} style={{ width: size, height: size }}>
+    <Avatar ref={ref} className={className} style={{ width: size, height: size }}>
       {getAvatarContent()}
     </Avatar>
   )
-}
+})
+UserAvatar.displayName = 'UserAvatar'
