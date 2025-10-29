@@ -44,7 +44,13 @@ export const useAuthStore = create<AuthState>()(
             set({ user: null })
           }
         } else {
-          console.log('No stored user/token found')
+          // Ensure we clear any stale in-memory user if token is missing
+          if (storedUser || storedToken) {
+            localStorage.removeItem('user')
+            localStorage.removeItem('token')
+          }
+          set({ user: null })
+          console.log('No stored user/token found; clearing user state')
         }
         console.log('Auth store initialization complete, setting isLoading to false')
         set({ isLoading: false })
