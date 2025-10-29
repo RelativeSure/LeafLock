@@ -25,7 +25,7 @@ export function LoginForm({
   useEffect(() => {
     if (user) {
       console.log('User logged in, redirecting to dashboard...')
-      window.location.href = '/dashboard'
+      window.location.href = '/'
     }
   }, [user])
 
@@ -200,7 +200,7 @@ export function LoginForm({
             <div>
               <button
                 type="button"
-                onClick={() => (window.location.href = '/auth/forgot')}
+                onClick={() => (window.location.href = '/forgot')}
                 className="text-primary hover:underline transition-smooth"
               >
                 Forgot password?
