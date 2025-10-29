@@ -136,20 +136,22 @@ const DashboardComponent: React.FC = () => {
     // Dynamically import auth store to prevent circular dependency
     let unsubscribe: (() => void) | undefined
     let mounted = true
+    let currentUserValue: any = null
     
     import('./stores/authStore').then(({ useAuthStore }) => {
       const store = useAuthStore.getState()
       store.initialize().then(() => {
         if (mounted) {
-          const currentUser = store.user
-          setUser(currentUser)
+          currentUserValue = store.user
+          setUser(currentUserValue)
           setIsLoading(false)
         }
       })
       
       // Subscribe to store changes - only update if user actually changed
-      unsubscribe = useAuthStore.subscribe((state, prevState) => {
-        if (mounted && state.user !== prevState?.user) {
+      unsubscribe = useAuthStore.subscribe((state) => {
+        if (mounted && state.user !== currentUserValue) {
+          currentUserValue = state.user
           setUser(state.user)
         }
       })
