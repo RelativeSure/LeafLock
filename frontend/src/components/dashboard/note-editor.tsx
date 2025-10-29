@@ -42,7 +42,7 @@ import { CollaborationBar } from './collaboration-bar'
 import { EncryptionUnlockDialog } from './encryption-unlock-dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { NoteStats } from './note-stats'
-import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog'
+// Temporarily disable keyboard shortcuts dialog to isolate React ref error after login
 import { BacklinksSection } from './note-linking-utils'
 import { VersionHistoryDialog } from './version-history-dialog'
 import { RichTextEditor } from './rich-text-editor'
@@ -354,7 +354,6 @@ export function NoteEditor() {
         </div>
 
         <div className="flex items-center gap-2">
-          <KeyboardShortcutsDialog />
 
           <Button
             variant="outline"
