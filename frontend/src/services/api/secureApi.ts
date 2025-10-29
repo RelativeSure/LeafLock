@@ -201,7 +201,7 @@ class ApiClient {
         localStorage.removeItem('user')
         localStorage.removeItem('token')
         // Only redirect if we're not already on the login page
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('/auth/')) {
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
           window.location.href = '/login'
         }
       }
