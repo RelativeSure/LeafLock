@@ -13,7 +13,13 @@ const Drawer = ({
 )
 Drawer.displayName = 'Drawer'
 
-const DrawerTrigger = DrawerPrimitive.Trigger
+const DrawerTrigger = React.forwardRef<
+  React.ElementRef<typeof DrawerPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Trigger>
+>(({ ...props }, ref) => {
+  return <DrawerPrimitive.Trigger ref={ref} {...props} />
+})
+DrawerTrigger.displayName = DrawerPrimitive.Trigger.displayName
 
 const DrawerPortal = DrawerPrimitive.Portal
 
