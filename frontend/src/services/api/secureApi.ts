@@ -183,6 +183,10 @@ class ApiClient {
       }
     }
 
+    // Always refresh token from localStorage before making requests to ensure it's current
+    // This handles cases where token was set in another tab/window or after page reload
+    this.refreshToken()
+    
     if (this.token) {
       headers.Authorization = `Bearer ${this.token}`
     }
@@ -252,6 +256,8 @@ class ApiClient {
       if (typeof window !== 'undefined') {
         localStorage.setItem('token', response.token)
         localStorage.setItem('user', JSON.stringify(transformedResponse.user))
+        // Ensure token is synced immediately
+        this.token = response.token
       }
 
       return transformedResponse
@@ -287,6 +293,8 @@ class ApiClient {
       if (typeof window !== 'undefined') {
         localStorage.setItem('token', response.token)
         localStorage.setItem('user', JSON.stringify(transformedResponse.user))
+        // Ensure token is synced immediately after localStorage write
+        this.token = response.token
       }
 
       return transformedResponse
@@ -332,6 +340,8 @@ class ApiClient {
       if (typeof window !== 'undefined') {
         localStorage.setItem('token', response.token)
         localStorage.setItem('user', JSON.stringify(transformedResponse.user))
+        // Ensure token is synced immediately after localStorage write
+        this.token = response.token
       }
 
       return transformedResponse
