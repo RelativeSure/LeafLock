@@ -71,29 +71,8 @@ const rootRoute = createRootRoute({
   component: RootLayout,
 })
 
-// Index route - redirects to dashboard (which is now at root for authenticated users)
-const IndexComponent: React.FC = () => {
-  React.useEffect(() => {
-    // Check if user is authenticated, if so go to dashboard, else login
-    import('./stores/authStore').then(({ useAuthStore }) => {
-      const store = useAuthStore.getState()
-      store.initialize().then(() => {
-        if (store.user) {
-          window.location.href = '/'
-        } else {
-          window.location.href = '/login'
-        }
-      })
-    })
-  }, [])
-  return null
-}
-
-const indexRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/',
-  component: IndexComponent,
-})
+// Dashboard route at root - will handle auth check internally
+// Index route removed - dashboard at root for authenticated users
 
 // Auth routes - clean URLs without /auth/ prefix
 const AuthComponent: React.FC<{ mode?: 'login' | 'register' | 'forgot' }> = ({
@@ -315,16 +294,11 @@ const DashboardComponent: React.FC = () => {
   )
 }
 
-// Dashboard route - now at root, using index for redirect logic
-// We'll create a separate dashboard route that handles authenticated access
-const DashboardRouteComponent: React.FC = () => {
-  return <DashboardComponent />
-}
-
+// Dashboard route at root - handles authentication check internally
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: DashboardRouteComponent,
+  component: DashboardComponent,
 })
 
 const settingsRoute = createRoute({
@@ -367,8 +341,7 @@ const adminRoute = createRoute({
   component: AdminPageComponent,
 })
 
-// Create the router - note: dashboard route uses '/' so it needs special handling
-// We'll make index route redirect based on auth state, and authenticated users see dashboard
+// Create the router - dashboard at root, auth routes use clean URLs
 export const router = createRouter({
   routeTree: rootRoute.addChildren([
     dashboardRoute, // Dashboard at root for authenticated users
@@ -378,7 +351,6 @@ export const router = createRouter({
     settingsRoute,
     manageRoute,
     adminRoute,
-    indexRoute, // Catch-all that redirects based on auth state
   ]),
 })
 
