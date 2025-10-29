@@ -86,6 +86,16 @@ const AuthComponent: React.FC<{ mode?: 'login' | 'register' | 'forgot' }> = ({
     setMode(initialMode)
   }, [initialMode])
 
+  // Ensure auth store reflects storage state when landing on auth pages
+  React.useEffect(() => {
+    // Sync in-memory user with localStorage; clears stale user if token missing
+    try {
+      useAuthStore.getState().initialize()
+    } catch (_) {
+      // no-op
+    }
+  }, [])
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 animate-in fade-in-50 duration-700 relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       <InteractiveGridPattern width={50} height={50} className="absolute inset-0 opacity-50" />
