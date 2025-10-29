@@ -5,6 +5,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { EncryptionProvider } from './lib/encryption-context'
 import { Toaster } from './components/ui/sonner'
 import { AppErrorBoundary } from './components/common/AppErrorBoundary'
+import { useAuthStore } from './stores/authStore'
 
 // Lazy load stores and components to prevent circular dependencies
 const LoginForm = React.lazy(() =>
@@ -128,24 +129,16 @@ const forgotRoute = createRoute({
   component: () => <AuthComponent mode="forgot" />,
 })
 
-// Dashboard route  
+// Dashboard route
 const DashboardComponent: React.FC = () => {
-  const [authStoreModule, setAuthStoreModule] = React.useState<typeof import('./stores/authStore') | null>(null)
-  const [isLoading, setIsLoading] = React.useState(true)
-
+  // Initialize auth store on mount
   React.useEffect(() => {
-    // Dynamically import auth store to prevent circular dependency
-    import('./stores/authStore').then((module) => {
-      setAuthStoreModule(module)
-      // Initialize store
-      module.useAuthStore.getState().initialize().then(() => {
-        setIsLoading(false)
-      })
-    })
+    useAuthStore.getState().initialize()
   }, [])
 
-  // Use Zustand selector hook - it automatically handles subscriptions and prevents infinite loops
-  const user = authStoreModule ? authStoreModule.useAuthStore((state) => state.user) : null
+  // Subscribe to specific store slices (stable hooks each render)
+  const user = useAuthStore((state) => state.user)
+  const isLoading = useAuthStore((state) => state.isLoading)
 
   React.useEffect(() => {
     if (!isLoading && !user) {
