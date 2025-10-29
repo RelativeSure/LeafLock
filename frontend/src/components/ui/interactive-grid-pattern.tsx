@@ -34,6 +34,16 @@ export const InteractiveGridPattern = React.forwardRef<SVGSVGElement, Interactiv
   const [squareColors, setSquareColors] = useState<Map<number, string>>(new Map())
   const svgRef = useRef<SVGSVGElement>(null)
 
+  // Merge forwarded ref with internal ref
+  const setRefs = React.useCallback((node: SVGSVGElement | null) => {
+    svgRef.current = node
+    if (typeof ref === 'function') {
+      ref(node)
+    } else if (ref) {
+      ref.current = node
+    }
+  }, [ref])
+
   useEffect(() => {
     const updateDimensions = () => {
       if (svgRef.current) {
@@ -62,7 +72,7 @@ export const InteractiveGridPattern = React.forwardRef<SVGSVGElement, Interactiv
   const { horizontal, vertical } = dimensions
 
   return (
-    <svg ref={ref || svgRef} className={cn('absolute inset-0 h-full w-full', className)} {...props}>
+    <svg ref={setRefs} className={cn('absolute inset-0 h-full w-full', className)} {...props}>
       {Array.from({ length: horizontal * vertical }).map((_, index) => {
         const x = (index % horizontal) * width
         const y = Math.floor(index / horizontal) * height
