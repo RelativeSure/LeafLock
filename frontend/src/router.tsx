@@ -18,8 +18,8 @@ const ForgotPasswordForm = React.lazy(() =>
   import('./components/auth/forgot-password-form').then((m) => ({ default: m.ForgotPasswordForm }))
 )
 // Direct imports to avoid ref/timing issues during auth transitions
-import { Sidebar } from './components/dashboard/sidebar'
-import { NoteEditor } from './components/dashboard/note-editor'
+// import { Sidebar } from './components/dashboard/sidebar'
+// import { NoteEditor } from './components/dashboard/note-editor'
 // Removed global KeyboardShortcutsDialog lazy import to avoid duplicate mounts
 
 // ThemeToggle temporarily disabled to isolate post-login ref error
@@ -189,16 +189,11 @@ const DashboardComponent: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content - Responsive Layout */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar - Hidden width on mobile, visible on desktop */}
-        <div className="w-0 md:w-48 xl:w-64 md:flex-shrink-0">
-          <Sidebar />
-        </div>
-
-        {/* Note Editor - Full width on mobile, flex-1 on desktop */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <NoteEditor />
+      {/* Main Content - Temporarily simplified to isolate crash */}
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center space-y-2">
+          <h2 className="text-xl font-semibold">Welcome</h2>
+          <p className="text-sm text-muted-foreground">Dashboard content temporarily disabled while we fix a rendering issue.</p>
         </div>
       </div>
 
