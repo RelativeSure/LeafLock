@@ -5,19 +5,28 @@ import * as TabsPrimitive from '@radix-ui/react-tabs'
 
 import { cn } from '@/lib/utils'
 
-function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Root>) {
+const Tabs = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root>
+>(({ className, ...props }, ref) => {
   return (
     <TabsPrimitive.Root
+      ref={ref}
       data-slot="tabs"
       className={cn('flex flex-col gap-2', className)}
       {...props}
     />
   )
-}
+})
+Tabs.displayName = TabsPrimitive.Root.displayName
 
-function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.List>) {
+const TabsList = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.List>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
+>(({ className, ...props }, ref) => {
   return (
     <TabsPrimitive.List
+      ref={ref}
       data-slot="tabs-list"
       className={cn(
         'bg-muted text-muted-foreground inline-flex h-9 w-fit items-center justify-center rounded-lg p-[3px]',
@@ -26,7 +35,8 @@ function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimi
       {...props}
     />
   )
-}
+})
+TabsList.displayName = TabsPrimitive.List.displayName
 
 const TabsTrigger = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Trigger>,
