@@ -20,6 +20,20 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
 import { useDecryptedNotes } from '@/hooks/use-decrypted-notes'
+import React from 'react'
+
+// Wrapper component for div that needs ref forwarding when used with asChild
+const NoteListItemWrapper = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<'div'>
+>(({ className, style, children, ...props }, ref) => {
+  return (
+    <div ref={ref} className={className} style={style} {...props}>
+      {children}
+    </div>
+  )
+})
+NoteListItemWrapper.displayName = 'NoteListItemWrapper'
 
 type SortOption = 'updated' | 'created' | 'title' | 'pinned'
 
