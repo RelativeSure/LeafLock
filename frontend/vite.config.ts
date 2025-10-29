@@ -53,7 +53,7 @@ export default defineConfig({
     react({
       // Optimize babel for faster builds
       babel: {
-        compact: process.env.NODE_ENV === 'production',
+        compact: false,
       },
     }),
     nodePolyfills({
@@ -89,9 +89,10 @@ export default defineConfig({
   build: {
     // Optimize build performance and bundle size
     target: 'esnext',
-    minify: 'esbuild', // Use esbuild instead of terser (faster and built-in)
+    // Force non-minified build to debug PR environment crashes
+    minify: false,
     cssCodeSplit: false, // Disable CSS code splitting to prevent circular deps
-    sourcemap: false, // Disable sourcemaps for production for faster builds
+    sourcemap: true,
     // Prevent circular dependencies by ensuring proper module resolution
     commonjsOptions: {
       include: [/node_modules/],
@@ -128,6 +129,9 @@ export default defineConfig({
     },
     // Increase chunk size warning threshold to account for the sodium WASM wrapper
     chunkSizeWarningLimit: 1600,
+  },
+  define: {
+    'process.env.NODE_ENV': JSON.stringify('development'),
   },
   server: {
     host: devServerHost,
