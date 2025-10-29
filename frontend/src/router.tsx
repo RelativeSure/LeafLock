@@ -307,7 +307,8 @@ const DashboardComponent: React.FC = () => {
       </React.Suspense>
     </div>
   )
-}
+})
+DashboardComponent.displayName = 'DashboardComponent'
 
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
