@@ -153,6 +153,8 @@ interface UserSettings {
   }
 }
 
+let isHandlingUnauthorizedRedirect = false
+
 class ApiClient {
   private baseURL: string
   private token: string | null = null
@@ -192,7 +194,7 @@ class ApiClient {
     // Always refresh token from localStorage before making requests to ensure it's current
     // This handles cases where token was set in another tab/window or after page reload
     this.refreshToken()
-    
+
     if (this.token) {
       headers.Authorization = `Bearer ${this.token}`
     }
@@ -210,9 +212,24 @@ class ApiClient {
         console.warn('401 Unauthorized - clearing expired session')
         localStorage.removeItem('user')
         localStorage.removeItem('token')
-        // Only redirect if we're not already on the login page
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-          window.location.href = '/login'
+        if (typeof window !== 'undefined') {
+          const path = window.location.pathname
+          const onAuthRoute = path === '/login' || path === '/register' || path === '/forgot'
+          // Avoid redirect storms: don't redirect from auth routes and debounce redirects
+          if (!onAuthRoute && !isHandlingUnauthorizedRedirect) {
+            isHandlingUnauthorizedRedirect = true
+            // Small timeout to allow UI state to settle
+            setTimeout(() => {
+              try {
+                window.location.href = '/login'
+              } finally {
+                // Reset after some time to avoid permanent lock
+                setTimeout(() => {
+                  isHandlingUnauthorizedRedirect = false
+                }, 1500)
+              }
+            }, 50)
+          }
         }
       }
 

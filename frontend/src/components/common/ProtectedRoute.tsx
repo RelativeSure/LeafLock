@@ -18,7 +18,7 @@ export function ProtectedRoute({
   requiredRole = 'user',
   isLoading = false,
   user,
-  fallbackRoute = '/dashboard',
+  fallbackRoute = '/',
 }: ProtectedRouteProps) {
   if (isLoading) {
     return (

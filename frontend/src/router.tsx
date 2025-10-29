@@ -152,7 +152,12 @@ const DashboardComponent: React.FC = () => {
 
   React.useEffect(() => {
     if (!isLoading && !user) {
-      window.location.href = '/login'
+      // Avoid redirect churn if we're already on an auth page
+      const path = typeof window !== 'undefined' ? window.location.pathname : ''
+      const onAuthRoute = path === '/login' || path === '/register' || path === '/forgot'
+      if (!onAuthRoute) {
+        window.location.href = '/login'
+      }
     }
   }, [user, isLoading])
 
