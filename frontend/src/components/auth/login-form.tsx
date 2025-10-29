@@ -26,7 +26,8 @@ export function LoginForm({
   // Use useRef to prevent multiple redirects
   const hasRedirected = React.useRef(false)
   useEffect(() => {
-    if (user && !hasRedirected.current) {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+    if (user && token && !hasRedirected.current) {
       hasRedirected.current = true
       console.log('User logged in, redirecting to dashboard...')
       // Use setTimeout to ensure state updates complete before redirect
