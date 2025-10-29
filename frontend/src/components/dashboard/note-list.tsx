@@ -196,12 +196,18 @@ export function NoteList() {
               <ContextMenu key={note.id}>
                 <ContextMenuTrigger asChild>
                   <div
-                    className={`w-full p-3 rounded-lg transition-smooth hover-lift stagger-item ${
+                    className={`w-full p-3 rounded-lg transition-smooth hover-lift stagger-item cursor-pointer ${
                       isSelected
                         ? 'bg-primary/10 border border-primary/20'
                         : 'hover:bg-surface-hover border border-transparent'
                     } ${isBulkSelected ? 'bg-primary/5 border-primary/10' : ''}`}
                     style={{ animationDelay: `${index * 0.05}s` }}
+                    onClick={(e) => {
+                      // Only select if not in bulk mode and click wasn't on checkbox
+                      if (!isBulkMode && !(e.target as HTMLElement).closest('input[type="checkbox"]')) {
+                        selectNote(note.id)
+                      }
+                    }}
                   >
                     <div className="flex items-start gap-3">
                       {isBulkMode && (
@@ -210,15 +216,13 @@ export function NoteList() {
                             type="checkbox"
                             checked={isBulkSelected}
                             onChange={() => toggleNoteSelection(note.id)}
+                            onClick={(e) => e.stopPropagation()}
                             className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                           />
                         </div>
                       )}
 
-                      <button
-                        onClick={() => !isBulkMode && selectNote(note.id)}
-                        className="flex-1 text-left"
-                      >
+                      <div className="flex-1 text-left">
                         <div className="flex items-start justify-between gap-2 mb-1">
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             {note.pinned && (
@@ -300,7 +304,7 @@ export function NoteList() {
                               : 'Unknown'}
                           </span>
                         </div>
-                      </button>
+                      </div>
                     </div>
                   </div>
                 </ContextMenuTrigger>
