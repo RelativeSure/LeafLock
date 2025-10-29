@@ -18,7 +18,7 @@ const ForgotPasswordForm = React.lazy(() =>
   import('./components/auth/forgot-password-form').then((m) => ({ default: m.ForgotPasswordForm }))
 )
 // Direct imports to avoid ref/timing issues during auth transitions
-import { Sidebar } from './components/dashboard/sidebar'
+// import { Sidebar } from './components/dashboard/sidebar'
 // import { NoteEditor } from './components/dashboard/note-editor'
 // Removed global KeyboardShortcutsDialog lazy import to avoid duplicate mounts
 
@@ -116,9 +116,16 @@ const forgotRoute = createRoute({
 
 // Dashboard route
 const DashboardComponent: React.FC = () => {
-  // Initialize auth store on mount
+  // Initialize auth store on mount (guarded to run once)
+  const initializedRef = React.useRef(false)
   React.useEffect(() => {
-    useAuthStore.getState().initialize()
+    if (initializedRef.current) return
+    initializedRef.current = true
+    try {
+      useAuthStore.getState().initialize()
+    } catch (err) {
+      console.warn('Auth initialize failed:', err)
+    }
   }, [])
 
   // Subscribe to specific store slices (stable hooks each render)
@@ -133,19 +140,18 @@ const DashboardComponent: React.FC = () => {
     }
   }, [user, isLoading])
 
-  // Load notes data when dashboard loads
-  React.useEffect(() => {
-    if (!isLoading && user) {
-      // Dynamically import notes store to prevent circular dependency
-      import('./stores/notesStore').then(({ useNotesStore }) => {
-        const store = useNotesStore.getState()
-        store.loadData().then(() => {
-          // Initialize default note after data is loaded
-          store.initializeDefaultNote()
-        })
-      })
-    }
-  }, [isLoading, user])
+  // Notes loading temporarily disabled to isolate render loop
+  // React.useEffect(() => {
+  //   if (!isLoading && user && !notesLoadedRef.current) {
+  //     notesLoadedRef.current = true
+  //     import('./stores/notesStore').then(({ useNotesStore }) => {
+  //       const store = useNotesStore.getState()
+  //       store.loadData().then(() => {
+  //         store.initializeDefaultNote()
+  //       })
+  //     })
+  //   }
+  // }, [isLoading, user])
 
   if (isLoading || !user) {
     return (
@@ -186,16 +192,11 @@ const DashboardComponent: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content - Sidebar enabled, editor placeholder */}
-      <div className="flex-1 flex overflow-hidden">
-        <div className="w-0 md:w-48 xl:w-64 md:flex-shrink-0">
-          <Sidebar />
-        </div>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-2">
-            <h2 className="text-xl font-semibold">Welcome</h2>
-            <p className="text-sm text-muted-foreground">Editor will be re-enabled next.</p>
-          </div>
+      {/* Main Content - Minimal while isolating render loop */}
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center space-y-2">
+          <h2 className="text-xl font-semibold">Welcome</h2>
+          <p className="text-sm text-muted-foreground">Loading minimized to isolate a render loop.</p>
         </div>
       </div>
 
