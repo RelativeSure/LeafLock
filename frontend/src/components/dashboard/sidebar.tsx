@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNotesStore } from '../../stores/notesStore'
+import { useEncryption } from '@/lib/encryption-context'
+import { getStoredKey } from '@/lib/encryption-utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -17,6 +19,7 @@ import { TemplatesDialog } from './templates-dialog'
 import { AdvancedSearchBar } from './advanced-search-bar'
 import { NoteList } from './note-list'
 import { TrashDialog } from './trash-dialog'
+import { EncryptionUnlockDialog } from './encryption-unlock-dialog'
 
 export function Sidebar() {
   const {
@@ -32,12 +35,15 @@ export function Sidebar() {
     selectTag,
   } = useNotesStore()
 
+  const { isUnlocked } = useEncryption()
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
   const [newFolderColor, setNewFolderColor] = useState('#3b82f6')
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false)
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false)
+  const [isUnlockDialogOpen, setIsUnlockDialogOpen] = useState(false)
 
   // Mobile detection and responsive behavior
   useEffect(() => {
@@ -74,6 +80,13 @@ export function Sidebar() {
   }
 
   const handleCreateNote = async () => {
+    // Check if encryption is required but not unlocked
+    const storedSalt = typeof window !== 'undefined' ? localStorage.getItem('encryptionSalt') : null
+    if (storedSalt && !isUnlocked) {
+      setIsUnlockDialogOpen(true)
+      return
+    }
+
     try {
       const note = await createNote({})
       if (note?.id) {
@@ -81,6 +94,26 @@ export function Sidebar() {
       }
     } catch (error) {
       console.error('Failed to create note:', error)
+      // If encryption key is not available, show unlock dialog
+      if (error instanceof Error && error.message.includes('Encryption key not available')) {
+        setIsUnlockDialogOpen(true)
+      }
+    }
+  }
+
+  const handleUnlock = async () => {
+    // After unlocking, the key is set synchronously in localStorage
+    // Check directly for the key since React state may not have updated yet
+    const key = getStoredKey()
+    if (key) {
+      try {
+        const note = await createNote({})
+        if (note?.id) {
+          selectNote(note.id)
+        }
+      } catch (error) {
+        console.error('Failed to create note after unlock:', error)
+      }
     }
   }
 
@@ -254,6 +287,12 @@ export function Sidebar() {
       </div>
 
       <TemplatesDialog open={isTemplatesOpen} onOpenChange={setIsTemplatesOpen} />
+
+      <EncryptionUnlockDialog
+        open={isUnlockDialogOpen}
+        onOpenChange={setIsUnlockDialogOpen}
+        onUnlock={handleUnlock}
+      />
     </div>
   )
 

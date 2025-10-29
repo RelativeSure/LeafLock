@@ -162,6 +162,12 @@ class ApiClient {
     this.token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
   }
 
+  private refreshToken(): void {
+    if (typeof window !== 'undefined') {
+      this.token = localStorage.getItem('token')
+    }
+  }
+
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`
     const headers: Record<string, string> = {
