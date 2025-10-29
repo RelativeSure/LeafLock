@@ -2,7 +2,7 @@ import React from 'react'
 import { RouterProvider } from '@tanstack/react-router'
 import { ThemeProvider } from './context/ThemeContext'
 import { EncryptionProvider } from './lib/encryption-context'
-import { ConfigDebug } from './components/debug/ConfigDebug'
+// import { ConfigDebug } from './components/debug/ConfigDebug'
 // Temporarily remove wrappers to isolate update loop
 
 // Lazy load router to prevent circular dependency
@@ -35,7 +35,6 @@ const App: React.FC = () => {
     <ThemeProvider>
       <EncryptionProvider>
         <RouterProvider router={router} />
-        <ConfigDebug />
       </EncryptionProvider>
     </ThemeProvider>
   )
