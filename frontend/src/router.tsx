@@ -7,29 +7,22 @@ import { Toaster } from './components/ui/sonner'
 import { AppErrorBoundary } from './components/common/AppErrorBoundary'
 
 // Lazy load stores and components to prevent circular dependencies
-// Wrap lazy components in forwardRef-compatible wrappers for React 19
-const lazyWithRef = <T extends React.ComponentType<any>>(
-  importFn: () => Promise<{ default: T }>
-): React.LazyExoticComponent<T> => {
-  return React.lazy(importFn)
-}
-
-const LoginForm = lazyWithRef(() =>
+const LoginForm = React.lazy(() =>
   import('./components/auth/login-form').then((m) => ({ default: m.LoginForm }))
 )
-const RegisterForm = lazyWithRef(() =>
+const RegisterForm = React.lazy(() =>
   import('./components/auth/register-form').then((m) => ({ default: m.RegisterForm }))
 )
-const ForgotPasswordForm = lazyWithRef(() =>
+const ForgotPasswordForm = React.lazy(() =>
   import('./components/auth/forgot-password-form').then((m) => ({ default: m.ForgotPasswordForm }))
 )
-const Sidebar = lazyWithRef(() =>
+const Sidebar = React.lazy(() =>
   import('./components/dashboard/sidebar').then((m) => ({ default: m.Sidebar }))
 )
-const NoteEditor = lazyWithRef(() =>
+const NoteEditor = React.lazy(() =>
   import('./components/dashboard/note-editor').then((m) => ({ default: m.NoteEditor }))
 )
-const KeyboardShortcutsDialog = lazyWithRef(() =>
+const KeyboardShortcutsDialog = React.lazy(() =>
   import('./components/dashboard/keyboard-shortcuts-dialog').then((m) => ({
     default: m.KeyboardShortcutsDialog,
   }))
@@ -136,29 +129,39 @@ const forgotRoute = createRoute({
 
 // Dashboard route
 const DashboardComponent: React.FC = () => {
-  const [authStore, setAuthStore] = React.useState<any>(null)
+  const [user, setUser] = React.useState<any>(null)
   const [isLoading, setIsLoading] = React.useState(true)
 
   React.useEffect(() => {
     // Dynamically import auth store to prevent circular dependency
     import('./stores/authStore').then(({ useAuthStore }) => {
       const store = useAuthStore.getState()
-      setAuthStore(store)
       store.initialize().then(() => {
+        const currentUser = store.user
+        setUser(currentUser)
         setIsLoading(false)
       })
+      
+      // Subscribe to store changes
+      const unsubscribe = useAuthStore.subscribe((state) => {
+        if (state.user !== user) {
+          setUser(state.user)
+        }
+      })
+      
+      return () => unsubscribe()
     })
   }, [])
 
   React.useEffect(() => {
-    if (!isLoading && authStore && !authStore.user) {
+    if (!isLoading && !user) {
       window.location.href = '/login'
     }
-  }, [authStore, isLoading])
+  }, [user, isLoading])
 
   // Load notes data when dashboard loads
   React.useEffect(() => {
-    if (!isLoading && authStore && authStore.user) {
+    if (!isLoading && user) {
       // Dynamically import notes store to prevent circular dependency
       import('./stores/notesStore').then(({ useNotesStore }) => {
         const store = useNotesStore.getState()
@@ -168,9 +171,9 @@ const DashboardComponent: React.FC = () => {
         })
       })
     }
-  }, [isLoading, authStore])
+  }, [isLoading, user])
 
-  if (isLoading || !authStore || !authStore.user) {
+  if (isLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">
         <div className="flex flex-col items-center gap-4">
@@ -181,10 +184,9 @@ const DashboardComponent: React.FC = () => {
     )
   }
 
-  const { user, logout } = authStore
-
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    const { useAuthStore } = await import('./stores/authStore')
+    useAuthStore.getState().logout()
     window.location.href = '/login'
   }
 
