@@ -24,23 +24,8 @@ import { NoteEditor } from './components/dashboard/note-editor'
 
 import { ThemeToggle } from './components/theme-toggle'
 import { Button } from './components/ui/button'
-import {
-  Leaf,
-  Settings,
-  LogOut,
-  ShieldCheck,
-  Keyboard,
-  HelpCircle,
-  ExternalLink,
-  FolderOpen,
-} from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from './components/ui/dropdown-menu'
+import { Leaf } from 'lucide-react'
+// Dropdown menu temporarily removed to avoid ref issues during post-login render
 import { UserAvatar } from './components/ui/user-avatar'
 import { SettingsPage } from './components/settings/settings-page'
 import { FoldersTagsPage } from './components/management/folders-tags-page'
@@ -198,63 +183,10 @@ const DashboardComponent: React.FC = () => {
 
         <div className="flex items-center gap-2 md:gap-3">
           <ThemeToggle />
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-2 transition-smooth hover-lift">
-                <UserAvatar user={user} size={28} />
-                <span className="hidden md:inline text-sm">{user?.name}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="animate-scale-in">
-              <DropdownMenuItem
-                onClick={() => (window.location.href = '/settings')}
-                className="transition-smooth"
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => (window.location.href = '/admin')}
-                className="transition-smooth"
-              >
-                <ShieldCheck className="h-4 w-4 mr-2" />
-                Admin Dashboard
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => (window.location.href = '/manage')}
-                className="transition-smooth"
-              >
-                <FolderOpen className="h-4 w-4 mr-2" />
-                Folders & Tags
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => {
-                  // Open keyboard shortcuts dialog
-                  const event = new CustomEvent('open-keyboard-shortcuts')
-                  window.dispatchEvent(event)
-                }}
-                className="transition-smooth"
-              >
-                <Keyboard className="h-4 w-4 mr-2" />
-                Keyboard Shortcuts
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => window.open('https://docs.leaflock.app', '_blank')}
-                className="transition-smooth"
-              >
-                <HelpCircle className="h-4 w-4 mr-2" />
-                Documentation
-                <ExternalLink className="h-3 w-3 ml-auto" />
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="transition-smooth">
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button variant="ghost" size="sm" className="gap-2 transition-smooth hover-lift" onClick={handleLogout}>
+            <UserAvatar user={user} size={28} />
+            <span className="hidden md:inline text-sm">Logout</span>
+          </Button>
         </div>
       </header>
 
