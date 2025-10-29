@@ -24,11 +24,7 @@ const Sidebar = React.lazy(() =>
 const NoteEditor = React.lazy(() =>
   import('./components/dashboard/note-editor').then((m) => ({ default: m.NoteEditor }))
 )
-const KeyboardShortcutsDialog = React.lazy(() =>
-  import('./components/dashboard/keyboard-shortcuts-dialog').then((m) => ({
-    default: m.KeyboardShortcutsDialog,
-  }))
-)
+// Removed global KeyboardShortcutsDialog lazy import to avoid duplicate mounts
 
 import { ThemeToggle } from './components/theme-toggle'
 import { Button } from './components/ui/button'
@@ -295,10 +291,7 @@ const DashboardComponent: React.FC = () => {
         </div>
       </div>
 
-      {/* Keyboard Shortcuts Dialog */}
-      <React.Suspense fallback={null}>
-        <KeyboardShortcutsDialog />
-      </React.Suspense>
+      {/* Keyboard Shortcuts Dialog rendered within NoteEditor to avoid duplication */}
     </div>
   )
 }
