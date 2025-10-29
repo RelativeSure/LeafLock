@@ -109,11 +109,9 @@ try {
 
   console.log('🎨 Rendering React app...')
   root.render(
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
-    </React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
   )
   console.log('✅ React app mounted successfully')
 } catch (error) {
