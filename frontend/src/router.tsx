@@ -128,61 +128,24 @@ const forgotRoute = createRoute({
   component: () => <AuthComponent mode="forgot" />,
 })
 
-// Dashboard route
+// Dashboard route  
 const DashboardComponent: React.FC = () => {
-  const [user, setUser] = React.useState<any>(null)
+  const [authStoreModule, setAuthStoreModule] = React.useState<typeof import('./stores/authStore') | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
-  const userRef = React.useRef<any>(null)
 
   React.useEffect(() => {
     // Dynamically import auth store to prevent circular dependency
-    let unsubscribe: (() => void) | undefined
-    let mounted = true
-    
-    import('./stores/authStore').then(({ useAuthStore }) => {
-      const store = useAuthStore.getState()
-      store.initialize().then(() => {
-        if (mounted) {
-          const currentUser = store.user
-          userRef.current = currentUser
-          setUser(currentUser)
-          setIsLoading(false)
-        }
-      })
-      
-      // Subscribe to store changes - only update if user actually changed
-      // Prevent infinite loops by checking if user reference or data actually changed
-      unsubscribe = useAuthStore.subscribe((state) => {
-        if (!mounted) return
-        
-        const newUser = state.user
-        const prevUser = userRef.current
-        
-        // Skip if user hasn't actually changed
-        if (newUser === prevUser) return
-        
-        // Check if it's actually a different user (by ID/email) or if user became null
-        const isDifferentUser = 
-          !newUser || 
-          !prevUser || 
-          newUser.id !== prevUser.id ||
-          newUser.email !== prevUser.email
-        
-        // Only update state if user actually changed
-        if (isDifferentUser) {
-          userRef.current = newUser
-          setUser(newUser)
-        }
+    import('./stores/authStore').then((module) => {
+      setAuthStoreModule(module)
+      // Initialize store
+      module.useAuthStore.getState().initialize().then(() => {
+        setIsLoading(false)
       })
     })
-    
-    return () => {
-      mounted = false
-      if (unsubscribe) {
-        unsubscribe()
-      }
-    }
   }, [])
+
+  // Use Zustand selector hook - it automatically handles subscriptions and prevents infinite loops
+  const user = authStoreModule ? authStoreModule.useAuthStore((state) => state.user) : null
 
   React.useEffect(() => {
     if (!isLoading && !user) {
