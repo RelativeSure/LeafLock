@@ -5,16 +5,15 @@ import { ChevronDownIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
-function NavigationMenu({
-  className,
-  children,
-  viewport = true,
-  ...props
-}: React.ComponentProps<typeof NavigationMenuPrimitive.Root> & {
-  viewport?: boolean
-}) {
+const NavigationMenu = React.forwardRef<
+  React.ElementRef<typeof NavigationMenuPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof NavigationMenuPrimitive.Root> & {
+    viewport?: boolean
+  }
+>(({ className, children, viewport = true, ...props }, ref) => {
   return (
     <NavigationMenuPrimitive.Root
+      ref={ref}
       data-slot="navigation-menu"
       data-viewport={viewport}
       className={cn(
@@ -27,7 +26,8 @@ function NavigationMenu({
       {viewport && <NavigationMenuViewport />}
     </NavigationMenuPrimitive.Root>
   )
-}
+})
+NavigationMenu.displayName = NavigationMenuPrimitive.Root.displayName
 
 const NavigationMenuList = React.forwardRef<
   React.ElementRef<typeof NavigationMenuPrimitive.List>,
