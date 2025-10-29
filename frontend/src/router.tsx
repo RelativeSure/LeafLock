@@ -140,18 +140,22 @@ const DashboardComponent: React.FC = () => {
     }
   }, [user, isLoading])
 
-  // Notes loading temporarily disabled to isolate render loop
-  // React.useEffect(() => {
-  //   if (!isLoading && user && !notesLoadedRef.current) {
-  //     notesLoadedRef.current = true
-  //     import('./stores/notesStore').then(({ useNotesStore }) => {
-  //       const store = useNotesStore.getState()
-  //       store.loadData().then(() => {
-  //         store.initializeDefaultNote()
-  //       })
-  //     })
-  //   }
-  // }, [isLoading, user])
+  // Notes loading guarded to run once after auth is ready
+  const notesLoadedRef = React.useRef(false)
+  React.useEffect(() => {
+    if (!isLoading && user && !notesLoadedRef.current) {
+      notesLoadedRef.current = true
+      import('./stores/notesStore').then(({ useNotesStore }) => {
+        const store = useNotesStore.getState()
+        store
+          .loadData()
+          .then(() => {
+            return store.initializeDefaultNote()
+          })
+          .catch((err) => console.warn('Notes bootstrap failed:', err))
+      })
+    }
+  }, [isLoading, user])
 
   if (isLoading || !user) {
     return (
