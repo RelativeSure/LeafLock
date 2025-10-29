@@ -3,8 +3,8 @@ import { Outlet, createRoute, createRouter, createRootRoute } from '@tanstack/re
 
 import { ThemeProvider } from './context/ThemeContext'
 import { EncryptionProvider } from './lib/encryption-context'
-import { Toaster } from './components/ui/sonner'
-import { AppErrorBoundary } from './components/common/AppErrorBoundary'
+// import { Toaster } from './components/ui/sonner'
+// Temporarily remove AppErrorBoundary to isolate React 185
 import { useAuthStore } from './stores/authStore'
 
 // Lazy load stores and components to prevent circular dependencies
@@ -35,16 +35,13 @@ import { InteractiveGridPattern } from './components/ui/interactive-grid-pattern
 import { isOnAuthRoute, safeRedirectToLogin } from './lib/navigation'
 
 const RootLayout: React.FC = () => (
-  <AppErrorBoundary>
-    <ThemeProvider>
-      <EncryptionProvider>
-        <div className="min-h-screen transition-all duration-300 ease-in-out">
-          <Outlet />
-        </div>
-        <Toaster />
-      </EncryptionProvider>
-    </ThemeProvider>
-  </AppErrorBoundary>
+  <ThemeProvider>
+    <EncryptionProvider>
+      <div className="min-h-screen transition-all duration-300 ease-in-out">
+        <Outlet />
+      </div>
+    </EncryptionProvider>
+  </ThemeProvider>
 )
 
 const rootRoute = createRootRoute({
