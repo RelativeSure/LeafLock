@@ -24,14 +24,16 @@ const DropdownMenuTrigger = React.forwardRef<
 })
 DropdownMenuTrigger.displayName = DropdownMenuPrimitive.Trigger.displayName
 
-function DropdownMenuContent({
-  className,
-  sideOffset = 4,
-  ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+const DropdownMenuContent = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content> & {
+    sideOffset?: number
+  }
+>(({ className, sideOffset = 4, ...props }, ref) => {
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
+        ref={ref}
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         className={cn(
@@ -42,7 +44,8 @@ function DropdownMenuContent({
       />
     </DropdownMenuPrimitive.Portal>
   )
-}
+})
+DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName
 
 function DropdownMenuGroup({ ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Group>) {
   return <DropdownMenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />
