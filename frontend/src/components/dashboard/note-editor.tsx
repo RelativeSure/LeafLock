@@ -62,6 +62,11 @@ export function NoteEditor() {
   const [isUnlockDialogOpen, setIsUnlockDialogOpen] = useState(false)
   const [isDecrypting, setIsDecrypting] = useState(false)
   const [decryptError, setDecryptError] = useState('')
+  const lastSavedRef = useState<{ title: string; content: string; tagsKey: string }>({
+    title: '',
+    content: '',
+    tagsKey: '',
+  })[0]
 
   const handleDelete = () => {
     if (selectedNote) {
@@ -119,25 +124,31 @@ export function NoteEditor() {
           try {
             // Decrypt title
             const decryptedTitle = selectedNote.title ? await decryptText(selectedNote.title) : ''
-            setTitle(decryptedTitle)
+            if (decryptedTitle !== title) {
+              setTitle(decryptedTitle)
+            }
 
             // Decrypt content if it exists
             if (selectedNote.content) {
               const decryptedContent = await decryptText(selectedNote.content)
-              setContent(decryptedContent)
-              setDisplayContent(decryptedContent)
+              if (decryptedContent !== _content) {
+                setContent(decryptedContent)
+              }
+              if (decryptedContent !== displayContent) {
+                setDisplayContent(decryptedContent)
+              }
             } else {
-              setContent('')
-              setDisplayContent('')
+              if (_content !== '') setContent('')
+              if (displayContent !== '') setDisplayContent('')
             }
 
             setIsDecrypting(false)
           } catch (err) {
             console.error('[v0] Decryption failed:', err)
             setDecryptError('Failed to decrypt note. The password may be incorrect.')
-            setTitle('')
-            setContent('')
-            setDisplayContent('')
+            if (title !== '') setTitle('')
+            if (_content !== '') setContent('')
+            if (displayContent !== '') setDisplayContent('')
             setIsDecrypting(false)
           }
         }
@@ -145,9 +156,9 @@ export function NoteEditor() {
         decryptData()
       } else {
         setIsUnlockDialogOpen(true)
-        setTitle('')
-        setContent('')
-        setDisplayContent('')
+        if (title !== '') setTitle('')
+        if (_content !== '') setContent('')
+        if (displayContent !== '') setDisplayContent('')
       }
 
       // Don't automatically leave collaboration session
@@ -179,6 +190,16 @@ export function NoteEditor() {
             return
           }
 
+          // Skip if unchanged vs last saved snapshot (by plaintext)
+          const tagsKey = (noteTags || []).slice().sort().join('|')
+          if (
+            lastSavedRef.title === trimmedTitle &&
+            lastSavedRef.content === trimmedContent &&
+            lastSavedRef.tagsKey === tagsKey
+          ) {
+            return
+          }
+
           // Always encrypt title and content before saving
           if (isUnlocked) {
             const encryptedTitle = await encryptText(title)
@@ -195,6 +216,11 @@ export function NoteEditor() {
             if (!selectedNote.id.startsWith('local-')) {
               toast.success('Note saved', { duration: 2000 })
             }
+
+            // Update last saved snapshot
+            lastSavedRef.title = trimmedTitle
+            lastSavedRef.content = trimmedContent
+            lastSavedRef.tagsKey = tagsKey
           } else {
             // If not unlocked, don't save
             return
