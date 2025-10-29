@@ -19,7 +19,7 @@ const ForgotPasswordForm = React.lazy(() =>
 )
 // Direct imports to avoid ref/timing issues during auth transitions
 import { Sidebar } from './components/dashboard/sidebar'
-import { NoteEditor } from './components/dashboard/note-editor'
+// import { NoteEditor } from './components/dashboard/note-editor'
 // import { NoteEditor } from './components/dashboard/note-editor'
 // Removed global KeyboardShortcutsDialog lazy import to avoid duplicate mounts
 
@@ -197,13 +197,16 @@ const DashboardComponent: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content - Sidebar + Note Editor */}
+      {/* Main Content - Sidebar + placeholder (editor temporarily disabled) */}
       <div className="flex-1 flex overflow-hidden">
         <div className="w-0 md:w-48 xl:w-64 md:flex-shrink-0">
           <Sidebar />
         </div>
-        <div className="flex-1 flex flex-col min-w-0">
-          <NoteEditor />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-2">
+            <h2 className="text-xl font-semibold">Welcome</h2>
+            <p className="text-sm text-muted-foreground">Editor temporarily disabled while we isolate an update loop.</p>
+          </div>
         </div>
       </div>
 
