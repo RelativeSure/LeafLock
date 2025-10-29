@@ -16,11 +16,16 @@ const RegisterForm = React.lazy(() =>
 const ForgotPasswordForm = React.lazy(() =>
   import('./components/auth/forgot-password-form').then((m) => ({ default: m.ForgotPasswordForm }))
 )
-const Sidebar = React.lazy(() =>
-  import('./components/dashboard/sidebar').then((m) => ({ default: m.Sidebar }))
+// Wrap lazy components to ensure proper ref handling with Suspense in React 19
+const Sidebar = React.memo(
+  React.lazy(() =>
+    import('./components/dashboard/sidebar').then((m) => ({ default: m.Sidebar }))
+  )
 )
-const NoteEditor = React.lazy(() =>
-  import('./components/dashboard/note-editor').then((m) => ({ default: m.NoteEditor }))
+const NoteEditor = React.memo(
+  React.lazy(() =>
+    import('./components/dashboard/note-editor').then((m) => ({ default: m.NoteEditor }))
+  )
 )
 const KeyboardShortcutsDialog = React.lazy(() =>
   import('./components/dashboard/keyboard-shortcuts-dialog').then((m) => ({
