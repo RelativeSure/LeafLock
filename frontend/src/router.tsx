@@ -7,22 +7,29 @@ import { Toaster } from './components/ui/sonner'
 import { AppErrorBoundary } from './components/common/AppErrorBoundary'
 
 // Lazy load stores and components to prevent circular dependencies
-const LoginForm = React.lazy(() =>
+// Wrap lazy components in forwardRef-compatible wrappers for React 19
+const lazyWithRef = <T extends React.ComponentType<any>>(
+  importFn: () => Promise<{ default: T }>
+): React.LazyExoticComponent<T> => {
+  return React.lazy(importFn)
+}
+
+const LoginForm = lazyWithRef(() =>
   import('./components/auth/login-form').then((m) => ({ default: m.LoginForm }))
 )
-const RegisterForm = React.lazy(() =>
+const RegisterForm = lazyWithRef(() =>
   import('./components/auth/register-form').then((m) => ({ default: m.RegisterForm }))
 )
-const ForgotPasswordForm = React.lazy(() =>
+const ForgotPasswordForm = lazyWithRef(() =>
   import('./components/auth/forgot-password-form').then((m) => ({ default: m.ForgotPasswordForm }))
 )
-const Sidebar = React.lazy(() =>
+const Sidebar = lazyWithRef(() =>
   import('./components/dashboard/sidebar').then((m) => ({ default: m.Sidebar }))
 )
-const NoteEditor = React.lazy(() =>
+const NoteEditor = lazyWithRef(() =>
   import('./components/dashboard/note-editor').then((m) => ({ default: m.NoteEditor }))
 )
-const KeyboardShortcutsDialog = React.lazy(() =>
+const KeyboardShortcutsDialog = lazyWithRef(() =>
   import('./components/dashboard/keyboard-shortcuts-dialog').then((m) => ({
     default: m.KeyboardShortcutsDialog,
   }))
