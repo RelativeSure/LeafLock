@@ -29,18 +29,20 @@ function NavigationMenu({
   )
 }
 
-function NavigationMenuList({
-  className,
-  ...props
-}: React.ComponentProps<typeof NavigationMenuPrimitive.List>) {
+const NavigationMenuList = React.forwardRef<
+  React.ElementRef<typeof NavigationMenuPrimitive.List>,
+  React.ComponentPropsWithoutRef<typeof NavigationMenuPrimitive.List>
+>(({ className, ...props }, ref) => {
   return (
     <NavigationMenuPrimitive.List
+      ref={ref}
       data-slot="navigation-menu-list"
       className={cn('group flex flex-1 list-none items-center justify-center gap-1', className)}
       {...props}
     />
   )
-}
+})
+NavigationMenuList.displayName = NavigationMenuPrimitive.List.displayName
 
 const NavigationMenuItem = React.forwardRef<
   React.ElementRef<typeof NavigationMenuPrimitive.Item>,
