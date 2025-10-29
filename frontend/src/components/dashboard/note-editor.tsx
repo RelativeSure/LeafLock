@@ -19,7 +19,7 @@ import {
   Plus,
   ShieldCheck,
   Pin,
-  History,
+  // History,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -38,13 +38,13 @@ import {
 import { Label } from '@/components/ui/label'
 import { SaveTemplateDialog } from './save-template-dialog'
 import { ShareNoteDialog } from './share-note-dialog'
-import { CollaborationBar } from './collaboration-bar'
+// Temporarily disable collaboration bar to isolate post-login crash
 import { EncryptionUnlockDialog } from './encryption-unlock-dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { NoteStats } from './note-stats'
 // Temporarily disable keyboard shortcuts dialog to isolate React ref error after login
 import { BacklinksSection } from './note-linking-utils'
-import { VersionHistoryDialog } from './version-history-dialog'
+// Temporarily disable version history dialog to isolate post-login crash
 import { RichTextEditor } from './rich-text-editor'
 
 export function NoteEditor() {
@@ -276,7 +276,7 @@ export function NoteEditor() {
 
   return (
     <div className="flex-1 flex flex-col h-full">
-      <CollaborationBar noteId={selectedNote.id} />
+      {/* <CollaborationBar noteId={selectedNote.id} /> */}
 
       {/* Toolbar - Responsive */}
       <div className="border-b border-border p-2 sm:p-4 flex items-center justify-between gap-2 sm:gap-4">
@@ -291,15 +291,7 @@ export function NoteEditor() {
             {selectedNote.pinned ? 'Pinned' : 'Pin'}
           </Button>
 
-          <VersionHistoryDialog
-            noteId={selectedNote.id}
-            noteTitle={selectedNote.title || 'Untitled'}
-          >
-            <Button variant="outline" size="sm" className="gap-2">
-              <History className="h-4 w-4" />
-              <span className="hidden sm:inline">Versions</span>
-            </Button>
-          </VersionHistoryDialog>
+          {/* Versions temporarily disabled */}
 
           <Dialog open={isAddingTag} onOpenChange={setIsAddingTag}>
             <DialogTrigger asChild>
