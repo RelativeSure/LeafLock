@@ -22,13 +22,13 @@ const rainbowColors = [
   'fill-teal-500/40 stroke-teal-400/70',
 ]
 
-export function InteractiveGridPattern({
+export const InteractiveGridPattern = React.forwardRef<SVGSVGElement, InteractiveGridPatternProps>(({
   width = 50,
   height = 50,
   className,
   squaresClassName,
   ...props
-}: InteractiveGridPatternProps) {
+}, ref) => {
   const [hoveredSquare, setHoveredSquare] = useState<number | null>(null)
   const [dimensions, setDimensions] = useState({ horizontal: 0, vertical: 0 })
   const [squareColors, setSquareColors] = useState<Map<number, string>>(new Map())
@@ -62,7 +62,7 @@ export function InteractiveGridPattern({
   const { horizontal, vertical } = dimensions
 
   return (
-    <svg ref={svgRef} className={cn('absolute inset-0 h-full w-full', className)} {...props}>
+    <svg ref={ref || svgRef} className={cn('absolute inset-0 h-full w-full', className)} {...props}>
       {Array.from({ length: horizontal * vertical }).map((_, index) => {
         const x = (index % horizontal) * width
         const y = Math.floor(index / horizontal) * height
@@ -87,6 +87,7 @@ export function InteractiveGridPattern({
       })}
     </svg>
   )
-}
+})
+InteractiveGridPattern.displayName = 'InteractiveGridPattern'
 
 export type { InteractiveGridPatternProps }

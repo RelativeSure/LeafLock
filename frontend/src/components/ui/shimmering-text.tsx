@@ -12,7 +12,7 @@ type ShimmeringTextProps = {
   shimmeringColor?: string
 } & Omit<HTMLMotionProps<'span'>, 'children'>
 
-function ShimmeringText({
+const ShimmeringText = React.forwardRef<HTMLSpanElement, ShimmeringTextProps>(({
   text,
   duration = 1,
   transition,
@@ -21,9 +21,10 @@ function ShimmeringText({
   color = 'var(--color-neutral-500)',
   shimmeringColor = 'var(--color-neutral-300)',
   ...props
-}: ShimmeringTextProps) {
+}, ref) => {
   return (
     <motion.span
+      ref={ref}
       className={cn('relative inline-block [perspective:500px]', className)}
       style={
         {
@@ -73,6 +74,7 @@ function ShimmeringText({
       ))}
     </motion.span>
   )
-}
+})
+ShimmeringText.displayName = 'ShimmeringText'
 
 export { ShimmeringText, type ShimmeringTextProps }
