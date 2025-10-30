@@ -178,7 +178,9 @@ export function Sidebar() {
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
           </div>
         ) : (
-          <NoteList />
+          <div className="flex items-center justify-center h-24 text-xs text-muted-foreground">
+            Notes list temporarily disabled while isolating update loop
+          </div>
         )}
       </div>
 
