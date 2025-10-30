@@ -168,8 +168,8 @@ export function NoteEditor() {
 
       // Don't automatically leave collaboration session
       // Only leave when explicitly sharing or closing
-    }
-  }, [selectedNote?.id, isUnlocked])
+      }
+    }, [selectedNote?.id, isUnlocked])
 
   useEffect(() => {
     if (selectedNote && displayContent !== undefined) {
@@ -181,7 +181,7 @@ export function NoteEditor() {
           }
 
           // Don't save while decrypting to avoid race conditions
-          if (isDecrypting || isSyncingRef.syncing) {
+            if (isDecrypting || isSyncingRef.syncing) {
             return
           }
 

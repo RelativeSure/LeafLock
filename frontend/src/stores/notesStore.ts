@@ -149,6 +149,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
     const updatedNote = await apiClient.updateNote(id, payload)
 
+<<<<<<< HEAD
     // Avoid redundant state updates when nothing meaningfully changed
     const shallowEqual = (a?: string[] | null, b?: string[] | null) => {
       if (a === b) return true
@@ -169,6 +170,8 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       return currentNote
     }
 
+=======
+>>>>>>> 92a5971798cd3aa571a071ab07873cbaceace8a4
     set((state) => ({
       notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
       selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
@@ -191,6 +194,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   },
 
   selectNote: (id: string | null) => {
+<<<<<<< HEAD
     const { notes, selectedNote } = get()
 
     if (id === null) {
@@ -199,13 +203,23 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     }
 
     if (selectedNote?.id === id) {
+=======
+    const { notes } = get()
+
+    if (id === null) {
+      set({ selectedNote: null })
+>>>>>>> 92a5971798cd3aa571a071ab07873cbaceace8a4
       return
     }
 
     const note = notes.find((n) => n.id === id) || null
+<<<<<<< HEAD
     if (note !== selectedNote) {
       set({ selectedNote: note })
     }
+=======
+    set({ selectedNote: note })
+>>>>>>> 92a5971798cd3aa571a071ab07873cbaceace8a4
 
     if (note && !note.isTrashed) {
       localStorage.setItem('lastSeenNoteId', note.id)

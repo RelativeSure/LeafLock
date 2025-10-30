@@ -19,9 +19,13 @@ const ForgotPasswordForm = React.lazy(() =>
 )
 // Direct imports to avoid ref/timing issues during auth transitions
 import { Sidebar } from './components/dashboard/sidebar'
+<<<<<<< HEAD
 const NoteEditor = React.lazy(() =>
   import('./components/dashboard/note-editor').then((m) => ({ default: m.NoteEditor }))
 )
+=======
+// import { NoteEditor } from './components/dashboard/note-editor'
+>>>>>>> 92a5971798cd3aa571a071ab07873cbaceace8a4
 // import { NoteEditor } from './components/dashboard/note-editor'
 // Removed global KeyboardShortcutsDialog lazy import to avoid duplicate mounts
 
@@ -135,8 +139,11 @@ const DashboardComponent: React.FC = () => {
   const user = useAuthStore((state) => state.user)
   const isLoading = useAuthStore((state) => state.isLoading)
 
+<<<<<<< HEAD
   const [editorReady, setEditorReady] = React.useState(false)
 
+=======
+>>>>>>> 92a5971798cd3aa571a071ab07873cbaceace8a4
   React.useEffect(() => {
     if (!isLoading && !user) {
       if (typeof window === 'undefined' || !isOnAuthRoute()) {
@@ -154,12 +161,19 @@ const DashboardComponent: React.FC = () => {
         const store = useNotesStore.getState()
         store
           .loadData()
+<<<<<<< HEAD
           .then(() => store.initializeDefaultNote())
           .then(() => setEditorReady(true))
           .catch((err) => {
             console.warn('Notes bootstrap failed:', err)
             setEditorReady(true)
           })
+=======
+          .then(() => {
+            return store.initializeDefaultNote()
+          })
+          .catch((err) => console.warn('Notes bootstrap failed:', err))
+>>>>>>> 92a5971798cd3aa571a071ab07873cbaceace8a4
       })
     }
   }, [isLoading, user])
@@ -203,11 +217,16 @@ const DashboardComponent: React.FC = () => {
         </div>
       </header>
 
+<<<<<<< HEAD
       {/* Main Content - Sidebar + conditional editor */}
+=======
+      {/* Main Content - Sidebar + placeholder (editor temporarily disabled) */}
+>>>>>>> 92a5971798cd3aa571a071ab07873cbaceace8a4
       <div className="flex-1 flex overflow-hidden">
         <div className="w-0 md:w-48 xl:w-64 md:flex-shrink-0">
           <Sidebar />
         </div>
+<<<<<<< HEAD
         <div className="flex-1 flex flex-col min-w-0">
           {editorReady ? (
             <React.Suspense
@@ -227,6 +246,13 @@ const DashboardComponent: React.FC = () => {
               </div>
             </div>
           )}
+=======
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-2">
+            <h2 className="text-xl font-semibold">Welcome</h2>
+            <p className="text-sm text-muted-foreground">Editor temporarily disabled while we isolate an update loop.</p>
+          </div>
+>>>>>>> 92a5971798cd3aa571a071ab07873cbaceace8a4
         </div>
       </div>
 
