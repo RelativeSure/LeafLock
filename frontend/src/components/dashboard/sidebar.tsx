@@ -15,7 +15,6 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { Label } from '@/components/ui/label'
 import { TemplatesDialog } from './templates-dialog'
-import { AdvancedSearchBar } from './advanced-search-bar'
 import { NoteList } from './note-list'
 import { TrashDialog } from './trash-dialog'
 
@@ -88,7 +87,15 @@ export function Sidebar() {
   const sidebarContent = (
     <div className="w-full border-r border-border bg-card flex flex-col h-full overflow-hidden">
       <div className="p-4 border-b border-border space-y-3">
-        <AdvancedSearchBar />
+        {/* Replaced AdvancedSearchBar with a basic, non-reactive search input to avoid update-depth loop */}
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Search notes..."
+            onChange={() => {}}
+            className="flex-1"
+          />
+          <Button variant="outline" size="sm" className="bg-transparent">Search</Button>
+        </div>
 
         <div className="flex gap-2">
           <Button
