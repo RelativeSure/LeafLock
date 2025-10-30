@@ -41,9 +41,9 @@ import { ShareNoteDialog } from './share-note-dialog'
 // Temporarily disable collaboration bar to isolate post-login crash
 import { EncryptionUnlockDialog } from './encryption-unlock-dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { NoteStats } from './note-stats'
+// import { NoteStats } from './note-stats'
 // Temporarily disable keyboard shortcuts dialog to isolate React ref error after login
-import { BacklinksSection } from './note-linking-utils'
+// import { BacklinksSection } from './note-linking-utils'
 // Temporarily disable version history dialog to isolate post-login crash
 import { RichTextEditor } from './rich-text-editor'
 
@@ -117,6 +117,7 @@ export function NoteEditor() {
 
   useEffect(() => {
     if (selectedNote) {
+      console.log('[Editor] selection changed to note', selectedNote.id)
       setNoteTags(selectedNote.tags || [])
       // Don't auto-join collaboration session - only join when Share button is clicked
 
@@ -128,6 +129,7 @@ export function NoteEditor() {
         const decryptData = async () => {
           try {
             isSyncingRef.current.syncing = true
+            console.log('[Editor] decrypt start', selectedNote.id)
             // Decrypt title
             const decryptedTitle = selectedNote.title ? await decryptText(selectedNote.title) : ''
             if (decryptedTitle !== title) {
@@ -168,6 +170,7 @@ export function NoteEditor() {
 
             setIsDecrypting(false)
             isSyncingRef.current.syncing = false
+            console.log('[Editor] decrypt done', selectedNote.id)
           } catch (err) {
             console.error('[v0] Decryption failed:', err)
             setDecryptError('Failed to decrypt note. The password may be incorrect.')
@@ -176,6 +179,7 @@ export function NoteEditor() {
             if (displayContent !== '') setDisplayContent('')
             setIsDecrypting(false)
             isSyncingRef.current.syncing = false
+            console.log('[Editor] decrypt failed', selectedNote.id)
           }
         }
 
@@ -237,6 +241,7 @@ export function NoteEditor() {
           if (isUnlocked) {
             const encryptedTitle = await encryptText(title)
             const encryptedContent = await encryptText(displayContent)
+            console.log('[Editor] autosave -> updateNote', selectedNote.id)
 
             await updateNote(selectedNote.id, {
               title: encryptedTitle,
@@ -249,6 +254,7 @@ export function NoteEditor() {
             if (!selectedNote.id.startsWith('local-')) {
               toast.success('Note saved', { duration: 2000 })
             }
+            console.log('[Editor] autosave complete', selectedNote.id)
 
             // Update last saved snapshot
             lastSavedRef.title = trimmedTitle
@@ -259,7 +265,7 @@ export function NoteEditor() {
             return
           }
         } catch (err) {
-          console.error('[v0] Failed to save note:', err)
+          console.error('[Editor] Failed to save note:', err)
           toast.error('Failed to save note', { duration: 3000 })
         }
       }, 500)
@@ -504,12 +510,13 @@ export function NoteEditor() {
           />
         </div>
 
-        <div className="mt-4 pt-4 border-t border-border">
+        {/* NoteStats temporarily disabled to isolate update loop */}
+        {/* <div className="mt-4 pt-4 border-t border-border">
           <NoteStats content={displayContent} />
-        </div>
+        </div> */}
 
-        {/* Backlinks Section */}
-        <BacklinksSection currentNoteId={selectedNote.id} onNoteSelect={selectNote} />
+        {/* BacklinksSection temporarily disabled to isolate update loop */}
+        {/* <BacklinksSection currentNoteId={selectedNote.id} onNoteSelect={selectNote} /> */}
       </div>
 
       {/* Save Template Dialog */}
