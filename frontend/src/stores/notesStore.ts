@@ -168,10 +168,19 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     if (!hasMeaningfulChange) {
       return currentNote
     }
-    set((state) => ({
-      notes: state.notes.map((note) => (note.id === id ? updatedNote : note)),
-      selectedNote: state.selectedNote?.id === id ? updatedNote : state.selectedNote,
-    }))
+    set((state) => {
+      const nextNotes = state.notes.map((note) => (note.id === id ? updatedNote : note))
+      // Avoid replacing selectedNote reference on encrypted content saves to prevent editor decrypt loop
+      const shouldReplaceSelected =
+        state.selectedNote?.id === id &&
+        // Replace only if structural props changed that UI outside editor depends on
+        (updates.folderId !== undefined || updates.pinned !== undefined)
+
+      return {
+        notes: nextNotes,
+        selectedNote: shouldReplaceSelected ? updatedNote : state.selectedNote,
+      }
+    })
 
     return updatedNote
   },
