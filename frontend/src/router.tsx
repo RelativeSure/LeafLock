@@ -211,7 +211,13 @@ const DashboardComponent: React.FC = () => {
       {/* Main Content - Sidebar + conditional editor */}
       <div className="flex-1 flex overflow-hidden">
         <div className="w-0 md:w-48 xl:w-64 md:flex-shrink-0">
-          <Sidebar />
+          {editorReady ? (
+            <Sidebar />
+          ) : (
+            <div className="h-full w-full border-r border-border flex items-center justify-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+            </div>
+          )}
         </div>
         <div className="flex-1 flex flex-col min-w-0">
           {editorReady ? (
