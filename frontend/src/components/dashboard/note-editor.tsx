@@ -62,6 +62,8 @@ export function NoteEditor() {
   const [isUnlockDialogOpen, setIsUnlockDialogOpen] = useState(false)
   const [isDecrypting, setIsDecrypting] = useState(false)
   const [decryptError, setDecryptError] = useState('')
+  // Prevent autosave from running while we are programmatically syncing decrypted content
+  const isSyncingRef = useState<{ syncing: boolean }>({ syncing: false })[0]
   const lastSavedRef = useState<{ title: string; content: string; tagsKey: string }>({
     title: '',
     content: '',
@@ -122,6 +124,7 @@ export function NoteEditor() {
 
         const decryptData = async () => {
           try {
+            isSyncingRef.syncing = true
             // Decrypt title
             const decryptedTitle = selectedNote.title ? await decryptText(selectedNote.title) : ''
             if (decryptedTitle !== title) {
@@ -143,6 +146,7 @@ export function NoteEditor() {
             }
 
             setIsDecrypting(false)
+            isSyncingRef.syncing = false
           } catch (err) {
             console.error('[v0] Decryption failed:', err)
             setDecryptError('Failed to decrypt note. The password may be incorrect.')
@@ -150,6 +154,7 @@ export function NoteEditor() {
             if (_content !== '') setContent('')
             if (displayContent !== '') setDisplayContent('')
             setIsDecrypting(false)
+            isSyncingRef.syncing = false
           }
         }
 
@@ -164,7 +169,7 @@ export function NoteEditor() {
       // Don't automatically leave collaboration session
       // Only leave when explicitly sharing or closing
     }
-  }, [selectedNote, isUnlocked])
+  }, [selectedNote?.id, isUnlocked])
 
   useEffect(() => {
     if (selectedNote && displayContent !== undefined) {
@@ -176,7 +181,7 @@ export function NoteEditor() {
           }
 
           // Don't save while decrypting to avoid race conditions
-          if (isDecrypting) {
+          if (isDecrypting || isSyncingRef.syncing) {
             return
           }
 
