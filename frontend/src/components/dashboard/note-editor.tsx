@@ -67,6 +67,8 @@ export function NoteEditor() {
   // Baseline of decrypted content to detect first user edit
   const decryptedBaselineRef = useRef<{ title: string; content: string }>({ title: '', content: '' })
   const userEditedRef = useRef<boolean>(false)
+  const saveTimeoutRef = useRef<number | null>(null)
+  const mountedRef = useRef<boolean>(false)
   const lastSavedRef = useState<{ title: string; content: string; tagsKey: string }>({
     title: '',
     content: '',
@@ -114,6 +116,17 @@ export function NoteEditor() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [selectedNote])
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = null
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (selectedNote) {
@@ -192,7 +205,7 @@ export function NoteEditor() {
         decryptedBaselineRef.current = { title: '', content: '' }
         userEditedRef.current = false
       }
-
+      
       // Don't automatically leave collaboration session
       // Only leave when explicitly sharing or closing
     }
@@ -200,8 +213,15 @@ export function NoteEditor() {
 
   useEffect(() => {
     if (selectedNote && displayContent !== undefined) {
-      const timeoutId = setTimeout(async () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = null
+      }
+
+      const scheduledNoteId = selectedNote.id
+      const timeoutId = window.setTimeout(async () => {
         try {
+          if (!mountedRef.current) return
           // Guard clause: only save if we have a valid selected note
           if (!selectedNote?.id) {
             return
@@ -214,6 +234,11 @@ export function NoteEditor() {
 
           // Only save after the user has actually edited content vs decrypted baseline
           if (!userEditedRef.current) {
+            return
+          }
+
+          // If selection changed since scheduling, skip this save
+          if (selectedNote.id !== scheduledNoteId) {
             return
           }
 
@@ -270,7 +295,13 @@ export function NoteEditor() {
         }
       }, 500)
 
-      return () => clearTimeout(timeoutId)
+      saveTimeoutRef.current = timeoutId
+      return () => {
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current)
+          saveTimeoutRef.current = null
+        }
+      }
     }
   }, [title, displayContent, noteTags, selectedNote?.id])
 
