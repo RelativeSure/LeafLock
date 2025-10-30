@@ -68,7 +68,10 @@ export function ProtectedRoute({
                 resource.
               </AlertDescription>
             </Alert>
-            <Button onClick={() => (window.location.href = fallbackRoute || '/')} className="w-full">
+            <Button
+              onClick={() => (window.location.href = fallbackRoute || '/')}
+              className="w-full"
+            >
               Go Back
             </Button>
           </CardContent>

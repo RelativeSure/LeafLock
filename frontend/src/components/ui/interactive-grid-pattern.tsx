@@ -22,82 +22,81 @@ const rainbowColors = [
   'fill-teal-500/40 stroke-teal-400/70',
 ]
 
-export const InteractiveGridPattern = React.forwardRef<SVGSVGElement, InteractiveGridPatternProps>(({
-  width = 50,
-  height = 50,
-  className,
-  squaresClassName,
-  ...props
-}, ref) => {
-  const [hoveredSquare, setHoveredSquare] = useState<number | null>(null)
-  const [dimensions, setDimensions] = useState({ horizontal: 0, vertical: 0 })
-  const [squareColors, setSquareColors] = useState<Map<number, string>>(new Map())
-  const svgRef = useRef<SVGSVGElement>(null)
+export const InteractiveGridPattern = React.forwardRef<SVGSVGElement, InteractiveGridPatternProps>(
+  ({ width = 50, height = 50, className, squaresClassName, ...props }, ref) => {
+    const [hoveredSquare, setHoveredSquare] = useState<number | null>(null)
+    const [dimensions, setDimensions] = useState({ horizontal: 0, vertical: 0 })
+    const [squareColors, setSquareColors] = useState<Map<number, string>>(new Map())
+    const svgRef = useRef<SVGSVGElement>(null)
 
-  // Merge forwarded ref with internal ref
-  const setRefs = React.useCallback((node: SVGSVGElement | null) => {
-    svgRef.current = node
-    if (typeof ref === 'function') {
-      ref(node)
-    } else if (ref) {
-      ref.current = node
-    }
-  }, [ref])
+    // Merge forwarded ref with internal ref
+    const setRefs = React.useCallback(
+      (node: SVGSVGElement | null) => {
+        svgRef.current = node
+        if (typeof ref === 'function') {
+          ref(node)
+        } else if (ref) {
+          ref.current = node
+        }
+      },
+      [ref]
+    )
 
-  useEffect(() => {
-    const updateDimensions = () => {
-      if (svgRef.current) {
-        const rect = svgRef.current.getBoundingClientRect()
-        const horizontal = Math.ceil(rect.width / width) + 1
-        const vertical = Math.ceil(rect.height / height) + 1
-        setDimensions({ horizontal, vertical })
+    useEffect(() => {
+      const updateDimensions = () => {
+        if (svgRef.current) {
+          const rect = svgRef.current.getBoundingClientRect()
+          const horizontal = Math.ceil(rect.width / width) + 1
+          const vertical = Math.ceil(rect.height / height) + 1
+          setDimensions({ horizontal, vertical })
+        }
+      }
+
+      updateDimensions()
+      window.addEventListener('resize', updateDimensions)
+      return () => window.removeEventListener('resize', updateDimensions)
+    }, [width, height])
+
+    const handleMouseEnter = (index: number) => {
+      setHoveredSquare(index)
+      if (!squareColors.has(index)) {
+        // Use deterministic color selection based on index to avoid impure Math.random() during render
+        const colorIndex = index % rainbowColors.length
+        const selectedColor = rainbowColors[colorIndex]
+        setSquareColors(new Map(squareColors.set(index, selectedColor)))
       }
     }
 
-    updateDimensions()
-    window.addEventListener('resize', updateDimensions)
-    return () => window.removeEventListener('resize', updateDimensions)
-  }, [width, height])
+    const { horizontal, vertical } = dimensions
 
-  const handleMouseEnter = (index: number) => {
-    setHoveredSquare(index)
-    if (!squareColors.has(index)) {
-      // Use deterministic color selection based on index to avoid impure Math.random() during render
-      const colorIndex = index % rainbowColors.length
-      const selectedColor = rainbowColors[colorIndex]
-      setSquareColors(new Map(squareColors.set(index, selectedColor)))
-    }
+    return (
+      <svg ref={setRefs} className={cn('absolute inset-0 h-full w-full', className)} {...props}>
+        {Array.from({ length: horizontal * vertical }).map((_, index) => {
+          const x = (index % horizontal) * width
+          const y = Math.floor(index / horizontal) * height
+          const colorClass = squareColors.get(index) || ''
+
+          return (
+            <rect
+              key={index}
+              x={x}
+              y={y}
+              width={width}
+              height={height}
+              className={cn(
+                'stroke-slate-700/40 transition-all duration-100 ease-in-out [&:not(:hover)]:duration-1000',
+                hoveredSquare === index ? colorClass : 'fill-slate-800/20',
+                squaresClassName
+              )}
+              onMouseEnter={() => handleMouseEnter(index)}
+              onMouseLeave={() => setHoveredSquare(null)}
+            />
+          )
+        })}
+      </svg>
+    )
   }
-
-  const { horizontal, vertical } = dimensions
-
-  return (
-    <svg ref={setRefs} className={cn('absolute inset-0 h-full w-full', className)} {...props}>
-      {Array.from({ length: horizontal * vertical }).map((_, index) => {
-        const x = (index % horizontal) * width
-        const y = Math.floor(index / horizontal) * height
-        const colorClass = squareColors.get(index) || ''
-
-        return (
-          <rect
-            key={index}
-            x={x}
-            y={y}
-            width={width}
-            height={height}
-            className={cn(
-              'stroke-slate-700/40 transition-all duration-100 ease-in-out [&:not(:hover)]:duration-1000',
-              hoveredSquare === index ? colorClass : 'fill-slate-800/20',
-              squaresClassName
-            )}
-            onMouseEnter={() => handleMouseEnter(index)}
-            onMouseLeave={() => setHoveredSquare(null)}
-          />
-        )
-      })}
-    </svg>
-  )
-})
+)
 InteractiveGridPattern.displayName = 'InteractiveGridPattern'
 
 export type { InteractiveGridPatternProps }

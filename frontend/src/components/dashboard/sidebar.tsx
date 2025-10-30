@@ -18,7 +18,6 @@ import { TemplatesDialog } from './templates-dialog'
 import { AdvancedSearchBar } from './advanced-search-bar'
 import { NoteList } from './note-list'
 import { TrashDialog } from './trash-dialog'
- 
 
 export function Sidebar() {
   const {
@@ -40,7 +39,6 @@ export function Sidebar() {
   const [newFolderColor, setNewFolderColor] = useState('#3b82f6')
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false)
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false)
-  
 
   // Mobile detection and responsive behavior
   useEffect(() => {

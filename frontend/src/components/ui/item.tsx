@@ -114,7 +114,10 @@ const ItemContent = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>
       <div
         ref={ref}
         data-slot="item-content"
-        className={cn('flex flex-1 flex-col gap-1 [&+[data-slot=item-content]]:flex-none', className)}
+        className={cn(
+          'flex flex-1 flex-col gap-1 [&+[data-slot=item-content]]:flex-none',
+          className
+        )}
         {...props}
       />
     )

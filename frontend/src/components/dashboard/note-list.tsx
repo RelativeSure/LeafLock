@@ -203,108 +203,111 @@ export function NoteList() {
                   style={{ animationDelay: `${index * 0.05}s` }}
                   onClick={(e) => {
                     // Only select if not in bulk mode and click wasn't on checkbox
-                    if (!isBulkMode && !(e.target as HTMLElement).closest('input[type="checkbox"]')) {
+                    if (
+                      !isBulkMode &&
+                      !(e.target as HTMLElement).closest('input[type="checkbox"]')
+                    ) {
                       selectNote(note.id)
                     }
                   }}
                 >
-                    <div className="flex items-start gap-3">
-                      {isBulkMode && (
-                        <div className="flex items-center mt-1">
-                          <input
-                            type="checkbox"
-                            checked={isBulkSelected}
-                            onChange={() => toggleNoteSelection(note.id)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                          />
+                  <div className="flex items-start gap-3">
+                    {isBulkMode && (
+                      <div className="flex items-center mt-1">
+                        <input
+                          type="checkbox"
+                          checked={isBulkSelected}
+                          onChange={() => toggleNoteSelection(note.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex-1 text-left">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          {note.pinned && (
+                            <Pin className="h-3 w-3 text-primary flex-shrink-0 mt-0.5" />
+                          )}
+                          {isUnlocked ? (
+                            decrypted ? (
+                              <h3 className="font-medium text-sm line-clamp-1">
+                                {decrypted.title || 'Untitled'}
+                              </h3>
+                            ) : isDecrypting ? (
+                              <Skeleton className="h-4 w-32" />
+                            ) : (
+                              <h3 className="font-medium text-sm line-clamp-1">Untitled</h3>
+                            )
+                          ) : (
+                            <h3 className="font-medium text-sm line-clamp-1">Locked</h3>
+                          )}
                         </div>
+                        {note.encrypted && (
+                          <Lock className="h-3 w-3 text-muted flex-shrink-0 mt-0.5 animate-pulse" />
+                        )}
+                      </div>
+
+                      {isUnlocked ? (
+                        decrypted ? (
+                          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                            {(decrypted.content || '')
+                              .replace(/<[^>]*>/g, ' ')
+                              .replace(/\s+/g, ' ')
+                              .trim() || 'No content'}
+                          </p>
+                        ) : isDecrypting ? (
+                          <div className="space-y-1 mb-2">
+                            <Skeleton className="h-3 w-full" />
+                            <Skeleton className="h-3 w-3/4" />
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                            No content
+                          </p>
+                        )
+                      ) : (
+                        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                          Unlock to preview content
+                        </p>
                       )}
 
-                      <div className="flex-1 text-left">
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            {note.pinned && (
-                              <Pin className="h-3 w-3 text-primary flex-shrink-0 mt-0.5" />
-                            )}
-                            {isUnlocked ? (
-                              decrypted ? (
-                                <h3 className="font-medium text-sm line-clamp-1">
-                                  {decrypted.title || 'Untitled'}
-                                </h3>
-                              ) : isDecrypting ? (
-                                <Skeleton className="h-4 w-32" />
-                              ) : (
-                                <h3 className="font-medium text-sm line-clamp-1">Untitled</h3>
-                              )
-                            ) : (
-                              <h3 className="font-medium text-sm line-clamp-1">Locked</h3>
-                            )}
-                          </div>
-                          {note.encrypted && (
-                            <Lock className="h-3 w-3 text-muted flex-shrink-0 mt-0.5 animate-pulse" />
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {(note.tags || []).slice(0, 2).map((tag) => (
+                            <span
+                              key={tag}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent/50 text-xs transition-smooth hover:bg-accent"
+                            >
+                              <TagIcon className="h-2.5 w-2.5" />
+                              {tag}
+                            </span>
+                          ))}
+                          {(note.tags || []).length > 2 && (
+                            <span className="text-xs text-muted">
+                              +{(note.tags || []).length - 2}
+                            </span>
                           )}
                         </div>
 
-                        {isUnlocked ? (
-                          decrypted ? (
-                            <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                              {(decrypted.content || '')
-                                .replace(/<[^>]*>/g, ' ')
-                                .replace(/\s+/g, ' ')
-                                .trim() || 'No content'}
-                            </p>
-                          ) : isDecrypting ? (
-                            <div className="space-y-1 mb-2">
-                              <Skeleton className="h-3 w-full" />
-                              <Skeleton className="h-3 w-3/4" />
-                            </div>
-                          ) : (
-                            <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                              No content
-                            </p>
-                          )
-                        ) : (
-                          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                            Unlock to preview content
-                          </p>
-                        )}
-
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1 flex-wrap">
-                            {(note.tags || []).slice(0, 2).map((tag) => (
-                              <span
-                                key={tag}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent/50 text-xs transition-smooth hover:bg-accent"
-                              >
-                                <TagIcon className="h-2.5 w-2.5" />
-                                {tag}
-                              </span>
-                            ))}
-                            {(note.tags || []).length > 2 && (
-                              <span className="text-xs text-muted">
-                                +{(note.tags || []).length - 2}
-                              </span>
-                            )}
-                          </div>
-
-                          <span className="text-xs text-muted-foreground flex-shrink-0">
-                            {note.updatedAt
-                              ? (() => {
-                                  try {
-                                    const date = new Date(note.updatedAt)
-                                    return isNaN(date.getTime())
-                                      ? 'Unknown'
-                                      : formatDistanceToNow(date, { addSuffix: true })
-                                  } catch {
-                                    return 'Unknown'
-                                  }
-                                })()
-                              : 'Unknown'}
-                          </span>
-                        </div>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                          {note.updatedAt
+                            ? (() => {
+                                try {
+                                  const date = new Date(note.updatedAt)
+                                  return isNaN(date.getTime())
+                                    ? 'Unknown'
+                                    : formatDistanceToNow(date, { addSuffix: true })
+                                } catch {
+                                  return 'Unknown'
+                                }
+                              })()
+                            : 'Unknown'}
+                        </span>
                       </div>
                     </div>
+                  </div>
                 </ContextMenuTrigger>
                 <ContextMenuContent>
                   <ContextMenuItem onClick={() => selectNote(note.id)}>Open</ContextMenuItem>

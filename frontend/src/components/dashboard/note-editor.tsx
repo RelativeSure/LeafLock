@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNotesStore } from '../../stores/notesStore'
 import { useCollaboration } from '@/lib/collaboration-context'
 import { useEncryption } from '@/lib/encryption-context'
@@ -63,7 +63,7 @@ export function NoteEditor() {
   const [isDecrypting, setIsDecrypting] = useState(false)
   const [decryptError, setDecryptError] = useState('')
   // Prevent autosave from running while we are programmatically syncing decrypted content
-  const isSyncingRef = useState<{ syncing: boolean }>({ syncing: false })[0]
+  const isSyncingRef = useRef<{ syncing: boolean }>({ syncing: false })
   const lastSavedRef = useState<{ title: string; content: string; tagsKey: string }>({
     title: '',
     content: '',
@@ -124,7 +124,7 @@ export function NoteEditor() {
 
         const decryptData = async () => {
           try {
-            isSyncingRef.syncing = true
+            isSyncingRef.current.syncing = true
             // Decrypt title
             const decryptedTitle = selectedNote.title ? await decryptText(selectedNote.title) : ''
             if (decryptedTitle !== title) {
@@ -146,7 +146,7 @@ export function NoteEditor() {
             }
 
             setIsDecrypting(false)
-            isSyncingRef.syncing = false
+            isSyncingRef.current.syncing = false
           } catch (err) {
             console.error('[v0] Decryption failed:', err)
             setDecryptError('Failed to decrypt note. The password may be incorrect.')
@@ -154,7 +154,7 @@ export function NoteEditor() {
             if (_content !== '') setContent('')
             if (displayContent !== '') setDisplayContent('')
             setIsDecrypting(false)
-            isSyncingRef.syncing = false
+            isSyncingRef.current.syncing = false
           }
         }
 
@@ -168,8 +168,8 @@ export function NoteEditor() {
 
       // Don't automatically leave collaboration session
       // Only leave when explicitly sharing or closing
-      }
-    }, [selectedNote?.id, isUnlocked])
+    }
+  }, [selectedNote?.id, isUnlocked])
 
   useEffect(() => {
     if (selectedNote && displayContent !== undefined) {
@@ -181,7 +181,7 @@ export function NoteEditor() {
           }
 
           // Don't save while decrypting to avoid race conditions
-            if (isDecrypting || isSyncingRef.syncing) {
+          if (isDecrypting || isSyncingRef.current.syncing) {
             return
           }
 
@@ -238,7 +238,7 @@ export function NoteEditor() {
 
       return () => clearTimeout(timeoutId)
     }
-  }, [title, displayContent, noteTags])
+  }, [title, displayContent, noteTags, selectedNote?.id])
 
   const handleUnlock = () => {
     // Trigger re-decryption by updating the effect dependency
@@ -377,7 +377,6 @@ export function NoteEditor() {
         </div>
 
         <div className="flex items-center gap-2">
-
           <Button
             variant="outline"
             size="sm"
@@ -464,7 +463,9 @@ export function NoteEditor() {
         <div className="flex-1 overflow-auto">
           <RichTextEditor
             content={displayContent}
-            onChange={setDisplayContent}
+            onChange={(html) => {
+              if (html !== displayContent) setDisplayContent(html)
+            }}
             placeholder="Start writing your note..."
           />
         </div>
