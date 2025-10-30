@@ -142,9 +142,47 @@ export function getStoredSalt(): string | null {
   return window.localStorage.getItem(ENCRYPTION_SALT_STORAGE_KEY)
 }
 
-export function setStoredSalt(saltBase64: string) {
+export async function setStoredSalt(saltInput: string) {
   if (typeof window === 'undefined') return
-  window.localStorage.setItem(ENCRYPTION_SALT_STORAGE_KEY, saltBase64)
+  const s = await getSodium()
+  // Reuse the tolerant salt decode path from deriveKey
+  const tryDecode = (raw: string): Uint8Array | null => {
+    const candidates: Array<[string, number]> = [
+      [raw, s.base64_variants.ORIGINAL],
+      [raw, s.base64_variants.NO_PADDING],
+      [raw, s.base64_variants.URLSAFE],
+      [raw, s.base64_variants.URLSAFE_NO_PADDING],
+    ]
+    for (const [value, variant] of candidates) {
+      try {
+        const bytes = s.from_base64(value, variant)
+        if (bytes.length === s.crypto_pwhash_SALTBYTES) return bytes
+      } catch {}
+    }
+    try {
+      const padLen = (4 - (raw.length % 4)) % 4
+      const padded = raw + '='.repeat(padLen)
+      const bytes = s.from_base64(padded, s.base64_variants.ORIGINAL)
+      if (bytes.length === s.crypto_pwhash_SALTBYTES) return bytes
+    } catch {}
+    try {
+      if (/^[0-9a-fA-F]+$/.test(raw) && raw.length % 2 === 0) {
+        const bytes = s.from_hex(raw)
+        if (bytes.length === s.crypto_pwhash_SALTBYTES) return bytes
+      }
+    } catch {}
+    try {
+      const utf8 = s.from_string(raw)
+      if (utf8.length === s.crypto_pwhash_SALTBYTES) return utf8
+    } catch {}
+    return null
+  }
+
+  const saltBytes = tryDecode(saltInput)
+  const toStore = saltBytes
+    ? s.to_base64(saltBytes, s.base64_variants.ORIGINAL)
+    : saltInput // store raw if we cannot decode; deriveKey will still error clearly later
+  window.localStorage.setItem(ENCRYPTION_SALT_STORAGE_KEY, toStore)
 }
 
 export async function encryptTextWithStoredKey(plaintext: string): Promise<string> {

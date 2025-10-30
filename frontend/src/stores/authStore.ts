@@ -62,7 +62,7 @@ export const useAuthStore = create<AuthState>()(
 
           if (response.requiresMFA) {
             if (response.encryptionSalt) {
-              setStoredSalt(response.encryptionSalt)
+              await setStoredSalt(response.encryptionSalt)
             }
             set({ pendingEncryption: { password, salt: response.encryptionSalt } })
             return { requiresMFA: true }
@@ -71,7 +71,7 @@ export const useAuthStore = create<AuthState>()(
           set({ user: { ...response.user, isAdmin: response.user.role === 'admin' } })
 
           if (response.encryptionSalt) {
-            setStoredSalt(response.encryptionSalt)
+            await setStoredSalt(response.encryptionSalt)
             try {
               const derivedKey = await deriveKey(password, response.encryptionSalt)
               setStoredKey(derivedKey)
@@ -97,7 +97,7 @@ export const useAuthStore = create<AuthState>()(
           const { pendingEncryption } = get()
           const salt = response.encryptionSalt || pendingEncryption?.salt
           if (salt) {
-            setStoredSalt(salt)
+            await setStoredSalt(salt)
           }
 
           if (pendingEncryption?.password && salt) {
@@ -124,7 +124,7 @@ export const useAuthStore = create<AuthState>()(
           set({ user: { ...response.user, isAdmin: response.user.role === 'admin' } })
 
           if (response.encryptionSalt) {
-            setStoredSalt(response.encryptionSalt)
+            await setStoredSalt(response.encryptionSalt)
             try {
               const derivedKey = await deriveKey(password, response.encryptionSalt)
               setStoredKey(derivedKey)
