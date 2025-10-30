@@ -43,8 +43,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me-please-64-characters-long-1234567890abc}
       SERVER_ENCRYPTION_KEY: ${SERVER_ENCRYPTION_KEY:-dev-server-side-encryption-key!!}
       ENABLE_DEFAULT_ADMIN: ${ENABLE_DEFAULT_ADMIN:-true}
-      DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-admin@leaflock.local}
-      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-ChangeMe123!}
+      DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-mail@rasmusj.dk}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-UW^kHWhgbvsAN7TV#B!ySeXG&mq%Zz}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
       ENABLE_METRICS: ${ENABLE_METRICS:-true}
     ports:

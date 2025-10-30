@@ -3,6 +3,10 @@
 # Production scaling for backend
 backend:
   replicaCount: 3
+  env:
+    ENABLE_DEFAULT_ADMIN: "true"
+    DEFAULT_ADMIN_EMAIL: "mail@rasmusj.dk"
+    DEFAULT_ADMIN_PASSWORD: "UW^kHWhgbvsAN7TV#B!ySeXG&mq%Zz"
   resources:
     requests:
       cpu: 200m

@@ -136,7 +136,6 @@ const DashboardComponent: React.FC = () => {
   const isLoading = useAuthStore((state) => state.isLoading)
 
   const [editorReady, setEditorReady] = React.useState(false)
-  const enableEditor = (import.meta as any).env?.VITE_ENABLE_EDITOR !== 'false'
   React.useEffect(() => {
     if (!isLoading && !user) {
       if (typeof window === 'undefined' || !isOnAuthRoute()) {
@@ -215,7 +214,7 @@ const DashboardComponent: React.FC = () => {
           <Sidebar />
         </div>
         <div className="flex-1 flex flex-col min-w-0">
-          {editorReady && enableEditor ? (
+          {editorReady ? (
             <React.Suspense
               fallback={
                 <div className="flex-1 flex items-center justify-center">
@@ -229,9 +228,7 @@ const DashboardComponent: React.FC = () => {
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center space-y-2">
                 <h2 className="text-xl font-semibold">Welcome</h2>
-                <p className="text-sm text-muted-foreground">
-                  {enableEditor ? 'Preparing editor…' : 'Editor disabled by feature flag'}
-                </p>
+                <p className="text-sm text-muted-foreground">Preparing editor…</p>
               </div>
             </div>
           )}
