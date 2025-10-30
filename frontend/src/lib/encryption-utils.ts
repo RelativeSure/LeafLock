@@ -65,6 +65,19 @@ export async function deriveKey(password: string, saltInput: string): Promise<st
       if (utf8.length === s.crypto_pwhash_SALTBYTES) return utf8
     } catch (_) {}
 
+    // Fallback: manual base64/URLSAFE decode via atob
+    try {
+      const norm = (() => {
+        let v = raw.replace(/-/g, '+').replace(/_/g, '/')
+        const padLen = (4 - (v.length % 4)) % 4
+        return v + '='.repeat(padLen)
+      })()
+      const bin = atob(norm)
+      const arr = new Uint8Array(bin.length)
+      for (let i = 0; i < bin.length; i += 1) arr[i] = bin.charCodeAt(i)
+      return arr
+    } catch (_) {}
+
     return null
   }
 
@@ -208,6 +221,18 @@ export async function setStoredSalt(saltInput: string) {
     try {
       const utf8 = s.from_string(raw)
       if (utf8.length === s.crypto_pwhash_SALTBYTES) return utf8
+    } catch {}
+
+    try {
+      const norm = (() => {
+        let v = raw.replace(/-/g, '+').replace(/_/g, '/')
+        const padLen = (4 - (v.length % 4)) % 4
+        return v + '='.repeat(padLen)
+      })()
+      const bin = atob(norm)
+      const arr = new Uint8Array(bin.length)
+      for (let i = 0; i < bin.length; i += 1) arr[i] = bin.charCodeAt(i)
+      return arr
     } catch {}
     return null
   }
