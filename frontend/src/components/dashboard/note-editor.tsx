@@ -64,6 +64,9 @@ export function NoteEditor() {
   const [decryptError, setDecryptError] = useState('')
   // Prevent autosave from running while we are programmatically syncing decrypted content
   const isSyncingRef = useRef<{ syncing: boolean }>({ syncing: false })
+  // Baseline of decrypted content to detect first user edit
+  const decryptedBaselineRef = useRef<{ title: string; content: string }>({ title: '', content: '' })
+  const userEditedRef = useRef<boolean>(false)
   const lastSavedRef = useState<{ title: string; content: string; tagsKey: string }>({
     title: '',
     content: '',
@@ -145,6 +148,13 @@ export function NoteEditor() {
               if (displayContent !== '') setDisplayContent('')
             }
 
+            // Update decrypted baseline and clear user-edited flag
+            decryptedBaselineRef.current = {
+              title: selectedNote.title ? await decryptText(selectedNote.title) : '',
+              content: selectedNote.content ? await decryptText(selectedNote.content) : '',
+            }
+            userEditedRef.current = false
+
             // Initialize last saved snapshot to the freshly decrypted state to avoid immediate autosave
             const trimmedTitle = (decryptedTitle || '').trim()
             const trimmedContent = (selectedNote.content
@@ -175,6 +185,8 @@ export function NoteEditor() {
         if (title !== '') setTitle('')
         if (_content !== '') setContent('')
         if (displayContent !== '') setDisplayContent('')
+        decryptedBaselineRef.current = { title: '', content: '' }
+        userEditedRef.current = false
       }
 
       // Don't automatically leave collaboration session
@@ -193,6 +205,11 @@ export function NoteEditor() {
 
           // Don't save while decrypting to avoid race conditions
           if (isDecrypting || isSyncingRef.current.syncing) {
+            return
+          }
+
+          // Only save after the user has actually edited content vs decrypted baseline
+          if (!userEditedRef.current) {
             return
           }
 
@@ -475,7 +492,13 @@ export function NoteEditor() {
           <RichTextEditor
             content={displayContent}
             onChange={(html) => {
-              if (html !== displayContent) setDisplayContent(html)
+              if (html !== displayContent) {
+                setDisplayContent(html)
+                // Mark as user-edited when diverging from decrypted baseline
+                if (html.trim() !== (decryptedBaselineRef.current.content || '').trim()) {
+                  userEditedRef.current = true
+                }
+              }
             }}
             placeholder="Start writing your note..."
           />
