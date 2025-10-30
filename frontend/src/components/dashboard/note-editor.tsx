@@ -145,6 +145,17 @@ export function NoteEditor() {
               if (displayContent !== '') setDisplayContent('')
             }
 
+            // Initialize last saved snapshot to the freshly decrypted state to avoid immediate autosave
+            const trimmedTitle = (decryptedTitle || '').trim()
+            const trimmedContent = (selectedNote.content
+              ? await decryptText(selectedNote.content)
+              : displayContent || ''
+            ).trim()
+            const tagsKey = (selectedNote.tags || []).slice().sort().join('|')
+            lastSavedRef.title = trimmedTitle
+            lastSavedRef.content = trimmedContent
+            lastSavedRef.tagsKey = tagsKey
+
             setIsDecrypting(false)
             isSyncingRef.current.syncing = false
           } catch (err) {
