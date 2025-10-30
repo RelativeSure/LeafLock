@@ -16,7 +16,17 @@ async function getSodium(): Promise<typeof sodium> {
 export async function deriveKey(password: string, saltInput: string): Promise<string> {
   const s = await getSodium()
 
-  const tryDecodeSalt = (raw: string): Uint8Array | null => {
+  const sanitize = (raw: string): string => {
+    if (!raw) return raw
+    let v = raw.trim()
+    if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+      v = v.slice(1, -1)
+    }
+    return v
+  }
+
+  const tryDecodeSalt = (raw0: string): Uint8Array | null => {
+    const raw = sanitize(raw0)
     const candidates: Array<[string, number]> = [
       [raw, s.base64_variants.ORIGINAL],
       [raw, s.base64_variants.NO_PADDING],
@@ -146,7 +156,14 @@ export async function setStoredSalt(saltInput: string) {
   if (typeof window === 'undefined') return
   const s = await getSodium()
   // Reuse the tolerant salt decode path from deriveKey
-  const tryDecode = (raw: string): Uint8Array | null => {
+  const tryDecode = (raw0: string): Uint8Array | null => {
+    const raw = (() => {
+      let v = (raw0 || '').trim()
+      if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+        v = v.slice(1, -1)
+      }
+      return v
+    })()
     const candidates: Array<[string, number]> = [
       [raw, s.base64_variants.ORIGINAL],
       [raw, s.base64_variants.NO_PADDING],
