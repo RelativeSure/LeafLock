@@ -1,8 +1,10 @@
-// Auth Store
-export * from './authStore'
+// Export stores in dependency order to prevent circular dependencies
+// Auth store should be loaded first as other stores may depend on it
+export { useAuthStore } from './authStore'
 
-// Collaboration Store
-export * from './collaborationStore'
+// Notes store should be loaded second as it's used by most components
+export { useNotesStore } from './notesStore'
 
-// Share Links Store
-export * from './shareLinksStore'
+// Settings and templates stores can be loaded after the core stores
+export { useSettingsStore } from './settingsStore'
+export { useTemplatesStore } from './templatesStore'

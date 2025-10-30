@@ -8,29 +8,39 @@ import (
 
 // User represents an authenticated user with modern, clean interfaces
 type User struct {
-	ID                  uuid.UUID  `json:"id"`
-	EmailHash           []byte     `json:"-"` // SHA-256 for uniqueness
-	EmailEncrypted      []byte     `json:"-"` // For privacy
-	EmailSearchHash     []byte     `json:"-"` // Deterministic for login
-	PasswordHash        string     `json:"-"` // Argon2id
-	Salt                []byte     `json:"-"`
-	MasterKeyEncrypted  []byte     `json:"-"`
-	PublicKey           []byte     `json:"-"`
-	PrivateKeyEncrypted []byte     `json:"-"`
-	MFASecretEncrypted  []byte     `json:"-"`
-	MFAEnabled          bool       `json:"mfa_enabled"`
-	MFABackupCodes      [][]byte   `json:"-"`
-	MFABackupCodesUsed  [][]byte   `json:"-"`
-	CreatedAt           time.Time  `json:"created_at"`
-	UpdatedAt           time.Time  `json:"updated_at"`
-	LastLogin           *time.Time `json:"last_login,omitempty"`
-	FailedAttempts      int        `json:"-"`
-	LockedUntil         *time.Time `json:"-"`
-	DeletedAt           *time.Time `json:"-"`
-	IsAdmin             bool       `json:"is_admin"`
-	StorageUsed         int64      `json:"storage_used"`
-	StorageLimit        int64      `json:"storage_limit"`
-	ThemePreference     string     `json:"theme_preference"`
+	ID                      uuid.UUID  `json:"id"`
+	EmailHash               []byte     `json:"-"` // SHA-256 for uniqueness
+	EmailEncrypted          []byte     `json:"-"` // For privacy
+	EmailSearchHash         []byte     `json:"-"` // Deterministic for login
+	PasswordHash            string     `json:"-"` // Argon2id
+	Salt                    []byte     `json:"-"`
+	MasterKeyEncrypted      []byte     `json:"-"`
+	PublicKey               []byte     `json:"-"`
+	PrivateKeyEncrypted     []byte     `json:"-"`
+	MFASecretEncrypted      []byte     `json:"-"`
+	MFAEnabled              bool       `json:"mfa_enabled"`
+	MFABackupCodes          [][]byte   `json:"-"`
+	MFABackupCodesUsed      [][]byte   `json:"-"`
+	CreatedAt               time.Time  `json:"created_at"`
+	UpdatedAt               time.Time  `json:"updated_at"`
+	LastLogin               *time.Time `json:"last_login,omitempty"`
+	FailedAttempts          int        `json:"-"`
+	LockedUntil             *time.Time `json:"-"`
+	DeletedAt               *time.Time `json:"-"`
+	IsAdmin                 bool       `json:"is_admin"`
+	StorageUsed             int64      `json:"storage_used"`
+	StorageLimit            int64      `json:"storage_limit"`
+	ThemePreference         string     `json:"theme_preference"`
+	AutoSave                bool       `json:"auto_save"`
+	AutoSaveInterval        int        `json:"auto_save_interval"`
+	DefaultView             string     `json:"default_view"`
+	NotificationsEnabled    bool       `json:"notifications_enabled"`
+	EmailNotifications      bool       `json:"email_notifications"`
+	EncryptionEnabled       bool       `json:"encryption_enabled"`
+	Language                string     `json:"language"`
+	DefaultNoteBehavior     string     `json:"default_note_behavior"`
+	ProfilePictureType      string     `json:"profile_picture_type"`
+	ProfilePictureCustomURL *string    `json:"profile_picture_custom_url"`
 }
 
 // Session represents an authenticated session
@@ -108,13 +118,15 @@ type PasswordResetConfirm struct {
 
 // AuthResponse represents successful authentication
 type AuthResponse struct {
-	Token        string    `json:"token"`
-	UserID       string    `json:"user_id"`
-	WorkspaceID  string    `json:"workspace_id,omitempty"`
-	MFARequired  bool      `json:"mfa_required,omitempty"`
-	SessionToken string    `json:"session_token,omitempty"` // For MFA flow
-	IsAdmin      bool      `json:"is_admin"`
-	ExpiresAt    time.Time `json:"expires_at"`
+	Token             string    `json:"token"`
+	UserID            string    `json:"user_id"`
+	WorkspaceID       string    `json:"workspace_id,omitempty"`
+	MFARequired       bool      `json:"mfa_required,omitempty"`
+	SessionToken      string    `json:"session_token,omitempty"` // For MFA flow
+	IsAdmin           bool      `json:"is_admin"`
+	ExpiresAt         time.Time `json:"expires_at"`
+	EncryptionSalt    string    `json:"encryption_salt,omitempty"`
+	EncryptionVersion int       `json:"encryption_version,omitempty"`
 }
 
 // ErrorResponse represents an error response
@@ -137,4 +149,5 @@ const (
 	ErrCodeValidationFailed     = "VALIDATION_FAILED"
 	ErrCodeInternalError        = "INTERNAL_ERROR"
 	ErrCodeRegistrationDisabled = "REGISTRATION_DISABLED"
+	ErrCodeAccessDenied         = "ACCESS_DENIED"
 )

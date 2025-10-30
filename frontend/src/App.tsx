@@ -1,18 +1,43 @@
-import type { ReactElement } from 'react'
+import React from 'react'
 import { RouterProvider } from '@tanstack/react-router'
+import { ThemeProvider } from './context/ThemeContext'
+import { EncryptionProvider } from './lib/encryption-context'
+// import { ConfigDebug } from './components/debug/ConfigDebug'
+// Temporarily remove wrappers to isolate update loop
 
-import { router } from '@/app-router'
+// Lazy load router to prevent circular dependency
+let routerInstance: any = null
 
-declare module '@tanstack/react-router' {
-  interface Register {
-    router: typeof router
+const App: React.FC = () => {
+  const [router, setRouter] = React.useState<any>(null)
+
+  React.useEffect(() => {
+    // Dynamically import router to break circular dependency
+    if (!routerInstance) {
+      import('./router').then((module) => {
+        routerInstance = module.router
+        setRouter(routerInstance)
+      })
+    } else {
+      setRouter(routerInstance)
+    }
+  }, [])
+
+  if (!router) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
   }
-}
 
-/* c8 ignore start */
-export function App(): ReactElement {
-  return <RouterProvider router={router} />
+  return (
+    <ThemeProvider>
+      <EncryptionProvider>
+        <RouterProvider router={router} />
+      </EncryptionProvider>
+    </ThemeProvider>
+  )
 }
 
 export default App
-/* c8 ignore stop */

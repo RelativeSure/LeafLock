@@ -331,9 +331,15 @@ func (suite *NotesHandlerTestSuite) TestCreateNoteSuccess() {
 	}), mock.Anything, mock.Anything, mock.Anything, mock.Anything, suite.userID).Return(mockNoteRow)
 
 	noteID := uuid.New()
-	mockNoteRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
+	mockNoteRow.On("Scan", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if nid, ok := args[0].(*uuid.UUID); ok {
 			*nid = noteID
+		}
+		if created, ok := args[1].(*time.Time); ok {
+			*created = time.Unix(0, 0).UTC()
+		}
+		if updated, ok := args[2].(*time.Time); ok {
+			*updated = time.Unix(0, 0).UTC()
 		}
 	}).Return(nil)
 
@@ -357,6 +363,15 @@ func (suite *NotesHandlerTestSuite) TestCreateNoteSuccess() {
 
 	suite.NoError(err)
 	suite.Equal(201, resp.StatusCode)
+
+	var payload struct {
+		Note map[string]interface{} `json:"note"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&payload)
+	suite.NoError(err)
+	suite.Equal(noteID.String(), payload.Note["id"])
+	suite.Equal(titleEnc, payload.Note["title_encrypted"])
+	suite.Equal(float64(1), payload.Note["encryption_version"])
 }
 
 func (suite *NotesHandlerTestSuite) TestDeleteNoteSuccess() {
@@ -880,39 +895,22 @@ func (suite *AttachmentsHandlerTestSuite) TestGetAttachmentsSuccess() {
 
 type SearchHandlerTestSuite struct {
 	suite.Suite
-	handler   *SearchHandler
-	mockDB    *MockDB
-	cryptoSvc *crypto.CryptoService
-	userID    uuid.UUID
+	handler *SearchHandler
+	userID  uuid.UUID
 }
 
 func (suite *SearchHandlerTestSuite) SetupTest() {
-	suite.mockDB = &MockDB{}
-
-	key := make([]byte, 32)
-	if _, err := rand.Read(key); err != nil {
-		suite.T().Fatalf("Failed to generate random data: %v", err)
-	}
-	suite.cryptoSvc = crypto.NewCryptoService(key)
-
-	suite.handler = NewSearchHandler(suite.mockDB, suite.cryptoSvc)
+	suite.handler = NewSearchHandler()
 	suite.userID = uuid.New()
 }
 
 func (suite *SearchHandlerTestSuite) TestNewSearchHandler() {
-	handler := NewSearchHandler(suite.mockDB, suite.cryptoSvc)
+	handler := NewSearchHandler()
 	suite.NotNil(handler)
 }
 
 func (suite *SearchHandlerTestSuite) TestSearchNotesSuccess() {
 	app := fiber.New()
-
-	mockRows := &MockRows{}
-	suite.mockDB.On("Query", mock.Anything, mock.MatchedBy(func(sql string) bool {
-		return contains(sql, "SELECT id, title_encrypted")
-	}), suite.userID, mock.Anything).Return(mockRows, nil)
-
-	mockRows.On("Next").Return(false)
 
 	app.Post("/search", func(c *fiber.Ctx) error {
 		c.Locals("user_id", suite.userID)
@@ -930,7 +928,7 @@ func (suite *SearchHandlerTestSuite) TestSearchNotesSuccess() {
 	resp, err := app.Test(req)
 
 	suite.NoError(err)
-	suite.Equal(200, resp.StatusCode)
+	suite.Equal(fiber.StatusNotImplemented, resp.StatusCode)
 }
 
 func (suite *SearchHandlerTestSuite) TestSearchNotesInvalidQuery() {
@@ -951,7 +949,7 @@ func (suite *SearchHandlerTestSuite) TestSearchNotesInvalidQuery() {
 	resp, err := app.Test(req)
 
 	suite.NoError(err)
-	suite.Equal(400, resp.StatusCode)
+	suite.Equal(fiber.StatusNotImplemented, resp.StatusCode)
 }
 
 // =====================

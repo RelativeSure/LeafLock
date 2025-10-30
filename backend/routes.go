@@ -1,7 +1,8 @@
 package main
 
 import (
-	"context"
+	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -77,9 +78,31 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 		},
 	}))
 
-	// CORS configuration
+	// CORS configuration with development/production mode support
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     strings.Join(config.AllowedOrigins, ","),
+		AllowOriginsFunc: func(origin string) bool {
+			// Development mode: allow all origins
+			if len(config.AllowedOrigins) == 1 && config.AllowedOrigins[0] == "*" {
+				return true
+			}
+
+			// Production mode: check each configured origin
+			for _, allowedOrigin := range config.AllowedOrigins {
+				// Exact match
+				if allowedOrigin == origin {
+					return true
+				}
+				// Wildcard pattern matching (e.g., https://*.leaflock.app)
+				if strings.Contains(allowedOrigin, "*") {
+					pattern := strings.ReplaceAll(allowedOrigin, "*", ".*")
+					matched, err := regexp.MatchString("^"+pattern+"$", origin)
+					if err == nil && matched {
+						return true
+					}
+				}
+			}
+			return false
+		},
 		AllowCredentials: true,
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-CSRF-Token",
 		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
@@ -107,97 +130,14 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	settingsHandler := handlers.NewSettingsHandler(db)
 	collabHandler := handlers.NewCollaborationHandler(db, crypto)
 	attachmentsHandler := handlers.NewAttachmentsHandler(db, crypto)
-	searchHandler := handlers.NewSearchHandler(db, crypto)
+	searchHandler := handlers.NewSearchHandler()
 	importExportHandler := handlers.NewImportExportHandler(db, crypto)
 	shareLinksHandler := handlers.NewShareLinksHandler(db, crypto, rdb)
 	announcementsHandler := handlers.NewAnnouncementsHandler(db)
+	noteLinksHandler := handlers.NewNoteLinksHandler(db)
 
 	// API group
 	api := app.Group("/api/v1")
-
-	// Health check endpoints
-	api.Get("/health/live", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"status":    "live",
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"uptime":    time.Since(startTime).String(),
-		})
-	})
-
-	api.Get("/health/ready", func(c *fiber.Ctx) error {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
-
-		health := fiber.Map{
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"uptime":    time.Since(startTime).String(),
-		}
-
-		if readyState.IsFullyReady() {
-			var userCount int
-			if err := readyState.GetDB().QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&userCount); err != nil {
-				health["status"] = "unhealthy"
-				health["error"] = "database check failed"
-				return c.Status(fiber.StatusServiceUnavailable).JSON(health)
-			}
-
-			if err := readyState.GetRedis().Ping(ctx).Err(); err != nil {
-				health["status"] = "unhealthy"
-				health["error"] = "redis check failed"
-				return c.Status(fiber.StatusServiceUnavailable).JSON(health)
-			}
-
-			health["status"] = "ready"
-			health["user_count"] = userCount
-			return c.JSON(health)
-		}
-
-		health["status"] = "initializing"
-		health["admin_ready"] = readyState.IsAdminReady()
-		health["templates_ready"] = readyState.IsTemplatesReady()
-		health["allowlist_ready"] = readyState.IsAllowlistReady()
-		health["redis_ready"] = readyState.IsRedisReady()
-		return c.Status(fiber.StatusServiceUnavailable).JSON(health)
-	})
-
-	api.Get("/health", func(c *fiber.Ctx) error {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		health := fiber.Map{
-			"status":    "healthy",
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"version":   "1.0.0",
-			"uptime":    time.Since(startTime).String(),
-		}
-
-		var userCount int
-		dbHealthy := true
-		if err := db.QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&userCount); err != nil {
-			dbHealthy = false
-			health["database"] = "unhealthy"
-			health["database_error"] = err.Error()
-		} else {
-			health["database"] = "healthy"
-			health["user_count"] = userCount
-		}
-
-		redisHealthy := true
-		if err := rdb.Ping(ctx).Err(); err != nil {
-			redisHealthy = false
-			health["redis"] = "unhealthy"
-			health["redis_error"] = err.Error()
-		} else {
-			health["redis"] = "healthy"
-		}
-
-		if !dbHealthy || !redisHealthy {
-			health["status"] = "unhealthy"
-			return c.Status(fiber.StatusServiceUnavailable).JSON(health)
-		}
-
-		return c.JSON(health)
-	})
 
 	// Swagger documentation endpoints
 	api.Get("/docs", swaggerUIHandler)
@@ -210,6 +150,14 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	api.Post("/auth/login", rateLimits.AuthLimiter, authHandler.Login)
 	api.Post("/auth/logout", authHandler.JWTMiddleware, authHandler.Logout)
 	api.Get("/auth/registration", rateLimits.LightweightLimiter, authHandler.GetRegistrationStatus)
+
+	// Debug routes (development only) - double check for security
+	if config.Environment != "production" && os.Getenv("ENABLE_DEBUG_ENDPOINTS") == "true" {
+		api.Post("/auth/debug-login", authHandler.DebugLogin)
+		api.Get("/auth/debug-admin", authHandler.DebugAdminInfo)
+		api.Get("/auth/debug-encryption", authHandler.DebugEncryptionKey)
+		api.Post("/auth/reset-admin", authHandler.ResetAdminUser)
+	}
 
 	// Password reset routes (public) - Tier 1: Strictest rate limiting
 	api.Post("/auth/password/reset-request", rateLimits.AuthLimiter, authHandler.RequestPasswordReset)
@@ -235,14 +183,25 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	// Note: Specific routes MUST come before generic /:id routes to avoid route shadowing
 	protected.Get("/notes", rateLimits.StandardCRUDLimiter, notesHandler.GetNotes)
 	protected.Get("/notes/trash", rateLimits.StandardCRUDLimiter, notesHandler.GetTrash)
+	protected.Get("/notes/search-for-linking", rateLimits.StandardCRUDLimiter, noteLinksHandler.GetAllNotesForLinking)
+	protected.Post("/notes/bulk/delete", rateLimits.StandardCRUDLimiter, notesHandler.BulkDeleteNotes)
+	protected.Post("/notes/bulk/restore", rateLimits.StandardCRUDLimiter, notesHandler.BulkRestoreNotes)
+	protected.Post("/notes/bulk/permanent-delete", rateLimits.StandardCRUDLimiter, notesHandler.BulkPermanentlyDeleteNotes)
 	protected.Post("/notes", rateLimits.StandardCRUDLimiter, notesHandler.CreateNote)
 	protected.Get("/notes/:id", rateLimits.StandardCRUDLimiter, notesHandler.GetNote)
 	protected.Put("/notes/:id", rateLimits.StandardCRUDLimiter, notesHandler.UpdateNote)
 	protected.Delete("/notes/:id", rateLimits.StandardCRUDLimiter, notesHandler.DeleteNote)
 	protected.Post("/notes/:id/restore", rateLimits.StandardCRUDLimiter, notesHandler.RestoreNote)
 	protected.Get("/notes/:id/versions", rateLimits.StandardCRUDLimiter, notesHandler.GetNoteVersions)
+	protected.Get("/notes/:id/versions/compare", rateLimits.StandardCRUDLimiter, notesHandler.CompareNoteVersions)
+	protected.Delete("/notes/:id/versions/:versionId", rateLimits.StandardCRUDLimiter, notesHandler.DeleteNoteVersion)
 	protected.Post("/notes/:id/versions/:version", rateLimits.StandardCRUDLimiter, notesHandler.RestoreNoteVersion)
+	protected.Put("/notes/:id/retention", rateLimits.StandardCRUDLimiter, notesHandler.UpdateRetentionPolicy)
 	protected.Delete("/notes/:id/permanent", rateLimits.StandardCRUDLimiter, notesHandler.PermanentlyDeleteNote)
+	protected.Post("/notes/:id/links", rateLimits.StandardCRUDLimiter, noteLinksHandler.CreateNoteLink)
+	protected.Get("/notes/:id/links", rateLimits.StandardCRUDLimiter, noteLinksHandler.GetNoteLinks)
+	protected.Get("/notes/:id/backlinks", rateLimits.StandardCRUDLimiter, noteLinksHandler.GetNoteBacklinks)
+	protected.Delete("/notes/:id/links/:linkId", rateLimits.StandardCRUDLimiter, noteLinksHandler.DeleteNoteLink)
 
 	// Tags routes - Tier 4: Standard CRUD
 	protected.Get("/tags", rateLimits.StandardCRUDLimiter, tagsHandler.GetTags)

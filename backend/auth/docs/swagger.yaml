@@ -1,0 +1,464 @@
+basePath: /api/v1
+definitions:
+  auth.AuthRequest:
+    properties:
+      email:
+        type: string
+      mfa_code:
+        type: string
+      password:
+        minLength: 12
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  auth.AuthResponse:
+    properties:
+      expires_at:
+        type: string
+      is_admin:
+        type: boolean
+      mfa_required:
+        type: boolean
+      session_token:
+        description: For MFA flow
+        type: string
+      token:
+        type: string
+      user_id:
+        type: string
+      workspace_id:
+        type: string
+    type: object
+  auth.ErrorResponse:
+    properties:
+      code:
+        type: string
+      details:
+        additionalProperties: true
+        type: object
+      error:
+        type: string
+    type: object
+  auth.MFASetupResponse:
+    properties:
+      backup_codes:
+        items:
+          type: string
+        type: array
+      qr_code_url:
+        type: string
+      secret:
+        type: string
+    type: object
+  auth.MFAVerifyRequest:
+    properties:
+      code:
+        type: string
+      session_token:
+        type: string
+    required:
+    - code
+    type: object
+  auth.PasswordResetConfirm:
+    properties:
+      new_password:
+        minLength: 12
+        type: string
+      token:
+        type: string
+    required:
+    - new_password
+    - token
+    type: object
+  auth.PasswordResetRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  auth.RegisterRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 12
+        type: string
+    required:
+    - email
+    - password
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: A secure notes application with end-to-end encryption and collaboration
+    features
+  title: LeafLock API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate a user with email and password
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.AuthRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "423":
+          description: Locked
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Login
+      tags:
+      - Authentication
+  /auth/logout:
+    post:
+      description: End user session
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Logout
+      tags:
+      - Authentication
+  /auth/mfa/backup-codes/regenerate:
+    post:
+      consumes:
+      - application/json
+      description: Generate new MFA backup codes
+      parameters:
+      - description: Password for verification
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.MFASetupResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Regenerate backup codes
+      tags:
+      - Authentication
+  /auth/mfa/disable:
+    post:
+      consumes:
+      - application/json
+      description: Disable MFA after verifying code
+      parameters:
+      - description: TOTP code or backup code
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.MFAVerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Disable MFA
+      tags:
+      - Authentication
+  /auth/mfa/enable:
+    post:
+      consumes:
+      - application/json
+      description: Enable MFA after verifying TOTP code
+      parameters:
+      - description: TOTP code and secret
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.MFASetupResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Enable MFA
+      tags:
+      - Authentication
+  /auth/mfa/setup:
+    post:
+      description: Generate TOTP secret for MFA setup
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.MFASetupResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Begin MFA setup
+      tags:
+      - Authentication
+  /auth/mfa/status:
+    get:
+      description: Check if MFA is enabled and how many backup codes remain
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get MFA status
+      tags:
+      - Authentication
+  /auth/mfa/verify:
+    post:
+      consumes:
+      - application/json
+      description: Complete login by verifying MFA code
+      parameters:
+      - description: MFA code and session token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.MFAVerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Verify MFA code
+      tags:
+      - Authentication
+  /auth/password/reset-confirm:
+    post:
+      consumes:
+      - application/json
+      description: Set new password using reset token
+      parameters:
+      - description: Reset token and new password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.PasswordResetConfirm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Confirm password reset
+      tags:
+      - Authentication
+  /auth/password/reset-request:
+    post:
+      consumes:
+      - application/json
+      description: Send password reset email
+      parameters:
+      - description: Email address
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.PasswordResetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Request password reset
+      tags:
+      - Authentication
+  /auth/password/reset-verify:
+    get:
+      consumes:
+      - application/json
+      description: Check if password reset token is valid
+      parameters:
+      - description: Reset token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Verify reset token
+      tags:
+      - Authentication
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account
+      parameters:
+      - description: Registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/auth.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - Authentication
+  /auth/registration:
+    get:
+      description: Check if new user registration is allowed
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      summary: Get registration status
+      tags:
+      - Authentication
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

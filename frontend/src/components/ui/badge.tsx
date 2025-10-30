@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
 
 import { cn } from '@/lib/utils'
@@ -8,7 +9,8 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: 'border-transparent bg-primary text-primary-foreground hover:bg-primary/80 hover:shadow-sm',
+        default:
+          'border-transparent bg-primary text-primary-foreground hover:bg-primary/80 hover:shadow-sm',
         secondary:
           'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:shadow-sm',
         destructive:
@@ -22,12 +24,15 @@ const badgeVariants = cva(
   }
 )
 
-export interface BadgeProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {}
+const Badge = React.forwardRef<
+  HTMLSpanElement,
+  React.ComponentProps<'span'> & VariantProps<typeof badgeVariants> & { asChild?: boolean }
+>(({ className, variant, asChild = false, ...props }, ref) => {
+  const Comp = asChild ? Slot : 'span'
 
-function Badge({ className, variant, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant }), className)} {...props} />
-}
+  return <Comp ref={ref} data-slot="badge" className={cn(badgeVariants({ variant }), className)} {...props} />
+})
+
+Badge.displayName = 'Badge'
 
 export { Badge, badgeVariants }

@@ -1,0 +1,206 @@
+---
+title: Complete API Reference
+description: Comprehensive list of all 38 LeafLock API endpoints with security requirements
+---
+
+import { Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Overview
+
+This page provides a complete reference of all **38 API endpoints** available in LeafLock, organized by functionality and security requirements.
+
+## Authentication Endpoints
+
+<CardGrid columns={1}>
+  <Card title="Public Authentication (7 endpoints)" icon="unlock">
+    **No authentication required**
+
+    | Method | Endpoint | Description |
+    |--------|----------|-------------|
+    | `POST` | `/auth/register` | Register new user |
+    | `POST` | `/auth/login` | Authenticate user |
+    | `GET` | `/auth/registration` | Check registration status |
+    | `POST` | `/auth/mfa/verify` | Verify MFA code |
+    | `POST` | `/auth/password/reset-request` | Request password reset |
+    | `GET` | `/auth/password/reset-verify` | Verify reset token |
+    | `POST` | `/auth/password/reset-confirm` | Confirm password reset |
+  </Card>
+</CardGrid>
+
+<CardGrid columns={1}>
+  <Card title="Protected Authentication (6 endpoints)" icon="lock">
+    **Requires BearerAuth**
+
+    | Method | Endpoint | Description |
+    |--------|----------|-------------|
+    | `POST` | `/auth/logout` | End session |
+    | `GET` | `/auth/mfa/status` | Check MFA status |
+    | `POST` | `/auth/mfa/setup` | Setup MFA |
+    | `POST` | `/auth/mfa/enable` | Enable MFA |
+    | `POST` | `/auth/mfa/disable` | Disable MFA |
+    | `POST` | `/auth/mfa/backup-codes/regenerate` | Regenerate backup codes |
+  </Card>
+</CardGrid>
+
+## Notes Management
+
+<CardGrid columns={1}>
+  <Card title="Core Notes CRUD (5 endpoints)" icon="document">
+    **Requires BearerAuth**
+
+    | Method | Endpoint | Description |
+    |--------|----------|-------------|
+    | `GET` | `/notes` | List all notes |
+    | `POST` | `/notes` | Create note |
+    | `GET` | `/notes/{id}` | Get specific note |
+    | `PUT` | `/notes/{id}` | Update note |
+    | `DELETE` | `/notes/{id}` | Delete note |
+  </Card>
+</CardGrid>
+
+<CardGrid columns={1}>
+  <Card title="Trash Management (3 endpoints)" icon="trash">
+    **Requires BearerAuth**
+
+    | Method | Endpoint | Description |
+    |--------|----------|-------------|
+    | `GET` | `/notes/trash` | List trashed notes |
+    | `POST` | `/notes/{id}/restore` | Restore deleted note |
+    | `DELETE` | `/notes/{id}/permanent` | Permanently delete note |
+  </Card>
+</CardGrid>
+
+<CardGrid columns={1}>
+  <Card title="Version Control (2 endpoints)" icon="history">
+    **Requires BearerAuth**
+
+    | Method | Endpoint | Description |
+    |--------|----------|-------------|
+    | `GET` | `/notes/{id}/versions` | Get note versions |
+    | `POST` | `/notes/{id}/versions/{version}/restore` | Restore note version |
+  </Card>
+</CardGrid>
+
+<CardGrid columns={1}>
+  <Card title="Collaboration (4 endpoints)" icon="users">
+    **Requires BearerAuth**
+
+    | Method | Endpoint | Description |
+    |--------|----------|-------------|
+    | `GET` | `/notes/shared` | List shared notes |
+    | `POST` | `/notes/{id}/share` | Share note with user |
+    | `GET` | `/notes/{id}/collaborators` | Get note collaborators |
+    | `DELETE` | `/notes/{id}/collaborators/{userId}` | Remove collaborator |
+  </Card>
+</CardGrid>
+
+<CardGrid columns={1}>
+  <Card title="Import/Export (3 endpoints)" icon="download">
+    **Requires BearerAuth**
+
+    | Method | Endpoint | Description |
+    |--------|----------|-------------|
+    | `POST` | `/notes/import` | Import note |
+    | `POST` | `/notes/bulk-import` | Bulk import notes |
+    | `POST` | `/notes/{id}/export` | Export note |
+  </Card>
+</CardGrid>
+
+## Share Links
+
+<CardGrid columns={2}>
+  <Card title="Protected Share Links (5 endpoints)" icon="link">
+    **Requires BearerAuth**
+
+    | Method | Endpoint | Description |
+    |--------|----------|-------------|
+    | `POST` | `/notes/{id}/share-links` | Create share link |
+    | `GET` | `/notes/{id}/share-links` | Get note share links |
+    | `GET` | `/share-links` | Get all user share links |
+    | `PUT` | `/share-links/{token}` | Update share link |
+    | `DELETE` | `/share-links/{token}` | Revoke share link |
+  </Card>
+  <Card title="Public Share Access (1 endpoint)" icon="globe">
+    **No authentication required**
+
+    | Method | Endpoint | Description |
+    |--------|----------|-------------|
+    | `GET` | `/share/{token}` | Access shared note via token |
+  </Card>
+</CardGrid>
+
+## Settings & Account
+
+<CardGrid columns={2}>
+  <Card title="User Settings (2 endpoints)" icon="settings">
+    **Requires BearerAuth**
+
+    | Method | Endpoint | Description |
+    |--------|----------|-------------|
+    | `GET` | `/settings` | Get user settings |
+    | `PUT` | `/settings` | Update user settings |
+  </Card>
+  <Card title="Account Management (3 endpoints)" icon="user">
+    **Requires BearerAuth**
+
+    | Method | Endpoint | Description |
+    |--------|----------|-------------|
+    | `DELETE` | `/account` | Delete account |
+    | `GET` | `/account/export` | Export user data |
+    | `GET` | `/user/storage` | Get storage info |
+  </Card>
+</CardGrid>
+
+## Admin & Announcements
+
+<CardGrid columns={2}>
+  <Card title="Admin Announcements (4 endpoints)" icon="shield">
+    **Requires BearerAuth + Admin Role**
+
+    | Method | Endpoint | Description |
+    |--------|----------|-------------|
+    | `GET` | `/api/v1/admin/announcements` | Get all announcements |
+    | `POST` | `/api/v1/admin/announcements` | Create announcement |
+    | `PUT` | `/api/v1/admin/announcements/{id}` | Update announcement |
+    | `DELETE` | `/api/v1/admin/announcements/{id}` | Delete announcement |
+  </Card>
+  <Card title="Public Announcements (1 endpoint)" icon="megaphone">
+    **No authentication required**
+
+    | Method | Endpoint | Description |
+    |--------|----------|-------------|
+    | `GET` | `/api/v1/announcements` | Get announcements |
+  </Card>
+</CardGrid>
+
+## Security Summary
+
+### Public Endpoints (8 total)
+- User registration and login
+- Password reset flow
+- MFA verification
+- Public announcements
+- Public share link access
+
+### Protected Endpoints (29 total)
+- All note operations
+- User settings and account management
+- MFA setup and management
+- Share link creation and management
+
+### Admin-Only Endpoints (4 total)
+- Announcement management
+- User administration
+- System configuration
+
+## Quick Reference
+
+**Total Endpoints**: 38
+- **Public**: 8 endpoints
+- **Protected**: 29 endpoints
+- **Admin-Only**: 4 endpoints
+
+**Authentication**: JWT Bearer Token
+**Base URL**: `https://leaflock.app/api/v1` (production) or `http://localhost:8080/api/v1` (local)
+
+**Interactive Testing**: Visit [Swagger UI](/docs/swagger/) to test all endpoints directly in your browser.

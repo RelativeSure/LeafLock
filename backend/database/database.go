@@ -18,7 +18,7 @@ import (
 )
 
 // MigrationSchemaVersion tracks the current schema version
-const MigrationSchemaVersion = "2025.10.09.001" // Updated for password_reset_tokens table
+const MigrationSchemaVersion = "2025.10.26.001" // Updated for note versioning enhancements, note links, and mobile/bulk features
 
 // Database interface for dependency injection and testing
 type Database interface {
@@ -41,10 +41,18 @@ func SetupDatabase(dbURL string) (*pgxpool.Pool, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to postgres: %w", err)
 		}
-		// Best effort ensure DB exists
+		// Check if database exists first to avoid error logs
 		if safe, ok := safePgIdent(dbName); ok {
-			if _, err := adminDB.Exec("CREATE DATABASE " + safe); err != nil && !strings.Contains(strings.ToLower(err.Error()), "already exists") {
-				log.Printf("Note: CREATE DATABASE may have failed (continuing if it exists): %v", err)
+			var exists bool
+			query := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = '%s')", dbName)
+			if err := adminDB.QueryRow(query).Scan(&exists); err != nil {
+				log.Printf("Note: Failed to check database existence: %v", err)
+			}
+			// Only create if it doesn't exist
+			if !exists {
+				if _, err := adminDB.Exec("CREATE DATABASE " + safe); err != nil {
+					log.Printf("Note: CREATE DATABASE failed (continuing if it exists): %v", err)
+				}
 			}
 		} else {
 			log.Printf("Warning: Database name '%s' contains unsupported characters; skipping CREATE DATABASE step", dbName)
@@ -109,10 +117,18 @@ func SetupDatabaseFast(dbURL string) (*pgxpool.Pool, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to postgres: %w", err)
 		}
-		// Best effort ensure DB exists
+		// Check if database exists first to avoid error logs
 		if safe, ok := safePgIdent(dbName); ok {
-			if _, err := adminDB.Exec("CREATE DATABASE " + safe); err != nil && !strings.Contains(strings.ToLower(err.Error()), "already exists") {
-				log.Printf("Note: CREATE DATABASE may have failed (continuing if it exists): %v", err)
+			var exists bool
+			query := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = '%s')", dbName)
+			if err := adminDB.QueryRow(query).Scan(&exists); err != nil {
+				log.Printf("Note: Failed to check database existence: %v", err)
+			}
+			// Only create if it doesn't exist
+			if !exists {
+				if _, err := adminDB.Exec("CREATE DATABASE " + safe); err != nil {
+					log.Printf("Note: CREATE DATABASE failed (continuing if it exists): %v", err)
+				}
 			}
 		} else {
 			log.Printf("Warning: Database name '%s' contains unsupported characters; skipping CREATE DATABASE step", dbName)

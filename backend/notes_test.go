@@ -11,6 +11,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -222,9 +223,15 @@ func (suite *NotesHandlerTestSuite) TestCreateNoteSuccess() {
 	// Mock note creation
 	mockRow2 := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockRow2)
-	mockRow2.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
+	mockRow2.On("Scan", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if nid, ok := args[0].(*uuid.UUID); ok {
 			*nid = noteID
+		}
+		if created, ok := args[1].(*time.Time); ok {
+			*created = time.Unix(0, 0).UTC()
+		}
+		if updated, ok := args[2].(*time.Time); ok {
+			*updated = time.Unix(0, 0).UTC()
 		}
 	}).Return(nil)
 
@@ -247,11 +254,16 @@ func (suite *NotesHandlerTestSuite) TestCreateNoteSuccess() {
 	suite.NoError(err)
 	suite.Equal(201, resp.StatusCode)
 
-	var response map[string]interface{}
-	_ = json.NewDecoder(resp.Body).Decode(&response) // Test response parsing
+	var response struct {
+		Note map[string]interface{} `json:"note"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	suite.NoError(err)
 
-	suite.Equal(noteID.String(), response["id"])
-	suite.Equal("Note created successfully", response["message"])
+	suite.Equal(noteID.String(), response.Note["id"])
+	suite.Equal("VGVzdCBUaXRsZQ==", response.Note["title_encrypted"])
+	suite.Equal("VGVzdCBDb250ZW50", response.Note["content_encrypted"])
+	suite.Equal(float64(1), response.Note["encryption_version"])
 }
 
 func (suite *NotesHandlerTestSuite) TestCreateNoteInvalidData() {
@@ -305,7 +317,7 @@ func (suite *NotesHandlerTestSuite) TestUpdateNoteSuccess() {
 	currentTitle := []byte("current-title")
 	currentContent := []byte("current-content")
 	currentHash := []byte("current-hash")
-	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if version, ok := args[0].(*int); ok {
 			*version = currentVersion
 		}
@@ -317,6 +329,9 @@ func (suite *NotesHandlerTestSuite) TestUpdateNoteSuccess() {
 		}
 		if hash, ok := args[3].(*[]byte); ok {
 			*hash = currentHash
+		}
+		if created, ok := args[4].(*time.Time); ok {
+			*created = time.Unix(0, 0).UTC()
 		}
 	}).Return(nil)
 
@@ -330,6 +345,16 @@ func (suite *NotesHandlerTestSuite) TestUpdateNoteSuccess() {
 	mockResult.tag = "UPDATE 1"
 	mockTx.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(mockResult, nil).Once()
+
+	mockUpdatedRow := &MockRow{}
+	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(mockUpdatedRow)
+
+	mockUpdatedRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
+		if ts, ok := args[0].(*time.Time); ok {
+			*ts = time.Unix(0, 0).UTC()
+		}
+	}).Return(nil)
 
 	req := UpdateNoteRequest{
 		TitleEncrypted:   "VXBkYXRlZCBUaXRsZQ==",
@@ -369,7 +394,7 @@ func (suite *NotesHandlerTestSuite) TestUpdateNoteNotFound() {
 	currentTitle := []byte("existing-title")
 	currentContent := []byte("existing-content")
 	currentHash := []byte("existing-hash")
-	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if version, ok := args[0].(*int); ok {
 			*version = currentVersion
 		}
@@ -381,6 +406,9 @@ func (suite *NotesHandlerTestSuite) TestUpdateNoteNotFound() {
 		}
 		if hash, ok := args[3].(*[]byte); ok {
 			*hash = currentHash
+		}
+		if created, ok := args[4].(*time.Time); ok {
+			*created = time.Unix(0, 0).UTC()
 		}
 	}).Return(nil)
 
@@ -394,6 +422,12 @@ func (suite *NotesHandlerTestSuite) TestUpdateNoteNotFound() {
 	mockResult.tag = "UPDATE 0"
 	mockTx.On("Exec", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(mockResult, nil).Once()
+
+	mockUpdatedRow := &MockRow{}
+	mockTx.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(mockUpdatedRow)
+
+	mockUpdatedRow.On("Scan", mock.Anything).Return(pgx.ErrNoRows)
 
 	req := UpdateNoteRequest{
 		TitleEncrypted:   "VXBkYXRlZCBUaXRsZQ==",

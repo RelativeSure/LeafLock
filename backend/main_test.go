@@ -33,7 +33,7 @@ import (
 
 // Test configuration
 const (
-	TestDatabaseURL = "postgres://test:test@localhost:5433/test_leaflock?sslmode=disable" // secretlint-disable-line
+	TestDatabaseURL = "postgres://test:test@localhost:5433/test_notes?sslmode=disable" // secretlint-disable-line
 	TestRedisURL    = "localhost:6380"
 )
 
