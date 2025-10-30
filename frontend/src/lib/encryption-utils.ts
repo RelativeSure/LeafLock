@@ -68,7 +68,17 @@ export async function deriveKey(password: string, saltInput: string): Promise<st
     return null
   }
 
-  const salt = tryDecodeSalt(saltInput)
+  const decoded = tryDecodeSalt(saltInput)
+  const salt = (() => {
+    if (!decoded) return null
+    if (decoded.length === s.crypto_pwhash_SALTBYTES) return decoded
+    // Normalize any other length (e.g., 32-byte salt) to required 16 bytes using a hash
+    try {
+      return s.crypto_generichash(s.crypto_pwhash_SALTBYTES, decoded)
+    } catch {
+      return null
+    }
+  })()
   if (!salt) {
     try {
       const raw = sanitize(saltInput)
@@ -202,10 +212,24 @@ export async function setStoredSalt(saltInput: string) {
     return null
   }
 
-  const saltBytes = tryDecode(saltInput)
-  const toStore = saltBytes
-    ? s.to_base64(saltBytes, s.base64_variants.ORIGINAL)
-    : saltInput // store raw if we cannot decode; deriveKey will still error clearly later
+  const decoded = tryDecode(saltInput)
+  let normalized: Uint8Array | null = null
+  if (decoded) {
+    normalized =
+      decoded.length === s.crypto_pwhash_SALTBYTES
+        ? decoded
+        : (() => {
+            try {
+              return s.crypto_generichash(s.crypto_pwhash_SALTBYTES, decoded)
+            } catch {
+              return null
+            }
+          })()
+  }
+
+  const toStore = normalized
+    ? s.to_base64(normalized, s.base64_variants.ORIGINAL)
+    : saltInput // fallback: store as-is; deriveKey will still emit a clear error
   window.localStorage.setItem(ENCRYPTION_SALT_STORAGE_KEY, toStore)
 }
 
