@@ -70,6 +70,13 @@ export async function deriveKey(password: string, saltInput: string): Promise<st
 
   const salt = tryDecodeSalt(saltInput)
   if (!salt) {
+    try {
+      const raw = sanitize(saltInput)
+      console.error('[Encryption] Invalid salt format', {
+        inputLen: raw ? raw.length : 0,
+        prefix: raw ? raw.slice(0, 12) : '',
+      })
+    } catch {}
     throw new Error('Invalid encryption salt format. Please log in again to refresh the session.')
   }
 
