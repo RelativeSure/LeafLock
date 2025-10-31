@@ -49,7 +49,9 @@ export async function deriveKey(password: string, saltInput: string): Promise<st
       const padded = raw + '='.repeat(padLen)
       const bytes = s.from_base64(padded, s.base64_variants.ORIGINAL)
       if (bytes.length === s.crypto_pwhash_SALTBYTES) return bytes
-    } catch (_) {}
+    } catch (_error) {
+      /* ignore malformed base64 */
+    }
 
     // Try hex encoded salt (32 hex chars -> 16 bytes)
     try {
@@ -57,13 +59,17 @@ export async function deriveKey(password: string, saltInput: string): Promise<st
         const bytes = s.from_hex(raw)
         if (bytes.length === s.crypto_pwhash_SALTBYTES) return bytes
       }
-    } catch (_) {}
+    } catch (_error) {
+      /* ignore hex decode errors */
+    }
 
     // As a last resort, use UTF-8 bytes directly if exactly the required length
     try {
       const utf8 = s.from_string(raw)
       if (utf8.length === s.crypto_pwhash_SALTBYTES) return utf8
-    } catch (_) {}
+    } catch (_error) {
+      /* ignore utf8 fallback errors */
+    }
 
     // Fallback: manual base64/URLSAFE decode via atob
     try {
@@ -76,7 +82,9 @@ export async function deriveKey(password: string, saltInput: string): Promise<st
       const arr = new Uint8Array(bin.length)
       for (let i = 0; i < bin.length; i += 1) arr[i] = bin.charCodeAt(i)
       return arr
-    } catch (_) {}
+    } catch (_error) {
+      /* ignore atob fallback errors */
+    }
 
     return null
   }
@@ -93,13 +101,13 @@ export async function deriveKey(password: string, saltInput: string): Promise<st
     }
   })()
   if (!salt) {
-    try {
+    if (process.env.NODE_ENV !== 'production') {
       const raw = sanitize(saltInput)
       console.error('[Encryption] Invalid salt format', {
         inputLen: raw ? raw.length : 0,
         prefix: raw ? raw.slice(0, 12) : '',
       })
-    } catch {}
+    }
     throw new Error('Invalid encryption salt format. Please log in again to refresh the session.')
   }
 
@@ -204,24 +212,32 @@ export async function setStoredSalt(saltInput: string) {
       try {
         const bytes = s.from_base64(value, variant)
         if (bytes.length === s.crypto_pwhash_SALTBYTES) return bytes
-      } catch {}
+      } catch (_error) {
+        /* ignore decode failure */
+      }
     }
     try {
       const padLen = (4 - (raw.length % 4)) % 4
       const padded = raw + '='.repeat(padLen)
       const bytes = s.from_base64(padded, s.base64_variants.ORIGINAL)
       if (bytes.length === s.crypto_pwhash_SALTBYTES) return bytes
-    } catch {}
+    } catch (_error) {
+      /* ignore decode failure */
+    }
     try {
       if (/^[0-9a-fA-F]+$/.test(raw) && raw.length % 2 === 0) {
         const bytes = s.from_hex(raw)
         if (bytes.length === s.crypto_pwhash_SALTBYTES) return bytes
       }
-    } catch {}
+    } catch (_error) {
+      /* ignore decode failure */
+    }
     try {
       const utf8 = s.from_string(raw)
       if (utf8.length === s.crypto_pwhash_SALTBYTES) return utf8
-    } catch {}
+    } catch (_error) {
+      /* ignore decode failure */
+    }
 
     try {
       const norm = (() => {
@@ -233,7 +249,9 @@ export async function setStoredSalt(saltInput: string) {
       const arr = new Uint8Array(bin.length)
       for (let i = 0; i < bin.length; i += 1) arr[i] = bin.charCodeAt(i)
       return arr
-    } catch {}
+    } catch (_error) {
+      /* ignore decode failure */
+    }
     return null
   }
 
@@ -252,9 +270,7 @@ export async function setStoredSalt(saltInput: string) {
           })()
   }
 
-  const toStore = normalized
-    ? s.to_base64(normalized, s.base64_variants.ORIGINAL)
-    : saltInput // fallback: store as-is; deriveKey will still emit a clear error
+  const toStore = normalized ? s.to_base64(normalized, s.base64_variants.ORIGINAL) : saltInput // fallback: store as-is; deriveKey will still emit a clear error
   window.localStorage.setItem(ENCRYPTION_SALT_STORAGE_KEY, toStore)
 }
 

@@ -203,6 +203,13 @@ func (s *Service) Register(ctx context.Context, email, password string) (*AuthRe
 		WorkspaceID: workspaceID.String(),
 		IsAdmin:     false,
 		ExpiresAt:   session.ExpiresAt,
+		EncryptionSalt: func() string {
+			if len(salt) == 0 {
+				return ""
+			}
+			return base64.StdEncoding.EncodeToString(salt)
+		}(),
+		EncryptionVersion: defaultEncryptionVersion,
 	}, nil
 }
 

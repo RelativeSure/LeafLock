@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { BulkOperationsBar } from './bulk-operations-bar'
 import { useNotesStore } from '../../stores/notesStore'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -30,7 +30,7 @@ export function NoteList() {
   const [selectedNotes, setSelectedNotes] = useState<string[]>([])
   const [isBulkMode, setIsBulkMode] = useState(false)
 
-  const activeNotes = (notes || []).filter((note) => !note.isTrashed)
+  const activeNotes = useMemo(() => (notes || []).filter((note) => !note.isTrashed), [notes])
   const { decryptedNotes, isUnlocked, isDecrypting } = useDecryptedNotes(activeNotes)
 
   const handleTogglePin = async (noteId: string, currentlyPinned: boolean) => {

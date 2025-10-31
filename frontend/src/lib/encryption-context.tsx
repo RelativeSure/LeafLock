@@ -95,12 +95,12 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       throw new Error('Encryption salt not found. Please log in again.')
     }
 
-    try {
+    if (process.env.NODE_ENV !== 'production') {
       console.log('[Encryption] Unlock attempt with stored salt', {
         len: salt.length,
         prefix: salt.slice(0, 12),
       })
-    } catch {}
+    }
 
     const derivedKey = await deriveKey(password, salt)
     setStoredKey(derivedKey)

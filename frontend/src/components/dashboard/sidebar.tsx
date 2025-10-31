@@ -38,6 +38,7 @@ export function Sidebar() {
   const [newFolderColor, setNewFolderColor] = useState('#3b82f6')
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false)
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Mobile detection and responsive behavior
   useEffect(() => {
@@ -91,10 +92,13 @@ export function Sidebar() {
         <div className="flex items-center gap-2">
           <Input
             placeholder="Search notes..."
-            onChange={() => {}}
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
             className="flex-1"
           />
-          <Button variant="outline" size="sm" className="bg-transparent">Search</Button>
+          <Button variant="outline" size="sm" className="bg-transparent">
+            Search
+          </Button>
         </div>
 
         <div className="flex gap-2">
@@ -185,9 +189,7 @@ export function Sidebar() {
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
           </div>
         ) : (
-          <div className="flex items-center justify-center h-24 text-xs text-muted-foreground">
-            Notes list temporarily disabled while isolating update loop
-          </div>
+          <NoteList />
         )}
       </div>
 

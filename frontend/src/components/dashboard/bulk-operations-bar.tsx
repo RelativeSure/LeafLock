@@ -39,6 +39,18 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
   const [newTagName, setNewTagName] = useState('')
   const [isCreatingTag, setIsCreatingTag] = useState(false)
 
+  const handleMoveDialogChange = (open: boolean) => {
+    setShowMoveDialog(open)
+  }
+
+  const handleTagDialogChange = (open: boolean) => {
+    setShowTagDialog(open)
+  }
+
+  const handleDeleteDialogChange = (open: boolean) => {
+    setShowDeleteDialog(open)
+  }
+
   const {
     notes,
     folders,
@@ -190,7 +202,7 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
       </Card>
 
       {/* Move to Folder Dialog */}
-      <Dialog open={showMoveDialog} onOpenChange={setShowMoveDialog}>
+      <Dialog open={showMoveDialog} onOpenChange={handleMoveDialogChange}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Move Notes to Folder</DialogTitle>
@@ -248,7 +260,7 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
       </Dialog>
 
       {/* Tag Management Dialog */}
-      <Dialog open={showTagDialog} onOpenChange={setShowTagDialog}>
+      <Dialog open={showTagDialog} onOpenChange={handleTagDialogChange}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Manage Tags</DialogTitle>
@@ -332,7 +344,7 @@ export function BulkOperationsBar({ selectedNotes, onClose }: BulkOperationsBarP
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <Dialog open={showDeleteDialog} onOpenChange={handleDeleteDialogChange}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Notes</DialogTitle>

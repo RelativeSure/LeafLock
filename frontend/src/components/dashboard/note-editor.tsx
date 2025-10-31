@@ -65,15 +65,18 @@ export function NoteEditor() {
   // Prevent autosave from running while we are programmatically syncing decrypted content
   const isSyncingRef = useRef<{ syncing: boolean }>({ syncing: false })
   // Baseline of decrypted content to detect first user edit
-  const decryptedBaselineRef = useRef<{ title: string; content: string }>({ title: '', content: '' })
+  const decryptedBaselineRef = useRef<{ title: string; content: string }>({
+    title: '',
+    content: '',
+  })
   const userEditedRef = useRef<boolean>(false)
   const saveTimeoutRef = useRef<number | null>(null)
   const mountedRef = useRef<boolean>(false)
-  const lastSavedRef = useState<{ title: string; content: string; tagsKey: string }>({
+  const lastSavedRef = useRef<{ title: string; content: string; tagsKey: string }>({
     title: '',
     content: '',
     tagsKey: '',
-  })[0]
+  })
 
   const handleDelete = () => {
     if (selectedNote) {
@@ -172,14 +175,13 @@ export function NoteEditor() {
 
             // Initialize last saved snapshot to the freshly decrypted state to avoid immediate autosave
             const trimmedTitle = (decryptedTitle || '').trim()
-            const trimmedContent = (selectedNote.content
-              ? await decryptText(selectedNote.content)
-              : displayContent || ''
+            const trimmedContent = (
+              selectedNote.content ? await decryptText(selectedNote.content) : displayContent || ''
             ).trim()
             const tagsKey = (selectedNote.tags || []).slice().sort().join('|')
-            lastSavedRef.title = trimmedTitle
-            lastSavedRef.content = trimmedContent
-            lastSavedRef.tagsKey = tagsKey
+            lastSavedRef.current.title = trimmedTitle
+            lastSavedRef.current.content = trimmedContent
+            lastSavedRef.current.tagsKey = tagsKey
 
             setIsDecrypting(false)
             isSyncingRef.current.syncing = false
@@ -205,7 +207,7 @@ export function NoteEditor() {
         decryptedBaselineRef.current = { title: '', content: '' }
         userEditedRef.current = false
       }
-      
+
       // Don't automatically leave collaboration session
       // Only leave when explicitly sharing or closing
     }
@@ -255,9 +257,9 @@ export function NoteEditor() {
           // Skip if unchanged vs last saved snapshot (by plaintext)
           const tagsKey = (noteTags || []).slice().sort().join('|')
           if (
-            lastSavedRef.title === trimmedTitle &&
-            lastSavedRef.content === trimmedContent &&
-            lastSavedRef.tagsKey === tagsKey
+            lastSavedRef.current.title === trimmedTitle &&
+            lastSavedRef.current.content === trimmedContent &&
+            lastSavedRef.current.tagsKey === tagsKey
           ) {
             return
           }
@@ -282,9 +284,9 @@ export function NoteEditor() {
             console.log('[Editor] autosave complete', selectedNote.id)
 
             // Update last saved snapshot
-            lastSavedRef.title = trimmedTitle
-            lastSavedRef.content = trimmedContent
-            lastSavedRef.tagsKey = tagsKey
+            lastSavedRef.current.title = trimmedTitle
+            lastSavedRef.current.content = trimmedContent
+            lastSavedRef.current.tagsKey = tagsKey
           } else {
             // If not unlocked, don't save
             return
