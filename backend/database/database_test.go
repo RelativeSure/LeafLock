@@ -187,6 +187,84 @@ func TestSchemaContainsExtensions(t *testing.T) {
 	}
 }
 
+func TestSchemaContainsConstraints(t *testing.T) {
+	constraints := []string{
+		"FOREIGN KEY",
+		"PRIMARY KEY",
+		"UNIQUE",
+		"NOT NULL",
+		"CHECK",
+	}
+
+	for _, constraint := range constraints {
+		if !containsString(DatabaseSchema, constraint) {
+			t.Errorf("DatabaseSchema should contain constraint type %s", constraint)
+		}
+	}
+}
+
+func TestMigrationSchemaVersion_Format(t *testing.T) {
+	// Verify format is YYYY.MM.DD.NNN
+	parts := len(MigrationSchemaVersion)
+	if parts < 13 { // Minimum: 2024.01.01.001
+		t.Errorf("MigrationSchemaVersion has invalid format: %s", MigrationSchemaVersion)
+	}
+
+	// Check for dots in expected positions
+	if len(MigrationSchemaVersion) >= 13 {
+		dotPositions := []int{4, 7, 10}
+		for _, pos := range dotPositions {
+			if MigrationSchemaVersion[pos] != '.' {
+				t.Errorf("Expected dot at position %d in version %s", pos, MigrationSchemaVersion)
+			}
+		}
+	}
+}
+
+func TestSchemaContainsCascadeDeletes(t *testing.T) {
+	// Verify CASCADE is used for proper cleanup
+	if !containsString(DatabaseSchema, "CASCADE") {
+		t.Error("DatabaseSchema should use CASCADE for foreign key constraints")
+	}
+}
+
+func TestSchemaHasTimestampDefaults(t *testing.T) {
+	// Verify timestamps have proper defaults
+	timestampDefaults := []string{
+		"DEFAULT NOW()",
+		"DEFAULT CURRENT_TIMESTAMP",
+	}
+
+	hasDefault := false
+	for _, def := range timestampDefaults {
+		if containsString(DatabaseSchema, def) {
+			hasDefault = true
+			break
+		}
+	}
+
+	if !hasDefault {
+		t.Error("DatabaseSchema should have timestamp defaults")
+	}
+}
+
+func TestSchemaContainsSecurityColumns(t *testing.T) {
+	securityColumns := []string{
+		"password_hash",
+		"salt",
+		"email_encrypted",
+		"title_encrypted",
+		"content_encrypted",
+		"master_key_encrypted",
+	}
+
+	for _, col := range securityColumns {
+		if !containsString(DatabaseSchema, col) {
+			t.Errorf("DatabaseSchema should contain security column %s", col)
+		}
+	}
+}
+
 // Helper function
 func containsString(s, substr string) bool {
 	return len(s) > 0 && len(substr) > 0 &&

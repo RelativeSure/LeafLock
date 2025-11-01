@@ -2,8 +2,8 @@ package config
 
 import (
 	"os"
+	"strings"
 	"testing"
-	"time"
 )
 
 func TestGetEnvOrDefault(t *testing.T) {
@@ -181,7 +181,6 @@ func TestResolveRedisPassword(t *testing.T) {
 }
 
 func TestBuildDatabaseURLFromEnv(t *testing.T) {
-	// Save original env
 	originalEnvs := []struct {
 		key   string
 		value string
@@ -191,73 +190,125 @@ func TestBuildDatabaseURLFromEnv(t *testing.T) {
 		{"POSTGRESQL_PASSWORD", os.Getenv("POSTGRESQL_PASSWORD")},
 		{"POSTGRESQL_DATABASE", os.Getenv("POSTGRESQL_DATABASE")},
 		{"POSTGRESQL_PORT", os.Getenv("POSTGRESQL_PORT")},
+		{"POSTGRESQL_SSLMODE", os.Getenv("POSTGRESQL_SSLMODE")},
 	}
 	defer func() {
 		for _, env := range originalEnvs {
 			if env.value != "" {
-				_ = os.Setenv(env.key, env.value) // Test cleanup
+				_ = os.Setenv(env.key, env.value)
 			} else {
-				_ = os.Unsetenv(env.key) // Test cleanup
+				_ = os.Unsetenv(env.key)
 			}
 		}
 	}()
 
 	t.Run("returns empty when required vars missing", func(t *testing.T) {
-		_ = os.Unsetenv("POSTGRESQL_HOST")     // Test setup
-		_ = os.Unsetenv("POSTGRESQL_USER")     // Test setup
-		_ = os.Unsetenv("POSTGRESQL_DATABASE") // Test setup
+		_ = os.Unsetenv("POSTGRESQL_HOST")
+		_ = os.Unsetenv("POSTGRESQL_USER")
+		_ = os.Unsetenv("POSTGRESQL_DATABASE")
 		result := buildDatabaseURLFromEnv()
 		if result != "" {
 			t.Errorf("expected empty string, got %s", result)
 		}
 	})
 
-	t.Run("builds URL with all vars set", func(t *testing.T) {
-		_ = os.Setenv("POSTGRESQL_HOST", "localhost")    // Test setup
-		_ = os.Setenv("POSTGRESQL_USER", "testuser")     // Test setup
-		_ = os.Setenv("POSTGRESQL_PASSWORD", "testpass") // Test setup
-		_ = os.Setenv("POSTGRESQL_DATABASE", "testdb")   // Test setup
-		_ = os.Setenv("POSTGRESQL_PORT", "5432")         // Test setup
+	t.Run("builds URL with required vars", func(t *testing.T) {
+		_ = os.Setenv("POSTGRESQL_HOST", "testhost")
+		_ = os.Setenv("POSTGRESQL_USER", "testuser")
+		_ = os.Setenv("POSTGRESQL_PASSWORD", "testpass123")
+		_ = os.Setenv("POSTGRESQL_DATABASE", "testdb")
+		_ = os.Unsetenv("POSTGRESQL_PORT")
+		_ = os.Unsetenv("POSTGRESQL_SSLMODE")
 
 		result := buildDatabaseURLFromEnv()
 		if result == "" {
 			t.Error("expected non-empty URL")
 		}
-		// Check URL contains expected components
-		if !containsString(result, "testuser") || !containsString(result, "localhost") || !containsString(result, "testdb") {
+		if !contains(result, "testuser") || !contains(result, "testhost") || !contains(result, "testdb") {
 			t.Errorf("URL missing expected components: %s", result)
 		}
-	})
-}
-
-func TestLoadConfigValidation(t *testing.T) {
-	// This test verifies that LoadConfig validates required environment variables
-	// We'll test individual validation logic rather than the full LoadConfig function
-	// to avoid affecting the entire test suite
-
-	t.Run("validates JWT secret length", func(t *testing.T) {
-		// We can't easily test the fatal log calls, but we can verify the logic
-		// would work correctly by checking string lengths
-		shortSecret := "short"
-		if len(shortSecret) >= 32 {
-			t.Error("test setup error: secret should be short")
+		if !contains(result, "5432") {
+			t.Error("should default to port 5432")
 		}
-
-		longSecret := "this_is_a_very_long_secret_that_exceeds_32_characters_for_security"
-		if len(longSecret) < 32 {
-			t.Error("test setup error: secret should be long enough")
+		if !contains(result, "sslmode=require") {
+			t.Error("should default to sslmode=require")
 		}
 	})
 
-	t.Run("session duration is 24 hours", func(t *testing.T) {
-		expected := 24 * time.Hour
-		if expected != 24*time.Hour {
-			t.Errorf("expected 24h, got %v", expected)
+	t.Run("uses custom port and sslmode", func(t *testing.T) {
+		_ = os.Setenv("POSTGRESQL_HOST", "custom")
+		_ = os.Setenv("POSTGRESQL_USER", "user")
+		_ = os.Setenv("POSTGRESQL_PASSWORD", "pass")
+		_ = os.Setenv("POSTGRESQL_DATABASE", "db")
+		_ = os.Setenv("POSTGRESQL_PORT", "5433")
+		_ = os.Setenv("POSTGRESQL_SSLMODE", "disable")
+
+		result := buildDatabaseURLFromEnv()
+		if !contains(result, "5433") {
+			t.Error("should use custom port")
+		}
+		if !contains(result, "sslmode=disable") {
+			t.Error("should use custom sslmode")
 		}
 	})
 }
 
-// Helper function
-func containsString(s, substr string) bool {
-	return len(s) > 0 && len(substr) > 0 && s != "" && len(s) >= len(substr) && s[0:len(substr)] == substr || s[len(s)-len(substr):] == substr || s == substr || (len(s) > len(substr) && s[1:len(s)-1] != "" && len(s) > 2)
+func TestNormalizeLogLevel(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"", "info"},
+		{"info", "info"},
+		{"INFO", "info"},
+		{"debug", "debug"},
+		{"DEBUG", "debug"},
+		{"trace", "debug"},
+		{"warn", "warn"},
+		{"warning", "warn"},
+		{"error", "error"},
+		{"err", "error"},
+		{"fatal", "fatal"},
+		{"critical", "fatal"},
+		{"panic", "fatal"},
+		{"unknown", "unknown"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := normalizeLogLevel(tt.input)
+			if result != tt.expected {
+				t.Errorf("normalizeLogLevel(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsSupportedLogLevel(t *testing.T) {
+	tests := []struct {
+		level    string
+		expected bool
+	}{
+		{"debug", true},
+		{"info", true},
+		{"warn", true},
+		{"error", true},
+		{"fatal", true},
+		{"trace", false},
+		{"unknown", false},
+		{"", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.level, func(t *testing.T) {
+			result := isSupportedLogLevel(tt.level)
+			if result != tt.expected {
+				t.Errorf("isSupportedLogLevel(%q) = %v, want %v", tt.level, result, tt.expected)
+			}
+		})
+	}
+}
+
+func contains(s, substr string) bool {
+	return len(substr) > 0 && len(s) >= len(substr) && (strings.Contains(s, substr) || s == substr)
 }
