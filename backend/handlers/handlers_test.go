@@ -1388,3 +1388,32 @@ func TestHelperFunctions(t *testing.T) {
 	assert.True(t, contains("SELECT * FROM notes WHERE id = 1", "notes"))
 	assert.False(t, contains("SELECT * FROM notes", "users"))
 }
+
+// =====================
+// Additional Edge Case Tests
+// =====================
+
+func TestContainsFunction(t *testing.T) {
+	tests := []struct {
+		name     string
+		s        string
+		substr   string
+		expected bool
+	}{
+		{"exact match", "test", "test", true},
+		{"substring at start", "testing", "test", true},
+		{"substring at end", "best", "est", true},
+		{"substring in middle", "testing", "sting", true},
+		{"not found", "hello", "world", false},
+		{"empty string", "", "test", false},
+		{"empty substr", "test", "", false},
+		{"both empty", "", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := contains(tt.s, tt.substr)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
