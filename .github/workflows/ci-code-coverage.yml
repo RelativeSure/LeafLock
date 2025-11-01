@@ -1,6 +1,7 @@
 name: CI - Code Coverage
 
 on:
+  workflow_dispatch:
   pull_request:
   push:
     branches:
