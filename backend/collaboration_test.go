@@ -1,17 +1,25 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
+	miniredis "github.com/alicebob/miniredis/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/valyala/fasthttp"
+
+	"leaflock/auth"
 )
 
 func TestCollaborationFeatures(t *testing.T) {
@@ -26,8 +34,23 @@ func TestCollaborationFeatures(t *testing.T) {
 		}
 	}()
 
+	dbPool, ok := db.(*pgxpool.Pool)
+	require.True(t, ok, "expected *pgxpool.Pool")
+
+	cfg := LoadConfig()
+
 	// Create crypto service
-	crypto := NewCryptoService([]byte("test-key-32-bytes-long-for-testing"))
+	crypto := NewCryptoService(cfg.EncryptionKey)
+
+	// Setup in-memory Redis for auth flows
+	mr := miniredis.RunT(t)
+	defer mr.Close()
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+
+	authService := auth.NewService(dbPool, rdb, crypto, string(cfg.JWTSecret))
 
 	// Create collaboration handler
 	handler := &CollaborationHandler{
@@ -36,65 +59,62 @@ func TestCollaborationFeatures(t *testing.T) {
 	}
 
 	// Create test users
-	user1ID := uuid.New()
-	user2ID := uuid.New()
-	user2Email := "user2@example.com"
-
-	// Insert test users
 	ctx := context.Background()
-	_, err = db.Exec(ctx, `
-		INSERT INTO users (id, email, password_hash, workspace_id)
-		VALUES ($1, 'user1@example.com', 'hash1', $2),
-			   ($3, $4, 'hash2', $5)`,
-		user1ID, uuid.New(), user2ID, user2Email, uuid.New())
+	suffix := uuid.NewString()
+	user1Email := fmt.Sprintf("user1+%s@example.com", suffix)
+	user2Email := fmt.Sprintf("user2+%s@example.com", suffix)
+
+	user1Resp, err := authService.Register(ctx, user1Email, "TestPass123!@#")
 	require.NoError(t, err)
 
-	// Create workspace for user1
-	workspace1ID := uuid.New()
-	_, err = db.Exec(ctx, `
-		INSERT INTO workspaces (id, name, owner_id)
-		VALUES ($1, 'Test Workspace', $2)`,
-		workspace1ID, user1ID)
+	user2Resp, err := authService.Register(ctx, user2Email, "DiffPass456!@#")
+	require.NoError(t, err)
+
+	user1ID := uuid.MustParse(user1Resp.UserID)
+	user2ID := uuid.MustParse(user2Resp.UserID)
+	workspace1ID := uuid.MustParse(user1Resp.WorkspaceID)
+
+	// Keep plaintext email column in sync for handlers relying on it
+	_, err = db.Exec(ctx, `UPDATE users SET email = $1 WHERE id = $2`, user1Email, user1ID)
+	require.NoError(t, err)
+	_, err = db.Exec(ctx, `UPDATE users SET email = $1 WHERE id = $2`, user2Email, user2ID)
 	require.NoError(t, err)
 
 	// Create test note
 	noteID := uuid.New()
+	title := []byte("Collaboration Test Note")
+	content := []byte("Encrypted content for collaboration testing.")
+	encryptedTitle, err := crypto.Encrypt(title)
+	require.NoError(t, err)
+	encryptedContent, err := crypto.Encrypt(content)
+	require.NoError(t, err)
+	contentHash := sha256.Sum256(content)
+
 	_, err = db.Exec(ctx, `
-		INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted)
-		VALUES ($1, $2, 'encrypted-title', 'encrypted-content')`,
-		noteID, workspace1ID)
+		INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted, content_hash, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6)`,
+		noteID, workspace1ID, encryptedTitle, encryptedContent, contentHash[:], user1ID)
 	require.NoError(t, err)
 
 	t.Run("ShareNote", func(t *testing.T) {
-		app := fiber.New()
-
-		// Create share request
-		shareReq := ShareNoteRequest{
-			UserEmail:  user2Email,
-			Permission: "write",
-		}
-		reqBody, _ := json.Marshal(shareReq)
-
-		// Create test context
-		ctx := &fasthttp.RequestCtx{}
-		ctx.Request.SetRequestURI(fmt.Sprintf("/notes/%s/share", noteID))
-		ctx.Request.Header.SetMethod("POST")
-		ctx.Request.Header.SetContentType("application/json")
-		ctx.Request.SetBody(reqBody)
-
-		c := app.AcquireCtx(ctx)
-		defer app.ReleaseCtx(c)
+	app := fiber.New()
+	app.Post("/notes/:id/share", func(c *fiber.Ctx) error {
 		c.Locals("user_id", user1ID)
+		return handler.ShareNote(c)
+	})
 
-		// Set route params
-		c.Params("id", noteID.String())
+	shareReq := ShareNoteRequest{
+		UserEmail:  user2Email,
+		Permission: "write",
+	}
+	reqBody, _ := json.Marshal(shareReq)
 
-		// Execute handler
-		err := handler.ShareNote(c)
-		require.NoError(t, err)
+	req := httptest.NewRequest("POST", fmt.Sprintf("/notes/%s/share", noteID), bytes.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
 
-		// Check response
-		assert.Equal(t, fiber.StatusCreated, c.Response().StatusCode())
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
 
 		// Verify collaboration was created
 		var count int
@@ -107,31 +127,20 @@ func TestCollaborationFeatures(t *testing.T) {
 	})
 
 	t.Run("GetCollaborators", func(t *testing.T) {
-		app := fiber.New()
-
-		// Create test context
-		ctx := &fasthttp.RequestCtx{}
-		ctx.Request.SetRequestURI(fmt.Sprintf("/notes/%s/collaborators", noteID))
-		ctx.Request.Header.SetMethod("GET")
-
-		c := app.AcquireCtx(ctx)
-		defer app.ReleaseCtx(c)
+	app := fiber.New()
+	app.Get("/notes/:id/collaborators", func(c *fiber.Ctx) error {
 		c.Locals("user_id", user1ID)
+		return handler.GetCollaborators(c)
+	})
 
-		// Set route params
-		c.Params("id", noteID.String())
+	req := httptest.NewRequest("GET", fmt.Sprintf("/notes/%s/collaborators", noteID), nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		// Execute handler
-		err := handler.GetCollaborators(c)
-		require.NoError(t, err)
-
-		// Check response
-		assert.Equal(t, fiber.StatusOK, c.Response().StatusCode())
-
-		// Parse response
-		var response map[string]interface{}
-		err = json.Unmarshal(c.Response().Body(), &response)
-		require.NoError(t, err)
+	var response map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&response))
+	resp.Body.Close()
 
 		collaborators, ok := response["collaborators"].([]interface{})
 		require.True(t, ok)
@@ -145,26 +154,15 @@ func TestCollaborationFeatures(t *testing.T) {
 
 	t.Run("RemoveCollaborator", func(t *testing.T) {
 		app := fiber.New()
+		app.Delete("/notes/:id/collaborators/:userId", func(c *fiber.Ctx) error {
+			c.Locals("user_id", user1ID)
+			return handler.RemoveCollaborator(c)
+		})
 
-		// Create test context
-		ctx := &fasthttp.RequestCtx{}
-		ctx.Request.SetRequestURI(fmt.Sprintf("/notes/%s/collaborators/%s", noteID, user2ID))
-		ctx.Request.Header.SetMethod("DELETE")
-
-		c := app.AcquireCtx(ctx)
-		defer app.ReleaseCtx(c)
-		c.Locals("user_id", user1ID)
-
-		// Set route params
-		c.Params("id", noteID.String())
-		c.Params("userId", user2ID.String())
-
-		// Execute handler
-		err := handler.RemoveCollaborator(c)
+		req := httptest.NewRequest("DELETE", fmt.Sprintf("/notes/%s/collaborators/%s", noteID, user2ID), nil)
+		resp, err := app.Test(req)
 		require.NoError(t, err)
-
-		// Check response
-		assert.Equal(t, fiber.StatusOK, c.Response().StatusCode())
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
 		// Verify collaboration was removed
 		var count int
@@ -223,7 +221,20 @@ func SetupTestDatabase() (Database, error) {
 	// For testing, we'll use an in-memory database or a test database
 	// This is a simplified version - in practice, you'd set up a proper test database
 	config := LoadConfig()
-	config.DatabaseURL = "postgres://test:test@localhost/leaflock_test?sslmode=disable" // secretlint-disable-line
+	if override := os.Getenv("TEST_DATABASE_URL"); override != "" {
+		config.DatabaseURL = override
+	} else {
+		config.DatabaseURL = "postgres://test:test@localhost:5433/leaflock_test?sslmode=disable" // secretlint-disable-line
+	}
 
-	return SetupDatabase(config.DatabaseURL)
+	db, err := SetupDatabase(config.DatabaseURL)
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure compatibility column exists for tests relying on plaintext email
+	ctx := context.Background()
+	_, _ = db.Exec(ctx, `ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT`)
+
+	return db, nil
 }

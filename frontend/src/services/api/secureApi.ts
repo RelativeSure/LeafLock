@@ -112,11 +112,14 @@ interface Folder {
 interface Template {
   id: string
   name: string
-  content: string
+  content?: string
+  description?: string
   tags: string[]
+  icon?: string | null
   isPublic: boolean
-  userId: string
+  userId?: string | null
   createdAt: string
+  updatedAt?: string
   usageCount: number
 }
 
@@ -550,39 +553,32 @@ class ApiClient {
 
   // Templates methods
   async getTemplates(): Promise<Template[]> {
-    const response = await this.request<{ templates: Template[] }>('/templates')
-    return response.templates || []
+    const response = await this.request<{ templates: any[] }>('/templates')
+    const templates = Array.isArray(response.templates) ? response.templates : []
+    return templates.map((template) => this.transformTemplateResponse(template))
   }
 
   async getTemplate(id: string): Promise<Template> {
-    return this.request<Template>(`/templates/${id}`)
+    const response = await this.request<any>(`/templates/${id}`)
+    return this.transformTemplateResponse(response)
   }
 
   async createTemplate(template: Partial<Template>): Promise<Template> {
-    // Encrypt template content before sending to backend
-    const encryptedTemplate: any = { ...template }
-
-    if (template.content) {
-      encryptedTemplate.content_encrypted = btoa(unescape(encodeURIComponent(template.content)))
-      delete encryptedTemplate.content
-    }
-
-    if (template.name) {
-      encryptedTemplate.name_encrypted = btoa(unescape(encodeURIComponent(template.name)))
-      delete encryptedTemplate.name
-    }
-
-    return this.request<Template>('/templates', {
+    const payload = this.buildTemplatePayload(template)
+    const response = await this.request<any>('/templates', {
       method: 'POST',
-      body: JSON.stringify(encryptedTemplate),
+      body: JSON.stringify(payload),
     })
+    return this.transformTemplateResponse(response)
   }
 
   async updateTemplate(id: string, template: Partial<Template>): Promise<Template> {
-    return this.request<Template>(`/templates/${id}`, {
+    const payload = this.buildTemplatePayload(template)
+    const response = await this.request<any>(`/templates/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(template),
+      body: JSON.stringify(payload),
     })
+    return this.transformTemplateResponse(response)
   }
 
   async deleteTemplate(id: string): Promise<void> {
@@ -595,6 +591,68 @@ class ApiClient {
     return this.request<Note>(`/templates/${id}/use`, {
       method: 'POST',
     })
+  }
+
+  private buildTemplatePayload(template: Partial<Template>) {
+    return {
+      name: template.name ?? '',
+      description: template.description ?? '',
+      content: template.content ?? '',
+      tags: template.tags ?? [],
+      icon: template.icon ?? '',
+      is_public: template.isPublic ?? false,
+    }
+  }
+
+  private transformTemplateResponse(data: any): Template {
+    if (!data) {
+      throw new Error('Invalid template payload received from API')
+    }
+
+    const tags = Array.isArray(data.tags) ? data.tags : []
+    const createdAtRaw = data.created_at ?? data.createdAt
+    const updatedAtRaw = data.updated_at ?? data.updatedAt
+    const userIdRaw = data.user_id ?? data.userId ?? null
+    const usageCountRaw = data.usage_count ?? data.usageCount
+
+    return {
+      id: data.id,
+      name: data.name ?? '',
+      description: data.description ?? '',
+      content: data.content ?? undefined,
+      tags,
+      icon: data.icon ?? null,
+      isPublic: data.is_public ?? data.isPublic ?? false,
+      userId: userIdRaw ?? null,
+      createdAt: this.normalizeIsoString(createdAtRaw),
+      updatedAt: updatedAtRaw ? this.normalizeIsoString(updatedAtRaw) : undefined,
+      usageCount: typeof usageCountRaw === 'number' ? usageCountRaw : 0,
+    }
+  }
+
+  private normalizeIsoString(value: any): string {
+    if (!value) {
+      return new Date().toISOString()
+    }
+
+    if (typeof value === 'string') {
+      const parsed = new Date(value)
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toISOString()
+      }
+      return value
+    }
+
+    if (value instanceof Date) {
+      return value.toISOString()
+    }
+
+    const parsed = new Date(value)
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString()
+    }
+
+    return new Date().toISOString()
   }
 
   // Settings methods

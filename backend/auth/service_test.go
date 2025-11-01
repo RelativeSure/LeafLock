@@ -2,6 +2,10 @@ package auth
 
 import (
 	"testing"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 func TestNewService(t *testing.T) {
@@ -157,6 +161,85 @@ func TestSessionManager_HashToken(t *testing.T) {
 	hash3 := sm.hashToken("different-token")
 	if hash1 == hash3 {
 		t.Error("Different tokens should produce different hashes")
+	}
+}
+
+func TestServiceValidateJWTSuccess(t *testing.T) {
+	svc := &Service{jwtSecret: "unit-test-secret"}
+	userID := uuid.New()
+	token, err := svc.GenerateJWT(userID, true)
+	if err != nil {
+		t.Fatalf("GenerateJWT failed: %v", err)
+	}
+
+	parsedID, isAdmin, err := svc.ValidateJWT(token)
+	if err != nil {
+		t.Fatalf("ValidateJWT returned error: %v", err)
+	}
+	if parsedID != userID {
+		t.Fatalf("expected user ID %s, got %s", userID, parsedID)
+	}
+	if !isAdmin {
+		t.Fatal("expected isAdmin to be true")
+	}
+}
+
+func TestServiceValidateJWTInvalidToken(t *testing.T) {
+	svc := &Service{jwtSecret: "unit-test-secret"}
+
+	if _, _, err := svc.ValidateJWT("not-a-token"); err == nil {
+		t.Fatal("expected error for invalid token string")
+	}
+}
+
+func TestServiceValidateJWTMissingUserID(t *testing.T) {
+	svc := &Service{jwtSecret: "unit-test-secret"}
+	claims := jwt.MapClaims{
+		"exp":      time.Now().Add(time.Hour).Unix(),
+		"is_admin": false,
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, err := token.SignedString([]byte(svc.jwtSecret))
+	if err != nil {
+		t.Fatalf("failed to sign token: %v", err)
+	}
+
+	if _, _, err := svc.ValidateJWT(signed); err == nil {
+		t.Fatal("expected error when user_id claim missing")
+	}
+}
+
+func TestServiceValidateJWTInvalidUserIDFormat(t *testing.T) {
+	svc := &Service{jwtSecret: "unit-test-secret"}
+	claims := jwt.MapClaims{
+		"user_id": 12345,
+		"exp":     time.Now().Add(time.Hour).Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, err := token.SignedString([]byte(svc.jwtSecret))
+	if err != nil {
+		t.Fatalf("failed to sign token: %v", err)
+	}
+
+	if _, _, err := svc.ValidateJWT(signed); err == nil {
+		t.Fatal("expected error for invalid user_id format")
+	}
+}
+
+func TestServiceValidateJWTExpiredToken(t *testing.T) {
+	svc := &Service{jwtSecret: "unit-test-secret"}
+	claims := jwt.MapClaims{
+		"user_id": uuid.New().String(),
+		"exp":     time.Now().Add(-time.Hour).Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, err := token.SignedString([]byte(svc.jwtSecret))
+	if err != nil {
+		t.Fatalf("failed to sign token: %v", err)
+	}
+
+	if _, _, err := svc.ValidateJWT(signed); err == nil {
+		t.Fatal("expected error for expired token")
 	}
 }
 

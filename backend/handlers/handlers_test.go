@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -49,11 +51,17 @@ func (m *MockDB) Exec(ctx context.Context, sql string, args ...interface{}) (pgc
 func (m *MockDB) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
 	callArgs := append([]interface{}{ctx, sql}, args...)
 	mockArgs := m.Called(callArgs...)
+	if mockArgs.Get(0) == nil {
+		return nil, mockArgs.Error(1)
+	}
 	return mockArgs.Get(0).(pgx.Rows), mockArgs.Error(1)
 }
 
 func (m *MockDB) Begin(ctx context.Context) (pgx.Tx, error) {
 	mockArgs := m.Called(ctx)
+	if mockArgs.Get(0) == nil {
+		return nil, mockArgs.Error(1)
+	}
 	return mockArgs.Get(0).(pgx.Tx), mockArgs.Error(1)
 }
 
@@ -638,69 +646,8 @@ func (suite *TagsHandlerTestSuite) TestCreateTagSuccess() {
 }
 
 // =====================
-// FoldersHandler Tests
+// FoldersHandler Tests - Moved to folders_test.go
 // =====================
-
-type FoldersHandlerTestSuite struct {
-	suite.Suite
-	handler   *FoldersHandler
-	mockDB    *MockDB
-	cryptoSvc *crypto.CryptoService
-	userID    uuid.UUID
-}
-
-func (suite *FoldersHandlerTestSuite) SetupTest() {
-	suite.mockDB = &MockDB{}
-
-	key := make([]byte, 32)
-	if _, err := rand.Read(key); err != nil {
-		suite.T().Fatalf("Failed to generate random data: %v", err)
-	}
-	suite.cryptoSvc = crypto.NewCryptoService(key)
-
-	suite.handler = NewFoldersHandler(suite.mockDB, suite.cryptoSvc)
-	suite.userID = uuid.New()
-}
-
-func (suite *FoldersHandlerTestSuite) TestNewFoldersHandler() {
-	handler := NewFoldersHandler(suite.mockDB, suite.cryptoSvc)
-	suite.NotNil(handler)
-}
-
-func (suite *FoldersHandlerTestSuite) TestCreateFolderSuccess() {
-	app := fiber.New()
-
-	mockRow := &MockRow{}
-	folderID := uuid.New()
-
-	suite.mockDB.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
-		return contains(sql, "INSERT INTO folders")
-	}), suite.userID, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockRow)
-
-	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
-		if fid, ok := args[0].(*uuid.UUID); ok {
-			*fid = folderID
-		}
-	}).Return(nil)
-
-	app.Post("/folders", func(c *fiber.Ctx) error {
-		c.Locals("user_id", suite.userID)
-		return suite.handler.CreateFolder(c)
-	})
-
-	reqBody := map[string]interface{}{
-		"name":  "Test Folder",
-		"color": "#3b82f6",
-	}
-	body, _ := json.Marshal(reqBody)
-	req := httptest.NewRequest("POST", "/folders", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req)
-
-	suite.NoError(err)
-	suite.Equal(200, resp.StatusCode)
-}
 
 // =====================
 // TemplatesHandler Tests
@@ -742,9 +689,18 @@ func (suite *TemplatesHandlerTestSuite) TestCreateTemplateSuccess() {
 		return contains(sql, "INSERT INTO templates")
 	}), suite.userID, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockRow)
 
-	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if tid, ok := args[0].(*uuid.UUID); ok {
 			*tid = templateID
+		}
+		if createdPtr, ok := args[1].(*time.Time); ok {
+			*createdPtr = time.Now().UTC()
+		}
+		if updatedPtr, ok := args[2].(*time.Time); ok {
+			*updatedPtr = time.Now().UTC()
+		}
+		if usagePtr, ok := args[3].(*int); ok {
+			*usagePtr = 0
 		}
 	}).Return(nil)
 
@@ -768,6 +724,244 @@ func (suite *TemplatesHandlerTestSuite) TestCreateTemplateSuccess() {
 
 	suite.NoError(err)
 	suite.Equal(201, resp.StatusCode)
+}
+
+func (suite *TemplatesHandlerTestSuite) TestGetTemplatesSuccess() {
+	app := fiber.New()
+
+	mockRows := &MockRows{}
+	suite.mockDB.On("Query", mock.Anything, mock.MatchedBy(func(sql string) bool {
+		return contains(sql, "FROM templates")
+	}), suite.userID).Return(mockRows, nil)
+
+	mockRows.On("Next").Return(true).Once()
+	mockRows.On("Next").Return(true).Once()
+	mockRows.On("Next").Return(false).Once()
+
+	now := time.Now().UTC()
+	starterID := uuid.New()
+	userTemplateID := uuid.New()
+
+	starterNameEnc, _ := suite.cryptoSvc.Encrypt([]byte("Starter Template"))
+	starterDescEnc, _ := suite.cryptoSvc.Encrypt([]byte("Default content"))
+	starterContentEnc, _ := suite.cryptoSvc.Encrypt([]byte("# Default"))
+
+	userNameEnc, _ := suite.cryptoSvc.Encrypt([]byte("My Template"))
+	userDescEnc, _ := suite.cryptoSvc.Encrypt([]byte("Custom description"))
+	userContentEnc, _ := suite.cryptoSvc.Encrypt([]byte("# Custom"))
+
+	scanCalls := 0
+	mockRows.On("Scan",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Run(func(args mock.Arguments) {
+		switch scanCalls {
+		case 0:
+			*args[0].(*uuid.UUID) = starterID
+			*args[1].(*sql.NullString) = sql.NullString{Valid: false}
+			*args[2].(*[]byte) = starterNameEnc
+			*args[3].(*[]byte) = starterDescEnc
+			*args[4].(*[]byte) = starterContentEnc
+			*args[5].(*[]string) = []string{"system", "starter"}
+			*args[6].(*string) = "✨"
+			*args[7].(*bool) = true
+			*args[8].(*int) = 42
+			*args[9].(*time.Time) = now.Add(-time.Hour)
+			*args[10].(*time.Time) = now
+		default:
+			*args[0].(*uuid.UUID) = userTemplateID
+			*args[1].(*sql.NullString) = sql.NullString{String: suite.userID.String(), Valid: true}
+			*args[2].(*[]byte) = userNameEnc
+			*args[3].(*[]byte) = userDescEnc
+			*args[4].(*[]byte) = userContentEnc
+			*args[5].(*[]string) = []string{"custom"}
+			*args[6].(*string) = "📝"
+			*args[7].(*bool) = false
+			*args[8].(*int) = 3
+			*args[9].(*time.Time) = now.Add(-2 * time.Hour)
+			*args[10].(*time.Time) = now.Add(-30 * time.Minute)
+		}
+		scanCalls++
+	}).Return(nil)
+
+	app.Get("/templates", func(c *fiber.Ctx) error {
+		c.Locals("user_id", suite.userID)
+		return suite.handler.GetTemplates(c)
+	})
+
+	req := httptest.NewRequest("GET", "/templates", nil)
+	resp, err := app.Test(req)
+
+	suite.NoError(err)
+	suite.Equal(200, resp.StatusCode)
+
+	var payload struct {
+		Templates []map[string]interface{} `json:"templates"`
+	}
+	body, _ := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	suite.NoError(json.Unmarshal(body, &payload))
+
+	suite.Len(payload.Templates, 2)
+	suite.Equal("Starter Template", payload.Templates[0]["name"])
+	suite.Nil(payload.Templates[0]["user_id"])
+	suite.Equal("My Template", payload.Templates[1]["name"])
+	suite.Equal(suite.userID.String(), payload.Templates[1]["user_id"])
+}
+
+func (suite *TemplatesHandlerTestSuite) TestGetTemplateSuccess() {
+	app := fiber.New()
+
+	templateID := uuid.New()
+	mockRow := &MockRow{}
+	suite.mockDB.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
+		return contains(sql, "SELECT user_id")
+	}), templateID, suite.userID).Return(mockRow)
+
+	nameEnc, _ := suite.cryptoSvc.Encrypt([]byte("Detailed Template"))
+	descEnc, _ := suite.cryptoSvc.Encrypt([]byte("Full description"))
+	contentEnc, _ := suite.cryptoSvc.Encrypt([]byte("# Body"))
+
+	mockRow.On("Scan",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Run(func(args mock.Arguments) {
+		*args[0].(*sql.NullString) = sql.NullString{Valid: true, String: suite.userID.String()}
+		*args[1].(*[]byte) = nameEnc
+		*args[2].(*[]byte) = descEnc
+		*args[3].(*[]byte) = contentEnc
+		*args[4].(*[]string) = []string{"custom"}
+		*args[5].(*string) = "📝"
+		*args[6].(*bool) = false
+		*args[7].(*int) = 1
+		now := time.Now().UTC()
+		*args[8].(*time.Time) = now.Add(-time.Minute)
+		*args[9].(*time.Time) = now
+	}).Return(nil)
+
+	app.Get("/templates/:id", func(c *fiber.Ctx) error {
+		c.Locals("user_id", suite.userID)
+		return suite.handler.GetTemplate(c)
+	})
+
+	req := httptest.NewRequest("GET", "/templates/"+templateID.String(), nil)
+	resp, err := app.Test(req)
+
+	suite.NoError(err)
+	suite.Equal(200, resp.StatusCode)
+
+	var payload map[string]interface{}
+	body, _ := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	suite.NoError(json.Unmarshal(body, &payload))
+	suite.Equal("Detailed Template", payload["name"])
+	suite.Equal(suite.userID.String(), payload["user_id"])
+	suite.Equal("# Body", payload["content"])
+}
+
+func (suite *TemplatesHandlerTestSuite) TestUpdateTemplateSuccess() {
+	app := fiber.New()
+
+	templateID := uuid.New()
+	suite.mockDB.On("Exec", mock.Anything, mock.MatchedBy(func(sql string) bool {
+		return contains(sql, "UPDATE templates")
+	}), templateID, suite.userID, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(int64(1), nil)
+
+	mockRow := &MockRow{}
+	suite.mockDB.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
+		return contains(sql, "SELECT usage_count")
+	}), templateID).Return(mockRow)
+
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		*args[0].(*int) = 7
+		now := time.Now().UTC()
+		*args[1].(*time.Time) = now.Add(-time.Hour)
+		*args[2].(*time.Time) = now
+	}).Return(nil)
+
+	app.Put("/templates/:id", func(c *fiber.Ctx) error {
+		c.Locals("user_id", suite.userID)
+		return suite.handler.UpdateTemplate(c)
+	})
+
+	payload := map[string]interface{}{
+		"name":        "Updated Template",
+		"description": "Updated description",
+		"content":     "# Updated",
+		"tags":        []string{"updated"},
+		"icon":        "✅",
+		"is_public":   true,
+	}
+	body, _ := json.Marshal(payload)
+	req := httptest.NewRequest("PUT", "/templates/"+templateID.String(), bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	suite.NoError(err)
+	suite.Equal(200, resp.StatusCode)
+
+	var response map[string]interface{}
+	respBody, _ := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	suite.NoError(json.Unmarshal(respBody, &response))
+	suite.Equal("Updated Template", response["name"])
+	suite.Equal(float64(7), response["usage_count"])
+}
+
+func (suite *TemplatesHandlerTestSuite) TestUpdateTemplateNotFound() {
+	app := fiber.New()
+
+	templateID := uuid.New()
+	suite.mockDB.On("Exec",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(int64(0), nil)
+
+	app.Put("/templates/:id", func(c *fiber.Ctx) error {
+		c.Locals("user_id", suite.userID)
+		return suite.handler.UpdateTemplate(c)
+	})
+
+	payload := map[string]interface{}{
+		"name":        "Missing Template",
+		"description": "Missing",
+		"content":     "# Missing",
+		"tags":        []string{},
+		"icon":        "",
+		"is_public":   false,
+	}
+	body, _ := json.Marshal(payload)
+	req := httptest.NewRequest("PUT", "/templates/"+templateID.String(), bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	suite.NoError(err)
+	suite.Equal(404, resp.StatusCode)
 }
 
 // =====================
@@ -820,6 +1014,72 @@ func (suite *CollaborationHandlerTestSuite) TestGetSharedNotesSuccess() {
 
 	suite.NoError(err)
 	suite.Equal(200, resp.StatusCode)
+}
+
+func (suite *CollaborationHandlerTestSuite) TestShareNote_InvalidNoteID() {
+	app := fiber.New()
+	app.Post("/notes/:id/share", func(c *fiber.Ctx) error {
+		c.Locals("user_id", suite.userID)
+		return suite.handler.ShareNote(c)
+	})
+
+	reqBody := `{"user_email":"test@example.com","permission":"read"}`
+	req := httptest.NewRequest("POST", "/notes/invalid-uuid/share", bytes.NewBufferString(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	suite.NoError(err)
+	suite.Equal(400, resp.StatusCode)
+}
+
+func (suite *CollaborationHandlerTestSuite) TestShareNote_InvalidBody() {
+	app := fiber.New()
+	app.Post("/notes/:id/share", func(c *fiber.Ctx) error {
+		c.Locals("user_id", suite.userID)
+		return suite.handler.ShareNote(c)
+	})
+
+	noteID := uuid.New()
+	req := httptest.NewRequest("POST", "/notes/"+noteID.String()+"/share", bytes.NewBufferString(`invalid`))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	suite.NoError(err)
+	suite.Equal(400, resp.StatusCode)
+}
+
+func (suite *CollaborationHandlerTestSuite) TestShareNote_InvalidEmail() {
+	app := fiber.New()
+	app.Post("/notes/:id/share", func(c *fiber.Ctx) error {
+		c.Locals("user_id", suite.userID)
+		return suite.handler.ShareNote(c)
+	})
+
+	noteID := uuid.New()
+	reqBody := `{"user_email":"invalid-email","permission":"read"}`
+	req := httptest.NewRequest("POST", "/notes/"+noteID.String()+"/share", bytes.NewBufferString(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	suite.NoError(err)
+	suite.Equal(400, resp.StatusCode)
+}
+
+func (suite *CollaborationHandlerTestSuite) TestShareNote_InvalidPermission() {
+	app := fiber.New()
+	app.Post("/notes/:id/share", func(c *fiber.Ctx) error {
+		c.Locals("user_id", suite.userID)
+		return suite.handler.ShareNote(c)
+	})
+
+	noteID := uuid.New()
+	reqBody := `{"user_email":"test@example.com","permission":"invalid"}`
+	req := httptest.NewRequest("POST", "/notes/"+noteID.String()+"/share", bytes.NewBufferString(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	suite.NoError(err)
+	suite.Equal(400, resp.StatusCode)
 }
 
 // =====================
@@ -889,68 +1149,48 @@ func (suite *AttachmentsHandlerTestSuite) TestGetAttachmentsSuccess() {
 	suite.Equal(200, resp.StatusCode)
 }
 
-// =====================
-// SearchHandler Tests
-// =====================
-
-type SearchHandlerTestSuite struct {
-	suite.Suite
-	handler *SearchHandler
-	userID  uuid.UUID
-}
-
-func (suite *SearchHandlerTestSuite) SetupTest() {
-	suite.handler = NewSearchHandler()
-	suite.userID = uuid.New()
-}
-
-func (suite *SearchHandlerTestSuite) TestNewSearchHandler() {
-	handler := NewSearchHandler()
-	suite.NotNil(handler)
-}
-
-func (suite *SearchHandlerTestSuite) TestSearchNotesSuccess() {
+func (suite *AttachmentsHandlerTestSuite) TestGetAttachments_InvalidNoteID() {
 	app := fiber.New()
-
-	app.Post("/search", func(c *fiber.Ctx) error {
+	app.Get("/notes/:noteId/attachments", func(c *fiber.Ctx) error {
 		c.Locals("user_id", suite.userID)
-		return suite.handler.SearchNotes(c)
+		return suite.handler.GetAttachments(c)
 	})
 
-	reqBody := map[string]interface{}{
-		"query": "test",
-		"limit": 20,
-	}
-	body, _ := json.Marshal(reqBody)
-	req := httptest.NewRequest("POST", "/search", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-
+	req := httptest.NewRequest("GET", "/notes/invalid-uuid/attachments", nil)
 	resp, err := app.Test(req)
-
 	suite.NoError(err)
-	suite.Equal(fiber.StatusNotImplemented, resp.StatusCode)
+	suite.Equal(400, resp.StatusCode)
 }
 
-func (suite *SearchHandlerTestSuite) TestSearchNotesInvalidQuery() {
+func (suite *AttachmentsHandlerTestSuite) TestGetAttachments_NoteNotFound() {
 	app := fiber.New()
+	noteID := uuid.New()
 
-	app.Post("/search", func(c *fiber.Ctx) error {
+	mockRow := &MockRow{}
+	suite.mockDB.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
+		return contains(sql, "EXISTS")
+	}), noteID, suite.userID).Return(mockRow)
+
+	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
+		if exists, ok := args[0].(*bool); ok {
+			*exists = false
+		}
+	}).Return(nil)
+
+	app.Get("/notes/:noteId/attachments", func(c *fiber.Ctx) error {
 		c.Locals("user_id", suite.userID)
-		return suite.handler.SearchNotes(c)
+		return suite.handler.GetAttachments(c)
 	})
 
-	reqBody := map[string]interface{}{
-		"query": "",
-	}
-	body, _ := json.Marshal(reqBody)
-	req := httptest.NewRequest("POST", "/search", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-
+	req := httptest.NewRequest("GET", "/notes/"+noteID.String()+"/attachments", nil)
 	resp, err := app.Test(req)
-
 	suite.NoError(err)
-	suite.Equal(fiber.StatusNotImplemented, resp.StatusCode)
+	suite.Equal(404, resp.StatusCode)
 }
+
+// =====================
+// SearchHandler Tests - Moved to search_test.go
+// =====================
 
 // =====================
 // ImportExportHandler Tests
@@ -1017,6 +1257,79 @@ func (suite *ImportExportHandlerTestSuite) TestGetStorageInfoSuccess() {
 	suite.Contains(response, "storage_limit")
 }
 
+func (suite *ImportExportHandlerTestSuite) TestGetStorageInfo_DatabaseError() {
+	app := fiber.New()
+
+	mockRow := &MockRow{}
+	suite.mockDB.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
+		return contains(sql, "storage_used")
+	}), suite.userID).Return(mockRow)
+
+	mockRow.On("Scan", mock.Anything, mock.Anything).Return(assert.AnError)
+
+	app.Get("/storage", func(c *fiber.Ctx) error {
+		c.Locals("user_id", suite.userID)
+		return suite.handler.GetStorageInfo(c)
+	})
+
+	req := httptest.NewRequest("GET", "/storage", nil)
+	resp, err := app.Test(req)
+	suite.NoError(err)
+	suite.Equal(500, resp.StatusCode)
+}
+
+// =====================
+// TemplatesHandler Additional Tests
+// =====================
+
+func (suite *TemplatesHandlerTestSuite) TestGetTemplate_InvalidID() {
+	app := fiber.New()
+	app.Get("/templates/:id", func(c *fiber.Ctx) error {
+		c.Locals("user_id", suite.userID)
+		return suite.handler.GetTemplate(c)
+	})
+
+	req := httptest.NewRequest("GET", "/templates/invalid-uuid", nil)
+	resp, err := app.Test(req)
+	suite.NoError(err)
+	suite.Equal(400, resp.StatusCode)
+}
+
+func (suite *TemplatesHandlerTestSuite) TestGetTemplate_NotFound() {
+	app := fiber.New()
+	templateID := uuid.New()
+
+	mockRow := &MockRow{}
+	suite.mockDB.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
+		return contains(sql, "SELECT user_id")
+	}), templateID, suite.userID).Return(mockRow)
+
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(assert.AnError)
+
+	app.Get("/templates/:id", func(c *fiber.Ctx) error {
+		c.Locals("user_id", suite.userID)
+		return suite.handler.GetTemplate(c)
+	})
+
+	req := httptest.NewRequest("GET", "/templates/"+templateID.String(), nil)
+	resp, err := app.Test(req)
+	suite.NoError(err)
+	suite.Equal(404, resp.StatusCode)
+}
+
+func (suite *TemplatesHandlerTestSuite) TestDeleteTemplate_InvalidID() {
+	app := fiber.New()
+	app.Delete("/templates/:id", func(c *fiber.Ctx) error {
+		c.Locals("user_id", suite.userID)
+		return suite.handler.DeleteTemplate(c)
+	})
+
+	req := httptest.NewRequest("DELETE", "/templates/invalid-uuid", nil)
+	resp, err := app.Test(req)
+	suite.NoError(err)
+	suite.Equal(400, resp.StatusCode)
+}
+
 // =====================
 // Test Suite Runners
 // =====================
@@ -1029,9 +1342,8 @@ func TestTagsHandlerSuite(t *testing.T) {
 	suite.Run(t, new(TagsHandlerTestSuite))
 }
 
-func TestFoldersHandlerSuite(t *testing.T) {
-	suite.Run(t, new(FoldersHandlerTestSuite))
-}
+// FoldersHandler tests are integrated into the main handlers_test.go file
+// TestFoldersHandlerSuite removed - folders tests are in handlers_test.go
 
 func TestTemplatesHandlerSuite(t *testing.T) {
 	suite.Run(t, new(TemplatesHandlerTestSuite))

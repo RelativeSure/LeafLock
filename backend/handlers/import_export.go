@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -221,12 +222,14 @@ func (h *ImportExportHandler) ImportNote(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt content"})
 	}
 
+	contentHash := sha256.Sum256([]byte(content))
+
 	// Insert note
 	noteID := uuid.New()
 	_, err = h.db.Exec(ctx, `
-		INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted)
-		VALUES ($1, $2, $3, $4)`,
-		noteID, workspaceID, titleEncrypted, contentEncrypted)
+		INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted, content_hash, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6)`,
+		noteID, workspaceID, titleEncrypted, contentEncrypted, contentHash[:], userID)
 
 	if err != nil {
 		utils.LogRequestError(c, "ImportNote: failed to create note in database", err, "note_id", noteID)
@@ -420,11 +423,13 @@ func (h *ImportExportHandler) BulkImport(c *fiber.Ctx) error {
 			continue
 		}
 
+		contentHash := sha256.Sum256([]byte(content))
+
 		noteID := uuid.New()
 		_, err = h.db.Exec(ctx, `
-			INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted)
-			VALUES ($1, $2, $3, $4)`,
-			noteID, workspaceID, titleEncrypted, contentEncrypted)
+			INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted, content_hash, created_by)
+			VALUES ($1, $2, $3, $4, $5, $6)`,
+			noteID, workspaceID, titleEncrypted, contentEncrypted, contentHash[:], userID)
 
 		if err != nil {
 			failed = append(failed, map[string]interface{}{

@@ -11,10 +11,10 @@ import (
 	"time"
 
 	appcrypto "leaflock/crypto"
+	"leaflock/database"
 	"leaflock/utils"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/argon2"
 )
 
@@ -34,12 +34,12 @@ const (
 
 // PasswordManager handles password operations
 type PasswordManager struct {
-	db     *pgxpool.Pool
+	db     database.Database
 	crypto *appcrypto.CryptoService
 }
 
 // NewPasswordManager creates a new password manager
-func NewPasswordManager(db *pgxpool.Pool, crypto *appcrypto.CryptoService) *PasswordManager {
+func NewPasswordManager(db database.Database, crypto *appcrypto.CryptoService) *PasswordManager {
 	return &PasswordManager{
 		db:     db,
 		crypto: crypto,

@@ -50,11 +50,14 @@ export interface Folder {
 export interface Template {
   id: string
   name: string
-  content: string
+  content?: string
+  description?: string
   tags: string[]
+  icon?: string | null
   isPublic: boolean
-  userId: string
+  userId?: string | null
   createdAt: string
+  updatedAt?: string
   usageCount: number
 }
 

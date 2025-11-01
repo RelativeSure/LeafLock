@@ -4,7 +4,8 @@ import { apiClient } from '../services/api/secureApi'
 
 interface TemplatesState {
   templates: Template[]
-  publicTemplates: Template[]
+  starterTemplates: Template[]
+  communityTemplates: Template[]
   isLoading: boolean
   createTemplate: (template: Partial<Template>) => Promise<Template>
   updateTemplate: (id: string, updates: Partial<Template>) => Promise<void>
@@ -17,7 +18,8 @@ interface TemplatesState {
 
 export const useTemplatesStore = create<TemplatesState>((set, get) => ({
   templates: [],
-  publicTemplates: [],
+  starterTemplates: [],
+  communityTemplates: [],
   isLoading: false,
 
   loadTemplates: async () => {
@@ -29,11 +31,20 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
     set({ isLoading: true })
     try {
       const templatesData = await apiClient.getTemplates()
-      // Filter templates by user and public status
-      const userTemplates = templatesData.filter((t) => t.userId === user.id)
-      const publicTemplatesData = templatesData.filter((t) => t.isPublic)
+      const isStarterTemplate = (template: Template) =>
+        (template.tags || []).map((tag) => tag.toLowerCase()).includes('system')
 
-      set({ templates: userTemplates, publicTemplates: publicTemplatesData })
+      const userTemplates = templatesData.filter((t) => t.userId === user.id)
+      const starterTemplates = templatesData.filter((t) => isStarterTemplate(t))
+      const communityTemplates = templatesData.filter(
+        (t) => t.isPublic && !isStarterTemplate(t) && t.userId !== user.id
+      )
+
+      set({
+        templates: userTemplates,
+        starterTemplates,
+        communityTemplates,
+      })
     } catch (error) {
       console.error('Failed to load templates:', error)
     } finally {
@@ -45,26 +56,9 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
     const storedUser = localStorage.getItem('user')
     if (!storedUser) throw new Error('No user logged in')
 
-    const user = JSON.parse(storedUser)
-
     try {
-      const newTemplate = await apiClient.createTemplate({
-        ...template,
-        userId: user.id,
-      })
-
-      set((state) => {
-        const updatedTemplates = [newTemplate, ...state.templates]
-        const updatedPublicTemplates = newTemplate.isPublic
-          ? [newTemplate, ...state.publicTemplates]
-          : state.publicTemplates
-
-        return {
-          templates: updatedTemplates,
-          publicTemplates: updatedPublicTemplates,
-        }
-      })
-
+      const newTemplate = await apiClient.createTemplate(template)
+      await get().loadTemplates()
       return newTemplate
     } catch (error) {
       console.error('Failed to create template:', error)
@@ -74,27 +68,50 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
 
   updateTemplate: async (id: string, updates: Partial<Template>) => {
     try {
-      const updatedTemplate = await apiClient.updateTemplate(id, updates)
+      const state = get()
+      const existingTemplate =
+        state.templates.find((template) => template.id === id) ||
+        state.starterTemplates.find((template) => template.id === id) ||
+        state.communityTemplates.find((template) => template.id === id)
 
-      set((state) => {
-        const updatedTemplates = state.templates.map((template) =>
-          template.id === id ? updatedTemplate : template
-        )
+      let baseTemplate = existingTemplate
 
-        let updatedPublicTemplates = state.publicTemplates
-        if (updatedTemplate.isPublic) {
-          updatedPublicTemplates = state.publicTemplates.map((template) =>
-            template.id === id ? updatedTemplate : template
-          )
-        } else {
-          updatedPublicTemplates = state.publicTemplates.filter((template) => template.id !== id)
+      if (!baseTemplate || !baseTemplate.content) {
+        try {
+          baseTemplate = await apiClient.getTemplate(id)
+        } catch (error) {
+          console.error('Failed to fetch template before update:', error)
         }
+      }
 
-        return {
-          templates: updatedTemplates,
-          publicTemplates: updatedPublicTemplates,
-        }
-      })
+      if (!baseTemplate) {
+        throw new Error('Template not found')
+      }
+
+      const mergedName = updates.name ?? baseTemplate.name
+      const mergedContent = updates.content ?? baseTemplate.content
+
+      if (!mergedName) {
+        throw new Error('Template name is required for update')
+      }
+
+      if (mergedContent === undefined) {
+        throw new Error('Template content unavailable for update')
+      }
+
+      const payload: Partial<Template> = {
+        ...baseTemplate,
+        ...updates,
+        name: mergedName,
+        content: mergedContent,
+        tags: updates.tags ?? baseTemplate.tags ?? [],
+        description: updates.description ?? baseTemplate.description ?? '',
+        icon: updates.icon ?? baseTemplate.icon ?? undefined,
+        isPublic: updates.isPublic ?? baseTemplate.isPublic ?? false,
+      }
+
+      await apiClient.updateTemplate(id, payload)
+      await get().loadTemplates()
     } catch (error) {
       console.error('Failed to update template:', error)
       throw error
@@ -106,7 +123,8 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
       await apiClient.deleteTemplate(id)
       set((state) => ({
         templates: state.templates.filter((template) => template.id !== id),
-        publicTemplates: state.publicTemplates.filter((template) => template.id !== id),
+        starterTemplates: state.starterTemplates.filter((template) => template.id !== id),
+        communityTemplates: state.communityTemplates.filter((template) => template.id !== id),
       }))
     } catch (error) {
       console.error('Failed to delete template:', error)
@@ -137,13 +155,15 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
   },
 
   searchTemplates: (query: string) => {
-    const { templates, publicTemplates } = get()
+    const { templates, starterTemplates, communityTemplates } = get()
     const lowerQuery = query.toLowerCase()
-    const allTemplates = [...templates, ...publicTemplates]
+    const allTemplates = [...templates, ...starterTemplates, ...communityTemplates]
     return allTemplates.filter(
       (template) =>
         template.name.toLowerCase().includes(lowerQuery) ||
-        template.content.toLowerCase().includes(lowerQuery)
+        (template.description || '').toLowerCase().includes(lowerQuery) ||
+        (template.content || '').toLowerCase().includes(lowerQuery) ||
+        (template.tags || []).some((tag) => tag.toLowerCase().includes(lowerQuery))
     )
   },
 }))

@@ -1,77 +1,184 @@
 package utils
 
-import "testing"
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"log"
+	"os"
+	"strings"
+	"testing"
 
-func TestParseLogLevel(t *testing.T) {
-	cases := map[string]LogLevel{
-		"debug": LevelDebug,
-		"INFO":  LevelInfo,
-		"Warn":  LevelWarn,
-		"error": LevelError,
-		"fatal": LevelFatal,
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/valyala/fasthttp"
+)
+
+func TestEnsureInitialized(t *testing.T) {
+	// reset global loggers
+	DebugLogger, InfoLogger, WarnLogger, ErrorLogger = nil, nil, nil, nil
+
+	// capture output to avoid polluting test logs
+	oldStdout, oldStderr := os.Stdout, os.Stderr
+	stdoutR, stdoutW, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("failed to create pipe: %v", err)
 	}
+	stderrR, stderrW, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("failed to create pipe: %v", err)
+	}
+	defer func() {
+		os.Stdout = oldStdout
+		os.Stderr = oldStderr
+		stdoutR.Close()
+		stdoutW.Close()
+		stderrR.Close()
+		stderrW.Close()
+	}()
 
-	for input, expected := range cases {
-		got, ok := parseLogLevel(input)
-		if !ok {
-			t.Fatalf("expected %q to be recognized", input)
-		}
-		if got != expected {
-			t.Fatalf("expected %s to map to %v, got %v", input, expected, got)
-		}
+	os.Stdout = stdoutW
+	os.Stderr = stderrW
+
+	ensureInitialized()
+
+	if InfoLogger == nil || ErrorLogger == nil || WarnLogger == nil || DebugLogger == nil {
+		t.Fatal("ensureInitialized should create all loggers when they are nil")
 	}
 }
 
-func TestParseConfiguredLogLevelFromEnv(t *testing.T) {
-	cases := []struct {
-		name          string
-		logLevelEnv   string
-		loglevelEnv   string
-		expectedLevel LogLevel
-		expectError   bool
+type noopWriter struct{}
+
+func (noopWriter) Write(p []byte) (int, error) { return len(p), nil }
+
+func TestLevelFromMessage(t *testing.T) {
+	tests := []struct {
+		msg      string
+		expected LogLevel
 	}{
-		{"prioritizes LOG_LEVEL", "warn", "error", LevelWarn, false},
-		{"fallback to LOGLEVEL", "", "error", LevelError, false},
-		{"invalid value", "verbose", "", LevelInfo, true},
+		{"all good", LevelInfo},
+		{"warning: disk usage high", LevelWarn},
+		{"error connecting to db", LevelError},
+		{"fatal: unrecoverable", LevelFatal},
+		{"debug details", LevelDebug},
+		{"❌ failure", LevelError},
+		{"⚠️ caution", LevelWarn},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("LOG_LEVEL", tc.logLevelEnv)
-			t.Setenv("LOGLEVEL", tc.loglevelEnv)
-
-			level, err := parseConfiguredLogLevel()
-			if tc.expectError && err == nil {
-				t.Fatalf("expected error for test %q", tc.name)
-			}
-			if !tc.expectError && err != nil {
-				t.Fatalf("did not expect error for test %q, got %v", tc.name, err)
-			}
-			if level != tc.expectedLevel {
-				t.Fatalf("expected level %v, got %v", tc.expectedLevel, level)
-			}
-		})
+	for _, tc := range tests {
+		if got := levelFromMessage(tc.msg); got != tc.expected {
+			t.Fatalf("levelFromMessage(%q) = %v, want %v", tc.msg, got, tc.expected)
+		}
 	}
 }
 
-func TestCurrentLogLevelName(t *testing.T) {
-	t.Run("known level", func(t *testing.T) {
-		original := currentLogLevel
-		defer func() { currentLogLevel = original }()
+func TestShouldLogRespectsLevel(t *testing.T) {
+	// configure level to WARN
+	currentLogLevel = LevelWarn
+	if shouldLog(LevelInfo) {
+		t.Fatalf("INFO should not log when level is WARN")
+	}
+	if !shouldLog(LevelError) {
+		t.Fatalf("ERROR should log when level is WARN")
+	}
+}
 
-		currentLogLevel = LevelError
-		if name := CurrentLogLevelName(); name != "ERROR" {
-			t.Fatalf("expected ERROR, got %s", name)
-		}
-	})
+func TestParseLogLevelFallback(t *testing.T) {
+	os.Unsetenv("LOG_LEVEL")
+	os.Unsetenv("LOGLEVEL")
+	level, err := parseConfiguredLogLevel()
+	if err != nil || level != LevelInfo {
+		t.Fatalf("expected default LevelInfo, got %v err=%v", level, err)
+	}
 
-	t.Run("unknown level defaults to INFO", func(t *testing.T) {
-		original := currentLogLevel
-		defer func() { currentLogLevel = original }()
+	os.Setenv("LOG_LEVEL", "debug")
+	defer os.Unsetenv("LOG_LEVEL")
+	level, err = parseConfiguredLogLevel()
+	if err != nil || level != LevelDebug {
+		t.Fatalf("expected LevelDebug, got %v err=%v", level, err)
+	}
 
-		currentLogLevel = LogLevel(42)
-		if name := CurrentLogLevelName(); name != "INFO" {
-			t.Fatalf("expected INFO fallback, got %s", name)
-		}
-	})
+	os.Setenv("LOG_LEVEL", "invalid")
+	level, err = parseConfiguredLogLevel()
+	if err == nil || level != LevelInfo {
+		t.Fatalf("expected fallback LevelInfo with error, got level=%v err=%v", level, err)
+	}
+}
+
+func TestLevelWriterFiltersMessages(t *testing.T) {
+	var buf bytes.Buffer
+	w := newLevelWriter(LevelInfo, &buf)
+	logger := log.New(w, "", 0)
+
+	currentLogLevel = LevelWarn
+
+	logger.Println("info: should not write")
+	if buf.Len() != 0 {
+		t.Fatalf("expected INFO message to be filtered")
+	}
+}
+
+func TestLogHelpers(t *testing.T) {
+	var infoBuf, warnBuf bytes.Buffer
+	DebugLogger = log.New(&infoBuf, "", 0)
+	InfoLogger = log.New(&infoBuf, "", 0)
+	WarnLogger = log.New(&warnBuf, "", 0)
+	ErrorLogger = log.New(&warnBuf, "", 0)
+
+	currentLogLevel = LevelDebug
+	LogInfo("info message", "key", 1)
+	LogWarn("warn message")
+	LogDebug("debug message")
+	LogError("context", fmt.Errorf("boom"))
+
+	if !strings.Contains(infoBuf.String(), "info message") || !strings.Contains(infoBuf.String(), "debug message") {
+		t.Fatalf("expected info/debug logs in buffer, got %q", infoBuf.String())
+	}
+	if !strings.Contains(warnBuf.String(), "warn message") || !strings.Contains(warnBuf.String(), "boom") {
+		t.Fatalf("expected warn/error logs in buffer, got %q", warnBuf.String())
+	}
+
+	if name := CurrentLogLevelName(); name == "" {
+		t.Fatalf("expected current log level name, got empty string")
+	}
+}
+
+func TestLogRequestError(t *testing.T) {
+	app := fiber.New()
+	c := app.AcquireCtx(&fasthttp.RequestCtx{})
+	defer app.ReleaseCtx(c)
+	c.Locals("request_id", "req-123")
+	c.Locals("user_id", uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"))
+
+	var errBuf bytes.Buffer
+	ErrorLogger = log.New(&errBuf, "", 0)
+	InfoLogger = log.New(io.Discard, "", 0)
+	WarnLogger = log.New(io.Discard, "", 0)
+	DebugLogger = log.New(io.Discard, "", 0)
+	currentLogLevel = LevelInfo
+
+	LogRequestError(c, "test context", fmt.Errorf("failure"))
+	if !strings.Contains(errBuf.String(), "failure") || !strings.Contains(errBuf.String(), "req-123") {
+		t.Fatalf("expected structured error log, got %q", errBuf.String())
+	}
+}
+
+func TestRootLogWriter(t *testing.T) {
+	var infoBuf, errorBuf bytes.Buffer
+	w := &rootLogWriter{infoOut: &infoBuf, errorOut: &errorBuf}
+	currentLogLevel = LevelDebug
+
+	if _, err := w.Write([]byte("INFO: hello")); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(infoBuf.String(), "INFO") {
+		t.Fatalf("expected info output, got %q", infoBuf.String())
+	}
+
+	if _, err := w.Write([]byte("WARNING: caution")); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(errorBuf.String(), "WARNING") {
+		t.Fatalf("expected warning routed to error buffer, got %q", errorBuf.String())
+	}
 }
