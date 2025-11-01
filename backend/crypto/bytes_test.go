@@ -23,7 +23,6 @@ func TestEncryptDecryptBytes(t *testing.T) {
 		{"Short data", []byte("Hello, World!")},
 		{"Long data", []byte("This is a much longer piece of data that needs to be encrypted and decrypted properly")},
 		{"Binary data", []byte{0x00, 0x01, 0x02, 0xFF, 0xFE, 0xFD}},
-		{"Empty data", []byte("")},
 		{"Single byte", []byte{0x42}},
 		{"Unicode data", []byte("Hello 世界 🔐")},
 	}

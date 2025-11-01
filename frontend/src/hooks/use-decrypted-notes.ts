@@ -39,8 +39,10 @@ export function useDecryptedNotes(notes: Note[]) {
 
       for (const note of notes) {
         const updatedTimestamp = (() => {
+          if (!note.updatedAt) return 0
           try {
-            return note.updatedAt ? new Date(note.updatedAt).getTime() : 0
+            const timestamp = new Date(note.updatedAt).getTime()
+            return isNaN(timestamp) ? 0 : timestamp
           } catch {
             return 0
           }
