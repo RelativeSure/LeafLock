@@ -1250,3 +1250,4 @@ func TestNoteLinksHandler_DeleteValidIDs(t *testing.T) {
 	// May return 404 if link doesn't exist, but handler is exercised
 	assert.NotEqual(t, 0, resp.StatusCode)
 }
+
