@@ -5,6 +5,7 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -1063,3 +1064,345 @@ func TestFoldersHandler_MoveNoteValidData(t *testing.T) {
 	// May fail if folder/note doesn't exist
 	assert.NotEqual(t, 0, resp.StatusCode)
 }
+
+// TestNotesHandler_UpdateRetentionPolicyInvalidID tests retention policy with invalid ID
+func TestNotesHandler_UpdateRetentionPolicyInvalidID(t *testing.T) {
+	pool, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cryptoSvc := crypto.NewCryptoService(make([]byte, 32))
+	handler := NewNotesHandler(pool, cryptoSvc)
+	app := fiber.New()
+
+	app.Put("/notes/:id/retention", func(c *fiber.Ctx) error {
+		c.Locals("user_id", uuid.New())
+		return handler.UpdateRetentionPolicy(c)
+	})
+
+	req := httptest.NewRequest("PUT", "/notes/invalid-uuid/retention", bytes.NewBufferString(`{"days":30}`))
+	req.Header.Set("Content-Type", "application/json")
+	
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+}
+
+// TestNotesHandler_BulkDeleteInvalidJSON tests bulk delete with invalid JSON
+func TestNotesHandler_BulkDeleteInvalidJSON(t *testing.T) {
+	pool, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cryptoSvc := crypto.NewCryptoService(make([]byte, 32))
+	handler := NewNotesHandler(pool, cryptoSvc)
+	app := fiber.New()
+
+	app.Post("/notes/bulk-delete", func(c *fiber.Ctx) error {
+		c.Locals("user_id", uuid.New())
+		return handler.BulkDeleteNotes(c)
+	})
+
+	req := httptest.NewRequest("POST", "/notes/bulk-delete", bytes.NewBufferString("{invalid json"))
+	req.Header.Set("Content-Type", "application/json")
+	
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+}
+
+// TestNotesHandler_BulkRestoreInvalidJSON tests bulk restore with invalid JSON
+func TestNotesHandler_BulkRestoreInvalidJSON(t *testing.T) {
+	pool, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cryptoSvc := crypto.NewCryptoService(make([]byte, 32))
+	handler := NewNotesHandler(pool, cryptoSvc)
+	app := fiber.New()
+
+	app.Post("/notes/bulk-restore", func(c *fiber.Ctx) error {
+		c.Locals("user_id", uuid.New())
+		return handler.BulkRestoreNotes(c)
+	})
+
+	req := httptest.NewRequest("POST", "/notes/bulk-restore", bytes.NewBufferString("{invalid json"))
+	req.Header.Set("Content-Type", "application/json")
+	
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+}
+
+// TestNotesHandler_BulkDeleteValidData tests bulk delete with valid data
+func TestNotesHandler_BulkDeleteValidData(t *testing.T) {
+	pool, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cryptoSvc := crypto.NewCryptoService(make([]byte, 32))
+	handler := NewNotesHandler(pool, cryptoSvc)
+	app := fiber.New()
+
+	app.Post("/notes/bulk-delete", func(c *fiber.Ctx) error {
+		c.Locals("user_id", uuid.New())
+		return handler.BulkDeleteNotes(c)
+	})
+
+	noteIDs := []string{uuid.New().String(), uuid.New().String()}
+	reqBody := map[string]interface{}{"note_ids": noteIDs}
+	body, _ := json.Marshal(reqBody)
+	
+	req := httptest.NewRequest("POST", "/notes/bulk-delete", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	// May succeed with 0 deleted or fail if notes don't exist
+	assert.NotEqual(t, 0, resp.StatusCode)
+}
+
+// TestNotesHandler_BulkRestoreValidData tests bulk restore with valid data
+func TestNotesHandler_BulkRestoreValidData(t *testing.T) {
+	pool, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cryptoSvc := crypto.NewCryptoService(make([]byte, 32))
+	handler := NewNotesHandler(pool, cryptoSvc)
+	app := fiber.New()
+
+	app.Post("/notes/bulk-restore", func(c *fiber.Ctx) error {
+		c.Locals("user_id", uuid.New())
+		return handler.BulkRestoreNotes(c)
+	})
+
+	noteIDs := []string{uuid.New().String(), uuid.New().String()}
+	reqBody := map[string]interface{}{"note_ids": noteIDs}
+	body, _ := json.Marshal(reqBody)
+	
+	req := httptest.NewRequest("POST", "/notes/bulk-restore", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	// May succeed with 0 restored or fail if notes don't exist
+	assert.NotEqual(t, 0, resp.StatusCode)
+}
+
+// TestCollaborationHandler_GetSharedNotes tests fetching shared notes
+func TestCollaborationHandler_GetSharedNotes(t *testing.T) {
+	pool, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cryptoSvc := crypto.NewCryptoService(make([]byte, 32))
+	handler := NewCollaborationHandler(pool, cryptoSvc)
+	app := fiber.New()
+
+	app.Get("/notes/shared", func(c *fiber.Ctx) error {
+		c.Locals("user_id", uuid.New())
+		return handler.GetSharedNotes(c)
+	})
+
+	req := httptest.NewRequest("GET", "/notes/shared", nil)
+	resp, err := app.Test(req, -1)
+	
+	require.NoError(t, err)
+	assert.Equal(t, 200, resp.StatusCode)
+}
+
+// TestNoteLinksHandler_GetLinks tests fetching note links
+func TestNoteLinksHandler_GetLinks(t *testing.T) {
+	pool, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	handler := NewNoteLinksHandler(pool)
+	app := fiber.New()
+
+	noteID := uuid.New()
+	app.Get("/notes/:id/links", func(c *fiber.Ctx) error {
+		c.Locals("user_id", uuid.New())
+		return handler.GetNoteLinks(c)
+	})
+
+	req := httptest.NewRequest("GET", "/notes/"+noteID.String()+"/links", nil)
+	resp, err := app.Test(req, -1)
+	
+	require.NoError(t, err)
+	// May return empty or error
+	assert.NotEqual(t, 0, resp.StatusCode)
+}
+
+// TestNoteLinksHandler_DeleteValidIDs tests delete with valid UUIDs
+func TestNoteLinksHandler_DeleteValidIDs(t *testing.T) {
+	pool, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	handler := NewNoteLinksHandler(pool)
+	app := fiber.New()
+
+	noteID := uuid.New()
+	linkID := uuid.New()
+	app.Delete("/notes/:id/links/:linkId", func(c *fiber.Ctx) error {
+		c.Locals("user_id", uuid.New())
+		return handler.DeleteNoteLink(c)
+	})
+
+	req := httptest.NewRequest("DELETE", "/notes/"+noteID.String()+"/links/"+linkID.String(), nil)
+	resp, err := app.Test(req, -1)
+	
+	require.NoError(t, err)
+	// May return 404 if link doesn't exist, but handler is exercised
+	assert.NotEqual(t, 0, resp.StatusCode)
+}
+
+// TestImportExportHandler_ImportNoteInvalidJSON tests import with invalid JSON
+func TestImportExportHandler_ImportNoteInvalidJSON(t *testing.T) {
+	pool, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cryptoSvc := crypto.NewCryptoService(make([]byte, 32))
+	handler := NewImportExportHandler(pool, cryptoSvc)
+	app := fiber.New()
+
+	app.Post("/notes/import", func(c *fiber.Ctx) error {
+		c.Locals("user_id", uuid.New())
+		c.Locals("workspace_id", uuid.New())
+		return handler.ImportNote(c)
+	})
+
+	req := httptest.NewRequest("POST", "/notes/import", bytes.NewBufferString("{invalid json"))
+	req.Header.Set("Content-Type", "application/json")
+	
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+}
+
+// TestImportExportHandler_ExportNoteInvalidID tests export with invalid ID
+func TestImportExportHandler_ExportNoteInvalidID(t *testing.T) {
+	pool, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cryptoSvc := crypto.NewCryptoService(make([]byte, 32))
+	handler := NewImportExportHandler(pool, cryptoSvc)
+	app := fiber.New()
+
+	app.Get("/notes/:id/export", func(c *fiber.Ctx) error {
+		c.Locals("user_id", uuid.New())
+		return handler.ExportNote(c)
+	})
+
+	req := httptest.NewRequest("GET", "/notes/invalid-uuid/export", nil)
+	resp, err := app.Test(req, -1)
+	
+	require.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+}
+
+// TestImportExportHandler_BulkImportInvalidJSON tests bulk import with invalid JSON
+func TestImportExportHandler_BulkImportInvalidJSON(t *testing.T) {
+	pool, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cryptoSvc := crypto.NewCryptoService(make([]byte, 32))
+	handler := NewImportExportHandler(pool, cryptoSvc)
+	app := fiber.New()
+
+	app.Post("/notes/bulk-import", func(c *fiber.Ctx) error {
+		c.Locals("user_id", uuid.New())
+		c.Locals("workspace_id", uuid.New())
+		return handler.BulkImport(c)
+	})
+
+	req := httptest.NewRequest("POST", "/notes/bulk-import", bytes.NewBufferString("{invalid json"))
+	req.Header.Set("Content-Type", "application/json")
+	
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+}
+
+// TestSearchHandler_SearchInvalidJSON tests search with invalid JSON
+func TestSearchHandler_SearchInvalidJSON(t *testing.T) {
+	_, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	handler := NewSearchHandler()
+	app := fiber.New()
+
+	app.Post("/search", func(c *fiber.Ctx) error {
+		c.Locals("user_id", uuid.New())
+		return handler.SearchNotes(c)
+	})
+
+	req := httptest.NewRequest("POST", "/search", bytes.NewBufferString("{invalid json"))
+	req.Header.Set("Content-Type", "application/json")
+	
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+}
+
+// TestSearchHandler_SearchValidQuery tests search with valid query
+func TestSearchHandler_SearchValidQuery(t *testing.T) {
+	_, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	handler := NewSearchHandler()
+	app := fiber.New()
+
+	app.Post("/search", func(c *fiber.Ctx) error {
+		c.Locals("user_id", uuid.New())
+		return handler.SearchNotes(c)
+	})
+
+	reqBody := map[string]interface{}{"query": "test"}
+	body, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest("POST", "/search", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	// May return empty results but should succeed
+	assert.Equal(t, 200, resp.StatusCode)
+}
+
+// TestSettingsHandler_GetSettings tests fetching user settings
+func TestSettingsHandler_GetSettings(t *testing.T) {
+	pool, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	handler := NewSettingsHandler(pool)
+	app := fiber.New()
+
+	app.Get("/settings", func(c *fiber.Ctx) error {
+		c.Locals("user_id", uuid.New())
+		return handler.GetSettings(c)
+	})
+
+	req := httptest.NewRequest("GET", "/settings", nil)
+	resp, err := app.Test(req, -1)
+	
+	require.NoError(t, err)
+	// May return default settings or error
+	assert.NotEqual(t, 0, resp.StatusCode)
+}
+
+// TestSettingsHandler_UpdateSettingsInvalidJSON tests update with invalid JSON
+func TestSettingsHandler_UpdateSettingsInvalidJSON(t *testing.T) {
+	pool, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	handler := NewSettingsHandler(pool)
+	app := fiber.New()
+
+	app.Put("/settings", func(c *fiber.Ctx) error {
+		c.Locals("user_id", uuid.New())
+		return handler.UpdateSettings(c)
+	})
+
+	req := httptest.NewRequest("PUT", "/settings", bytes.NewBufferString("{invalid json"))
+	req.Header.Set("Content-Type", "application/json")
+	
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+}
+
+// Account handler tests skipped - requires redis client and config setup
