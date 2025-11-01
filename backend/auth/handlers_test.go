@@ -10,14 +10,11 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	appcrypto "leaflock/crypto"
@@ -269,9 +266,9 @@ func (suite *AuthHandlersTestSuite) TestLogin_Success() {
 	body, _ := json.Marshal(reqBody)
 
 	expectedResponse := &AuthResponse{
-		Token:  "mock-jwt-token",
-		UserID: uuid.New().String(),
-		Email:  "test@example.com",
+		Token:   "mock-jwt-token",
+		UserID:  uuid.New().String(),
+		IsAdmin: false,
 	}
 	suite.mockSvc.On("Login", mock.Anything, "test@example.com", "CorrectP@ssw0rd123!", "").
 		Return(expectedResponse, nil)
@@ -383,9 +380,9 @@ func (suite *AuthHandlersTestSuite) TestVerifyMFA_Success() {
 	body, _ := json.Marshal(reqBody)
 
 	expectedResponse := &AuthResponse{
-		Token:  "full-jwt-token",
-		UserID: uuid.New().String(),
-		Email:  "mfa@example.com",
+		Token:   "full-jwt-token",
+		UserID:  uuid.New().String(),
+		IsAdmin: false,
 	}
 	suite.mockSvc.On("VerifyMFA", mock.Anything, "half-authed-session-token", "123456").
 		Return(expectedResponse, nil)
