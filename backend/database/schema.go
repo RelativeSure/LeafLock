@@ -8,6 +8,33 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
+-- UUIDv7 function for time-ordered UUIDs (PostgreSQL 18+ native or custom implementation)
+CREATE OR REPLACE FUNCTION uuid_generate_v7()
+RETURNS UUID AS $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_uuidv7') THEN
+        -- Use native pg_uuidv7 if available
+        PERFORM uuid_generate_v7();
+    ELSE
+        -- Custom implementation for older PostgreSQL versions
+        DECLARE
+            unix_ts_ms BIGINT;
+            timestamp_bytes BYTEA;
+            random_bytes BYTEA;
+            combined BYTEA;
+        BEGIN
+            unix_ts_ms := EXTRACT(EPOCH FROM NOW()) * 1000;
+            timestamp_bytes := substring(int8send(unix_ts_ms::INT8) FROM 2 FOR 6);
+            random_bytes := gen_random_bytes(10);
+
+            -- Construct UUIDv7 format: timestamp (48 bits) + version (4 bits) + random (62 bits)
+            combined := timestamp_bytes || substring(random_bytes FROM 1);
+            return combined::UUID;
+        END;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Users table with encrypted fields
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -47,6 +74,18 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 
 -- Add theme preference column for user customization
 ALTER TABLE users ADD COLUMN IF NOT EXISTS theme_preference VARCHAR(20) DEFAULT 'system';
+
+-- Add comprehensive user settings columns
+ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_save BOOLEAN DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_save_interval INTEGER DEFAULT 30;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS default_view VARCHAR(10) DEFAULT 'list';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS notifications_enabled BOOLEAN DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_notifications BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS encryption_enabled BOOLEAN DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS language VARCHAR(10) DEFAULT 'en';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS default_note_behavior VARCHAR(20) DEFAULT 'last-seen';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_type VARCHAR(20) DEFAULT 'gravatar';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_custom_url TEXT;
 
 -- Password reset tokens table for secure password recovery
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -125,7 +164,7 @@ CREATE TABLE IF NOT EXISTS workspaces (
 
 -- Notes table with full encryption
 CREATE TABLE IF NOT EXISTS notes (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
     workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
     title_encrypted BYTEA NOT NULL, -- Encrypted title
     content_encrypted BYTEA NOT NULL, -- Encrypted content
@@ -414,6 +453,29 @@ CREATE INDEX IF NOT EXISTS idx_share_links_token ON share_links(token) WHERE is_
 CREATE INDEX IF NOT EXISTS idx_share_links_note ON share_links(note_id);
 CREATE INDEX IF NOT EXISTS idx_share_links_created_by ON share_links(created_by);
 CREATE INDEX IF NOT EXISTS idx_share_links_expires ON share_links(expires_at) WHERE expires_at IS NOT NULL AND is_active = true;
+
+-- Add retention_policy column to notes table for version management (default: 20 versions)
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS retention_policy INT DEFAULT 20;
+
+-- Add change_description column to note_versions for better version tracking
+ALTER TABLE note_versions ADD COLUMN IF NOT EXISTS change_description TEXT;
+
+-- Add index on note_versions for performance (latest versions first)
+CREATE INDEX IF NOT EXISTS idx_note_versions_created_at ON note_versions(note_id, created_at DESC);
+
+-- Note links table for internal note connections ([[note]] syntax)
+CREATE TABLE IF NOT EXISTS note_links (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    source_note_id UUID REFERENCES notes(id) ON DELETE CASCADE NOT NULL,
+    target_note_id UUID REFERENCES notes(id) ON DELETE CASCADE NOT NULL,
+    link_text TEXT, -- Display text for the link (e.g., "My Note Title")
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(source_note_id, target_note_id) -- Prevent duplicate links
+);
+
+-- Note links indexes for fast backlink lookups and graph queries
+CREATE INDEX IF NOT EXISTS idx_note_links_source ON note_links(source_note_id);
+CREATE INDEX IF NOT EXISTS idx_note_links_target ON note_links(target_note_id);
 
 -- Note: Cleanup jobs run automatically via background service every 24 hours
 `

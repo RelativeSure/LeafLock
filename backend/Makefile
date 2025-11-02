@@ -30,7 +30,7 @@ BINARY_UNIX=$(BINARY_NAME)_unix
 TEST_TIMEOUT=10m
 INTEGRATION_TEST_TAG=integration
 SECURITY_TEST_TAG=security
-COVERAGE_THRESHOLD=72
+COVERAGE_THRESHOLD=80
 
 # Database test parameters
 TEST_DB_URL=postgres://test:test@localhost:5433/test_notes?sslmode=disable # secretlint-disable-line

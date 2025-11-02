@@ -8,11 +8,12 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
+
+	"leaflock/database"
 )
 
 type AnnouncementsHandler struct {
-	db *pgxpool.Pool
+	db database.Database
 }
 
 type Announcement struct {
@@ -55,7 +56,7 @@ type UpdateAnnouncementRequest struct {
 	EndDate     *time.Time             `json:"end_date"`
 }
 
-func NewAnnouncementsHandler(db *pgxpool.Pool) *AnnouncementsHandler {
+func NewAnnouncementsHandler(db database.Database) *AnnouncementsHandler {
 	return &AnnouncementsHandler{db: db}
 }
 

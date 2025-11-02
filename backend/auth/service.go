@@ -4,30 +4,43 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
+	appcrypto "leaflock/crypto"
+	"leaflock/database"
+	"leaflock/utils"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
-	appcrypto "leaflock/crypto"
-	"leaflock/utils"
 )
 
 // Service coordinates all auth operations
 type Service struct {
-	db        *pgxpool.Pool
+	db        database.Database
 	crypto    *appcrypto.CryptoService
-	session   *SessionManager
+	session   sessionManager
 	password  *PasswordManager
 	mfa       *MFAManager
 	jwtSecret string
 }
 
+type sessionManager interface {
+	CreateSession(ctx context.Context, userID uuid.UUID, ipAddress, userAgent string, mfaVerified bool) (*Session, string, error)
+	CreateMFASession(ctx context.Context, userID uuid.UUID, email, ipAddress, userAgent string, mfaEnabled bool) (string, error)
+	GetMFASession(ctx context.Context, token string) (*MFASession, error)
+	DeleteMFASession(ctx context.Context, token string) error
+	DeleteSession(ctx context.Context, token string) error
+}
+
+const defaultEncryptionVersion = 1
+
 // NewService creates a new auth service
-func NewService(db *pgxpool.Pool, rdb *redis.Client, crypto *appcrypto.CryptoService, jwtSecret string) *Service {
+func NewService(db database.Database, rdb *redis.Client, crypto *appcrypto.CryptoService, jwtSecret string) *Service {
 	return &Service{
 		db:        db,
 		crypto:    crypto,
@@ -172,6 +185,12 @@ func (s *Service) Register(ctx context.Context, email, password string) (*AuthRe
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	// Log successful registration
+	s.auditLog(ctx, userID, "user_registered", map[string]interface{}{
+		"email":        email,
+		"workspace_id": workspaceID.String(),
+	})
+
 	// Create session and generate JWT
 	ipAddress := utils.GetClientIPFromContext(ctx)
 	userAgent := utils.GetUserAgentFromContext(ctx)
@@ -192,6 +211,13 @@ func (s *Service) Register(ctx context.Context, email, password string) (*AuthRe
 		WorkspaceID: workspaceID.String(),
 		IsAdmin:     false,
 		ExpiresAt:   session.ExpiresAt,
+		EncryptionSalt: func() string {
+			if len(salt) == 0 {
+				return ""
+			}
+			return base64.StdEncoding.EncodeToString(salt)
+		}(),
+		EncryptionVersion: defaultEncryptionVersion,
 	}, nil
 }
 
@@ -235,6 +261,13 @@ func (s *Service) Login(ctx context.Context, email, password, mfaCode string) (*
 	if !s.password.VerifyPassword(password, passwordHash, salt) {
 		// Increment failed attempts
 		s.incrementFailedAttempts(ctx, userID, failedAttempts)
+
+		// Log failed login attempt
+		s.auditLog(ctx, userID, "login_failed", map[string]interface{}{
+			"reason":   "invalid_password",
+			"attempts": failedAttempts + 1,
+		})
+
 		return nil, fmt.Errorf("invalid credentials")
 	}
 
@@ -274,15 +307,29 @@ func (s *Service) Login(ctx context.Context, email, password, mfaCode string) (*
 			return nil, fmt.Errorf("failed to create MFA session: %w", err)
 		}
 
+		saltEncoded := base64.StdEncoding.EncodeToString(salt)
 		return &AuthResponse{
-			MFARequired:  true,
-			SessionToken: sessionToken,
-			UserID:       userID.String(),
+			MFARequired:       true,
+			SessionToken:      sessionToken,
+			UserID:            userID.String(),
+			EncryptionSalt:    saltEncoded,
+			EncryptionVersion: defaultEncryptionVersion,
 		}, nil
 	}
 
 	// No MFA, create full session
-	return s.createAuthResponse(ctx, userID, isAdmin, false)
+	response, err := s.createAuthResponse(ctx, userID, isAdmin, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// Log successful login
+	s.auditLog(ctx, userID, "login_success", map[string]interface{}{
+		"mfa_required": false,
+		"is_admin":     isAdmin,
+	})
+
+	return response, nil
 }
 
 // VerifyMFA verifies an MFA code during login
@@ -327,7 +374,17 @@ func (s *Service) VerifyMFA(ctx context.Context, sessionToken, code string) (*Au
 	_ = s.session.DeleteMFASession(ctx, sessionToken)
 
 	// Create full session
-	return s.createAuthResponse(ctx, mfaSession.UserID, isAdmin, true)
+	response, err := s.createAuthResponse(ctx, mfaSession.UserID, isAdmin, true)
+	if err != nil {
+		return nil, err
+	}
+
+	// Log successful MFA verification
+	s.auditLog(ctx, mfaSession.UserID, "mfa_verified", map[string]interface{}{
+		"is_admin": isAdmin,
+	})
+
+	return response, nil
 }
 
 // Logout logs out a user
@@ -438,6 +495,12 @@ func (s *Service) createAuthResponse(ctx context.Context, userID uuid.UUID, isAd
 	// Store token in session for logout
 	_ = sessionToken // Session token is managed internally
 
+	var saltBytes []byte
+	if err := s.db.QueryRow(ctx, `SELECT salt FROM users WHERE id = $1`, userID).Scan(&saltBytes); err == nil {
+		response.EncryptionSalt = base64.StdEncoding.EncodeToString(saltBytes)
+		response.EncryptionVersion = defaultEncryptionVersion
+	}
+
 	return response, nil
 }
 
@@ -466,4 +529,187 @@ func (s *Service) resetFailedAttempts(ctx context.Context, userID uuid.UUID) {
 		WHERE id = $1
 	`
 	_, _ = s.db.Exec(ctx, query, userID)
+}
+
+// EnsureDefaultAdmin creates a default admin user if no users exist and admin creation is enabled
+func (s *Service) EnsureDefaultAdmin(ctx context.Context, enabled bool, email, password string) error {
+	if !enabled {
+		return nil // Admin creation disabled
+	}
+
+	// Check if any users exist
+	var userCount int
+	err := s.db.QueryRow(ctx, `SELECT COUNT(*) FROM users WHERE deleted_at IS NULL`).Scan(&userCount)
+	if err != nil {
+		return fmt.Errorf("failed to check existing users: %w", err)
+	}
+
+	if userCount > 0 {
+		return nil // Users already exist, skip admin creation
+	}
+
+	// Validate password strength
+	if err := s.password.ValidatePasswordStrength(password); err != nil {
+		return fmt.Errorf("admin password validation failed: %w", err)
+	}
+
+	// Generate salt
+	salt, err := s.password.GenerateSalt()
+	if err != nil {
+		return fmt.Errorf("failed to generate salt: %w", err)
+	}
+
+	// Hash password
+	passwordHash := s.password.HashPassword(password, salt)
+
+	// Generate master key (32 bytes)
+	masterKey := make([]byte, 32)
+	if _, err := rand.Read(masterKey); err != nil {
+		return fmt.Errorf("failed to generate master key: %w", err)
+	}
+
+	// Derive key from password for encrypting master key
+	derivedKey := s.password.DeriveKeyBytes(password, salt)
+	tempCrypto := appcrypto.NewCryptoService(derivedKey)
+	masterKeyEncrypted, err := tempCrypto.EncryptBytes(masterKey)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt master key: %w", err)
+	}
+
+	// Create email hashes
+	emailBytes := []byte(strings.ToLower(strings.TrimSpace(email)))
+	emailHash := sha256.Sum256(emailBytes)
+
+	// Encrypt email for privacy
+	emailEncrypted, err := s.crypto.EncryptBytes(emailBytes)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt email: %w", err)
+	}
+
+	// Create deterministic search hash for login
+	searchHash := sha256.Sum256(append(emailBytes, []byte("search-salt")...))
+
+	// Begin transaction
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	// Insert admin user
+	userID := uuid.New()
+	insertUserQuery := `
+		INSERT INTO users (
+			id, email_hash, email_encrypted, email_search_hash,
+			password_hash, salt, master_key_encrypted,
+			is_admin, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+		RETURNING id
+	`
+
+	err = tx.QueryRow(ctx, insertUserQuery,
+		userID, emailHash[:], emailEncrypted, searchHash[:],
+		passwordHash, salt, masterKeyEncrypted, true,
+	).Scan(&userID)
+	if err != nil {
+		return fmt.Errorf("failed to create admin user: %w", err)
+	}
+
+	// Create GDPR deletion key
+	deletionKey := make([]byte, 32)
+	if _, err := rand.Read(deletionKey); err != nil {
+		return fmt.Errorf("failed to generate deletion key: %w", err)
+	}
+
+	insertGDPRQuery := `
+		INSERT INTO gdpr_keys (email_hash, deletion_key)
+		VALUES ($1, $2)
+	`
+	_, err = tx.Exec(ctx, insertGDPRQuery, emailHash[:], deletionKey)
+	if err != nil {
+		return fmt.Errorf("failed to create GDPR key: %w", err)
+	}
+
+	// Create default workspace
+	workspaceID := uuid.New()
+	workspaceKey := make([]byte, 32)
+	if _, err := rand.Read(workspaceKey); err != nil {
+		return fmt.Errorf("failed to generate workspace key: %w", err)
+	}
+
+	// Encrypt workspace key with master key
+	workspaceCrypto := appcrypto.NewCryptoService(masterKey)
+	workspaceKeyEncrypted, err := workspaceCrypto.EncryptBytes(workspaceKey)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt workspace key: %w", err)
+	}
+
+	// Encrypt workspace name
+	workspaceName := []byte("Admin Workspace")
+	workspaceNameEncrypted, err := workspaceCrypto.EncryptBytes(workspaceName)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt workspace name: %w", err)
+	}
+
+	insertWorkspaceQuery := `
+		INSERT INTO workspaces (id, name_encrypted, owner_id, encryption_key_encrypted)
+		VALUES ($1, $2, $3, $4)
+	`
+	_, err = tx.Exec(ctx, insertWorkspaceQuery, workspaceID, workspaceNameEncrypted, userID, workspaceKeyEncrypted)
+	if err != nil {
+		return fmt.Errorf("failed to create workspace: %w", err)
+	}
+
+	// Assign both user and admin roles
+	assignRolesQuery := `
+		INSERT INTO user_roles (user_id, role_id)
+		SELECT $1, id FROM roles WHERE name IN ('user', 'admin')
+	`
+	_, err = tx.Exec(ctx, assignRolesQuery, userID)
+	if err != nil {
+		return fmt.Errorf("failed to assign roles: %w", err)
+	}
+
+	// Commit transaction
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// auditLog logs an audit event for security tracking
+func (s *Service) auditLog(ctx context.Context, userID uuid.UUID, action string, metadata map[string]interface{}) {
+	// Get client info from context
+	ipAddress := utils.GetClientIPFromContext(ctx)
+	userAgent := utils.GetUserAgentFromContext(ctx)
+
+	// Encrypt IP and User-Agent
+	ipEncrypted, err := s.crypto.EncryptBytes([]byte(ipAddress))
+	if err != nil {
+		return // Fail silently for audit logging
+	}
+
+	uaEncrypted, err := s.crypto.EncryptBytes([]byte(userAgent))
+	if err != nil {
+		return // Fail silently for audit logging
+	}
+
+	// Encrypt metadata if provided
+	var metadataEncrypted []byte
+	if metadata != nil {
+		metadataBytes, err := json.Marshal(metadata)
+		if err == nil {
+			metadataEncrypted, _ = s.crypto.EncryptBytes(metadataBytes)
+		}
+	}
+
+	// Insert audit log
+	query := `
+		INSERT INTO audit_log (user_id, action, resource_type, ip_address_encrypted, user_agent_encrypted, metadata_encrypted)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`
+	_, _ = s.db.Exec(ctx, query, userID, action, "auth", ipEncrypted, uaEncrypted, metadataEncrypted)
 }

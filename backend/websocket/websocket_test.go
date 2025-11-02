@@ -542,3 +542,44 @@ func BenchmarkBroadcastToNote(b *testing.B) {
 		hub.broadcastToNote(noteID, testMessage, userID)
 	}
 }
+
+func TestHubCloseIdempotent(t *testing.T) {
+	hub := NewHub()
+	// Closing multiple times should not panic or close already closed channels again
+	hub.Close()
+	hub.Close()
+}
+
+func TestBroadcastRemovesSlowConsumer(t *testing.T) {
+	hub := NewHub()
+	noteID := uuid.New()
+	userID := uuid.New()
+	slowConn := &Connection{
+		ID:     uuid.New().String(),
+		UserID: userID,
+		NoteID: noteID,
+		Send:   make(chan []byte),
+	}
+
+	hub.noteUsers[noteID] = map[uuid.UUID]*Connection{userID: slowConn}
+
+	msg := WSMessage{
+		Type:   "presence",
+		NoteID: noteID.String(),
+	}
+
+	hub.broadcastToNote(noteID, msg, uuid.Nil)
+
+	select {
+	case _, ok := <-slowConn.Send:
+		if ok {
+			t.Fatal("expected slow connection channel to be closed")
+		}
+	default:
+		t.Fatal("expected to observe closed channel")
+	}
+
+	if conns := hub.noteUsers[noteID]; len(conns) != 0 {
+		t.Fatalf("expected slow connection to be removed, remaining: %d", len(conns))
+	}
+}

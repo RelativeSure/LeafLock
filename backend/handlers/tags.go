@@ -257,11 +257,12 @@ func (h *TagsHandler) GetNotesByTag(c *fiber.Ctx) error {
 		}
 
 		notes = append(notes, fiber.Map{
-			"id":                id,
-			"title_encrypted":   base64.StdEncoding.EncodeToString(titleEnc),
-			"content_encrypted": base64.StdEncoding.EncodeToString(contentEnc),
-			"created_at":        createdAt,
-			"updated_at":        updatedAt,
+			"id":                 id,
+			"title_encrypted":    base64.StdEncoding.EncodeToString(titleEnc),
+			"content_encrypted":  base64.StdEncoding.EncodeToString(contentEnc),
+			"created_at":         createdAt,
+			"updated_at":         updatedAt,
+			"encryption_version": defaultEncryptionVersion,
 		})
 	}
 

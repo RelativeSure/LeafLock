@@ -83,59 +83,95 @@ Each endpoint includes:
 
 ## API Organization
 
+**Total Endpoints**: 38 documented endpoints across 6 main categories
+
 <Tabs>
-  <TabItem label="Authentication">
+  <TabItem label="Authentication (13 endpoints)">
     **Tag**: `Authentication`
 
+    **Public Endpoints** (No Auth Required):
     - `POST /auth/register` - Register new user
     - `POST /auth/login` - Authenticate user
+    - `GET /auth/registration` - Check registration status
+    - `POST /auth/mfa/verify` - Verify MFA code
+    - `POST /auth/password/reset-request` - Request password reset
+    - `GET /auth/password/reset-verify` - Verify reset token
+    - `POST /auth/password/reset-confirm` - Confirm password reset
+
+    **Protected Endpoints** (Require BearerAuth):
     - `POST /auth/logout` - End session
-    - `POST /auth/refresh` - Refresh JWT token
     - `GET /auth/mfa/status` - Check MFA status
     - `POST /auth/mfa/setup` - Setup MFA
-    - `POST /auth/mfa/verify` - Verify MFA code
+    - `POST /auth/mfa/enable` - Enable MFA
     - `POST /auth/mfa/disable` - Disable MFA
+    - `POST /auth/mfa/backup-codes/regenerate` - Regenerate backup codes
   </TabItem>
-  <TabItem label="Notes">
+  <TabItem label="Notes (15 endpoints)">
     **Tag**: `Notes`
 
+    **Core CRUD**:
     - `GET /notes` - List all notes
     - `POST /notes` - Create note
     - `GET /notes/{id}` - Get note
     - `PUT /notes/{id}` - Update note
     - `DELETE /notes/{id}` - Delete note
-    - `GET /notes/shared` - List shared notes
+
+    **Trash Management**:
     - `GET /notes/trash` - List trashed notes
     - `POST /notes/{id}/restore` - Restore note
-  </TabItem>
-  <TabItem label="Collaboration">
-    **Tag**: `Collaboration`
+    - `DELETE /notes/{id}/permanent` - Permanently delete note
 
+    **Version Control**:
+    - `GET /notes/{id}/versions` - Get note versions
+    - `POST /notes/{id}/versions/{version}/restore` - Restore note version
+
+    **Collaboration**:
+    - `GET /notes/shared` - List shared notes
     - `POST /notes/{id}/share` - Share note
-    - `DELETE /notes/{id}/share/{user_id}` - Unshare
-    - `GET /notes/{id}/shares` - List shares
-    - `PUT /notes/{id}/share/{user_id}` - Update permissions
-  </TabItem>
-  <TabItem label="Tags & Folders">
-    **Tags**: `Tags`, `Folders`
+    - `GET /notes/{id}/collaborators` - Get note collaborators
+    - `DELETE /notes/{id}/collaborators/{userId}` - Remove collaborator
 
-    - `GET /tags` - List tags
-    - `POST /tags` - Create tag
-    - `DELETE /tags/{id}` - Delete tag
-    - `GET /folders` - List folders
-    - `POST /folders` - Create folder
-    - `DELETE /folders/{id}` - Delete folder
+    **Import/Export**:
+    - `POST /notes/import` - Import note
+    - `POST /notes/bulk-import` - Bulk import notes
+    - `POST /notes/{id}/export` - Export note
   </TabItem>
-  <TabItem label="Admin">
-    **Tag**: `Admin`
+  <TabItem label="Share Links (5 endpoints)">
+    **Tag**: `Share Links`
 
-    - `GET /admin/users` - List users
-    - `GET /admin/users/{id}` - Get user details
-    - `PUT /admin/users/{id}/admin` - Grant/revoke admin
-    - `POST /admin/users/{id}/roles` - Assign role
-    - `DELETE /admin/users/{id}/roles/{role}` - Remove role
-    - `GET /admin/registration` - Get registration status
-    - `PUT /admin/registration` - Enable/disable registration
+    **Protected Endpoints**:
+    - `POST /notes/{id}/share-links` - Create share link
+    - `GET /notes/{id}/share-links` - Get note share links
+    - `GET /share-links` - Get all user share links
+    - `PUT /share-links/{token}` - Update share link
+    - `DELETE /share-links/{token}` - Revoke share link
+
+    **Public Endpoint**:
+    - `GET /share/{token}` - Access shared note via token
+  </TabItem>
+  <TabItem label="Settings & Account (4 endpoints)">
+    **Tags**: `Settings`, `Account`
+
+    **Settings**:
+    - `GET /settings` - Get user settings
+    - `PUT /settings` - Update user settings
+
+    **Account Management**:
+    - `DELETE /account` - Delete account
+    - `GET /account/export` - Export user data
+    - `GET /user/storage` - Get storage info
+  </TabItem>
+  <TabItem label="Admin (4 endpoints)">
+    **Tag**: `Admin` (Admin-only)
+
+    **Announcement Management**:
+    - `GET /api/v1/admin/announcements` - Get all announcements
+    - `POST /api/v1/admin/announcements` - Create announcement
+    - `PUT /api/v1/admin/announcements/{id}` - Update announcement
+    - `DELETE /api/v1/admin/announcements/{id}` - Delete announcement
+
+    **Public Announcements**:
+    - `GET /api/v1/announcements` - Get announcements (public)
   </TabItem>
 </Tabs>
 
@@ -147,21 +183,21 @@ The OpenAPI specification is available in multiple formats:
 ```
 /api/v1/docs/openapi.json
 ```
-**Size**: ~13KB
+**Size**: ~95KB (38 endpoints)
 **Use**: API clients, code generators, validation tools
 
 ### YAML Format
 ```
 /api/v1/docs/swagger.yaml
 ```
-**Size**: ~5.7KB
+**Size**: ~45KB (38 endpoints)
 **Use**: Human-readable format, easier to diff
 
 ### Swagger 2.0 (Legacy)
 ```
 /api/v1/docs/swagger.json
 ```
-**Size**: ~11.6KB
+**Size**: ~85KB (38 endpoints)
 **Use**: Tools that require Swagger 2.0 instead of OpenAPI 3.0
 
 ## Code Generation
@@ -263,9 +299,11 @@ This scans all `@` annotations in Go files and generates:
 - `swagger.yaml` - YAML format
 - OpenAPI 3.0 conversion (via backend transformation)
 
-## Security Schemas
+## Security Configuration
 
-The API uses **JWT Bearer authentication**:
+### Authentication Types
+
+The API uses **JWT Bearer authentication** with comprehensive security:
 
 ```yaml
 securityDefinitions:
@@ -275,6 +313,26 @@ securityDefinitions:
     in: header
     description: 'Type "Bearer" followed by a space and JWT token.'
 ```
+
+### Endpoint Security Breakdown
+
+**Public Endpoints** (No Authentication Required):
+- User registration and login
+- Password reset flow
+- MFA verification
+- Public announcements
+- Public share link access
+
+**Protected Endpoints** (Require BearerAuth):
+- All note operations (CRUD, collaboration, import/export)
+- User settings and account management
+- MFA setup and management
+- Share link creation and management
+
+**Admin-Only Endpoints** (Require BearerAuth + Admin Role):
+- Announcement management
+- User administration
+- System configuration
 
 ### Usage in Swagger UI
 

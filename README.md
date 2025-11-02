@@ -2,6 +2,9 @@
 
 [![Unit Tests](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/unit-tests.yml?branch=main&label=unit%20tests)](https://github.com/RelativeSure/LeafLock/actions/workflows/unit-tests.yml)
 [![Code Coverage](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-code-coverage.yml?branch=main&label=coverage)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-code-coverage.yml)
+[![codecov](https://codecov.io/gh/RelativeSure/LeafLock/branch/main/graph/badge.svg?token=YOUR_CODECOV_TOKEN)](https://codecov.io/gh/RelativeSure/LeafLock)
+[![Backend Coverage](https://codecov.io/gh/RelativeSure/LeafLock/branch/main/graph/badge.svg?token=YOUR_CODECOV_TOKEN&flag=backend)](https://codecov.io/gh/RelativeSure/LeafLock?flags%5B%5D=backend)
+[![Frontend Coverage](https://codecov.io/gh/RelativeSure/LeafLock/branch/main/graph/badge.svg?token=YOUR_CODECOV_TOKEN&flag=frontend)](https://codecov.io/gh/RelativeSure/LeafLock?flags%5B%5D=frontend)
 [![Backend Lint](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-backend-lint.yml?branch=main&label=backend%20lint)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-backend-lint.yml)
 [![Frontend Quality](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-frontend-quality.yml?branch=main&label=frontend%20quality)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-frontend-quality.yml)
 [![MegaLinter](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/mega-linter.yml?branch=main&label=mega%20linter)](https://github.com/RelativeSure/LeafLock/actions/workflows/mega-linter.yml)

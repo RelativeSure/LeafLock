@@ -3,9 +3,7 @@
   "build": {
     "builder": "RAILPACK",
     "dockerfilePath": "frontend/Dockerfile",
-    "watchPatterns": [
-      "frontend/**"
-    ]
+    "watchPatterns": ["frontend/**"]
   },
   "deploy": {
     "numReplicas": 1,

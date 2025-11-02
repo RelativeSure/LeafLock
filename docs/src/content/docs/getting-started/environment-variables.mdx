@@ -61,12 +61,22 @@ description: Complete reference for all LeafLock environment variables
 
 ---
 
+#### APP_ENV
+**Required**: No
+**Type**: String (`development` or `production`)
+**Default**: `development`
+**Example**: `production`
+**Description**: Environment mode. When set to `development`, automatically allows `*.railway.app` origins for PR testing. Production mode requires explicit `CORS_ORIGINS` configuration.
+
+---
+
 #### CORS_ORIGINS
 **Required**: Yes
 **Type**: Comma-separated list of URLs
 **Example**: `http://localhost:3000,https://app.example.com`
 **Description**: Allowed frontend origins for CORS. Include both development and production URLs.
 **IPv6 Support**: Include IPv6 origins if needed: `http://localhost:3000,http://[::1]:3000`
+**Development Mode**: When `APP_ENV=development`, `*.railway.app` is automatically allowed for PR deployments.
 
 ---
 

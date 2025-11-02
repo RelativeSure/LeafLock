@@ -9,16 +9,17 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   timeout: 60 * 1000,
   use: {
-    baseURL: `http://${HOST}:${E2E_PORT}`,
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'https://frontend-leaflock-pr-363.up.railway.app',
     trace: 'on-first-retry',
     video: 'retain-on-failure',
   },
-  webServer: {
-    command: `pnpm dev -- --host ${HOST} --port ${E2E_PORT}`,
-    port: E2E_PORT,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
+  // Disable webServer for deployed testing
+  // webServer: {
+  //   command: `pnpm dev -- --host ${HOST} --port ${E2E_PORT}`,
+  //   port: E2E_PORT,
+  //   reuseExistingServer: !process.env.CI,
+  //   timeout: 120 * 1000,
+  // },
   projects: [
     {
       name: 'chromium',

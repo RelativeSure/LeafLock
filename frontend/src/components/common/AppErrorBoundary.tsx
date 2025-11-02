@@ -1,57 +1,59 @@
-import React from 'react'
+import { Component, type ErrorInfo, type ReactNode } from 'react'
 
-export class AppErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  { hasError: boolean; error: Error | null }
-> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props)
-    this.state = { hasError: false, error: null }
+interface Props {
+  children: ReactNode
+}
+
+interface State {
+  hasError: boolean
+  error?: Error
+}
+
+export class AppErrorBoundary extends Component<Props, State> {
+  public state: State = {
+    hasError: false,
   }
 
-  static getDerivedStateFromError(error: Error) {
+  public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error }
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('React Error Boundary caught:', error, errorInfo)
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Uncaught error:', error, errorInfo)
+    // Also log to window for debugging
+    if (typeof window !== 'undefined') {
+      window.console.error('Error Boundary caught error:', error.message, error.stack)
+    }
   }
 
-  render() {
+  public render() {
     if (this.state.hasError) {
       return (
-        <div
-          style={{
-            fontFamily: 'system-ui',
-            padding: '2rem',
-            maxWidth: '600px',
-            margin: '0 auto',
-          }}
-        >
-          <h1 style={{ color: '#dc2626' }}>LeafLock Error</h1>
-          <p>
-            <strong>Error:</strong> {this.state.error?.message}
-          </p>
-          <pre
-            style={{
-              background: '#f3f4f6',
-              padding: '1rem',
-              borderRadius: '0.5rem',
-              overflowX: 'auto',
-            }}
-          >
-            {this.state.error?.stack}
-          </pre>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              marginTop: '1rem',
-              padding: '0.5rem 1rem',
-              cursor: 'pointer',
-            }}
-          >
-            Reload Page
-          </button>
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="text-center p-8 max-w-md">
+            <h1 className="text-2xl font-bold text-destructive mb-4">Something went wrong</h1>
+            <p className="text-muted-foreground mb-6">
+              We're sorry, but something unexpected happened. Please try refreshing the page.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+            >
+              Refresh Page
+            </button>
+            {this.state.error && (
+              <details className="mt-6 text-left">
+                <summary className="cursor-pointer text-sm text-muted-foreground">
+                  Error Details
+                </summary>
+                <pre className="mt-2 p-4 bg-muted rounded-md text-xs overflow-auto">
+                  {this.state.error.message}
+                  {'\n\n'}
+                  {this.state.error.stack}
+                </pre>
+              </details>
+            )}
+          </div>
         </div>
       )
     }
@@ -59,5 +61,3 @@ export class AppErrorBoundary extends React.Component<
     return this.props.children
   }
 }
-
-export default AppErrorBoundary

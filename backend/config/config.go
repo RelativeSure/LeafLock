@@ -156,11 +156,22 @@ func LoadConfig() *Config {
 		EncryptionKey: []byte(encKey),
 		Port:          GetEnvOrDefault("PORT", "8080"),
 		AllowedOrigins: func() []string {
-			origins := strings.Split(GetEnvOrDefault("CORS_ORIGINS", "https://localhost:3000"), ",")
+			environment := GetEnvOrDefault("APP_ENV", "development")
+
+			// In development mode, allow all origins (CORS disabled)
+			if environment == "development" {
+				log.Println("🔓 Development mode: CORS restrictions disabled (allowing all origins)")
+				return []string{"*"}
+			}
+
+			// Production mode: strict CORS with leaflock.app domains
+			origins := strings.Split(GetEnvOrDefault("CORS_ORIGINS", "https://leaflock.app,https://*.leaflock.app"), ",")
 			// Trim whitespace from each origin to prevent CORS issues
 			for i := range origins {
 				origins[i] = strings.TrimSpace(origins[i])
 			}
+
+			log.Printf("🔒 Production mode: CORS enabled for origins: %v", origins)
 			return origins
 		}(),
 		MaxLoginAttempts:   GetEnvAsInt("MAX_LOGIN_ATTEMPTS", 5),
