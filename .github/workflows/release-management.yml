@@ -239,7 +239,7 @@ jobs:
           BACKEND_PID=$!
 
           sleep 5
-          curl -f http://localhost:8080/api/v1/health || exit 1
+          curl -f http://localhost:8080/api/v1/health/live || exit 1
           kill $BACKEND_PID
 
   # Create the release
