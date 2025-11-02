@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	appcrypto "leaflock/crypto"
+	"leaflock/database"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/argon2"
@@ -27,12 +27,12 @@ const (
 
 // MFAManager handles MFA operations
 type MFAManager struct {
-	db     *pgxpool.Pool
+	db     database.Database
 	crypto *appcrypto.CryptoService
 }
 
 // NewMFAManager creates a new MFA manager
-func NewMFAManager(db *pgxpool.Pool, crypto *appcrypto.CryptoService) *MFAManager {
+func NewMFAManager(db database.Database, crypto *appcrypto.CryptoService) *MFAManager {
 	return &MFAManager{
 		db:     db,
 		crypto: crypto,

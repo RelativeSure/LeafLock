@@ -199,6 +199,337 @@ describe('secureApi - ApiClient', () => {
     })
   })
 
+  describe('Tags API', () => {
+    beforeEach(() => {
+      localStorage.setItem('token', mockToken)
+    })
+
+    it('should get all tags', async () => {
+      const mockTags = [
+        { id: 'tag-1', name: 'work', color: 'blue', userId: '123' },
+        { id: 'tag-2', name: 'personal', color: 'green', userId: '123' },
+      ]
+
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => mockTags,
+      } as Response)
+
+      const { apiClient } = await import('../secureApi')
+      const result = await apiClient.getTags()
+
+      expect(result).toEqual(mockTags)
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${apiBaseUrl}/tags`,
+        expect.objectContaining({ method: 'GET' })
+      )
+    })
+
+    it('should create a tag', async () => {
+      const newTag = { id: 'tag-1', name: 'urgent', color: 'red', userId: '123' }
+
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        status: 201,
+        json: async () => newTag,
+      } as Response)
+
+      const { apiClient } = await import('../secureApi')
+      const result = await apiClient.createTag({ name: 'urgent', color: 'red' })
+
+      expect(result).toEqual(newTag)
+    })
+
+    it('should delete a tag', async () => {
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        status: 204,
+        json: async () => ({}),
+      } as Response)
+
+      const { apiClient } = await import('../secureApi')
+      await apiClient.deleteTag('tag-1')
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${apiBaseUrl}/tags/tag-1`,
+        expect.objectContaining({ method: 'DELETE' })
+      )
+    })
+  })
+
+  describe('Folders API', () => {
+    beforeEach(() => {
+      localStorage.setItem('token', mockToken)
+    })
+
+    it('should get all folders', async () => {
+      const mockFolders = [
+        { id: 'folder-1', name: 'Work', color: 'blue', userId: '123', parentId: null, createdAt: '2024-01-01' },
+      ]
+
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => mockFolders,
+      } as Response)
+
+      const { apiClient } = await import('../secureApi')
+      const result = await apiClient.getFolders()
+
+      expect(result).toEqual(mockFolders)
+    })
+
+    it('should create a folder', async () => {
+      const newFolder = { id: 'folder-1', name: 'Projects', userId: '123', parentId: null, createdAt: '2024-01-01' }
+
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        status: 201,
+        json: async () => newFolder,
+      } as Response)
+
+      const { apiClient } = await import('../secureApi')
+      const result = await apiClient.createFolder({ name: 'Projects' })
+
+      expect(result).toEqual(newFolder)
+    })
+
+    it('should delete a folder', async () => {
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        status: 204,
+        json: async () => ({}),
+      } as Response)
+
+      const { apiClient } = await import('../secureApi')
+      await apiClient.deleteFolder('folder-1')
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${apiBaseUrl}/folders/folder-1`,
+        expect.objectContaining({ method: 'DELETE' })
+      )
+    })
+  })
+
+  describe('Templates API', () => {
+    beforeEach(() => {
+      localStorage.setItem('token', mockToken)
+    })
+
+    it('should get all templates', async () => {
+      const mockTemplates = [
+        { id: 'tpl-1', name: 'Meeting Notes', content: 'Template', tags: [], isPublic: false, usageCount: 0, createdAt: '2024-01-01' },
+      ]
+
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => mockTemplates,
+      } as Response)
+
+      const { apiClient } = await import('../secureApi')
+      const result = await apiClient.getTemplates()
+
+      expect(result).toEqual(mockTemplates)
+    })
+
+    it('should get a single template', async () => {
+      const mockTemplate = { id: 'tpl-1', name: 'Meeting Notes', content: 'Template', tags: [], isPublic: false, usageCount: 0, createdAt: '2024-01-01' }
+
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => mockTemplate,
+      } as Response)
+
+      const { apiClient } = await import('../secureApi')
+      const result = await apiClient.getTemplate('tpl-1')
+
+      expect(result).toEqual(mockTemplate)
+    })
+
+    it('should create a template', async () => {
+      const newTemplate = { id: 'tpl-1', name: 'Daily Log', content: '', tags: [], isPublic: false, usageCount: 0, createdAt: '2024-01-01' }
+
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        status: 201,
+        json: async () => newTemplate,
+      } as Response)
+
+      const { apiClient } = await import('../secureApi')
+      const result = await apiClient.createTemplate({ name: 'Daily Log', content: '' })
+
+      expect(result).toEqual(newTemplate)
+    })
+
+    it('should delete a template', async () => {
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        status: 204,
+        json: async () => ({}),
+      } as Response)
+
+      const { apiClient } = await import('../secureApi')
+      await apiClient.deleteTemplate('tpl-1')
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${apiBaseUrl}/templates/tpl-1`,
+        expect.objectContaining({ method: 'DELETE' })
+      )
+    })
+  })
+
+  describe('Settings API', () => {
+    beforeEach(() => {
+      localStorage.setItem('token', mockToken)
+    })
+
+    it('should get user settings', async () => {
+      const mockSettings = {
+        theme: 'dark',
+        autoSave: true,
+        autoSaveInterval: 30,
+        defaultView: 'list',
+        notificationsEnabled: true,
+        emailNotifications: false,
+        encryptionEnabled: true,
+        language: 'en',
+        defaultNoteBehavior: 'last-seen',
+        profilePicture: { type: 'gravatar' },
+      }
+
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => mockSettings,
+      } as Response)
+
+      const { apiClient } = await import('../secureApi')
+      const result = await apiClient.getSettings()
+
+      expect(result).toEqual(mockSettings)
+    })
+
+    it('should update user settings', async () => {
+      const updatedSettings = { theme: 'light', autoSave: false }
+
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => updatedSettings,
+      } as Response)
+
+      const { apiClient } = await import('../secureApi')
+      const result = await apiClient.updateSettings(updatedSettings)
+
+      expect(result).toEqual(updatedSettings)
+    })
+  })
+
+  describe('Collaboration API', () => {
+    beforeEach(() => {
+      localStorage.setItem('token', mockToken)
+    })
+
+    it('should get collaborators for a note', async () => {
+      const mockCollaborators = [
+        { id: '1', email: 'user1@example.com', permission: 'read' },
+      ]
+
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => mockCollaborators,
+      } as Response)
+
+      const { apiClient } = await import('../secureApi')
+      const result = await apiClient.getCollaborators('note-1')
+
+      expect(result).toEqual(mockCollaborators)
+    })
+
+    it('should share a note with users', async () => {
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+      } as Response)
+
+      const { apiClient } = await import('../secureApi')
+      await apiClient.shareNote('note-1', ['user@example.com'], 'read')
+
+      expect(global.fetch).toHaveBeenCalled()
+    })
+
+    it('should get shared notes', async () => {
+      const mockSharedNotes = [
+        { id: 'note-1', title: 'Shared Note', content: 'Content', encrypted: true, createdAt: '2024-01-01', updatedAt: '2024-01-01' },
+      ]
+
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => mockSharedNotes,
+      } as Response)
+
+      const { apiClient } = await import('../secureApi')
+      const result = await apiClient.getSharedNotes()
+
+      expect(result.length).toBeGreaterThanOrEqual(0)
+    })
+  })
+
+  describe('Note Links API', () => {
+    beforeEach(() => {
+      localStorage.setItem('token', mockToken)
+    })
+
+    it('should get note links', async () => {
+      const mockLinks = { links: [{ id: 'link-1', targetNoteId: 'note-2' }] }
+
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => mockLinks,
+      } as Response)
+
+      const { apiClient } = await import('../secureApi')
+      const result = await apiClient.getNoteLinks('note-1')
+
+      expect(result.links).toBeDefined()
+    })
+
+    it('should get note backlinks', async () => {
+      const mockBacklinks = { backlinks: [{ id: 'link-1', sourceNoteId: 'note-2' }] }
+
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => mockBacklinks,
+      } as Response)
+
+      const { apiClient } = await import('../secureApi')
+      const result = await apiClient.getNoteBacklinks('note-1')
+
+      expect(result.backlinks).toBeDefined()
+    })
+
+    it('should delete a note link', async () => {
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        status: 204,
+        json: async () => ({}),
+      } as Response)
+
+      const { apiClient } = await import('../secureApi')
+      await apiClient.deleteNoteLink('note-1', 'link-1')
+
+      expect(global.fetch).toHaveBeenCalled()
+    })
+  })
+
   describe('Authentication - verifyMFA', () => {
     it('should verify MFA successfully', async () => {
       const mockResponse = {

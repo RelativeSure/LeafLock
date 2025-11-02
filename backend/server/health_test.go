@@ -3,27 +3,34 @@ package server
 import (
 	"testing"
 
-	"github.com/redis/go-redis/v9"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestReadyStateAccessors(t *testing.T) {
-	ready := NewReadyState(nil, nil, nil, redis.NewClient(&redis.Options{Addr: "localhost:0"}))
-	require.False(t, ready.IsFullyReady())
+func TestReadyStateLifecycle(t *testing.T) {
+	ready := NewReadyState(nil, nil, nil, nil)
+
+	assert.False(t, ready.IsFullyReady())
+	assert.False(t, ready.IsAdminReady())
+	assert.False(t, ready.IsTemplatesReady())
+	assert.False(t, ready.IsAllowlistReady())
+	assert.False(t, ready.IsRedisReady())
 
 	ready.MarkAdminReady()
 	ready.MarkTemplatesReady()
 	ready.MarkAllowlistReady()
 	ready.MarkRedisReady()
-	require.True(t, ready.IsFullyReady())
 
-	if ready.GetDB() != nil {
-		t.Fatalf("expected nil DB by default")
-	}
-	if ready.GetConfig() != nil {
-		t.Fatalf("expected nil config by default")
-	}
-	if ready.GetRedis() == nil {
-		t.Fatalf("expected redis client to be set")
-	}
+	assert.True(t, ready.IsAdminReady())
+	assert.True(t, ready.IsTemplatesReady())
+	assert.True(t, ready.IsAllowlistReady())
+	assert.True(t, ready.IsRedisReady())
+	assert.True(t, ready.IsFullyReady())
+}
+
+func TestReadyStateGetters(t *testing.T) {
+	ready := NewReadyState(nil, nil, nil, nil)
+	assert.Nil(t, ready.GetDB())
+	assert.Nil(t, ready.GetRedis())
+	assert.Nil(t, ready.GetConfig())
+	assert.Nil(t, ready.GetCrypto())
 }

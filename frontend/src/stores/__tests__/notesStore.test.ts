@@ -18,6 +18,25 @@ vi.mock('@/services/api/secureApi', () => ({
     deleteFolder: vi.fn(),
     createTag: vi.fn(),
     deleteTag: vi.fn(),
+    restoreNote: vi.fn(),
+    permanentlyDeleteNote: vi.fn(),
+    getTrash: vi.fn(),
+    createNoteVersion: vi.fn(),
+    getNoteVersions: vi.fn(),
+    restoreNoteVersion: vi.fn(),
+    deleteNoteVersion: vi.fn(),
+    compareNoteVersions: vi.fn(),
+    updateRetentionPolicy: vi.fn(),
+    bulkDeleteNotes: vi.fn(),
+    bulkRestoreNotes: vi.fn(),
+    bulkPermanentlyDeleteNotes: vi.fn(),
+    moveNotesToFolder: vi.fn(),
+    addTagsToNotes: vi.fn(),
+    removeTagsFromNotes: vi.fn(),
+    createNoteLink: vi.fn(),
+    getNoteLinks: vi.fn(),
+    getNoteBacklinks: vi.fn(),
+    deleteNoteLink: vi.fn(),
   },
 }))
 
@@ -487,6 +506,428 @@ describe('notesStore', () => {
       useNotesStore.getState().selectFolder(null)
 
       expect(useNotesStore.getState().selectedFolder).toBeNull()
+    })
+  })
+
+  describe('deleteTag', () => {
+    beforeEach(() => {
+      const note1 = { ...mockNote, id: 'note-1', tags: ['tag1', 'tag2'] }
+      const note2 = { ...mockNote, id: 'note-2', tags: ['tag1'] }
+      useNotesStore.setState({ notes: [note1, note2], tags: [mockTag] })
+    })
+
+    it('should delete a tag and remove it from all notes', async () => {
+      vi.mocked(apiClient.deleteTag).mockResolvedValue(undefined)
+
+      await useNotesStore.getState().deleteTag('tag-1')
+
+      expect(apiClient.deleteTag).toHaveBeenCalledWith('tag-1')
+      expect(useNotesStore.getState().tags).toEqual([])
+    })
+
+    it('should handle API error', async () => {
+      vi.mocked(apiClient.deleteTag).mockRejectedValue(new Error('Delete tag failed'))
+
+      await expect(useNotesStore.getState().deleteTag('tag-1')).rejects.toThrow('Delete tag failed')
+    })
+  })
+
+  describe('filterByTag', () => {
+    beforeEach(() => {
+      const note1 = { ...mockNote, id: 'note-1', tags: ['urgent', 'work'] }
+      const note2 = { ...mockNote, id: 'note-2', tags: ['personal'] }
+      const note3 = { ...mockNote, id: 'note-3', tags: ['urgent'], isTrashed: true }
+      useNotesStore.setState({ notes: [note1, note2, note3] })
+    })
+
+    it('should filter notes by tag name', () => {
+      const result = useNotesStore.getState().filterByTag('urgent')
+
+      expect(result).toHaveLength(1)
+      expect(result[0].id).toBe('note-1')
+    })
+
+    it('should exclude trashed notes from filter', () => {
+      const result = useNotesStore.getState().filterByTag('urgent')
+
+      expect(result.every((n) => !n.isTrashed)).toBe(true)
+    })
+
+    it('should return empty array for non-existent tag', () => {
+      const result = useNotesStore.getState().filterByTag('non-existent')
+
+      expect(result).toEqual([])
+    })
+  })
+
+  describe('moveToTrash', () => {
+    beforeEach(() => {
+      useNotesStore.setState({ notes: [mockNote], selectedNote: mockNote })
+    })
+
+    it('should move note to trash', async () => {
+      vi.mocked(apiClient.deleteNote).mockResolvedValue(undefined)
+
+      await useNotesStore.getState().moveToTrash('note-1')
+
+      expect(apiClient.deleteNote).toHaveBeenCalledWith('note-1')
+      const note = useNotesStore.getState().notes.find((n) => n.id === 'note-1')
+      expect(note?.isTrashed).toBe(true)
+      expect(note?.trashedAt).toBeDefined()
+    })
+
+    it('should clear selectedNote if trashing selected note', async () => {
+      vi.mocked(apiClient.deleteNote).mockResolvedValue(undefined)
+
+      await useNotesStore.getState().moveToTrash('note-1')
+
+      expect(useNotesStore.getState().selectedNote).toBeNull()
+    })
+  })
+
+  describe('restoreFromTrash', () => {
+    beforeEach(() => {
+      const trashedNote = { ...mockNote, isTrashed: true, trashedAt: new Date().toISOString() }
+      useNotesStore.setState({ notes: [trashedNote] })
+    })
+
+    it('should restore note from trash', async () => {
+      vi.mocked(apiClient.restoreNote).mockResolvedValue(undefined)
+
+      await useNotesStore.getState().restoreFromTrash('note-1')
+
+      expect(apiClient.restoreNote).toHaveBeenCalledWith('note-1')
+      const note = useNotesStore.getState().notes.find((n) => n.id === 'note-1')
+      expect(note?.isTrashed).toBe(false)
+      expect(note?.trashedAt).toBeUndefined()
+    })
+  })
+
+  describe('emptyTrash', () => {
+    beforeEach(() => {
+      const trashedNote1 = { ...mockNote, id: 'note-1', isTrashed: true }
+      const trashedNote2 = { ...mockNote, id: 'note-2', isTrashed: true }
+      const activeNote = { ...mockNote, id: 'note-3', isTrashed: false }
+      useNotesStore.setState({ notes: [trashedNote1, trashedNote2, activeNote] })
+    })
+
+    it('should permanently delete all trashed notes', async () => {
+      vi.mocked(apiClient.permanentlyDeleteNote).mockResolvedValue(undefined)
+
+      await useNotesStore.getState().emptyTrash()
+
+      expect(apiClient.permanentlyDeleteNote).toHaveBeenCalledTimes(2)
+      expect(useNotesStore.getState().notes).toHaveLength(1)
+      expect(useNotesStore.getState().notes[0].id).toBe('note-3')
+    })
+  })
+
+  describe('getTrashedNotes', () => {
+    it('should get trashed notes from API', async () => {
+      const trashedNote = { ...mockNote, isTrashed: true }
+      vi.mocked(apiClient.getTrash).mockResolvedValue([trashedNote])
+
+      const result = await useNotesStore.getState().getTrashedNotes()
+
+      expect(apiClient.getTrash).toHaveBeenCalled()
+      expect(result).toEqual([trashedNote])
+    })
+
+    it('should return empty array on error', async () => {
+      vi.mocked(apiClient.getTrash).mockRejectedValue(new Error('API error'))
+
+      const result = await useNotesStore.getState().getTrashedNotes()
+
+      expect(result).toEqual([])
+    })
+  })
+
+  describe('Note Version Management', () => {
+    describe('createNoteVersion', () => {
+      beforeEach(() => {
+        useNotesStore.setState({ notes: [mockNote] })
+      })
+
+      it('should create a note version', async () => {
+        const mockVersion = {
+          id: 'version-1',
+          noteId: 'note-1',
+          versionNumber: 1,
+          title: mockNote.title,
+          content: mockNote.content,
+          changeDescription: 'Initial version',
+          createdAt: new Date().toISOString(),
+        }
+        vi.mocked(apiClient.createNoteVersion).mockResolvedValue(mockVersion)
+
+        const result = await useNotesStore.getState().createNoteVersion('note-1', 'Initial version')
+
+        expect(apiClient.createNoteVersion).toHaveBeenCalledWith({
+          noteId: 'note-1',
+          title: mockNote.title,
+          content: mockNote.content,
+          changeDescription: 'Initial version',
+        })
+        expect(result).toEqual(mockVersion)
+      })
+
+      it('should throw error if note not found', async () => {
+        await expect(
+          useNotesStore.getState().createNoteVersion('non-existent')
+        ).rejects.toThrow('Note not found')
+      })
+    })
+
+    describe('getNoteVersions', () => {
+      it('should get note versions', async () => {
+        const versions = [{ id: 'v1', versionNumber: 1 }, { id: 'v2', versionNumber: 2 }]
+        vi.mocked(apiClient.getNoteVersions).mockResolvedValue(versions as any)
+
+        const result = await useNotesStore.getState().getNoteVersions('note-1')
+
+        expect(apiClient.getNoteVersions).toHaveBeenCalledWith('note-1')
+        expect(result).toEqual(versions)
+      })
+
+      it('should return empty array on error', async () => {
+        vi.mocked(apiClient.getNoteVersions).mockRejectedValue(new Error('API error'))
+
+        const result = await useNotesStore.getState().getNoteVersions('note-1')
+
+        expect(result).toEqual([])
+      })
+    })
+
+    describe('restoreNoteVersion', () => {
+      beforeEach(() => {
+        useNotesStore.setState({ notes: [mockNote], selectedNote: mockNote })
+      })
+
+      it('should restore a note version', async () => {
+        const restoredNote = { ...mockNote, title: 'Restored Title' }
+        vi.mocked(apiClient.restoreNoteVersion).mockResolvedValue(restoredNote)
+
+        await useNotesStore.getState().restoreNoteVersion('version-1')
+
+        expect(apiClient.restoreNoteVersion).toHaveBeenCalledWith('version-1')
+        expect(useNotesStore.getState().notes[0].title).toBe('Restored Title')
+        expect(useNotesStore.getState().selectedNote?.title).toBe('Restored Title')
+      })
+    })
+
+    describe('deleteNoteVersion', () => {
+      it('should delete a note version', async () => {
+        vi.mocked(apiClient.deleteNoteVersion).mockResolvedValue(undefined)
+
+        await useNotesStore.getState().deleteNoteVersion('version-1')
+
+        expect(apiClient.deleteNoteVersion).toHaveBeenCalledWith('version-1')
+      })
+    })
+
+    describe('compareNoteVersions', () => {
+      it('should compare two note versions', async () => {
+        const comparison = {
+          v1: { id: 'v1', versionNumber: 1 } as any,
+          v2: { id: 'v2', versionNumber: 2 } as any,
+        }
+        vi.mocked(apiClient.compareNoteVersions).mockResolvedValue(comparison)
+
+        const result = await useNotesStore.getState().compareNoteVersions('note-1', 1, 2)
+
+        expect(apiClient.compareNoteVersions).toHaveBeenCalledWith('note-1', 1, 2)
+        expect(result).toEqual(comparison)
+      })
+    })
+  })
+
+  describe('Bulk Operations', () => {
+    beforeEach(() => {
+      localStorage.setItem('user', JSON.stringify(mockUser))
+    })
+
+    describe('bulkDeleteNotes', () => {
+      it('should bulk delete notes', async () => {
+        const result = { successful: 2, failed: 0, errors: [] }
+        vi.mocked(apiClient.bulkDeleteNotes).mockResolvedValue(result)
+        vi.mocked(apiClient.getNotes).mockResolvedValue([])
+        vi.mocked(apiClient.getFolders).mockResolvedValue([])
+        vi.mocked(apiClient.getTags).mockResolvedValue([])
+
+        const deleteResult = await useNotesStore.getState().bulkDeleteNotes(['note-1', 'note-2'])
+
+        expect(apiClient.bulkDeleteNotes).toHaveBeenCalledWith(['note-1', 'note-2'])
+        expect(deleteResult).toEqual(result)
+        expect(apiClient.getNotes).toHaveBeenCalled()
+      })
+
+      it('should handle bulk delete errors', async () => {
+        vi.mocked(apiClient.bulkDeleteNotes).mockRejectedValue(new Error('Bulk delete failed'))
+
+        await expect(
+          useNotesStore.getState().bulkDeleteNotes(['note-1', 'note-2'])
+        ).rejects.toThrow('Bulk delete failed')
+      })
+    })
+
+    describe('bulkRestoreNotes', () => {
+      it('should bulk restore notes', async () => {
+        const result = { successful: 2, failed: 0, errors: [] }
+        vi.mocked(apiClient.bulkRestoreNotes).mockResolvedValue(result)
+        vi.mocked(apiClient.getNotes).mockResolvedValue([])
+        vi.mocked(apiClient.getFolders).mockResolvedValue([])
+        vi.mocked(apiClient.getTags).mockResolvedValue([])
+
+        const restoreResult = await useNotesStore.getState().bulkRestoreNotes(['note-1', 'note-2'])
+
+        expect(apiClient.bulkRestoreNotes).toHaveBeenCalledWith(['note-1', 'note-2'])
+        expect(restoreResult).toEqual(result)
+      })
+    })
+
+    describe('bulkPermanentlyDeleteNotes', () => {
+      it('should bulk permanently delete notes', async () => {
+        const result = { successful: 2, failed: 0, errors: [] }
+        vi.mocked(apiClient.bulkPermanentlyDeleteNotes).mockResolvedValue(result)
+        vi.mocked(apiClient.getNotes).mockResolvedValue([])
+        vi.mocked(apiClient.getFolders).mockResolvedValue([])
+        vi.mocked(apiClient.getTags).mockResolvedValue([])
+
+        const deleteResult = await useNotesStore
+          .getState()
+          .bulkPermanentlyDeleteNotes(['note-1', 'note-2'])
+
+        expect(apiClient.bulkPermanentlyDeleteNotes).toHaveBeenCalledWith(['note-1', 'note-2'])
+        expect(deleteResult).toEqual(result)
+      })
+    })
+
+    describe('moveNotesToFolder', () => {
+      beforeEach(() => {
+        const note1 = { ...mockNote, id: 'note-1', folderId: null }
+        const note2 = { ...mockNote, id: 'note-2', folderId: null }
+        useNotesStore.setState({ notes: [note1, note2] })
+      })
+
+      it('should move notes to a folder', async () => {
+        vi.mocked(apiClient.moveNotesToFolder).mockResolvedValue(undefined)
+
+        await useNotesStore.getState().moveNotesToFolder(['note-1', 'note-2'], 'folder-1')
+
+        expect(apiClient.moveNotesToFolder).toHaveBeenCalledWith(['note-1', 'note-2'], 'folder-1')
+        expect(useNotesStore.getState().notes[0].folderId).toBe('folder-1')
+        expect(useNotesStore.getState().notes[1].folderId).toBe('folder-1')
+      })
+    })
+
+    describe('addTagsToNotes', () => {
+      beforeEach(() => {
+        const note1 = { ...mockNote, id: 'note-1', tags: ['existing'] }
+        const note2 = { ...mockNote, id: 'note-2', tags: [] }
+        useNotesStore.setState({ notes: [note1, note2] })
+      })
+
+      it('should add tags to notes', async () => {
+        vi.mocked(apiClient.addTagsToNotes).mockResolvedValue(undefined)
+
+        await useNotesStore.getState().addTagsToNotes(['note-1', 'note-2'], ['new-tag'])
+
+        expect(apiClient.addTagsToNotes).toHaveBeenCalledWith(['note-1', 'note-2'], ['new-tag'])
+        expect(useNotesStore.getState().notes[0].tags).toContain('new-tag')
+        expect(useNotesStore.getState().notes[1].tags).toContain('new-tag')
+      })
+
+      it('should not duplicate existing tags', async () => {
+        vi.mocked(apiClient.addTagsToNotes).mockResolvedValue(undefined)
+
+        await useNotesStore.getState().addTagsToNotes(['note-1'], ['existing'])
+
+        const tags = useNotesStore.getState().notes[0].tags
+        expect(tags.filter((t) => t === 'existing')).toHaveLength(1)
+      })
+    })
+
+    describe('removeTagsFromNotes', () => {
+      beforeEach(() => {
+        const note1 = { ...mockNote, id: 'note-1', tags: ['tag1', 'tag2'] }
+        const note2 = { ...mockNote, id: 'note-2', tags: ['tag1'] }
+        useNotesStore.setState({ notes: [note1, note2] })
+      })
+
+      it('should remove tags from notes', async () => {
+        vi.mocked(apiClient.removeTagsFromNotes).mockResolvedValue(undefined)
+
+        await useNotesStore.getState().removeTagsFromNotes(['note-1', 'note-2'], ['tag1'])
+
+        expect(apiClient.removeTagsFromNotes).toHaveBeenCalledWith(['note-1', 'note-2'], ['tag1'])
+        expect(useNotesStore.getState().notes[0].tags).not.toContain('tag1')
+        expect(useNotesStore.getState().notes[1].tags).not.toContain('tag1')
+      })
+    })
+  })
+
+  describe('updateRetentionPolicy', () => {
+    beforeEach(() => {
+      useNotesStore.setState({ notes: [mockNote] })
+    })
+
+    it('should update note retention policy', async () => {
+      vi.mocked(apiClient.updateRetentionPolicy).mockResolvedValue(undefined)
+
+      await useNotesStore.getState().updateRetentionPolicy('note-1', 30)
+
+      expect(apiClient.updateRetentionPolicy).toHaveBeenCalledWith('note-1', 30)
+      expect((useNotesStore.getState().notes[0] as any).retentionPolicy).toBe(30)
+    })
+  })
+
+  describe('Note Links', () => {
+    describe('createNoteLink', () => {
+      it('should create a note link', async () => {
+        const mockLink = { id: 'link-1', sourceNoteId: 'note-1', targetNoteId: 'note-2' }
+        vi.mocked(apiClient.createNoteLink).mockResolvedValue(mockLink as any)
+
+        const result = await useNotesStore
+          .getState()
+          .createNoteLink('note-1', 'note-2', 'Related note')
+
+        expect(apiClient.createNoteLink).toHaveBeenCalledWith('note-1', 'note-2', 'Related note')
+        expect(result).toEqual(mockLink)
+      })
+    })
+
+    describe('getNoteLinks', () => {
+      it('should get note links', async () => {
+        const links = [{ id: 'link-1' }, { id: 'link-2' }]
+        vi.mocked(apiClient.getNoteLinks).mockResolvedValue(links as any)
+
+        const result = await useNotesStore.getState().getNoteLinks('note-1')
+
+        expect(apiClient.getNoteLinks).toHaveBeenCalledWith('note-1')
+        expect(result).toEqual(links)
+      })
+    })
+
+    describe('getNoteBacklinks', () => {
+      it('should get note backlinks', async () => {
+        const backlinks = [{ id: 'link-1' }, { id: 'link-2' }]
+        vi.mocked(apiClient.getNoteBacklinks).mockResolvedValue(backlinks as any)
+
+        const result = await useNotesStore.getState().getNoteBacklinks('note-1')
+
+        expect(apiClient.getNoteBacklinks).toHaveBeenCalledWith('note-1')
+        expect(result).toEqual(backlinks)
+      })
+    })
+
+    describe('deleteNoteLink', () => {
+      it('should delete a note link', async () => {
+        vi.mocked(apiClient.deleteNoteLink).mockResolvedValue(undefined)
+
+        await useNotesStore.getState().deleteNoteLink('note-1', 'link-1')
+
+        expect(apiClient.deleteNoteLink).toHaveBeenCalledWith('note-1', 'link-1')
+      })
     })
   })
 })

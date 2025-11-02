@@ -1,53 +1,35 @@
 import { describe, it, expect, vi } from 'vitest'
 import { useToast } from '../use-toast'
-import { toast as sonnerToast } from 'sonner'
 
-// Mock sonner
 vi.mock('sonner', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-    warning: vi.fn(),
-    loading: vi.fn(),
-    promise: vi.fn(),
-    dismiss: vi.fn(),
-  },
+  toast: vi.fn(),
 }))
 
-describe('useToast', () => {
-  it('should return toast object from sonner', () => {
+describe('use-toast', () => {
+  it('should return toast function', () => {
     const { toast } = useToast()
-
-    expect(toast).toBe(sonnerToast)
+    
+    expect(toast).toBeDefined()
+    expect(typeof toast).toBe('function')
   })
 
-  it('should expose toast methods', () => {
+  it('should call sonner toast', () => {
     const { toast } = useToast()
-
-    expect(toast).toHaveProperty('success')
-    expect(toast).toHaveProperty('error')
-    expect(toast).toHaveProperty('info')
-    expect(toast).toHaveProperty('warning')
-    expect(toast).toHaveProperty('loading')
-    expect(toast).toHaveProperty('promise')
-    expect(toast).toHaveProperty('dismiss')
+    
+    toast('Test message')
+    
+    expect(toast).toHaveBeenCalledWith('Test message')
   })
 
-  it('should allow calling toast methods', () => {
+  it('should support toast options', () => {
     const { toast } = useToast()
-
+    
     toast.success('Success message')
-    expect(sonnerToast.success).toHaveBeenCalledWith('Success message')
-
     toast.error('Error message')
-    expect(sonnerToast.error).toHaveBeenCalledWith('Error message')
-  })
-
-  it('should return the same toast object on multiple calls', () => {
-    const result1 = useToast()
-    const result2 = useToast()
-
-    expect(result1.toast).toBe(result2.toast)
+    toast.info('Info message')
+    toast.warning('Warning message')
+    
+    expect(toast.success).toHaveBeenCalledWith('Success message')
+    expect(toast.error).toHaveBeenCalledWith('Error message')
   })
 })

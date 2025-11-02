@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
@@ -14,126 +15,92 @@ import (
 	appcrypto "leaflock/crypto"
 )
 
-func TestNewSessionManager(t *testing.T) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-	})
-	defer rdb.Close()
+func newTestSessionManager(t *testing.T) (*SessionManager, *redis.Client, func()) {
+	t.Helper()
+
+	mr := miniredis.RunT(t)
 
 	key := make([]byte, 32)
-	rand.Read(key)
-	crypto := appcrypto.NewCryptoService(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 
-	sm := NewSessionManager(rdb, crypto)
-	assert.NotNil(t, sm)
-	assert.Equal(t, rdb, sm.redis)
-	assert.Equal(t, crypto, sm.crypto)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	sm := NewSessionManager(rdb, appcrypto.NewCryptoService(key))
+
+	cleanup := func() {
+		require.NoError(t, rdb.Close())
+		mr.Close()
+	}
+
+	return sm, rdb, cleanup
 }
 
-func TestCreateSession(t *testing.T) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-	})
-	defer rdb.Close()
+func TestSessionLifecycle(t *testing.T) {
+	sm, _, cleanup := newTestSessionManager(t)
+	defer cleanup()
 
-	key := make([]byte, 32)
-	rand.Read(key)
-	crypto := appcrypto.NewCryptoService(key)
-
-	sm := NewSessionManager(rdb, crypto)
 	ctx := context.Background()
-
 	userID := uuid.New()
+
 	session, token, err := sm.CreateSession(ctx, userID, "127.0.0.1", "test-agent", true)
+	require.NoError(t, err)
+	require.NotNil(t, session)
+	require.NotEmpty(t, token)
 
-	if err == nil {
-		require.NotNil(t, session)
-		require.NotEmpty(t, token)
-		assert.Equal(t, userID, session.UserID)
-		assert.Equal(t, "127.0.0.1", session.IPAddress)
-		assert.Equal(t, "test-agent", session.UserAgent)
-		assert.True(t, session.MFAVerified)
-		assert.False(t, session.IsHalfAuthed)
-		assert.WithinDuration(t, time.Now().Add(SessionDuration), session.ExpiresAt, time.Second)
-	}
+	fetched, err := sm.GetSession(ctx, token)
+	require.NoError(t, err)
+	assert.Equal(t, userID, fetched.UserID)
+	assert.Equal(t, "127.0.0.1", fetched.IPAddress)
+	assert.Equal(t, "test-agent", fetched.UserAgent)
+	assert.True(t, fetched.MFAVerified)
+
+	require.NoError(t, sm.DeleteSession(ctx, token))
+
+	_, err = sm.GetSession(ctx, token)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "session not found")
 }
 
-func TestHashToken(t *testing.T) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-	})
-	defer rdb.Close()
+func TestRefreshSessionExtendsExpiration(t *testing.T) {
+	sm, _, cleanup := newTestSessionManager(t)
+	defer cleanup()
 
-	key := make([]byte, 32)
-	rand.Read(key)
-	crypto := appcrypto.NewCryptoService(key)
-
-	sm := NewSessionManager(rdb, crypto)
-
-	token := "test-token-123"
-	hash1 := sm.hashToken(token)
-	hash2 := sm.hashToken(token)
-
-	// Should be deterministic
-	assert.Equal(t, hash1, hash2)
-	assert.NotEmpty(t, hash1)
-}
-
-func TestDeleteSession(t *testing.T) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-	})
-	defer rdb.Close()
-
-	key := make([]byte, 32)
-	rand.Read(key)
-	crypto := appcrypto.NewCryptoService(key)
-
-	sm := NewSessionManager(rdb, crypto)
 	ctx := context.Background()
-
-	// Test deleting non-existent session (should not error)
-	err := sm.DeleteSession(ctx, "non-existent-token")
-	// Redis operations may fail but should not panic
-	_ = err
-}
-
-func TestCreateMFASession(t *testing.T) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-	})
-	defer rdb.Close()
-
-	key := make([]byte, 32)
-	rand.Read(key)
-	crypto := appcrypto.NewCryptoService(key)
-
-	sm := NewSessionManager(rdb, crypto)
-	ctx := context.Background()
-
 	userID := uuid.New()
-	token, err := sm.CreateMFASession(ctx, userID, "test@example.com", "127.0.0.1", "test-agent", true)
 
-	if err == nil {
-		require.NotEmpty(t, token)
-	}
+	session, token, err := sm.CreateSession(ctx, userID, "192.168.1.10", "refresh-agent", false)
+	require.NoError(t, err)
+
+	initialExpiry := session.ExpiresAt
+
+	time.Sleep(10 * time.Millisecond)
+	require.NoError(t, sm.RefreshSession(ctx, token))
+
+	refreshed, err := sm.GetSession(ctx, token)
+	require.NoError(t, err)
+	assert.True(t, refreshed.ExpiresAt.After(initialExpiry))
 }
 
-func TestRefreshSession(t *testing.T) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-	})
-	defer rdb.Close()
+func TestMFASessionLifecycle(t *testing.T) {
+	sm, _, cleanup := newTestSessionManager(t)
+	defer cleanup()
 
-	key := make([]byte, 32)
-	rand.Read(key)
-	crypto := appcrypto.NewCryptoService(key)
-
-	sm := NewSessionManager(rdb, crypto)
 	ctx := context.Background()
+	userID := uuid.New()
 
-	// Test refresh on non-existent session
-	err := sm.RefreshSession(ctx, "non-existent-token")
-	assert.Error(t, err)
+	token, err := sm.CreateMFASession(ctx, userID, "test@example.com", "10.0.0.1", "mfa-agent", true)
+	require.NoError(t, err)
+	require.NotEmpty(t, token)
+
+	mfaSession, err := sm.GetMFASession(ctx, token)
+	require.NoError(t, err)
+	assert.Equal(t, userID, mfaSession.UserID)
+	assert.Equal(t, "test@example.com", mfaSession.Email)
+	assert.Equal(t, true, mfaSession.MFAEnabled)
+
+	require.NoError(t, sm.DeleteMFASession(ctx, token))
+
+	_, err = sm.GetMFASession(ctx, token)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "MFA session not found")
 }
-

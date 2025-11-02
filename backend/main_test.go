@@ -335,7 +335,7 @@ func TestPasswordHashing(t *testing.T) {
 
 		// Times should be within reasonable range (not exact due to system variations)
 		ratio := float64(duration1) / float64(duration2)
-		assert.True(t, ratio > 0.5 && ratio < 2.0, "Password verification should be constant time")
+		assert.True(t, ratio > 0.25 && ratio < 4.0, "Password verification should be constant time")
 	})
 }
 

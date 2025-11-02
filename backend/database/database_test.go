@@ -203,6 +203,12 @@ func TestSchemaContainsConstraints(t *testing.T) {
 	}
 }
 
+func TestSetupDatabaseFastInvalidURL(t *testing.T) {
+	if _, err := SetupDatabaseFast("not-a-valid-url"); err == nil {
+		t.Fatal("expected error for invalid database URL")
+	}
+}
+
 func TestMigrationSchemaVersion_Format(t *testing.T) {
 	// Verify format is YYYY.MM.DD.NNN
 	parts := len(MigrationSchemaVersion)

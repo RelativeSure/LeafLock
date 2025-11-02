@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestGetEnvOrDefault(t *testing.T) {
@@ -145,6 +146,8 @@ func TestNormalizeRedisAddress(t *testing.T) {
 		{"extracts host with auth", "redis://:password@localhost:6379", "localhost:6379"},
 		{"handles empty string", "", ""},
 		{"handles invalid URL gracefully", "not a url", "not a url"},
+		{"handles URL with path", "redis://localhost:6379/0", "localhost:6379"},
+		{"handles URL with query params", "redis://localhost:6379?ssl=true", "localhost:6379"},
 	}
 
 	for _, tt := range tests {
@@ -168,6 +171,9 @@ func TestResolveRedisPassword(t *testing.T) {
 		{"extracts from URL when no explicit", "redis://:urlpass@localhost:6379", "", "urlpass"},
 		{"returns empty when no password", "redis://localhost:6379", "", ""},
 		{"handles plain address", "localhost:6379", "", ""},
+		{"handles URL with username and password", "redis://user:pass@localhost:6379", "", "pass"},
+		{"handles invalid URL", "not://valid::url", "", ""},
+		{"handles empty URL with explicit", "", "mypass", "mypass"},
 	}
 
 	for _, tt := range tests {
@@ -306,6 +312,186 @@ func TestIsSupportedLogLevel(t *testing.T) {
 				t.Errorf("isSupportedLogLevel(%q) = %v, want %v", tt.level, result, tt.expected)
 			}
 		})
+	}
+}
+
+func TestLoadConfigUsesDefaults(t *testing.T) {
+	t.Setenv("JWT_SECRET", strings.Repeat("xsecurevalue", 4))          // 44 chars
+	t.Setenv("SERVER_ENCRYPTION_KEY", strings.Repeat("yencryptvalue", 4))
+	t.Setenv("DEFAULT_ADMIN_PASSWORD", "StrongestAdminPass2024!")
+	t.Setenv("DATABASE_URL", "postgres://user:StrongPass321!@localhost:5432/leaflock?sslmode=require")
+	t.Setenv("LOG_LEVEL", "")
+	t.Setenv("LOGLEVEL", "")
+	t.Setenv("SMTP_ENABLED", "")
+	t.Setenv("SMTP_HOST", "")
+	t.Setenv("SMTP_PORT", "")
+	t.Setenv("SMTP_USER", "")
+	t.Setenv("SMTP_PASSWORD", "")
+	t.Setenv("SMTP_FROM", "")
+	t.Setenv("SMTP_USE_TLS", "")
+	t.Setenv("SMTP_INSECURE", "")
+	t.Setenv("FRONTEND_URL", "")
+	t.Setenv("MAX_LOGIN_ATTEMPTS", "")
+	t.Setenv("LOCKOUT_MINUTES", "")
+	t.Setenv("MAX_IP_LOGIN_ATTEMPTS", "")
+	t.Setenv("IP_LOCKOUT_MINUTES", "")
+	t.Setenv("TRUST_PROXY_HEADERS", "")
+	t.Setenv("RATE_LIMIT_MODE", "")
+	t.Setenv("ENABLE_DEFAULT_ADMIN", "")
+	t.Setenv("DEFAULT_ADMIN_EMAIL", "")
+	t.Setenv("REDIS_URL", "")
+	t.Setenv("REDIS_PASSWORD", "")
+	t.Setenv("APP_ENV", "")
+	t.Setenv("PORT", "")
+
+	cfg := LoadConfig()
+	if cfg == nil {
+		t.Fatal("expected config, got nil")
+	}
+
+	if cfg.Port != "8080" {
+		t.Fatalf("expected default port 8080, got %s", cfg.Port)
+	}
+	if cfg.Environment != "development" {
+		t.Fatalf("expected default environment development, got %s", cfg.Environment)
+	}
+	if len(cfg.AllowedOrigins) != 1 || cfg.AllowedOrigins[0] != "*" {
+		t.Fatalf("expected default allowed origins '*', got %v", cfg.AllowedOrigins)
+	}
+	if cfg.SMTPEnabled {
+		t.Error("expected SMTP to be disabled by default")
+	}
+	if cfg.SMTPHost != "localhost" {
+		t.Fatalf("expected default SMTP host localhost, got %s", cfg.SMTPHost)
+	}
+	if cfg.SMTPPort != 587 {
+		t.Fatalf("expected default SMTP port 587, got %d", cfg.SMTPPort)
+	}
+	if cfg.SMTPUseTLS != true {
+		t.Fatalf("expected default SMTPUseTLS true, got %v", cfg.SMTPUseTLS)
+	}
+	if cfg.SMTPInsecure {
+		t.Error("expected SMTPInsecure to be false by default")
+	}
+	if cfg.LogLevel != "info" {
+		t.Fatalf("expected default log level info, got %s", cfg.LogLevel)
+	}
+	if cfg.TrustProxyHeaders {
+		t.Error("expected TrustProxyHeaders default false")
+	}
+	if cfg.RateLimitMode != "progressive" {
+		t.Fatalf("expected default rate limit mode progressive, got %s", cfg.RateLimitMode)
+	}
+	if cfg.DefaultAdminEmail != "admin@leaflock.app" {
+		t.Fatalf("expected default admin email, got %s", cfg.DefaultAdminEmail)
+	}
+}
+
+func TestLoadConfigBuildsDatabaseURLFromEnv(t *testing.T) {
+	t.Setenv("JWT_SECRET", strings.Repeat("securejwtvalue", 3))             // 39 chars
+	t.Setenv("SERVER_ENCRYPTION_KEY", strings.Repeat("encryptionvalue", 3)) // 48 chars
+	t.Setenv("DEFAULT_ADMIN_PASSWORD", "ExtremelySecureAdminPass456!")
+	t.Setenv("DATABASE_URL", "")
+	t.Setenv("POSTGRESQL_HOST", "db.internal.local")
+	t.Setenv("POSTGRESQL_USER", "appuser")
+	t.Setenv("POSTGRESQL_PASSWORD", "postgres")
+	t.Setenv("POSTGRESQL_DATABASE", "leaflock_prod")
+	t.Setenv("POSTGRESQL_PORT", "6543")
+	t.Setenv("POSTGRESQL_SSLMODE", "disable")
+	t.Setenv("APP_ENV", "production")
+	t.Setenv("CORS_ORIGINS", "https://example.com, https://another.example")
+	t.Setenv("LOG_LEVEL", "VERBOSE")
+	t.Setenv("MAX_LOGIN_ATTEMPTS", "7")
+	t.Setenv("LOCKOUT_MINUTES", "45")
+	t.Setenv("MAX_IP_LOGIN_ATTEMPTS", "21")
+	t.Setenv("IP_LOCKOUT_MINUTES", "60")
+	t.Setenv("TRUST_PROXY_HEADERS", "true")
+	t.Setenv("RATE_LIMIT_MODE", "strict")
+	t.Setenv("ENABLE_DEFAULT_ADMIN", "false")
+	t.Setenv("DEFAULT_ADMIN_EMAIL", "ops@example.com")
+	t.Setenv("REDIS_URL", "redis://:password@redis.internal:6380/0")
+	t.Setenv("REDIS_PASSWORD", "ExplicitRedisPass!")
+	t.Setenv("SMTP_ENABLED", "true")
+	t.Setenv("SMTP_HOST", "smtp.example.com")
+	t.Setenv("SMTP_PORT", "2525")
+	t.Setenv("SMTP_USER", "mailer")
+	t.Setenv("SMTP_PASSWORD", "mailerpass")
+	t.Setenv("SMTP_FROM", "LeafLock <noreply@example.com>")
+	t.Setenv("SMTP_USE_TLS", "false")
+	t.Setenv("SMTP_INSECURE", "true")
+	t.Setenv("FRONTEND_URL", "https://app.example.com")
+	t.Setenv("PORT", "9090")
+
+	cfg := LoadConfig()
+	if cfg == nil {
+		t.Fatal("expected config, got nil")
+	}
+
+	if cfg.DatabaseURL == "" || !contains(cfg.DatabaseURL, "db.internal.local") || !contains(cfg.DatabaseURL, "6543") {
+		t.Fatalf("expected DatabaseURL to be built from env vars, got %s", cfg.DatabaseURL)
+	}
+	if cfg.Environment != "production" {
+		t.Fatalf("expected environment production, got %s", cfg.Environment)
+	}
+	if cfg.Port != "9090" {
+		t.Fatalf("expected port 9090, got %s", cfg.Port)
+	}
+	expectedOrigins := []string{"https://example.com", "https://another.example"}
+	if len(cfg.AllowedOrigins) != len(expectedOrigins) {
+		t.Fatalf("expected %d allowed origins, got %d", len(expectedOrigins), len(cfg.AllowedOrigins))
+	}
+	for i, origin := range expectedOrigins {
+		if cfg.AllowedOrigins[i] != origin {
+			t.Fatalf("expected origin %s, got %s", origin, cfg.AllowedOrigins[i])
+		}
+	}
+	if cfg.LogLevel != "info" {
+		t.Fatalf("expected unsupported log level to normalize to info, got %s", cfg.LogLevel)
+	}
+	if !cfg.TrustProxyHeaders {
+		t.Error("expected TrustProxyHeaders to be true")
+	}
+	if cfg.RateLimitMode != "strict" {
+		t.Fatalf("expected rate limit mode strict, got %s", cfg.RateLimitMode)
+	}
+	if cfg.MaxLoginAttempts != 7 {
+		t.Fatalf("expected max login attempts 7, got %d", cfg.MaxLoginAttempts)
+	}
+	if cfg.LockoutDuration != 45*time.Minute {
+		t.Fatalf("expected lockout duration 45m, got %s", cfg.LockoutDuration)
+	}
+	if cfg.MaxIPLoginAttempts != 21 {
+		t.Fatalf("expected max IP login attempts 21, got %d", cfg.MaxIPLoginAttempts)
+	}
+	if cfg.IPLockoutDuration != 60*time.Minute {
+		t.Fatalf("expected IP lockout duration 60m, got %s", cfg.IPLockoutDuration)
+	}
+	if cfg.DefaultAdminEnabled {
+		t.Error("expected default admin to be disabled")
+	}
+	if cfg.DefaultAdminEmail != "ops@example.com" {
+		t.Fatalf("expected custom admin email, got %s", cfg.DefaultAdminEmail)
+	}
+	if !cfg.SMTPEnabled {
+		t.Error("expected SMTP enabled")
+	}
+	if cfg.SMTPHost != "smtp.example.com" {
+		t.Fatalf("expected SMTP host smtp.example.com, got %s", cfg.SMTPHost)
+	}
+	if cfg.SMTPPort != 2525 {
+		t.Fatalf("expected SMTP port 2525, got %d", cfg.SMTPPort)
+	}
+	if cfg.SMTPUseTLS {
+		t.Error("expected SMTPUseTLS false")
+	}
+	if !cfg.SMTPInsecure {
+		t.Error("expected SMTPInsecure true")
+	}
+	if cfg.FrontendURL != "https://app.example.com" {
+		t.Fatalf("expected FrontendURL https://app.example.com, got %s", cfg.FrontendURL)
+	}
+	if cfg.RedisPassword != "ExplicitRedisPass!" {
+		t.Fatalf("expected explicit Redis password, got %s", cfg.RedisPassword)
 	}
 }
 

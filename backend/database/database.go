@@ -172,9 +172,9 @@ func SetupDatabaseFast(dbURL string) (*pgxpool.Pool, error) {
 }
 
 // runOptimizedMigrations checks if migrations are needed before running them
-func runOptimizedMigrations(ctx context.Context, pool *pgxpool.Pool) error {
+func runOptimizedMigrations(ctx context.Context, db Database) error {
 	// Check if migration tracking table exists and get current version
-	currentVersion, needsMigration := checkMigrationStatus(ctx, pool)
+	currentVersion, needsMigration := checkMigrationStatus(ctx, db)
 
 	if !needsMigration {
 		log.Printf("Database schema is up to date (version: %s), skipping migrations", currentVersion)
@@ -185,7 +185,7 @@ func runOptimizedMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 	start := time.Now()
 
 	// Run migrations in a transaction for atomicity
-	tx, err := pool.Begin(ctx)
+	tx, err := db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin migration transaction: %w", err)
 	}
@@ -213,9 +213,9 @@ func runOptimizedMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 }
 
 // checkMigrationStatus returns current version and whether migration is needed
-func checkMigrationStatus(ctx context.Context, pool *pgxpool.Pool) (string, bool) {
+func checkMigrationStatus(ctx context.Context, db Database) (string, bool) {
 	// Create migration tracking table if it doesn't exist
-	_, err := pool.Exec(ctx, `
+	_, err := db.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS _migrations (
 			id SERIAL PRIMARY KEY,
 			version TEXT UNIQUE NOT NULL,
@@ -230,7 +230,7 @@ func checkMigrationStatus(ctx context.Context, pool *pgxpool.Pool) (string, bool
 
 	// Check current version
 	var currentVersion string
-	err = pool.QueryRow(ctx, "SELECT version FROM _migrations ORDER BY applied_at DESC LIMIT 1").Scan(&currentVersion)
+	err = db.QueryRow(ctx, "SELECT version FROM _migrations ORDER BY applied_at DESC LIMIT 1").Scan(&currentVersion)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// No migrations applied yet
@@ -247,7 +247,7 @@ func checkMigrationStatus(ctx context.Context, pool *pgxpool.Pool) (string, bool
 
 	// Additional quick check: verify key tables exist to avoid unnecessary migrations
 	var tableCount int
-	err = pool.QueryRow(ctx, `
+	err = db.QueryRow(ctx, `
 		SELECT COUNT(*) FROM information_schema.tables
 		WHERE table_schema = 'public'
 		AND table_name IN ('users', 'notes', 'workspaces', 'audit_log')
@@ -267,10 +267,10 @@ func updateMigrationVersion(ctx context.Context, tx pgx.Tx, version string) erro
 }
 
 // fastHealthCheck performs a lightweight database connectivity check
-func fastHealthCheck(ctx context.Context, pool *pgxpool.Pool) error {
+func fastHealthCheck(ctx context.Context, db Database) error {
 	// Use a simple SELECT 1 query for fast health checking
 	var result int
-	err := pool.QueryRow(ctx, "SELECT 1").Scan(&result)
+	err := db.QueryRow(ctx, "SELECT 1").Scan(&result)
 	if err != nil {
 		return fmt.Errorf("database health check failed: %w", err)
 	}
@@ -278,12 +278,12 @@ func fastHealthCheck(ctx context.Context, pool *pgxpool.Pool) error {
 }
 
 // validateDatabaseConnectivity performs an optimized database connectivity check
-func validateDatabaseConnectivity(pool *pgxpool.Pool) error {
+func validateDatabaseConnectivity(db Database) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	// Fast health check first
-	if err := fastHealthCheck(ctx, pool); err != nil {
+	if err := fastHealthCheck(ctx, db); err != nil {
 		return fmt.Errorf("database connectivity check failed: %w", err)
 	}
 

@@ -16,21 +16,21 @@ describe('permission-utils', () => {
   const adminUser: User = {
     id: '1',
     email: 'admin@example.com',
-    name: 'Admin',
+    name: 'Admin User',
     role: 'admin',
     isAdmin: true,
     mfaEnabled: false,
-    createdAt: new Date().toISOString(),
+    createdAt: '2024-01-01',
   }
 
   const regularUser: User = {
     id: '2',
     email: 'user@example.com',
-    name: 'User',
+    name: 'Regular User',
     role: 'user',
     isAdmin: false,
     mfaEnabled: false,
-    createdAt: new Date().toISOString(),
+    createdAt: '2024-01-01',
   }
 
   describe('isAdmin', () => {
@@ -70,17 +70,17 @@ describe('permission-utils', () => {
       expect(hasPermission(adminUser, 'user')).toBe(true)
     })
 
-    it('should return true for user with user permission', () => {
-      expect(hasPermission(regularUser, 'user')).toBe(true)
-    })
-
     it('should return false for user with admin permission', () => {
       expect(hasPermission(regularUser, 'admin')).toBe(false)
     })
 
+    it('should return true for user with user permission', () => {
+      expect(hasPermission(regularUser, 'user')).toBe(true)
+    })
+
     it('should return false for null user', () => {
-      expect(hasPermission(null, 'user')).toBe(false)
       expect(hasPermission(null, 'admin')).toBe(false)
+      expect(hasPermission(null, 'user')).toBe(false)
     })
   })
 
@@ -92,55 +92,102 @@ describe('permission-utils', () => {
     it('should return false for regular user', () => {
       expect(requiresAdmin(regularUser)).toBe(false)
     })
+
+    it('should return false for null user', () => {
+      expect(requiresAdmin(null)).toBe(false)
+    })
   })
 
   describe('canManageUsers', () => {
-    it('should return true for admin', () => {
+    it('should allow admin to manage users', () => {
       expect(canManageUsers(adminUser)).toBe(true)
     })
 
-    it('should return false for regular user', () => {
+    it('should not allow regular user to manage users', () => {
       expect(canManageUsers(regularUser)).toBe(false)
+    })
+
+    it('should not allow null user to manage users', () => {
+      expect(canManageUsers(null)).toBe(false)
     })
   })
 
   describe('canViewAnalytics', () => {
-    it('should return true for admin', () => {
+    it('should allow admin to view analytics', () => {
       expect(canViewAnalytics(adminUser)).toBe(true)
     })
 
-    it('should return false for regular user', () => {
+    it('should not allow regular user to view analytics', () => {
       expect(canViewAnalytics(regularUser)).toBe(false)
+    })
+
+    it('should not allow null user to view analytics', () => {
+      expect(canViewAnalytics(null)).toBe(false)
     })
   })
 
   describe('canManageAnnouncements', () => {
-    it('should return true for admin', () => {
+    it('should allow admin to manage announcements', () => {
       expect(canManageAnnouncements(adminUser)).toBe(true)
     })
 
-    it('should return false for regular user', () => {
+    it('should not allow regular user to manage announcements', () => {
       expect(canManageAnnouncements(regularUser)).toBe(false)
+    })
+
+    it('should not allow null user to manage announcements', () => {
+      expect(canManageAnnouncements(null)).toBe(false)
     })
   })
 
   describe('canViewSecuritySettings', () => {
-    it('should return true for admin', () => {
+    it('should allow admin to view security settings', () => {
       expect(canViewSecuritySettings(adminUser)).toBe(true)
     })
 
-    it('should return false for regular user', () => {
+    it('should not allow regular user to view security settings', () => {
       expect(canViewSecuritySettings(regularUser)).toBe(false)
+    })
+
+    it('should not allow null user to view security settings', () => {
+      expect(canViewSecuritySettings(null)).toBe(false)
     })
   })
 
   describe('canManageSystemSettings', () => {
-    it('should return true for admin', () => {
+    it('should allow admin to manage system settings', () => {
       expect(canManageSystemSettings(adminUser)).toBe(true)
     })
 
-    it('should return false for regular user', () => {
+    it('should not allow regular user to manage system settings', () => {
       expect(canManageSystemSettings(regularUser)).toBe(false)
+    })
+
+    it('should not allow null user to manage system settings', () => {
+      expect(canManageSystemSettings(null)).toBe(false)
+    })
+  })
+
+  describe('Edge Cases', () => {
+    it('should handle user with undefined role', () => {
+      const userWithUndefinedRole = {
+        ...regularUser,
+        role: undefined,
+      } as any
+
+      expect(isAdmin(userWithUndefinedRole)).toBe(false)
+      expect(hasPermission(userWithUndefinedRole, 'admin')).toBe(false)
+    })
+
+    it('should handle user with invalid role', () => {
+      const userWithInvalidRole = {
+        ...regularUser,
+        role: 'invalid' as any,
+      }
+
+      expect(isAdmin(userWithInvalidRole)).toBe(false)
+      expect(isUser(userWithInvalidRole)).toBe(false)
+      expect(hasPermission(userWithInvalidRole, 'admin')).toBe(false)
     })
   })
 })

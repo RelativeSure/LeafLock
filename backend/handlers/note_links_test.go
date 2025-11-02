@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
@@ -163,6 +164,73 @@ func (suite *NoteLinksHandlerTestSuite) TestCreateNoteLink_Success() {
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	suite.NoError(err)
 	suite.Equal(linkID.String(), result["id"].(string))
+}
+
+func (suite *NoteLinksHandlerTestSuite) TestGetAllNotesForLinking() {
+	app := fiber.New()
+	app.Get("/notes/search-for-linking", func(c *fiber.Ctx) error {
+		c.Locals("user_id", suite.userID)
+		return suite.handler.GetAllNotesForLinking(c)
+	})
+
+	noteTitle := []byte("encrypted-title")
+	encodedTitle := base64.StdEncoding.EncodeToString(noteTitle)
+	noteID := uuid.New()
+
+	rows := &MockRows{}
+	rows.On("Next").Return(true).Once()
+	rows.On("Next").Return(false).Once()
+	rows.On("Scan", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		if v, ok := args[0].(*uuid.UUID); ok {
+			*v = noteID
+		}
+		if v, ok := args[1].(*[]byte); ok {
+			*v = noteTitle
+		}
+	}).Return(nil).Once()
+
+	suite.mockDB.On("Query", mock.Anything, mock.Anything, suite.userID).Return(rows, nil).Once()
+
+	req := httptest.NewRequest("GET", "/notes/search-for-linking", nil)
+	resp, err := app.Test(req, -1)
+	suite.Require().NoError(err)
+	suite.Equal(200, resp.StatusCode)
+
+	var payload map[string][]map[string]interface{}
+	suite.Require().NoError(json.NewDecoder(resp.Body).Decode(&payload))
+	results := payload["notes"]
+	suite.Require().Len(results, 1)
+	suite.Equal(noteID.String(), results[0]["id"])
+	suite.Equal(encodedTitle, results[0]["title_encrypted"])
+}
+
+func (suite *NoteLinksHandlerTestSuite) TestGetAllNotesForLinkingWithQuery() {
+	app := fiber.New()
+	app.Get("/notes/search-for-linking", func(c *fiber.Ctx) error {
+		c.Locals("user_id", suite.userID)
+		return suite.handler.GetAllNotesForLinking(c)
+	})
+
+	rows := &MockRows{}
+	rows.On("Next").Return(true).Once()
+	rows.On("Next").Return(false).Once()
+	noteID := uuid.New()
+	titleBytes := []byte("another-title")
+	rows.On("Scan", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		if v, ok := args[0].(*uuid.UUID); ok {
+			*v = noteID
+		}
+		if v, ok := args[1].(*[]byte); ok {
+			*v = titleBytes
+		}
+	}).Return(nil).Once()
+
+	suite.mockDB.On("Query", mock.Anything, mock.Anything, suite.userID).Return(rows, nil).Once()
+
+	req := httptest.NewRequest("GET", "/notes/search-for-linking?q=test", nil)
+	resp, err := app.Test(req, -1)
+	suite.Require().NoError(err)
+	suite.Equal(200, resp.StatusCode)
 }
 
 func (suite *NoteLinksHandlerTestSuite) TestGetNoteLinks_InvalidNoteID() {

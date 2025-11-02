@@ -11,28 +11,36 @@ import (
 	"time"
 
 	appcrypto "leaflock/crypto"
+	"leaflock/database"
 	"leaflock/utils"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
 
 // Service coordinates all auth operations
 type Service struct {
-	db        *pgxpool.Pool
+	db        database.Database
 	crypto    *appcrypto.CryptoService
-	session   *SessionManager
+	session   sessionManager
 	password  *PasswordManager
 	mfa       *MFAManager
 	jwtSecret string
 }
 
+type sessionManager interface {
+	CreateSession(ctx context.Context, userID uuid.UUID, ipAddress, userAgent string, mfaVerified bool) (*Session, string, error)
+	CreateMFASession(ctx context.Context, userID uuid.UUID, email, ipAddress, userAgent string, mfaEnabled bool) (string, error)
+	GetMFASession(ctx context.Context, token string) (*MFASession, error)
+	DeleteMFASession(ctx context.Context, token string) error
+	DeleteSession(ctx context.Context, token string) error
+}
+
 const defaultEncryptionVersion = 1
 
 // NewService creates a new auth service
-func NewService(db *pgxpool.Pool, rdb *redis.Client, crypto *appcrypto.CryptoService, jwtSecret string) *Service {
+func NewService(db database.Database, rdb *redis.Client, crypto *appcrypto.CryptoService, jwtSecret string) *Service {
 	return &Service{
 		db:        db,
 		crypto:    crypto,
