@@ -64,7 +64,7 @@ describe('Integration: Complete Note Lifecycle', () => {
         content: 'encrypted',
         userId: '123',
         encrypted: true,
-        encryptionVersion: 'v1',
+        encryptionVersion: 1,
         folderId: null,
         tags: [],
         pinned: false,
@@ -107,8 +107,8 @@ describe('Integration: Complete Note Lifecycle', () => {
       vi.mocked(apiClient.createTag).mockResolvedValue({
         id: 'tag-1',
         name: 'important',
+        color: '#ff0000',
         userId: '123',
-        createdAt: '2024-01-01',
       })
 
       await useNotesStore.getState().createTag({ name: 'important' })
@@ -145,7 +145,7 @@ describe('Integration: Complete Note Lifecycle', () => {
         { id: '1', email: 'collaborator@example.com', permission: 'read' },
       ])
 
-      await apiClient.shareNote('note-1', ['collaborator@example.com'], 'read')
+      await apiClient.shareNote('note-1', ['collaborator@example.com'])
 
       const collaborators = await apiClient.getCollaborators('note-1')
 
@@ -187,7 +187,7 @@ describe('Integration: Complete Note Lifecycle', () => {
       content: 'encrypted',
       userId: '123',
       encrypted: true,
-      encryptionVersion: 'v1',
+      encryptionVersion: 1,
       folderId: null,
       tags: [],
       pinned: false,
@@ -289,7 +289,7 @@ describe('Integration: Complete Note Lifecycle', () => {
         content: 'Content 1',
         userId: '123',
         encrypted: true,
-        encryptionVersion: 'v1',
+        encryptionVersion: 1,
         folderId: null,
         tags: [],
         pinned: false,
@@ -305,7 +305,7 @@ describe('Integration: Complete Note Lifecycle', () => {
         content: 'Content 2',
         userId: '123',
         encrypted: true,
-        encryptionVersion: 'v1',
+        encryptionVersion: 1,
         folderId: null,
         tags: [],
         pinned: false,
@@ -321,7 +321,7 @@ describe('Integration: Complete Note Lifecycle', () => {
         content: 'Content 3',
         userId: '123',
         encrypted: true,
-        encryptionVersion: 'v1',
+        encryptionVersion: 1,
         folderId: null,
         tags: [],
         pinned: false,
@@ -399,7 +399,7 @@ describe('Integration: Complete Note Lifecycle', () => {
         content: 'Original content',
         userId: '123',
         encrypted: true,
-        encryptionVersion: 'v1',
+        encryptionVersion: 1,
         folderId: null,
         tags: [],
         pinned: false,

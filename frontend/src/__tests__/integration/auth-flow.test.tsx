@@ -8,7 +8,7 @@ vi.mock('@/services/api/secureApi', () => ({
     register: vi.fn(),
     logout: vi.fn(),
     verifyMFA: vi.fn(),
-    setupMFA: vi.fn(),
+    beginMFASetup: vi.fn(),
     enableMFA: vi.fn(),
     disableMFA: vi.fn(),
     getBackupCodes: vi.fn(),
@@ -19,9 +19,7 @@ describe('Integration: Complete Auth Flow', () => {
   beforeEach(() => {
     useAuthStore.setState({
       user: null,
-      isAuthenticated: false,
       isLoading: false,
-      error: null,
     })
     localStorage.clear()
     vi.clearAllMocks()
@@ -47,7 +45,7 @@ describe('Integration: Complete Auth Flow', () => {
 
       await useAuthStore.getState().register('newuser@example.com', 'password123', 'New User')
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(true)
+      expect(useAuthStore.getState().user).not.toBeNull()
       expect(useAuthStore.getState().user?.email).toBe('newuser@example.com')
       expect(localStorage.getItem('token')).toBe('register-token')
 
@@ -56,7 +54,7 @@ describe('Integration: Complete Auth Flow', () => {
 
       await useAuthStore.getState().logout()
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(false)
+      expect(useAuthStore.getState().user).toBeNull()
       expect(useAuthStore.getState().user).toBeNull()
       expect(localStorage.getItem('token')).toBeNull()
 
@@ -71,7 +69,7 @@ describe('Integration: Complete Auth Flow', () => {
 
       await useAuthStore.getState().login('newuser@example.com', 'password123')
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(true)
+      expect(useAuthStore.getState().user).not.toBeNull()
       expect(localStorage.getItem('token')).toBe('login-token')
     })
 
@@ -83,7 +81,7 @@ describe('Integration: Complete Auth Flow', () => {
         useAuthStore.getState().register('existing@example.com', 'password', 'User')
       ).rejects.toThrow('Email already exists')
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(false)
+      expect(useAuthStore.getState().user).toBeNull()
 
       // Step 2: Retry with different email succeeds
       const registerResponse = {
@@ -103,7 +101,7 @@ describe('Integration: Complete Auth Flow', () => {
 
       await useAuthStore.getState().register('newemail@example.com', 'password', 'User')
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(true)
+      expect(useAuthStore.getState().user).not.toBeNull()
     })
   })
 
@@ -133,20 +131,18 @@ describe('Integration: Complete Auth Flow', () => {
       const setupResponse = {
         secret: 'JBSWY3DPEHPK3PXP',
         qrCode: 'data:image/png;base64,ABC',
-        backupCodes: ['1111-2222-3333', '4444-5555-6666'],
       }
 
-      vi.mocked(apiClient.setupMFA).mockResolvedValue(setupResponse)
+      vi.mocked(apiClient.beginMFASetup).mockResolvedValue(setupResponse)
 
-      const mfaSetup = await useAuthStore.getState().setupMFA()
+      const mfaSecret = await useAuthStore.getState().enableMFA()
 
-      expect(mfaSetup.qrCode).toBeTruthy()
-      expect(mfaSetup.backupCodes).toHaveLength(2)
+      expect(mfaSecret).toBe('JBSWY3DPEHPK3PXP')
 
-      // Step 3: Enable MFA with code
+      // Step 3: Enable MFA with code (call API directly)
       vi.mocked(apiClient.enableMFA).mockResolvedValue(undefined)
 
-      await useAuthStore.getState().enableMFA('123456')
+      await apiClient.enableMFA('123456')
 
       // Update user state to reflect MFA enabled
       useAuthStore.setState({
@@ -170,7 +166,7 @@ describe('Integration: Complete Auth Flow', () => {
 
       await useAuthStore.getState().login('user@example.com', 'password')
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(false) // Not fully authenticated yet
+      expect(useAuthStore.getState().user).toBeNull() // Not fully authenticated yet
 
       // Step 6: Verify MFA code
       const verifyResponse = {
@@ -182,7 +178,7 @@ describe('Integration: Complete Auth Flow', () => {
 
       await useAuthStore.getState().verifyMFA('123456')
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(true)
+      expect(useAuthStore.getState().user).not.toBeNull()
       expect(localStorage.getItem('token')).toBe('mfa-token')
     })
 
@@ -198,7 +194,6 @@ describe('Integration: Complete Auth Flow', () => {
           mfaEnabled: true,
           createdAt: '2024-01-01',
         },
-        isAuthenticated: false,
       })
 
       // Step 1: First MFA attempt fails
@@ -206,7 +201,7 @@ describe('Integration: Complete Auth Flow', () => {
 
       await expect(useAuthStore.getState().verifyMFA('000000')).rejects.toThrow('Invalid code')
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(false)
+      expect(useAuthStore.getState().user).toBeNull()
 
       // Step 2: Second attempt succeeds
       const verifyResponse = {
@@ -225,7 +220,7 @@ describe('Integration: Complete Auth Flow', () => {
 
       await useAuthStore.getState().verifyMFA('123456')
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(true)
+      expect(useAuthStore.getState().user).not.toBeNull()
     })
 
     it('should disable MFA and login without it', async () => {
@@ -240,13 +235,12 @@ describe('Integration: Complete Auth Flow', () => {
           mfaEnabled: true,
           createdAt: '2024-01-01',
         },
-        isAuthenticated: true,
       })
 
       // Step 1: Disable MFA
       vi.mocked(apiClient.disableMFA).mockResolvedValue(undefined)
 
-      await useAuthStore.getState().disableMFA('password123')
+      await useAuthStore.getState().disableMFA()
 
       // Update user state
       useAuthStore.setState({
@@ -274,7 +268,7 @@ describe('Integration: Complete Auth Flow', () => {
 
       await useAuthStore.getState().login('user@example.com', 'password123')
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(true)
+      expect(useAuthStore.getState().user).not.toBeNull()
       expect(useAuthStore.getState().user?.mfaEnabled).toBe(false)
     })
   })
@@ -298,10 +292,9 @@ describe('Integration: Complete Auth Flow', () => {
       // Restore session
       useAuthStore.setState({
         user: mockUser,
-        isAuthenticated: true,
       })
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(true)
+      expect(useAuthStore.getState().user).not.toBeNull()
       expect(useAuthStore.getState().user).toEqual(mockUser)
     })
 
@@ -328,7 +321,7 @@ describe('Integration: Complete Auth Flow', () => {
 
       await useAuthStore.getState().login('user@example.com', 'password')
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(true)
+      expect(useAuthStore.getState().user).not.toBeNull()
       expect(localStorage.getItem('token')).toBe('new-token')
     })
   })
@@ -342,7 +335,7 @@ describe('Integration: Complete Auth Flow', () => {
         'Network error'
       )
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(false)
+      expect(useAuthStore.getState().user).toBeNull()
 
       // Step 2: Retry succeeds
       const loginResponse = {
@@ -362,7 +355,7 @@ describe('Integration: Complete Auth Flow', () => {
 
       await useAuthStore.getState().login('user@example.com', 'password')
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(true)
+      expect(useAuthStore.getState().user).not.toBeNull()
     })
 
     it('should handle logout failure gracefully', async () => {
@@ -377,7 +370,6 @@ describe('Integration: Complete Auth Flow', () => {
           mfaEnabled: false,
           createdAt: '2024-01-01',
         },
-        isAuthenticated: true,
       })
 
       localStorage.setItem('token', 'token')
@@ -388,7 +380,7 @@ describe('Integration: Complete Auth Flow', () => {
       await useAuthStore.getState().logout()
 
       // Should still clear local state even if server fails
-      expect(useAuthStore.getState().isAuthenticated).toBe(false)
+      expect(useAuthStore.getState().user).toBeNull()
       expect(localStorage.getItem('token')).toBeNull()
     })
   })

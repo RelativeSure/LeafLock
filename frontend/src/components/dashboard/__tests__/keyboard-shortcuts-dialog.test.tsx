@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { KeyboardShortcutsDialog } from '../keyboard-shortcuts-dialog'
 
 vi.mock('@/components/ui/dialog', () => ({
@@ -10,8 +10,8 @@ vi.mock('@/components/ui/dialog', () => ({
   DialogDescription: ({ children }: any) => <p>{children}</p>,
 }))
 
-vi.mock('@/components/ui/scroll-area', () => ({
-  ScrollArea: ({ children }: any) => <div data-testid="scroll-area">{children}</div>,
+vi.mock('@/components/ui/badge', () => ({
+  Badge: ({ children }: any) => <span data-testid="badge">{children}</span>,
 }))
 
 describe('KeyboardShortcutsDialog', () => {
@@ -19,86 +19,97 @@ describe('KeyboardShortcutsDialog', () => {
     vi.clearAllMocks()
   })
 
-  it('should render when open', () => {
-    render(<KeyboardShortcutsDialog open={true} onOpenChange={vi.fn()} />)
+  it('should render when open event is triggered', () => {
+    render(<KeyboardShortcutsDialog />)
+    fireEvent(window, new Event('open-keyboard-shortcuts'))
     expect(screen.getByTestId('dialog')).toBeInTheDocument()
   })
 
-  it('should not render when closed', () => {
-    render(<KeyboardShortcutsDialog open={false} onOpenChange={vi.fn()} />)
+  it('should not render initially', () => {
+    render(<KeyboardShortcutsDialog />)
     expect(screen.queryByTestId('dialog')).not.toBeInTheDocument()
   })
 
-  it('should display keyboard shortcuts', () => {
-    render(<KeyboardShortcutsDialog open={true} onOpenChange={vi.fn()} />)
-    expect(screen.getByTestId('scroll-area')).toBeInTheDocument()
+  it('should display keyboard shortcuts list', () => {
+    render(<KeyboardShortcutsDialog />)
+    fireEvent(window, new Event('open-keyboard-shortcuts'))
+    expect(screen.getByTestId('dialog-content')).toBeInTheDocument()
   })
 
-  it('should show general shortcuts section', () => {
-    render(<KeyboardShortcutsDialog open={true} onOpenChange={vi.fn()} />)
-    expect(screen.getByText(/general|navigation/i)).toBeInTheDocument()
+  it('should show shortcuts title', () => {
+    render(<KeyboardShortcutsDialog />)
+    fireEvent(window, new Event('open-keyboard-shortcuts'))
+    expect(screen.getByText(/keyboard shortcuts/i)).toBeInTheDocument()
   })
 
-  it('should show editor shortcuts section', () => {
-    render(<KeyboardShortcutsDialog open={true} onOpenChange={vi.fn()} />)
-    expect(screen.getByText(/editor|editing/i)).toBeInTheDocument()
+  it('should display shortcut descriptions', () => {
+    render(<KeyboardShortcutsDialog />)
+    fireEvent(window, new Event('open-keyboard-shortcuts'))
+    expect(screen.getByText(/create new note/i)).toBeInTheDocument()
   })
 
   it('should display keyboard key badges', () => {
-    render(<KeyboardShortcutsDialog open={true} onOpenChange={vi.fn()} />)
-    expect(screen.getByText(/ctrl|cmd|⌘/i)).toBeInTheDocument()
+    render(<KeyboardShortcutsDialog />)
+    fireEvent(window, new Event('open-keyboard-shortcuts'))
+    const badges = screen.getAllByText(/cmd\/ctrl/i)
+    expect(badges.length).toBeGreaterThan(0)
   })
 
   it('should show save shortcut', () => {
-    render(<KeyboardShortcutsDialog open={true} onOpenChange={vi.fn()} />)
+    render(<KeyboardShortcutsDialog />)
+    fireEvent(window, new Event('open-keyboard-shortcuts'))
     expect(screen.getByText(/save/i)).toBeInTheDocument()
   })
 
   it('should show search shortcut', () => {
-    render(<KeyboardShortcutsDialog open={true} onOpenChange={vi.fn()} />)
-    expect(screen.getByText(/search|find/i)).toBeInTheDocument()
+    render(<KeyboardShortcutsDialog />)
+    fireEvent(window, new Event('open-keyboard-shortcuts'))
+    expect(screen.getByText(/search/i)).toBeInTheDocument()
   })
 
   it('should show new note shortcut', () => {
-    render(<KeyboardShortcutsDialog open={true} onOpenChange={vi.fn()} />)
-    expect(screen.getByText(/new.*note/i)).toBeInTheDocument()
+    render(<KeyboardShortcutsDialog />)
+    fireEvent(window, new Event('open-keyboard-shortcuts'))
+    expect(screen.getByText(/create new note/i)).toBeInTheDocument()
   })
 
-  it('should group shortcuts by category', () => {
-    render(<KeyboardShortcutsDialog open={true} onOpenChange={vi.fn()} />)
+  it('should display all shortcuts', () => {
+    render(<KeyboardShortcutsDialog />)
+    fireEvent(window, new Event('open-keyboard-shortcuts'))
 
-    const categories = screen.queryAllByRole('heading', { level: 3 })
-    expect(categories.length).toBeGreaterThan(0)
+    // Component has 14 shortcuts defined
+    expect(screen.getByText(/create new note/i)).toBeInTheDocument()
+    expect(screen.getByText(/search notes/i)).toBeInTheDocument()
+    expect(screen.getByText(/save note/i)).toBeInTheDocument()
   })
 
-  it('should handle dialog close', () => {
-    const onOpenChange = vi.fn()
-    render(<KeyboardShortcutsDialog open={true} onOpenChange={onOpenChange} />)
+  it('should display badge components', () => {
+    render(<KeyboardShortcutsDialog />)
+    fireEvent(window, new Event('open-keyboard-shortcuts'))
 
-    const closeButton = screen.queryByRole('button', { name: /close/i })
-    if (closeButton) {
-      closeButton.click()
-      expect(onOpenChange).toHaveBeenCalledWith(false)
-    }
+    const badges = screen.getAllByTestId('badge')
+    expect(badges.length).toBeGreaterThan(0)
   })
 
-  it('should display platform-specific shortcuts', () => {
-    render(<KeyboardShortcutsDialog open={true} onOpenChange={vi.fn()} />)
+  it('should show bold formatting shortcut', () => {
+    render(<KeyboardShortcutsDialog />)
+    fireEvent(window, new Event('open-keyboard-shortcuts'))
 
-    // Should show either Ctrl or Cmd based on platform
-    expect(screen.getByText(/ctrl|cmd|⌘/i)).toBeInTheDocument()
+    expect(screen.getByText(/bold text/i)).toBeInTheDocument()
   })
 
-  it('should show formatting shortcuts', () => {
-    render(<KeyboardShortcutsDialog open={true} onOpenChange={vi.fn()} />)
+  it('should show italic formatting shortcut', () => {
+    render(<KeyboardShortcutsDialog />)
+    fireEvent(window, new Event('open-keyboard-shortcuts'))
 
-    expect(screen.getByText(/bold/i) || screen.getByText(/italic/i) || document.body).toBeTruthy()
+    expect(screen.getByText(/italic text/i)).toBeInTheDocument()
   })
 
-  it('should display multiple shortcut combinations', () => {
-    render(<KeyboardShortcutsDialog open={true} onOpenChange={vi.fn()} />)
+  it('should display multiple shortcut combinations with plus signs', () => {
+    render(<KeyboardShortcutsDialog />)
+    fireEvent(window, new Event('open-keyboard-shortcuts'))
 
-    const shortcuts = screen.getAllByText(/\+/i)
-    expect(shortcuts.length).toBeGreaterThan(0)
+    const plusSigns = screen.getAllByText('+')
+    expect(plusSigns.length).toBeGreaterThan(0)
   })
 })

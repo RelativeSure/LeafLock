@@ -15,62 +15,89 @@ vi.mock('@/components/ui/tooltip', () => ({
   TooltipProvider: ({ children }: any) => <div>{children}</div>,
 }))
 
+const mockGetSessionUsers = vi.fn()
+
+vi.mock('@/lib/collaboration-context', () => ({
+  useCollaboration: () => ({
+    getSessionUsers: mockGetSessionUsers,
+    joinSession: vi.fn(),
+    leaveSession: vi.fn(),
+    shareNote: vi.fn(),
+    unshareNote: vi.fn(),
+    getSharedUsers: vi.fn(),
+  }),
+}))
+
 describe('CollaborationBar', () => {
-  const mockCollaborators = [
-    { id: '1', email: 'user1@example.com', name: 'User One', permission: 'read' },
-    { id: '2', email: 'user2@example.com', name: 'User Two', permission: 'write' },
+  const mockUsers = [
+    { id: '1', email: 'user1@example.com', name: 'User One', color: '#ff0000' },
+    { id: '2', email: 'user2@example.com', name: 'User Two', color: '#00ff00' },
   ]
+
+  const testNoteId = 'test-note-123'
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockGetSessionUsers.mockReturnValue([])
   })
 
-  it('should render collaboration bar', () => {
-    render(<CollaborationBar collaborators={[]} />)
-    expect(document.body).toBeTruthy()
+  it('should render nothing when only one user or less', () => {
+    mockGetSessionUsers.mockReturnValue([mockUsers[0]])
+    const { container } = render(<CollaborationBar noteId={testNoteId} />)
+    expect(container.firstChild).toBeNull()
   })
 
-  it('should display collaborators', () => {
-    render(<CollaborationBar collaborators={mockCollaborators} />)
+  it('should display collaboration bar with multiple users', () => {
+    mockGetSessionUsers.mockReturnValue(mockUsers)
+    render(<CollaborationBar noteId={testNoteId} />)
+    expect(screen.getByText('2 people editing')).toBeInTheDocument()
+  })
+
+  it('should display user avatars', () => {
+    mockGetSessionUsers.mockReturnValue(mockUsers)
+    render(<CollaborationBar noteId={testNoteId} />)
     const avatars = screen.getAllByTestId('avatar')
     expect(avatars.length).toBeGreaterThan(0)
   })
 
-  it('should handle empty collaborators list', () => {
-    render(<CollaborationBar collaborators={[]} />)
-    expect(document.body).toBeTruthy()
+  it('should display user initials', () => {
+    mockGetSessionUsers.mockReturnValue(mockUsers)
+    render(<CollaborationBar noteId={testNoteId} />)
+    const initials = screen.getAllByText('U')
+    expect(initials.length).toBe(2)
   })
 
-  it('should show multiple collaborators', () => {
-    render(<CollaborationBar collaborators={mockCollaborators} />)
+  it('should handle exactly two users', () => {
+    mockGetSessionUsers.mockReturnValue(mockUsers)
+    render(<CollaborationBar noteId={testNoteId} />)
+    expect(screen.getByText('2 people editing')).toBeInTheDocument()
     expect(screen.getAllByTestId('avatar').length).toBe(2)
   })
 
-  it('should display collaborator initials', () => {
-    render(<CollaborationBar collaborators={mockCollaborators} />)
-    expect(screen.getByText('UO')).toBeInTheDocument()
-    expect(screen.getByText('UT')).toBeInTheDocument()
-  })
-
-  it('should handle single collaborator', () => {
-    render(<CollaborationBar collaborators={[mockCollaborators[0]]} />)
-    expect(screen.getAllByTestId('avatar')).toHaveLength(1)
-  })
-
-  it('should apply custom className', () => {
-    const { container } = render(<CollaborationBar collaborators={[]} className="custom-bar" />)
-    expect(container.firstChild).toHaveClass('custom-bar')
-  })
-
-  it('should render with max display limit', () => {
-    const manyCollaborators = Array.from({ length: 10 }, (_, i) => ({
+  it('should limit display to 5 users and show overflow count', () => {
+    const manyUsers = Array.from({ length: 8 }, (_, i) => ({
       id: `user-${i}`,
       email: `user${i}@example.com`,
       name: `User ${i}`,
-      permission: 'read' as const,
+      color: '#000000',
     }))
 
-    render(<CollaborationBar collaborators={manyCollaborators} maxDisplay={5} />)
-    expect(document.body).toBeTruthy()
+    mockGetSessionUsers.mockReturnValue(manyUsers)
+    render(<CollaborationBar noteId={testNoteId} />)
+
+    expect(screen.getByText('8 people editing')).toBeInTheDocument()
+    expect(screen.getByText('+3')).toBeInTheDocument()
+  })
+
+  it('should call getSessionUsers with correct noteId', () => {
+    mockGetSessionUsers.mockReturnValue(mockUsers)
+    render(<CollaborationBar noteId={testNoteId} />)
+    expect(mockGetSessionUsers).toHaveBeenCalledWith(testNoteId)
+  })
+
+  it('should not render when no users are active', () => {
+    mockGetSessionUsers.mockReturnValue([])
+    const { container } = render(<CollaborationBar noteId={testNoteId} />)
+    expect(container.firstChild).toBeNull()
   })
 })

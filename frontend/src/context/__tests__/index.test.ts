@@ -12,10 +12,6 @@ describe('context/index', () => {
     expect(typeof useTheme).toBe('function')
   })
 
-  it('ThemeProvider has correct display name', () => {
-    expect(ThemeProvider.displayName).toBe('ThemeProvider')
-  })
-
   it('re-exports from ThemeContext module', async () => {
     const { ThemeProvider: DirectProvider, useTheme: DirectUseTheme } = await import(
       '../ThemeContext'

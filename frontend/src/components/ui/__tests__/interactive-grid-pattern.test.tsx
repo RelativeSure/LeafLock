@@ -23,25 +23,14 @@ describe('InteractiveGridPattern', () => {
     expect(container.firstChild).toBeInTheDocument()
   })
 
-  it('should render with custom square size', () => {
-    const { container } = render(<InteractiveGridPattern squareSize={10} />)
-    expect(container.firstChild).toBeInTheDocument()
-  })
-
-  it('should render with custom square gap', () => {
-    const { container } = render(<InteractiveGridPattern squareGap={5} />)
-    expect(container.firstChild).toBeInTheDocument()
+  it('should render with square styling', () => {
+    const { container } = render(<InteractiveGridPattern squaresClassName="fill-primary" />)
+    expect(container.querySelector('svg')).toBeInTheDocument()
   })
 
   it('should render with all custom props', () => {
     const { container } = render(
-      <InteractiveGridPattern
-        width={200}
-        height={200}
-        squareSize={15}
-        squareGap={3}
-        className="full-custom"
-      />
+      <InteractiveGridPattern width={200} height={200} className="full-custom" />
     )
     expect(container.firstChild).toBeInTheDocument()
   })

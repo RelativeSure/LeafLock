@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ForgotPasswordForm } from '../forgot-password-form'
-import { BrowserRouter } from 'react-router-dom'
 
 vi.mock('@/services/api/secureApi', () => ({
   apiClient: {
@@ -26,23 +25,24 @@ vi.mock('@/components/ui/label', () => ({
 }))
 
 describe('ForgotPasswordForm', () => {
-  const renderWithRouter = (component: React.ReactElement) => {
-    return render(<BrowserRouter>{component}</BrowserRouter>)
-  }
+  const toggleMode = vi.fn()
+
+  const renderForm = () => render(<ForgotPasswordForm onToggleMode={toggleMode} />)
 
   beforeEach(() => {
     vi.clearAllMocks()
+    toggleMode.mockClear()
   })
 
   it('should render forgot password form', () => {
-    renderWithRouter(<ForgotPasswordForm />)
+    renderForm()
 
     expect(screen.getByText(/forgot password/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
   })
 
   it('should have email input field', () => {
-    renderWithRouter(<ForgotPasswordForm />)
+    renderForm()
 
     const emailInput = screen.getByLabelText(/email/i)
     expect(emailInput).toBeInTheDocument()
@@ -50,14 +50,14 @@ describe('ForgotPasswordForm', () => {
   })
 
   it('should have submit button', () => {
-    renderWithRouter(<ForgotPasswordForm />)
+    renderForm()
 
     const submitButton = screen.getByRole('button', { name: /reset password|send/i })
     expect(submitButton).toBeInTheDocument()
   })
 
   it('should allow typing in email field', () => {
-    renderWithRouter(<ForgotPasswordForm />)
+    renderForm()
 
     const emailInput = screen.getByLabelText(/email/i) as HTMLInputElement
     fireEvent.change(emailInput, { target: { value: 'user@example.com' } })
@@ -69,7 +69,7 @@ describe('ForgotPasswordForm', () => {
     const { apiClient } = await import('@/services/api/secureApi')
     vi.mocked(apiClient.requestPasswordReset).mockResolvedValue(undefined)
 
-    renderWithRouter(<ForgotPasswordForm />)
+    renderForm()
 
     const emailInput = screen.getByLabelText(/email/i)
     const submitButton = screen.getByRole('button', { name: /reset password|send/i })
@@ -86,7 +86,7 @@ describe('ForgotPasswordForm', () => {
     const { apiClient } = await import('@/services/api/secureApi')
     vi.mocked(apiClient.requestPasswordReset).mockResolvedValue(undefined)
 
-    renderWithRouter(<ForgotPasswordForm />)
+    renderForm()
 
     const emailInput = screen.getByLabelText(/email/i)
     const submitButton = screen.getByRole('button', { name: /reset password|send/i })
@@ -103,7 +103,7 @@ describe('ForgotPasswordForm', () => {
     const { apiClient } = await import('@/services/api/secureApi')
     vi.mocked(apiClient.requestPasswordReset).mockRejectedValue(new Error('Email not found'))
 
-    renderWithRouter(<ForgotPasswordForm />)
+    renderForm()
 
     const emailInput = screen.getByLabelText(/email/i)
     const submitButton = screen.getByRole('button', { name: /reset password|send/i })
@@ -117,7 +117,7 @@ describe('ForgotPasswordForm', () => {
   })
 
   it('should validate email format', async () => {
-    renderWithRouter(<ForgotPasswordForm />)
+    renderForm()
 
     const emailInput = screen.getByLabelText(/email/i)
     const submitButton = screen.getByRole('button', { name: /reset password|send/i })
@@ -134,7 +134,7 @@ describe('ForgotPasswordForm', () => {
       () => new Promise((resolve) => setTimeout(resolve, 1000))
     )
 
-    renderWithRouter(<ForgotPasswordForm />)
+    renderForm()
 
     const emailInput = screen.getByLabelText(/email/i)
     const submitButton = screen.getByRole('button', { name: /reset password|send/i })
@@ -148,7 +148,7 @@ describe('ForgotPasswordForm', () => {
   })
 
   it('should have link back to login', () => {
-    renderWithRouter(<ForgotPasswordForm />)
+    renderForm()
 
     const loginLink = screen.getByText(/back to login|sign in/i)
     expect(loginLink).toBeInTheDocument()

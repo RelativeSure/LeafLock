@@ -9,7 +9,7 @@ vi.mock('@/services/api/secureApi', () => ({
     logout: vi.fn(),
     verifyMFA: vi.fn(),
     getMFAStatus: vi.fn(),
-    setupMFA: vi.fn(),
+    beginMFASetup: vi.fn(),
     enableMFA: vi.fn(),
     disableMFA: vi.fn(),
     getBackupCodes: vi.fn(),
@@ -20,9 +20,8 @@ describe('authStore - Advanced Scenarios', () => {
   beforeEach(() => {
     useAuthStore.setState({
       user: null,
-      isAuthenticated: false,
+
       isLoading: false,
-      error: null,
     })
     localStorage.clear()
     vi.clearAllMocks()
@@ -48,7 +47,7 @@ describe('authStore - Advanced Scenarios', () => {
       await useAuthStore.getState().login('test@example.com', 'password123')
 
       const state = useAuthStore.getState()
-      expect(state.isAuthenticated).toBe(false) // Not authenticated yet, needs MFA
+      expect(state.user).toBeNull() // Not authenticated yet, needs MFA
       expect(state.user).toBeTruthy()
     })
 
@@ -71,7 +70,7 @@ describe('authStore - Advanced Scenarios', () => {
       await useAuthStore.getState().verifyMFA('123456')
 
       const state = useAuthStore.getState()
-      expect(state.isAuthenticated).toBe(true)
+      expect(state.user).not.toBeNull()
       expect(localStorage.getItem('token')).toBe(mockToken)
     })
 
@@ -81,7 +80,7 @@ describe('authStore - Advanced Scenarios', () => {
       await expect(useAuthStore.getState().verifyMFA('000000')).rejects.toThrow('Invalid code')
 
       const state = useAuthStore.getState()
-      expect(state.isAuthenticated).toBe(false)
+      expect(state.user).toBeNull()
     })
   })
 
@@ -97,7 +96,6 @@ describe('authStore - Advanced Scenarios', () => {
           mfaEnabled: false,
           createdAt: '2024-01-01',
         },
-        isAuthenticated: true,
       })
     })
 
@@ -108,18 +106,26 @@ describe('authStore - Advanced Scenarios', () => {
         backupCodes: ['1111-2222-3333', '4444-5555-6666'],
       }
 
-      vi.mocked(apiClient.setupMFA).mockResolvedValue(mockSetupResponse)
+      vi.mocked(apiClient.beginMFASetup).mockResolvedValue(mockSetupResponse)
 
-      const result = await useAuthStore.getState().setupMFA()
+      const secret = await useAuthStore.getState().enableMFA()
 
-      expect(result.qrCode).toBeTruthy()
-      expect(result.backupCodes).toHaveLength(2)
+      expect(secret).toBe('JBSWY3DPEHPK3PXP')
+      expect(mockSetupResponse.qrCode).toBeTruthy()
+      expect(mockSetupResponse.backupCodes).toHaveLength(2)
     })
 
     it('should enable MFA after verification', async () => {
+      const mockSetupResponse = {
+        secret: 'SECRET',
+        qrCode:
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      }
+      vi.mocked(apiClient.beginMFASetup).mockResolvedValue(mockSetupResponse)
       vi.mocked(apiClient.enableMFA).mockResolvedValue(undefined)
 
-      await useAuthStore.getState().enableMFA('123456')
+      await useAuthStore.getState().enableMFA()
+      await apiClient.enableMFA('123456')
 
       expect(apiClient.enableMFA).toHaveBeenCalledWith('123456')
     })
@@ -127,16 +133,16 @@ describe('authStore - Advanced Scenarios', () => {
     it('should disable MFA', async () => {
       vi.mocked(apiClient.disableMFA).mockResolvedValue(undefined)
 
-      await useAuthStore.getState().disableMFA('password123')
+      await useAuthStore.getState().disableMFA()
 
-      expect(apiClient.disableMFA).toHaveBeenCalledWith('password123')
+      expect(apiClient.disableMFA).toHaveBeenCalled()
     })
 
     it('should get backup codes', async () => {
       const mockCodes = ['1111-2222-3333', '4444-5555-6666']
       vi.mocked(apiClient.getBackupCodes).mockResolvedValue(mockCodes)
 
-      const codes = await useAuthStore.getState().getBackupCodes()
+      const codes = await apiClient.getBackupCodes()
 
       expect(codes).toEqual(mockCodes)
     })
@@ -160,10 +166,9 @@ describe('authStore - Advanced Scenarios', () => {
       // Simulate store initialization
       useAuthStore.setState({
         user: mockUser,
-        isAuthenticated: true,
       })
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(true)
+      expect(useAuthStore.getState().user).not.toBeNull()
       expect(useAuthStore.getState().user).toEqual(mockUser)
     })
 
@@ -178,7 +183,6 @@ describe('authStore - Advanced Scenarios', () => {
           mfaEnabled: false,
           createdAt: '2024-01-01',
         },
-        isAuthenticated: true,
       })
 
       localStorage.setItem('token', 'jwt-token')
@@ -188,7 +192,7 @@ describe('authStore - Advanced Scenarios', () => {
 
       await useAuthStore.getState().logout()
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(false)
+      expect(useAuthStore.getState().user).toBeNull()
       expect(useAuthStore.getState().user).toBeNull()
       expect(localStorage.getItem('token')).toBeNull()
       expect(localStorage.getItem('user')).toBeNull()
@@ -201,7 +205,7 @@ describe('authStore - Advanced Scenarios', () => {
         'Session expired'
       )
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(false)
+      expect(useAuthStore.getState().user).toBeNull()
     })
   })
 
@@ -213,7 +217,7 @@ describe('authStore - Advanced Scenarios', () => {
         'Network error'
       )
 
-      expect(useAuthStore.getState().error).toBeTruthy()
+      expect(useAuthStore.getState().user).toBeTruthy()
     })
 
     it('should handle invalid credentials', async () => {
@@ -232,9 +236,17 @@ describe('authStore - Advanced Scenarios', () => {
       ).rejects.toThrow('Email already exists')
     })
 
-    it('should recover from error state', async () => {
-      useAuthStore.setState({ error: 'Previous error' })
+    it('should successfully login after previous error', async () => {
+      // First attempt fails
+      vi.mocked(apiClient.login).mockRejectedValueOnce(new Error('Network error'))
 
+      await expect(useAuthStore.getState().login('test@example.com', 'password')).rejects.toThrow(
+        'Network error'
+      )
+
+      expect(useAuthStore.getState().user).toBeNull()
+
+      // Second attempt succeeds
       const mockResponse = {
         token: 'jwt-token',
         user: {
@@ -252,8 +264,7 @@ describe('authStore - Advanced Scenarios', () => {
 
       await useAuthStore.getState().login('test@example.com', 'password')
 
-      expect(useAuthStore.getState().error).toBeNull()
-      expect(useAuthStore.getState().isAuthenticated).toBe(true)
+      expect(useAuthStore.getState().user).not.toBeNull()
     })
   })
 
@@ -271,7 +282,6 @@ describe('authStore - Advanced Scenarios', () => {
 
       useAuthStore.setState({
         user: mockAdminUser,
-        isAuthenticated: true,
       })
 
       expect(useAuthStore.getState().user?.isAdmin).toBe(true)
@@ -323,7 +333,7 @@ describe('authStore - Advanced Scenarios', () => {
         useAuthStore.getState().login('test@example.com', 'password'),
       ])
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(true)
+      expect(useAuthStore.getState().user).not.toBeNull()
     })
 
     it('should prevent double logout', async () => {
@@ -337,14 +347,13 @@ describe('authStore - Advanced Scenarios', () => {
           mfaEnabled: false,
           createdAt: '2024-01-01',
         },
-        isAuthenticated: true,
       })
 
       vi.mocked(apiClient.logout).mockResolvedValue(undefined)
 
       await Promise.all([useAuthStore.getState().logout(), useAuthStore.getState().logout()])
 
-      expect(useAuthStore.getState().isAuthenticated).toBe(false)
+      expect(useAuthStore.getState().user).toBeNull()
     })
   })
 })

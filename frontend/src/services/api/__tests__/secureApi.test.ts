@@ -213,7 +213,8 @@ describe('secureApi - ApiClient', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => mockTags,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ tags: mockTags }),
       } as Response)
 
       const { apiClient } = await import('../secureApi')
@@ -222,7 +223,9 @@ describe('secureApi - ApiClient', () => {
       expect(result).toEqual(mockTags)
       expect(global.fetch).toHaveBeenCalledWith(
         `${apiBaseUrl}/tags`,
-        expect.objectContaining({ method: 'GET' })
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: `Bearer ${mockToken}` }),
+        })
       )
     })
 
@@ -232,6 +235,7 @@ describe('secureApi - ApiClient', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 201,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => newTag,
       } as Response)
 
@@ -245,6 +249,7 @@ describe('secureApi - ApiClient', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 204,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => ({}),
       } as Response)
 
@@ -271,14 +276,15 @@ describe('secureApi - ApiClient', () => {
           color: 'blue',
           userId: '123',
           parentId: null,
-          createdAt: '2024-01-01',
+          createdAt: '2024-01-01T00:00:00.000Z',
         },
       ]
 
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => mockFolders,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ folders: mockFolders }),
       } as Response)
 
       const { apiClient } = await import('../secureApi')
@@ -299,6 +305,7 @@ describe('secureApi - ApiClient', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 201,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => newFolder,
       } as Response)
 
@@ -312,6 +319,7 @@ describe('secureApi - ApiClient', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 204,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => ({}),
       } as Response)
 
@@ -331,80 +339,131 @@ describe('secureApi - ApiClient', () => {
     })
 
     it('should get all templates', async () => {
-      const mockTemplates = [
-        {
-          id: 'tpl-1',
-          name: 'Meeting Notes',
-          content: 'Template',
-          tags: [],
-          isPublic: false,
-          usageCount: 0,
-          createdAt: '2024-01-01',
-        },
-      ]
+      const apiTemplate = {
+        id: 'tpl-1',
+        name: 'Meeting Notes',
+        description: 'Template description',
+        content: 'Template',
+        tags: ['work'],
+        icon: '📝',
+        is_public: true,
+        user_id: 'user-1',
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-02T00:00:00.000Z',
+        usage_count: 3,
+      }
 
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => mockTemplates,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ templates: [apiTemplate] }),
       } as Response)
 
       const { apiClient } = await import('../secureApi')
       const result = await apiClient.getTemplates()
 
-      expect(result).toEqual(mockTemplates)
+      expect(result).toEqual([
+        {
+          id: 'tpl-1',
+          name: 'Meeting Notes',
+          description: 'Template description',
+          content: 'Template',
+          tags: ['work'],
+          icon: '📝',
+          isPublic: true,
+          userId: 'user-1',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-02T00:00:00.000Z',
+          usageCount: 3,
+        },
+      ])
     })
 
     it('should get a single template', async () => {
-      const mockTemplate = {
+      const apiTemplate = {
         id: 'tpl-1',
         name: 'Meeting Notes',
+        description: 'Template description',
         content: 'Template',
-        tags: [],
-        isPublic: false,
-        usageCount: 0,
-        createdAt: '2024-01-01',
+        tags: ['work'],
+        icon: null,
+        is_public: false,
+        user_id: 'user-1',
+        created_at: '2024-01-01T00:00:00.000Z',
+        usage_count: 0,
       }
 
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => mockTemplate,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => apiTemplate,
       } as Response)
 
       const { apiClient } = await import('../secureApi')
       const result = await apiClient.getTemplate('tpl-1')
 
-      expect(result).toEqual(mockTemplate)
+      expect(result).toEqual({
+        id: 'tpl-1',
+        name: 'Meeting Notes',
+        description: 'Template description',
+        content: 'Template',
+        tags: ['work'],
+        icon: null,
+        isPublic: false,
+        userId: 'user-1',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: undefined,
+        usageCount: 0,
+      })
     })
 
     it('should create a template', async () => {
-      const newTemplate = {
+      const apiTemplate = {
         id: 'tpl-1',
         name: 'Daily Log',
+        description: '',
         content: '',
         tags: [],
-        isPublic: false,
-        usageCount: 0,
-        createdAt: '2024-01-01',
+        icon: '',
+        is_public: false,
+        user_id: 'user-1',
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+        usage_count: 0,
       }
 
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 201,
-        json: async () => newTemplate,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => apiTemplate,
       } as Response)
 
       const { apiClient } = await import('../secureApi')
       const result = await apiClient.createTemplate({ name: 'Daily Log', content: '' })
 
-      expect(result).toEqual(newTemplate)
+      expect(result).toEqual({
+        id: 'tpl-1',
+        name: 'Daily Log',
+        description: '',
+        content: '',
+        tags: [],
+        icon: '',
+        isPublic: false,
+        userId: 'user-1',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+        usageCount: 0,
+      })
     })
 
     it('should delete a template', async () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 204,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => ({}),
       } as Response)
 
@@ -440,6 +499,7 @@ describe('secureApi - ApiClient', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => mockSettings,
       } as Response)
 
@@ -450,11 +510,12 @@ describe('secureApi - ApiClient', () => {
     })
 
     it('should update user settings', async () => {
-      const updatedSettings = { theme: 'light', autoSave: false }
+      const updatedSettings = { theme: 'light' as const, autoSave: false }
 
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => updatedSettings,
       } as Response)
 
@@ -476,6 +537,7 @@ describe('secureApi - ApiClient', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => mockCollaborators,
       } as Response)
 
@@ -489,11 +551,12 @@ describe('secureApi - ApiClient', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => ({}),
       } as Response)
 
       const { apiClient } = await import('../secureApi')
-      await apiClient.shareNote('note-1', ['user@example.com'], 'read')
+      await apiClient.shareNote('note-1', ['user@example.com'])
 
       expect(global.fetch).toHaveBeenCalled()
     })
@@ -513,6 +576,7 @@ describe('secureApi - ApiClient', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => mockSharedNotes,
       } as Response)
 
@@ -534,6 +598,7 @@ describe('secureApi - ApiClient', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => mockLinks,
       } as Response)
 
@@ -549,6 +614,7 @@ describe('secureApi - ApiClient', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => mockBacklinks,
       } as Response)
 
@@ -562,6 +628,7 @@ describe('secureApi - ApiClient', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 204,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => ({}),
       } as Response)
 
@@ -771,7 +838,7 @@ describe('secureApi - ApiClient', () => {
         json: async () => {
           throw new Error('Invalid JSON')
         },
-      } as Response)
+      } as unknown as Response)
 
       const { apiClient } = await import('../secureApi')
 
@@ -784,11 +851,11 @@ describe('secureApi - ApiClient', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 204,
-        headers: new Headers(),
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => {
           throw new Error('No content')
         },
-      } as Response)
+      } as unknown as Response)
 
       const { apiClient } = await import('../secureApi')
 
@@ -804,11 +871,14 @@ describe('secureApi - ApiClient', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Headers({ 'content-length': '0' }),
+        headers: new Headers({
+          'content-type': 'application/json',
+          'content-length': '0',
+        }),
         json: async () => {
           throw new Error('No content')
         },
-      } as Response)
+      } as unknown as Response)
 
       const { apiClient } = await import('../secureApi')
 
@@ -824,11 +894,9 @@ describe('secureApi - ApiClient', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Headers({ 'content-type': 'text/html' }),
-        json: async () => {
-          throw new Error('Not JSON')
-        },
-      } as Response)
+        headers: new Headers({ 'content-type': 'text/plain' }),
+        text: async () => 'plain text',
+      } as unknown as Response)
 
       const { apiClient } = await import('../secureApi')
 

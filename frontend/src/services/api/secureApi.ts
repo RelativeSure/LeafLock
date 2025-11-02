@@ -222,18 +222,27 @@ class ApiClient {
       throw new Error(errorData.message || errorData.error || `HTTP ${response.status}`)
     }
 
-    // Handle empty responses (204 No Content)
-    if (response.status === 204 || response.headers.get('content-length') === '0') {
-      return {} as T
+    // Handle empty responses (204 No Content or missing payload)
+    if (
+      response.status === 204 ||
+      (!response.headers.get('content-type') && response.headers.get('content-length') === '0')
+    ) {
+      return null as T
     }
 
     // Check if response has JSON content type
     const contentType = response.headers.get('content-type')
     if (!contentType || !contentType.includes('application/json')) {
-      return {} as T
+      return null as T
     }
 
-    return response.json()
+    const data = await response.json()
+
+    if (data == null) {
+      return null as T
+    }
+
+    return data
   }
 
   // Authentication methods
@@ -408,7 +417,11 @@ class ApiClient {
   // Notes methods
   async getNotes(): Promise<Note[]> {
     const response = await this.request<{ notes: any[] }>('/notes')
-    return (response.notes || []).map(normalizeNoteResponse)
+    const notes = response?.notes
+    if (!Array.isArray(notes)) {
+      return []
+    }
+    return notes.map(normalizeNoteResponse)
   }
 
   async getNote(id: string): Promise<Note> {
@@ -862,6 +875,34 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(folder),
     })
+  }
+
+  // Password reset methods
+  async requestPasswordReset(email: string): Promise<void> {
+    await this.request('/auth/password-reset/request', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    })
+  }
+
+  // Collaboration methods
+  async updateCollaboratorPermission(
+    noteId: string,
+    userId: string,
+    permission: string
+  ): Promise<void> {
+    await this.request(`/notes/${noteId}/collaborators/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ permission }),
+    })
+  }
+
+  // Search methods
+  async searchNotes(query: string): Promise<Note[]> {
+    const response = await this.request<{ notes: any[] }>(
+      `/notes/search?q=${encodeURIComponent(query)}`
+    )
+    return (response.notes || []).map(normalizeNoteResponse)
   }
 }
 

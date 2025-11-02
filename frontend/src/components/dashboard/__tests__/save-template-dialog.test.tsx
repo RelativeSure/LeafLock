@@ -1,27 +1,34 @@
+import { type ComponentProps } from 'react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { SaveTemplateDialog } from '../save-template-dialog'
+
+const createTemplateMock = vi.fn()
+
+vi.mock('../../stores/templatesStore', () => ({
+  useTemplatesStore: vi.fn(() => ({
+    createTemplate: createTemplateMock,
+  })),
+}))
 
 vi.mock('@/components/ui/dialog', () => ({
   Dialog: ({ children, open }: any) => (open ? <div data-testid="dialog">{children}</div> : null),
-  DialogContent: ({ children }: any) => <div data-testid="dialog-content">{children}</div>,
+  DialogContent: ({ children }: any) => <div>{children}</div>,
   DialogHeader: ({ children }: any) => <div>{children}</div>,
   DialogTitle: ({ children }: any) => <h2>{children}</h2>,
-  DialogDescription: ({ children }: any) => <p>{children}</p>,
-  DialogFooter: ({ children }: any) => <div>{children}</div>,
 }))
 
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, ...props }: any) => (
-    <button onClick={onClick} disabled={disabled} {...props}>
+    <button type="button" onClick={onClick} disabled={disabled} {...props}>
       {children}
     </button>
   ),
 }))
 
 vi.mock('@/components/ui/input', () => ({
-  Input: ({ onChange, value, ...props }: any) => (
-    <input onChange={onChange} value={value} {...props} />
+  Input: ({ value, onChange, ...props }: any) => (
+    <input value={value} onChange={onChange} {...props} />
   ),
 }))
 
@@ -29,182 +36,107 @@ vi.mock('@/components/ui/label', () => ({
   Label: ({ children, ...props }: any) => <label {...props}>{children}</label>,
 }))
 
+vi.mock('@/components/ui/switch', () => ({
+  Switch: ({ checked, onCheckedChange }: any) => (
+    <input
+      type="checkbox"
+      role="switch"
+      checked={checked}
+      onChange={(event) => onCheckedChange?.(event.target.checked)}
+    />
+  ),
+}))
+
+vi.mock('@/components/ui/badge', () => ({
+  Badge: ({ children }: any) => <span>{children}</span>,
+}))
+
+vi.mock('lucide-react', () => ({
+  FileText: () => <span />,
+  Globe: () => <span />,
+  TagIcon: () => <span />,
+  X: () => <span />,
+}))
+
 describe('SaveTemplateDialog', () => {
-  const mockOnSave = vi.fn()
-  const mockOnOpenChange = vi.fn()
+  const onOpenChange = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('should render when open', () => {
+  const renderDialog = (props?: Partial<ComponentProps<typeof SaveTemplateDialog>>) =>
     render(
       <SaveTemplateDialog
-        open={true}
-        onOpenChange={mockOnOpenChange}
-        onSave={mockOnSave}
-        noteTitle="Test Note"
-        noteContent="Test Content"
+        open
+        onOpenChange={onOpenChange}
+        content="<p>content</p>"
+        tags={['tag-a', 'tag-b']}
+        {...props}
       />
     )
 
+  it('renders dialog when open', () => {
+    renderDialog()
     expect(screen.getByTestId('dialog')).toBeInTheDocument()
   })
 
-  it('should not render when closed', () => {
-    render(
-      <SaveTemplateDialog
-        open={false}
-        onOpenChange={mockOnOpenChange}
-        onSave={mockOnSave}
-        noteTitle="Test Note"
-        noteContent="Test Content"
-      />
-    )
-
+  it('does not render when closed', () => {
+    renderDialog({ open: false })
     expect(screen.queryByTestId('dialog')).not.toBeInTheDocument()
   })
 
-  it('should show template name input', () => {
-    render(
-      <SaveTemplateDialog
-        open={true}
-        onOpenChange={mockOnOpenChange}
-        onSave={mockOnSave}
-        noteTitle="Test Note"
-        noteContent="Test Content"
-      />
-    )
-
-    expect(screen.getByRole('textbox')).toBeInTheDocument()
-  })
-
-  it('should accept template name input', () => {
-    render(
-      <SaveTemplateDialog
-        open={true}
-        onOpenChange={mockOnOpenChange}
-        onSave={mockOnSave}
-        noteTitle="Test Note"
-        noteContent="Test Content"
-      />
-    )
-
-    const input = screen.getByRole('textbox')
-    fireEvent.change(input, { target: { value: 'My Template' } })
-
-    expect(input).toHaveValue('My Template')
-  })
-
-  it('should call onSave with template data', async () => {
-    render(
-      <SaveTemplateDialog
-        open={true}
-        onOpenChange={mockOnOpenChange}
-        onSave={mockOnSave}
-        noteTitle="Test Note"
-        noteContent="Test Content"
-      />
-    )
-
-    const input = screen.getByRole('textbox')
-    fireEvent.change(input, { target: { value: 'My Template' } })
-
-    const saveButton = screen.getByRole('button', { name: /save/i })
-    fireEvent.click(saveButton)
-
-    await waitFor(() => {
-      expect(mockOnSave).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: 'My Template',
-        })
-      )
-    })
-  })
-
-  it('should disable save button when name is empty', () => {
-    render(
-      <SaveTemplateDialog
-        open={true}
-        onOpenChange={mockOnOpenChange}
-        onSave={mockOnSave}
-        noteTitle="Test Note"
-        noteContent="Test Content"
-      />
-    )
-
-    const saveButton = screen.getByRole('button', { name: /save/i })
+  it('disables save button when name is empty', () => {
+    renderDialog()
+    const saveButton = screen.getByRole('button', { name: /save template/i })
     expect(saveButton).toBeDisabled()
   })
 
-  it('should enable save button when name is provided', () => {
-    render(
-      <SaveTemplateDialog
-        open={true}
-        onOpenChange={mockOnOpenChange}
-        onSave={mockOnSave}
-        noteTitle="Test Note"
-        noteContent="Test Content"
-      />
-    )
+  it('calls createTemplate and closes dialog on save', () => {
+    renderDialog()
 
-    const input = screen.getByRole('textbox')
-    fireEvent.change(input, { target: { value: 'My Template' } })
+    const nameInput = screen.getByRole('textbox')
+    fireEvent.change(nameInput, { target: { value: 'My Template' } })
 
-    const saveButton = screen.getByRole('button', { name: /save/i })
-    expect(saveButton).not.toBeDisabled()
-  })
-
-  it('should show cancel button', () => {
-    render(
-      <SaveTemplateDialog
-        open={true}
-        onOpenChange={mockOnOpenChange}
-        onSave={mockOnSave}
-        noteTitle="Test Note"
-        noteContent="Test Content"
-      />
-    )
-
-    expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument()
-  })
-
-  it('should call onOpenChange when cancel is clicked', () => {
-    render(
-      <SaveTemplateDialog
-        open={true}
-        onOpenChange={mockOnOpenChange}
-        onSave={mockOnSave}
-        noteTitle="Test Note"
-        noteContent="Test Content"
-      />
-    )
-
-    const cancelButton = screen.getByRole('button', { name: /cancel/i })
-    fireEvent.click(cancelButton)
-
-    expect(mockOnOpenChange).toHaveBeenCalledWith(false)
-  })
-
-  it('should reset form after save', async () => {
-    render(
-      <SaveTemplateDialog
-        open={true}
-        onOpenChange={mockOnOpenChange}
-        onSave={mockOnSave}
-        noteTitle="Test Note"
-        noteContent="Test Content"
-      />
-    )
-
-    const input = screen.getByRole('textbox')
-    fireEvent.change(input, { target: { value: 'My Template' } })
-
-    const saveButton = screen.getByRole('button', { name: /save/i })
+    const saveButton = screen.getByRole('button', { name: /save template/i })
     fireEvent.click(saveButton)
 
-    await waitFor(() => {
-      expect(mockOnSave).toHaveBeenCalled()
+    expect(createTemplateMock).toHaveBeenCalledWith({
+      name: 'My Template',
+      content: '<p>content</p>',
+      tags: ['tag-a', 'tag-b'],
+      isPublic: false,
+    })
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('resets fields after saving', () => {
+    renderDialog()
+
+    const nameInput = screen.getByRole('textbox')
+    fireEvent.change(nameInput, { target: { value: 'Another Template' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /save template/i }))
+
+    expect(nameInput).toHaveValue('')
+  })
+
+  it('sets template as public when switch is toggled', () => {
+    renderDialog()
+
+    const nameInput = screen.getByRole('textbox')
+    fireEvent.change(nameInput, { target: { value: 'Public Template' } })
+
+    const shareToggle = screen.getByRole('switch')
+    fireEvent.click(shareToggle)
+
+    fireEvent.click(screen.getByRole('button', { name: /save template/i }))
+
+    expect(createTemplateMock).toHaveBeenLastCalledWith({
+      name: 'Public Template',
+      content: '<p>content</p>',
+      tags: ['tag-a', 'tag-b'],
+      isPublic: true,
     })
   })
 })

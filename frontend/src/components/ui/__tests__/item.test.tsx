@@ -3,10 +3,10 @@ import { render, screen } from '@testing-library/react'
 import {
   ItemGroup,
   Item,
-  ItemIcon,
+  ItemMedia,
   ItemTitle,
   ItemDescription,
-  ItemAction,
+  ItemActions,
   ItemSeparator,
 } from '../item'
 
@@ -41,10 +41,10 @@ describe('Item Components', () => {
     expect(screen.getByText('Description text')).toBeInTheDocument()
   })
 
-  it('should render Item with icon', () => {
+  it('should render Item with media content', () => {
     render(
       <Item>
-        <ItemIcon>🔥</ItemIcon>
+        <ItemMedia>🔥</ItemMedia>
         <ItemTitle>Title</ItemTitle>
       </Item>
     )
@@ -55,9 +55,9 @@ describe('Item Components', () => {
     render(
       <Item>
         <ItemTitle>Title</ItemTitle>
-        <ItemAction>
+        <ItemActions>
           <button>Action</button>
-        </ItemAction>
+        </ItemActions>
       </Item>
     )
     expect(screen.getByRole('button')).toBeInTheDocument()

@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
-import { BrowserRouter } from '@tanstack/react-router'
 
 // Mock all dependencies
 vi.mock('@/stores/notesStore', () => ({
@@ -125,7 +124,7 @@ describe('Dashboard Components Basic Render Tests', () => {
       const { NoteStats } = await import('../note-stats')
 
       expect(() => {
-        render(<NoteStats />)
+        render(<NoteStats content="" />)
       }).not.toThrow()
     })
   })
@@ -145,7 +144,7 @@ describe('Dashboard Components Basic Render Tests', () => {
       const { EncryptionUnlockDialog } = await import('../encryption-unlock-dialog')
 
       expect(() => {
-        render(<EncryptionUnlockDialog isOpen={true} onClose={vi.fn()} />)
+        render(<EncryptionUnlockDialog open={true} onOpenChange={vi.fn()} onUnlock={vi.fn()} />)
       }).not.toThrow()
     })
 
@@ -153,17 +152,17 @@ describe('Dashboard Components Basic Render Tests', () => {
       const { EncryptionUnlockDialog } = await import('../encryption-unlock-dialog')
 
       expect(() => {
-        render(<EncryptionUnlockDialog isOpen={false} onClose={vi.fn()} />)
+        render(<EncryptionUnlockDialog open={false} onOpenChange={vi.fn()} onUnlock={vi.fn()} />)
       }).not.toThrow()
     })
   })
 
   describe('KeyboardShortcutsDialog', () => {
-    it('should render without crashing when open', async () => {
+    it('should render without crashing', async () => {
       const { KeyboardShortcutsDialog } = await import('../keyboard-shortcuts-dialog')
 
       expect(() => {
-        render(<KeyboardShortcutsDialog isOpen={true} onClose={vi.fn()} />)
+        render(<KeyboardShortcutsDialog />)
       }).not.toThrow()
     })
   })
@@ -174,7 +173,12 @@ describe('Dashboard Components Basic Render Tests', () => {
 
       expect(() => {
         render(
-          <SaveTemplateDialog isOpen={true} onClose={vi.fn()} title="Test" content="Test content" />
+          <SaveTemplateDialog
+            open={true}
+            onOpenChange={vi.fn()}
+            content="Test content"
+            tags={['test']}
+          />
         )
       }).not.toThrow()
     })
@@ -185,7 +189,7 @@ describe('Dashboard Components Basic Render Tests', () => {
       const { ShareNoteDialog } = await import('../share-note-dialog')
 
       expect(() => {
-        render(<ShareNoteDialog isOpen={true} onClose={vi.fn()} noteId="test-note" />)
+        render(<ShareNoteDialog open={true} onOpenChange={vi.fn()} noteId="test-note" />)
       }).not.toThrow()
     })
   })
@@ -197,17 +201,15 @@ describe('Dashboard Components Basic Render Tests', () => {
       const { SaveTemplateDialog } = await import('../save-template-dialog')
 
       const { unmount: unmount1 } = render(
-        <EncryptionUnlockDialog isOpen={true} onClose={vi.fn()} />
+        <EncryptionUnlockDialog open={true} onOpenChange={vi.fn()} onUnlock={vi.fn()} />
       )
       unmount1()
 
-      const { unmount: unmount2 } = render(
-        <KeyboardShortcutsDialog isOpen={true} onClose={vi.fn()} />
-      )
+      const { unmount: unmount2 } = render(<KeyboardShortcutsDialog />)
       unmount2()
 
       const { unmount: unmount3 } = render(
-        <SaveTemplateDialog isOpen={true} onClose={vi.fn()} title="Test" content="Test" />
+        <SaveTemplateDialog open={true} onOpenChange={vi.fn()} content="Test" tags={[]} />
       )
       unmount3()
 
@@ -240,10 +242,12 @@ describe('Dashboard Components Basic Render Tests', () => {
     it('should handle open/close states for dialogs', async () => {
       const { EncryptionUnlockDialog } = await import('../encryption-unlock-dialog')
 
-      const { rerender } = render(<EncryptionUnlockDialog isOpen={false} onClose={vi.fn()} />)
+      const { rerender } = render(
+        <EncryptionUnlockDialog open={false} onOpenChange={vi.fn()} onUnlock={vi.fn()} />
+      )
 
-      rerender(<EncryptionUnlockDialog isOpen={true} onClose={vi.fn()} />)
-      rerender(<EncryptionUnlockDialog isOpen={false} onClose={vi.fn()} />)
+      rerender(<EncryptionUnlockDialog open={true} onOpenChange={vi.fn()} onUnlock={vi.fn()} />)
+      rerender(<EncryptionUnlockDialog open={false} onOpenChange={vi.fn()} onUnlock={vi.fn()} />)
 
       expect(true).toBe(true)
     })
@@ -255,7 +259,7 @@ describe('Dashboard Components Basic Render Tests', () => {
       const { NoteStats } = await import('../note-stats')
 
       const { unmount: unmount1 } = render(<SearchBar />)
-      const { unmount: unmount2 } = render(<NoteStats />)
+      const { unmount: unmount2 } = render(<NoteStats content="" />)
 
       expect(() => {
         unmount1()
@@ -270,7 +274,7 @@ describe('Dashboard Components Basic Render Tests', () => {
       const { NoteStats } = await import('../note-stats')
 
       render(<SearchBar />)
-      render(<NoteStats />)
+      render(<NoteStats content="" />)
 
       expect(true).toBe(true)
     })
@@ -302,7 +306,7 @@ describe('Dashboard Components Basic Render Tests', () => {
 
       for (let i = 0; i < 5; i++) {
         instances.push(render(<SearchBar />))
-        instances.push(render(<NoteStats />))
+        instances.push(render(<NoteStats content="" />))
       }
 
       instances.forEach((instance) => instance.unmount())
@@ -316,11 +320,11 @@ describe('Dashboard Components Basic Render Tests', () => {
       const { EncryptionUnlockDialog } = await import('../encryption-unlock-dialog')
 
       const { container: container1 } = render(
-        <EncryptionUnlockDialog isOpen={false} onClose={vi.fn()} />
+        <EncryptionUnlockDialog open={false} onOpenChange={vi.fn()} onUnlock={vi.fn()} />
       )
 
       const { container: container2 } = render(
-        <EncryptionUnlockDialog isOpen={true} onClose={vi.fn()} />
+        <EncryptionUnlockDialog open={true} onOpenChange={vi.fn()} onUnlock={vi.fn()} />
       )
 
       expect(container1).toBeDefined()
@@ -331,30 +335,26 @@ describe('Dashboard Components Basic Render Tests', () => {
   describe('Event Handlers', () => {
     it('should accept callback props', async () => {
       const { EncryptionUnlockDialog } = await import('../encryption-unlock-dialog')
-      const mockClose = vi.fn()
+      const mockOpenChange = vi.fn()
+      const mockUnlock = vi.fn()
 
-      render(<EncryptionUnlockDialog isOpen={true} onClose={mockClose} />)
+      render(
+        <EncryptionUnlockDialog open={true} onOpenChange={mockOpenChange} onUnlock={mockUnlock} />
+      )
 
-      expect(mockClose).not.toHaveBeenCalled()
+      expect(mockOpenChange).not.toHaveBeenCalled()
+      expect(mockUnlock).not.toHaveBeenCalled()
     })
 
     it('should accept multiple callbacks', async () => {
       const { SaveTemplateDialog } = await import('../save-template-dialog')
-      const mockClose = vi.fn()
-      const mockSave = vi.fn()
+      const mockOpenChange = vi.fn()
 
       render(
-        <SaveTemplateDialog
-          isOpen={true}
-          onClose={mockClose}
-          onSave={mockSave}
-          title="Test"
-          content="Test"
-        />
+        <SaveTemplateDialog open={true} onOpenChange={mockOpenChange} content="Test" tags={[]} />
       )
 
-      expect(mockClose).not.toHaveBeenCalled()
-      expect(mockSave).not.toHaveBeenCalled()
+      expect(mockOpenChange).not.toHaveBeenCalled()
     })
   })
 

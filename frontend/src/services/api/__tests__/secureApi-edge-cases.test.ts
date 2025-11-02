@@ -62,6 +62,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: false,
         status: 401,
+        headers: new Headers(),
         json: async () => ({ message: 'Unauthorized' }),
       } as Response)
 
@@ -75,6 +76,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: false,
         status: 403,
+        headers: new Headers(),
         json: async () => ({ message: 'Forbidden' }),
       } as Response)
 
@@ -87,6 +89,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: false,
         status: 404,
+        headers: new Headers(),
         json: async () => ({ message: 'Not found' }),
       } as Response)
 
@@ -99,6 +102,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: false,
         status: 429,
+        headers: new Headers(),
         json: async () => ({ message: 'Too many requests' }),
       } as Response)
 
@@ -111,6 +115,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: false,
         status: 500,
+        headers: new Headers(),
         json: async () => ({ message: 'Internal server error' }),
       } as Response)
 
@@ -123,6 +128,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: false,
         status: 503,
+        headers: new Headers(),
         json: async () => ({ message: 'Service unavailable' }),
       } as Response)
 
@@ -137,10 +143,11 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => {
           throw new Error('Unexpected token in JSON')
         },
-      } as Response)
+      } as unknown as Response)
 
       const { apiClient } = await import('../secureApi')
 
@@ -151,19 +158,21 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => null,
       } as Response)
 
       const { apiClient } = await import('../secureApi')
 
       const result = await apiClient.getNotes()
-      expect(result).toBeNull()
+      expect(result).toEqual([])
     })
 
     it('should handle missing fields in response', async () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => ({
           // Missing required fields
         }),
@@ -179,13 +188,14 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => 'not an object',
       } as Response)
 
       const { apiClient } = await import('../secureApi')
 
       const result = await apiClient.getNotes()
-      expect(result).toBe('not an object')
+      expect(result).toEqual([])
     })
   })
 
@@ -196,6 +206,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => [],
       } as Response)
 
@@ -217,6 +228,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => ({ token: 'new-token', user: {} }),
       } as Response)
 
@@ -238,6 +250,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => [],
       } as Response)
 
@@ -268,6 +281,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => [],
       } as Response)
 
@@ -284,6 +298,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => [],
       } as Response)
 
@@ -310,6 +325,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 201,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => ({ id: 'note-1' }),
       } as Response)
 
@@ -327,6 +343,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => ({ id: 'note-1' }),
       } as Response)
 
@@ -346,6 +363,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => ({ id: 'note-1' }),
       } as Response)
 
@@ -377,6 +395,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
         .mockResolvedValueOnce({
           ok: true,
           status: 200,
+          headers: new Headers({ 'content-type': 'application/json' }),
           json: async () => [],
         } as Response)
 
@@ -392,6 +411,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => ({ id: 'note-1' }),
       } as Response)
 
@@ -409,6 +429,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => ({}),
       } as Response)
 
@@ -423,6 +444,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => ({ token: 'token', user: {} }),
       } as Response)
 

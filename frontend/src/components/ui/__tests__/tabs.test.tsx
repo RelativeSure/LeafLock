@@ -28,7 +28,7 @@ describe('Tabs', () => {
       </Tabs>
     )
     expect(screen.getByText('Content 1')).toBeVisible()
-    expect(screen.queryByText('Content 2')).not.toBeVisible()
+    expect(screen.queryByText('Content 2')).not.toBeInTheDocument()
   })
 
   it('switches content when tab is clicked', async () => {
@@ -50,7 +50,7 @@ describe('Tabs', () => {
     await user.click(tab2)
 
     expect(screen.getByText('Content 2')).toBeVisible()
-    expect(screen.queryByText('Content 1')).not.toBeVisible()
+    expect(screen.queryByText('Content 1')).not.toBeInTheDocument()
   })
 
   it('can be controlled with value prop', async () => {
@@ -256,7 +256,7 @@ describe('Tabs', () => {
     )
 
     const tab1 = screen.getByText('Tab 1')
-    tab1.focus()
+    await user.click(tab1)
     expect(tab1).toHaveFocus()
 
     await user.keyboard('{ArrowRight}')
@@ -416,7 +416,7 @@ describe('Tabs', () => {
   })
 
   it('indicates active state on trigger', () => {
-    const { container } = render(
+    render(
       <Tabs defaultValue="tab1">
         <TabsList>
           <TabsTrigger value="tab1">Tab 1</TabsTrigger>

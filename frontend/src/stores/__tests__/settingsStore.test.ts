@@ -177,7 +177,7 @@ describe('settingsStore', () => {
 
     it('should update theme setting', async () => {
       const updates: Partial<UserSettings> = { theme: 'light' }
-      const updatedSettings = { ...defaultSettings, theme: 'light' }
+      const updatedSettings: UserSettings = { ...defaultSettings, theme: 'light' }
 
       vi.mocked(apiClient.updateSettings).mockResolvedValue(updatedSettings)
 
@@ -231,7 +231,7 @@ describe('settingsStore', () => {
 
     it('should update defaultView setting', async () => {
       const updates: Partial<UserSettings> = { defaultView: 'grid' }
-      const updatedSettings = { ...defaultSettings, defaultView: 'grid' }
+      const updatedSettings: UserSettings = { ...defaultSettings, defaultView: 'grid' }
 
       vi.mocked(apiClient.updateSettings).mockResolvedValue(updatedSettings)
 
@@ -242,7 +242,7 @@ describe('settingsStore', () => {
 
     it('should update defaultNoteBehavior setting', async () => {
       const updates: Partial<UserSettings> = { defaultNoteBehavior: 'new-note' }
-      const updatedSettings = { ...defaultSettings, defaultNoteBehavior: 'new-note' }
+      const updatedSettings: UserSettings = { ...defaultSettings, defaultNoteBehavior: 'new-note' }
 
       vi.mocked(apiClient.updateSettings).mockResolvedValue(updatedSettings)
 

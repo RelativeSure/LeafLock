@@ -33,6 +33,7 @@ describe('templatesStore', () => {
     isPublic: false,
     icon: '📝',
     createdAt: new Date().toISOString(),
+    usageCount: 0,
     updatedAt: new Date().toISOString(),
   }
 
@@ -46,6 +47,7 @@ describe('templatesStore', () => {
     isPublic: true,
     icon: '🗓️',
     createdAt: new Date().toISOString(),
+    usageCount: 0,
     updatedAt: new Date().toISOString(),
   }
 
@@ -59,6 +61,7 @@ describe('templatesStore', () => {
     isPublic: true,
     icon: '🌐',
     createdAt: new Date().toISOString(),
+    usageCount: 0,
     updatedAt: new Date().toISOString(),
   }
 
@@ -262,8 +265,9 @@ describe('templatesStore', () => {
         description: 'Updated description',
       }
 
-      vi.mocked(apiClient.updateTemplate).mockResolvedValue(undefined)
-      vi.mocked(apiClient.getTemplates).mockResolvedValue([{ ...mockUserTemplate, ...updates }])
+      const updatedTemplate = { ...mockUserTemplate, ...updates }
+      vi.mocked(apiClient.updateTemplate).mockResolvedValue(updatedTemplate)
+      vi.mocked(apiClient.getTemplates).mockResolvedValue([updatedTemplate])
 
       await useTemplatesStore.getState().updateTemplate('template-1', updates)
 
@@ -281,9 +285,10 @@ describe('templatesStore', () => {
       const templateWithoutContent = { ...mockUserTemplate, content: undefined }
       useTemplatesStore.setState({ templates: [templateWithoutContent] })
 
+      const updatedTemplate = { ...mockUserTemplate, name: 'New Name' }
       vi.mocked(apiClient.getTemplate).mockResolvedValue(mockUserTemplate)
-      vi.mocked(apiClient.updateTemplate).mockResolvedValue(undefined)
-      vi.mocked(apiClient.getTemplates).mockResolvedValue([mockUserTemplate])
+      vi.mocked(apiClient.updateTemplate).mockResolvedValue(updatedTemplate)
+      vi.mocked(apiClient.getTemplates).mockResolvedValue([updatedTemplate])
 
       await useTemplatesStore.getState().updateTemplate('template-1', { name: 'New Name' })
 
@@ -310,8 +315,9 @@ describe('templatesStore', () => {
     })
 
     it('should merge updates with existing template data', async () => {
-      vi.mocked(apiClient.updateTemplate).mockResolvedValue(undefined)
-      vi.mocked(apiClient.getTemplates).mockResolvedValue([mockUserTemplate])
+      const updatedTemplate = { ...mockUserTemplate, description: 'New desc' }
+      vi.mocked(apiClient.updateTemplate).mockResolvedValue(updatedTemplate)
+      vi.mocked(apiClient.getTemplates).mockResolvedValue([updatedTemplate])
 
       await useTemplatesStore.getState().updateTemplate('template-1', { description: 'New desc' })
 
@@ -401,8 +407,9 @@ describe('templatesStore', () => {
     })
 
     it('should share a template publicly', async () => {
-      vi.mocked(apiClient.updateTemplate).mockResolvedValue(undefined)
-      vi.mocked(apiClient.getTemplates).mockResolvedValue([{ ...mockUserTemplate, isPublic: true }])
+      const updatedTemplate = { ...mockUserTemplate, isPublic: true }
+      vi.mocked(apiClient.updateTemplate).mockResolvedValue(updatedTemplate)
+      vi.mocked(apiClient.getTemplates).mockResolvedValue([updatedTemplate])
 
       await useTemplatesStore.getState().shareTemplate('template-1', true)
 
@@ -413,10 +420,9 @@ describe('templatesStore', () => {
     })
 
     it('should make a template private', async () => {
-      vi.mocked(apiClient.updateTemplate).mockResolvedValue(undefined)
-      vi.mocked(apiClient.getTemplates).mockResolvedValue([
-        { ...mockUserTemplate, isPublic: false },
-      ])
+      const updatedTemplate = { ...mockUserTemplate, isPublic: false }
+      vi.mocked(apiClient.updateTemplate).mockResolvedValue(updatedTemplate)
+      vi.mocked(apiClient.getTemplates).mockResolvedValue([updatedTemplate])
 
       await useTemplatesStore.getState().shareTemplate('template-1', false)
 

@@ -21,7 +21,7 @@ describe('NoteStats', () => {
       ],
     } as any)
 
-    render(<NoteStats />)
+    render(<NoteStats content="" />)
 
     expect(screen.getByText(/total|notes/i) || document.body).toBeTruthy()
   })
@@ -35,7 +35,7 @@ describe('NoteStats', () => {
       ],
     } as any)
 
-    render(<NoteStats />)
+    render(<NoteStats content="" />)
 
     expect(screen.getByText('3') || screen.getByText(/3\s+notes/i) || document.body).toBeTruthy()
   })
@@ -50,7 +50,7 @@ describe('NoteStats', () => {
       ],
     } as any)
 
-    render(<NoteStats />)
+    render(<NoteStats content="" />)
 
     expect(document.body).toBeTruthy()
   })
@@ -64,7 +64,7 @@ describe('NoteStats', () => {
       ],
     } as any)
 
-    render(<NoteStats />)
+    render(<NoteStats content="" />)
 
     expect(document.body).toBeTruthy()
   })
@@ -74,7 +74,7 @@ describe('NoteStats', () => {
       notes: [],
     } as any)
 
-    render(<NoteStats />)
+    render(<NoteStats content="" />)
 
     expect(screen.getByText('0') || screen.getByText(/0\s+notes/i) || document.body).toBeTruthy()
   })
@@ -88,7 +88,7 @@ describe('NoteStats', () => {
       ],
     } as any)
 
-    render(<NoteStats />)
+    render(<NoteStats content="" />)
 
     expect(document.body).toBeTruthy()
   })
@@ -102,19 +102,19 @@ describe('NoteStats', () => {
       ],
     } as any)
 
-    render(<NoteStats />)
+    render(<NoteStats content="" />)
 
     expect(document.body).toBeTruthy()
   })
 
   it('should update stats when notes change', () => {
-    const { rerender } = render(<NoteStats />)
+    const { rerender } = render(<NoteStats content="" />)
 
     vi.mocked(useNotesStore).mockReturnValue({
       notes: [{ id: '1', isTrashed: false }],
     } as any)
 
-    rerender(<NoteStats />)
+    rerender(<NoteStats content="" />)
 
     expect(document.body).toBeTruthy()
 
@@ -125,7 +125,7 @@ describe('NoteStats', () => {
       ],
     } as any)
 
-    rerender(<NoteStats />)
+    rerender(<NoteStats content="" />)
 
     expect(document.body).toBeTruthy()
   })
@@ -135,7 +135,7 @@ describe('NoteStats', () => {
       notes: [{ id: '1', isTrashed: false }],
     } as any)
 
-    const { container } = render(<NoteStats />)
+    const { container } = render(<NoteStats content="" />)
 
     expect(container.firstChild).toBeTruthy()
   })

@@ -386,7 +386,7 @@ describe('Select', () => {
     await user.click(trigger)
 
     await waitFor(() => {
-      const option1 = screen.getByText('Option 1').closest('[role="option"]')
+      const option1 = screen.getByRole('option', { name: 'Option 1' })
       expect(option1).toHaveAttribute('data-state', 'checked')
     })
   })

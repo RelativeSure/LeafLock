@@ -1,92 +1,139 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SearchBar } from '../search-bar'
 
+const selectNoteMock = vi.fn()
+let notesState: Array<Record<string, any>> = []
+let decryptedReturn = {
+  decryptedNotes: {} as Record<string, { title?: string; content?: string }>,
+  isUnlocked: true,
+  isDecrypting: false,
+}
+
+vi.mock('../../stores/notesStore', () => ({
+  useNotesStore: vi.fn(() => ({
+    notes: notesState,
+    selectNote: selectNoteMock,
+  })),
+}))
+
+vi.mock('@/hooks/use-decrypted-notes', () => ({
+  useDecryptedNotes: vi.fn(() => decryptedReturn),
+}))
+
 vi.mock('@/components/ui/input', () => ({
-  Input: ({ onChange, value, ...props }: any) => (
-    <input onChange={onChange} value={value} {...props} />
+  Input: ({ value, onChange, ...props }: any) => (
+    <input value={value} onChange={onChange} {...props} />
   ),
 }))
 
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, ...props }: any) => (
-    <button onClick={onClick} {...props}>
+    <button type="button" onClick={onClick} {...props}>
       {children}
     </button>
   ),
 }))
 
+vi.mock('@/components/ui/dialog', () => ({
+  Dialog: ({ children, open }: any) => (open ? <div data-testid="dialog">{children}</div> : null),
+  DialogContent: ({ children }: any) => <div>{children}</div>,
+  DialogHeader: ({ children }: any) => <div>{children}</div>,
+  DialogTitle: ({ children }: any) => <h2>{children}</h2>,
+}))
+
+vi.mock('@/components/ui/scroll-area', () => ({
+  ScrollArea: ({ children }: any) => <div>{children}</div>,
+}))
+
+vi.mock('@/components/ui/badge', () => ({
+  Badge: ({ children }: any) => <span>{children}</span>,
+}))
+
+vi.mock('lucide-react', () => ({
+  Search: () => <span />,
+  X: () => <span />,
+  Lock: () => <span />,
+}))
+
 describe('SearchBar', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    notesState = []
+    decryptedReturn = {
+      decryptedNotes: {},
+      isUnlocked: true,
+      isDecrypting: false,
+    }
   })
 
-  it('should render search input', () => {
-    const onSearch = vi.fn()
-    render(<SearchBar onSearch={onSearch} />)
-
-    expect(screen.getByRole('textbox')).toBeInTheDocument()
-  })
-
-  it('should call onSearch when typing', () => {
-    const onSearch = vi.fn()
-    render(<SearchBar onSearch={onSearch} />)
-
-    const input = screen.getByRole('textbox')
-    fireEvent.change(input, { target: { value: 'test query' } })
-
-    expect(onSearch).toHaveBeenCalledWith('test query')
-  })
-
-  it('should accept placeholder prop', () => {
-    const onSearch = vi.fn()
-    render(<SearchBar onSearch={onSearch} placeholder="Search notes..." />)
-
+  it('renders the search input', () => {
+    render(<SearchBar />)
     expect(screen.getByPlaceholderText('Search notes...')).toBeInTheDocument()
   })
 
-  it('should handle empty search', () => {
-    const onSearch = vi.fn()
-    render(<SearchBar onSearch={onSearch} />)
+  it('shows unlock message when vault is locked', async () => {
+    decryptedReturn = {
+      decryptedNotes: {},
+      isUnlocked: false,
+      isDecrypting: false,
+    }
 
-    const input = screen.getByRole('textbox')
-    fireEvent.change(input, { target: { value: '' } })
+    render(<SearchBar />)
 
-    expect(onSearch).toHaveBeenCalledWith('')
+    const input = screen.getByPlaceholderText('Search notes...')
+    fireEvent.change(input, { target: { value: 'project' } })
+
+    expect(screen.getByTestId('dialog')).toBeInTheDocument()
+    await screen.findByText('Unlock your vault to search notes.')
   })
 
-  it('should handle special characters', () => {
-    const onSearch = vi.fn()
-    render(<SearchBar onSearch={onSearch} />)
+  it('displays search results when unlocked', async () => {
+    const noteId = 'note-1'
+    notesState = [{ id: noteId, updatedAt: new Date().toISOString(), tags: [] }]
+    decryptedReturn = {
+      decryptedNotes: {
+        [noteId]: {
+          title: 'Project Meeting',
+          content: 'Discuss roadmap',
+        },
+      },
+      isUnlocked: true,
+      isDecrypting: false,
+    }
 
-    const input = screen.getByRole('textbox')
-    fireEvent.change(input, { target: { value: '@#$%' } })
+    render(<SearchBar />)
 
-    expect(onSearch).toHaveBeenCalledWith('@#$%')
+    const input = screen.getByPlaceholderText('Search notes...')
+    fireEvent.change(input, { target: { value: 'project' } })
+
+    const result = await screen.findByRole('button', { name: /project meeting/i })
+    expect(result).toBeInTheDocument()
   })
 
-  it('should handle long search queries', () => {
-    const onSearch = vi.fn()
-    render(<SearchBar onSearch={onSearch} />)
+  it('selects note and clears query when a result is clicked', async () => {
+    const noteId = 'note-42'
+    notesState = [{ id: noteId, updatedAt: new Date().toISOString(), tags: ['work'] }]
+    decryptedReturn = {
+      decryptedNotes: {
+        [noteId]: {
+          title: 'Weekly Sync',
+          content: 'Agenda and action items',
+        },
+      },
+      isUnlocked: true,
+      isDecrypting: false,
+    }
 
-    const longQuery = 'a'.repeat(100)
-    const input = screen.getByRole('textbox')
-    fireEvent.change(input, { target: { value: longQuery } })
+    render(<SearchBar />)
 
-    expect(onSearch).toHaveBeenCalledWith(longQuery)
-  })
+    const input = screen.getByPlaceholderText('Search notes...')
+    fireEvent.change(input, { target: { value: 'weekly' } })
 
-  it('should render with custom className', () => {
-    const onSearch = vi.fn()
-    const { container } = render(<SearchBar onSearch={onSearch} className="custom-search" />)
+    const result = await screen.findByRole('button', { name: /weekly sync/i })
+    fireEvent.click(result)
 
-    expect(container.firstChild).toHaveClass('custom-search')
-  })
-
-  it('should be disabled when disabled prop is true', () => {
-    const onSearch = vi.fn()
-    render(<SearchBar onSearch={onSearch} disabled={true} />)
-
-    expect(screen.getByRole('textbox')).toBeDisabled()
+    await waitFor(() => expect(selectNoteMock).toHaveBeenCalledWith(noteId))
+    expect(input).toHaveValue('')
   })
 })

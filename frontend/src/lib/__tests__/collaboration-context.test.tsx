@@ -1,95 +1,55 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import { CollaborationProvider, useCollaboration } from '../collaboration-context'
-
-// Mock WebSocket
-global.WebSocket = vi.fn().mockImplementation(() => ({
-  addEventListener: vi.fn(),
-  removeEventListener: vi.fn(),
-  send: vi.fn(),
-  close: vi.fn(),
-  readyState: 1,
-})) as any
-
-vi.mock('@/lib/config', () => ({
-  config: {
-    apiUrl: 'http://localhost:8080',
-    wsUrl: 'ws://localhost:8080',
-  },
-}))
+import { renderHook } from '@testing-library/react'
+import { useCollaboration } from '../collaboration-context'
 
 describe('CollaborationContext', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    localStorage.clear()
   })
 
-  it('should render children', () => {
-    render(
-      <CollaborationProvider>
-        <div>Test Child</div>
-      </CollaborationProvider>
-    )
+  it('should return collaboration functions', () => {
+    const { result } = renderHook(() => useCollaboration())
 
-    expect(screen.getByText('Test Child')).toBeInTheDocument()
+    expect(result.current.getSessionUsers).toBeDefined()
+    expect(result.current.joinSession).toBeDefined()
+    expect(result.current.leaveSession).toBeDefined()
+    expect(result.current.shareNote).toBeDefined()
+    expect(result.current.unshareNote).toBeDefined()
+    expect(result.current.getSharedUsers).toBeDefined()
   })
 
-  it('should provide collaboration context', () => {
-    function TestComponent() {
-      const { isConnected } = useCollaboration()
-      return <div>Connected: {isConnected ? 'yes' : 'no'}</div>
-    }
+  it('should return empty users array', () => {
+    const { result } = renderHook(() => useCollaboration())
 
-    render(
-      <CollaborationProvider>
-        <TestComponent />
-      </CollaborationProvider>
-    )
-
-    expect(screen.getByText(/Connected:/)).toBeInTheDocument()
+    expect(result.current.getSessionUsers('note-1')).toEqual([])
+    expect(result.current.getSharedUsers('note-1')).toEqual([])
   })
 
-  it('should throw error when used outside provider', () => {
+  it('should handle joinSession without errors', () => {
+    const { result } = renderHook(() => useCollaboration())
+
     expect(() => {
-      function TestComponent() {
-        useCollaboration()
-        return <div>Test</div>
-      }
-      render(<TestComponent />)
-    }).toThrow('useCollaboration must be used within a CollaborationProvider')
+      result.current.joinSession('note-1')
+    }).not.toThrow()
   })
 
-  it('should handle connection when token exists', async () => {
-    localStorage.setItem('token', 'test-token')
+  it('should handle leaveSession without errors', () => {
+    const { result } = renderHook(() => useCollaboration())
 
-    function TestComponent() {
-      const { isConnected } = useCollaboration()
-      return <div>Connected: {isConnected ? 'yes' : 'no'}</div>
-    }
-
-    render(
-      <CollaborationProvider>
-        <TestComponent />
-      </CollaborationProvider>
-    )
-
-    await waitFor(() => {
-      expect(screen.getByText(/Connected/)).toBeInTheDocument()
-    })
+    expect(() => {
+      result.current.leaveSession('note-1')
+    }).not.toThrow()
   })
 
-  it('should not connect without token', () => {
-    function TestComponent() {
-      const { isConnected } = useCollaboration()
-      return <div>Connected: {isConnected ? 'yes' : 'no'}</div>
-    }
+  it('should resolve shareNote promise', async () => {
+    const { result } = renderHook(() => useCollaboration())
 
-    render(
-      <CollaborationProvider>
-        <TestComponent />
-      </CollaborationProvider>
-    )
+    await expect(result.current.shareNote('note-1', 'user@example.com')).resolves.toBeUndefined()
+  })
 
-    expect(screen.getByText('Connected: no')).toBeInTheDocument()
+  it('should resolve unshareNote promise', async () => {
+    const { result } = renderHook(() => useCollaboration())
+
+    await expect(result.current.unshareNote('note-1', 'user-1')).resolves.toBeUndefined()
   })
 })

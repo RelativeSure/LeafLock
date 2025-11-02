@@ -30,7 +30,7 @@ describe('useDecryptedNotes', () => {
     vi.clearAllMocks()
   })
 
-  it('should return empty array for empty input', async () => {
+  it('should return empty cache for empty input', async () => {
     vi.mocked(useEncryption).mockReturnValue({
       isUnlocked: true,
       encryptionVersion: 1,
@@ -43,8 +43,11 @@ describe('useDecryptedNotes', () => {
     const { result } = renderHook(() => useDecryptedNotes([]))
 
     await waitFor(() => {
-      expect(result.current).toEqual([])
+      expect(result.current.isDecrypting).toBe(false)
     })
+
+    expect(result.current.decryptedNotes).toEqual({})
+    expect(result.current.isUnlocked).toBe(true)
   })
 
   it('should decrypt notes', async () => {
@@ -65,13 +68,13 @@ describe('useDecryptedNotes', () => {
     const { result } = renderHook(() => useDecryptedNotes([mockNote]))
 
     await waitFor(() => {
-      expect(result.current.length).toBe(1)
-      expect(result.current[0].title).toBe('Decrypted Title')
-      expect(result.current[0].content).toBe('Decrypted Content')
+      expect(Object.keys(result.current.decryptedNotes).length).toBe(1)
+      expect(result.current.decryptedNotes['note-1'].title).toBe('Decrypted Title')
+      expect(result.current.decryptedNotes['note-1'].content).toBe('Decrypted Content')
     })
   })
 
-  it('should return encrypted notes when not unlocked', () => {
+  it('should return empty cache when not unlocked', () => {
     vi.mocked(useEncryption).mockReturnValue({
       isUnlocked: false,
       encryptionVersion: 1,
@@ -83,7 +86,8 @@ describe('useDecryptedNotes', () => {
 
     const { result } = renderHook(() => useDecryptedNotes([mockNote]))
 
-    expect(result.current[0].title).toBe('encrypted-title')
+    expect(result.current.decryptedNotes).toEqual({})
+    expect(result.current.isUnlocked).toBe(false)
   })
 
   it('should handle multiple notes', async () => {
@@ -111,7 +115,9 @@ describe('useDecryptedNotes', () => {
     const { result } = renderHook(() => useDecryptedNotes(notes))
 
     await waitFor(() => {
-      expect(result.current.length).toBe(2)
+      expect(Object.keys(result.current.decryptedNotes).length).toBe(2)
+      expect(result.current.decryptedNotes['note-1'].title).toBe('Dec-1')
+      expect(result.current.decryptedNotes['note-2'].title).toBe('Dec-2')
     })
   })
 
@@ -133,8 +139,9 @@ describe('useDecryptedNotes', () => {
     const { result } = renderHook(() => useDecryptedNotes([mockNote]))
 
     await waitFor(() => {
-      expect(result.current.length).toBe(1)
-      expect(result.current[0].title).toContain('[Decryption Error]')
+      expect(Object.keys(result.current.decryptedNotes).length).toBe(1)
+      expect(result.current.decryptedNotes['note-1'].title).toBe('encrypted-title')
+      expect(result.current.decryptedNotes['note-1'].content).toBe('encrypted-content')
     })
   })
 })

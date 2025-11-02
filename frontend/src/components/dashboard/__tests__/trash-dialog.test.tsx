@@ -1,176 +1,148 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { TrashDialog } from '../trash-dialog'
-import { useNotesStore } from '@/stores/notesStore'
-import type { Note } from '@/types'
 
-vi.mock('@/stores/notesStore', () => ({
-  useNotesStore: vi.fn(),
+const getTrashedNotesMock = vi.fn()
+const restoreFromTrashMock = vi.fn()
+const deleteNoteMock = vi.fn()
+const emptyTrashMock = vi.fn()
+const toastMock = vi.fn()
+
+vi.mock('../../stores/notesStore', () => ({
+  useNotesStore: vi.fn(() => ({
+    getTrashedNotes: getTrashedNotesMock,
+    restoreFromTrash: restoreFromTrashMock,
+    deleteNote: deleteNoteMock,
+    emptyTrash: emptyTrashMock,
+  })),
+}))
+
+vi.mock('../../hooks/use-toast', () => ({
+  useToast: () => ({
+    toast: toastMock,
+  }),
 }))
 
 vi.mock('@/components/ui/dialog', () => ({
-  Dialog: ({ children, open }: any) => (open ? <div data-testid="dialog">{children}</div> : null),
-  DialogContent: ({ children }: any) => <div data-testid="dialog-content">{children}</div>,
+  Dialog: ({ children }: any) => <div data-testid="dialog-root">{children}</div>,
+  DialogTrigger: ({ children }: any) => <div>{children}</div>,
+  DialogContent: ({ children }: any) => <div>{children}</div>,
   DialogHeader: ({ children }: any) => <div>{children}</div>,
   DialogTitle: ({ children }: any) => <h2>{children}</h2>,
   DialogDescription: ({ children }: any) => <p>{children}</p>,
-  DialogFooter: ({ children }: any) => <div>{children}</div>,
 }))
 
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, ...props }: any) => (
-    <button onClick={onClick} {...props}>
+    <button type="button" onClick={onClick} {...props}>
       {children}
     </button>
   ),
 }))
 
 vi.mock('@/components/ui/scroll-area', () => ({
-  ScrollArea: ({ children }: any) => <div data-testid="scroll-area">{children}</div>,
+  ScrollArea: ({ children }: any) => <div>{children}</div>,
+}))
+
+vi.mock('@/components/ui/alert-dialog', () => ({
+  AlertDialog: ({ children }: any) => <div>{children}</div>,
+  AlertDialogTrigger: ({ children }: any) => <div>{children}</div>,
+  AlertDialogContent: ({ children }: any) => <div>{children}</div>,
+  AlertDialogHeader: ({ children }: any) => <div>{children}</div>,
+  AlertDialogTitle: ({ children }: any) => <h3>{children}</h3>,
+  AlertDialogDescription: ({ children }: any) => <p>{children}</p>,
+  AlertDialogFooter: ({ children }: any) => <div>{children}</div>,
+  AlertDialogCancel: ({ children, onClick }: any) => (
+    <button type="button" onClick={onClick}>
+      {children}
+    </button>
+  ),
+  AlertDialogAction: ({ children, onClick }: any) => (
+    <button type="button" onClick={onClick}>
+      {children}
+    </button>
+  ),
+}))
+
+vi.mock('lucide-react', () => ({
+  Trash2: () => <span>trash-icon</span>,
+  RotateCcw: () => <span>restore-icon</span>,
+  X: () => <span>delete-icon</span>,
 }))
 
 describe('TrashDialog', () => {
-  const mockTrashedNote: Note = {
-    id: 'note-1',
-    title: 'Trashed Note',
-    content: 'Content',
-    userId: '123',
-    encrypted: true,
-    encryptionVersion: 1,
-    folderId: null,
-    tags: [],
-    pinned: false,
-    isTrashed: true,
-    trashedAt: '2024-01-01T00:00:00Z',
-    sharedWith: [],
-    isTemplate: false,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-  }
-
   beforeEach(() => {
     vi.clearAllMocks()
+    getTrashedNotesMock.mockResolvedValue([])
+    restoreFromTrashMock.mockResolvedValue(undefined)
+    deleteNoteMock.mockResolvedValue(undefined)
+    emptyTrashMock.mockResolvedValue(undefined)
   })
 
-  it('should render trash dialog when open', () => {
-    vi.mocked(useNotesStore).mockReturnValue({
-      notes: [],
-      getTrashedNotes: vi.fn().mockResolvedValue([]),
-      restoreFromTrash: vi.fn(),
-      emptyTrash: vi.fn(),
-    } as any)
-
-    render(<TrashDialog open={true} onOpenChange={vi.fn()} />)
-    expect(screen.getByTestId('dialog')).toBeInTheDocument()
-  })
-
-  it('should not render when closed', () => {
-    vi.mocked(useNotesStore).mockReturnValue({
-      notes: [],
-      getTrashedNotes: vi.fn().mockResolvedValue([]),
-      restoreFromTrash: vi.fn(),
-      emptyTrash: vi.fn(),
-    } as any)
-
-    render(<TrashDialog open={false} onOpenChange={vi.fn()} />)
-    expect(screen.queryByTestId('dialog')).not.toBeInTheDocument()
-  })
-
-  it('should load trashed notes on mount', async () => {
-    const getTrashedNotes = vi.fn().mockResolvedValue([mockTrashedNote])
-
-    vi.mocked(useNotesStore).mockReturnValue({
-      notes: [mockTrashedNote],
-      getTrashedNotes,
-      restoreFromTrash: vi.fn(),
-      emptyTrash: vi.fn(),
-    } as any)
-
-    render(<TrashDialog open={true} onOpenChange={vi.fn()} />)
+  it('loads trashed notes on mount', async () => {
+    render(<TrashDialog />)
 
     await waitFor(() => {
-      expect(getTrashedNotes).toHaveBeenCalled()
+      expect(getTrashedNotesMock).toHaveBeenCalled()
     })
   })
 
-  it('should display trashed notes', async () => {
-    vi.mocked(useNotesStore).mockReturnValue({
-      notes: [mockTrashedNote],
-      getTrashedNotes: vi.fn().mockResolvedValue([mockTrashedNote]),
-      restoreFromTrash: vi.fn(),
-      emptyTrash: vi.fn(),
-    } as any)
+  it('renders trashed note information', async () => {
+    getTrashedNotesMock.mockResolvedValue([
+      {
+        id: 'note-1',
+        title: 'Old draft',
+        content: 'Archived content',
+        trashedAt: new Date().toISOString(),
+      },
+    ])
 
-    render(<TrashDialog open={true} onOpenChange={vi.fn()} />)
+    render(<TrashDialog />)
+
+    await screen.findByText('Old draft')
+    expect(screen.getByText(/Empty Trash/)).toBeInTheDocument()
+  })
+
+  it('restores note when restore button clicked', async () => {
+    getTrashedNotesMock.mockResolvedValue([
+      {
+        id: 'note-2',
+        title: 'Restore me',
+        content: 'note body',
+        trashedAt: new Date().toISOString(),
+      },
+    ])
+
+    render(<TrashDialog />)
+
+    const restoreButton = await screen.findByRole('button', { name: /restore/i })
+    fireEvent.click(restoreButton)
 
     await waitFor(() => {
-      expect(screen.getByTestId('dialog-content')).toBeInTheDocument()
+      expect(restoreFromTrashMock).toHaveBeenCalledWith('note-2')
     })
   })
 
-  it('should call restore on restore button click', async () => {
-    const restoreFromTrash = vi.fn().mockResolvedValue(undefined)
+  it('empties trash when confirmed', async () => {
+    getTrashedNotesMock.mockResolvedValue([
+      {
+        id: 'note-3',
+        title: 'Delete me',
+        content: 'trash content',
+        trashedAt: new Date().toISOString(),
+      },
+    ])
 
-    vi.mocked(useNotesStore).mockReturnValue({
-      notes: [mockTrashedNote],
-      getTrashedNotes: vi.fn().mockResolvedValue([mockTrashedNote]),
-      restoreFromTrash,
-      emptyTrash: vi.fn(),
-    } as any)
+    render(<TrashDialog />)
 
-    render(<TrashDialog open={true} onOpenChange={vi.fn()} />)
+    await screen.findByText('Delete me')
 
-    await waitFor(() => {
-      expect(screen.getByTestId('dialog-content')).toBeInTheDocument()
-    })
-  })
-
-  it('should call empty trash on empty button click', async () => {
-    const emptyTrash = vi.fn().mockResolvedValue(undefined)
-
-    vi.mocked(useNotesStore).mockReturnValue({
-      notes: [mockTrashedNote],
-      getTrashedNotes: vi.fn().mockResolvedValue([mockTrashedNote]),
-      restoreFromTrash: vi.fn(),
-      emptyTrash,
-    } as any)
-
-    render(<TrashDialog open={true} onOpenChange={vi.fn()} />)
+    const emptyButtons = screen.getAllByText(/empty trash/i)
+    const confirmButton = emptyButtons[emptyButtons.length - 1]
+    fireEvent.click(confirmButton)
 
     await waitFor(() => {
-      expect(screen.getByTestId('dialog-content')).toBeInTheDocument()
-    })
-  })
-
-  it('should show empty state when no trashed notes', async () => {
-    vi.mocked(useNotesStore).mockReturnValue({
-      notes: [],
-      getTrashedNotes: vi.fn().mockResolvedValue([]),
-      restoreFromTrash: vi.fn(),
-      emptyTrash: vi.fn(),
-    } as any)
-
-    render(<TrashDialog open={true} onOpenChange={vi.fn()} />)
-
-    await waitFor(() => {
-      expect(screen.getByTestId('dialog-content')).toBeInTheDocument()
-    })
-  })
-
-  it('should handle errors gracefully', async () => {
-    const getTrashedNotes = vi.fn().mockRejectedValue(new Error('Failed to load'))
-
-    vi.mocked(useNotesStore).mockReturnValue({
-      notes: [],
-      getTrashedNotes,
-      restoreFromTrash: vi.fn(),
-      emptyTrash: vi.fn(),
-    } as any)
-
-    render(<TrashDialog open={true} onOpenChange={vi.fn()} />)
-
-    await waitFor(() => {
-      expect(screen.getByTestId('dialog-content')).toBeInTheDocument()
+      expect(emptyTrashMock).toHaveBeenCalled()
     })
   })
 })

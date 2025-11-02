@@ -11,7 +11,6 @@ describe('Types', () => {
       isAdmin: false,
       mfaEnabled: false,
       createdAt: '2024-01-01',
-      updatedAt: '2024-01-01',
     }
 
     expect(user.id).toBe('123')
@@ -44,10 +43,10 @@ describe('Types', () => {
     const folder: Folder = {
       id: 'folder-1',
       name: 'My Folder',
+      color: '#3b82f6',
       userId: '123',
       parentId: null,
       createdAt: '2024-01-01',
-      updatedAt: '2024-01-01',
     }
 
     expect(folder.id).toBe('folder-1')
@@ -58,9 +57,8 @@ describe('Types', () => {
     const tag: Tag = {
       id: 'tag-1',
       name: 'work',
+      color: '#ef4444',
       userId: '123',
-      createdAt: '2024-01-01',
-      updatedAt: '2024-01-01',
     }
 
     expect(tag.id).toBe('tag-1')
@@ -72,9 +70,11 @@ describe('Types', () => {
       id: 'template-1',
       name: 'Meeting Notes',
       content: 'Template content',
+      tags: ['meetings', 'work'],
+      isPublic: false,
       userId: '123',
+      usageCount: 0,
       createdAt: '2024-01-01',
-      updatedAt: '2024-01-01',
     }
 
     expect(template.id).toBe('template-1')

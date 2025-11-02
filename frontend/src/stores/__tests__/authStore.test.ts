@@ -138,6 +138,7 @@ describe('authStore', () => {
       const mockResponse = {
         user: mockUser,
         requiresMFA: false,
+        token: 'test-token',
         encryptionSalt: 'test-salt-base64',
       }
 
@@ -161,6 +162,7 @@ describe('authStore', () => {
       const mockResponse = {
         user: mockAdminUser,
         requiresMFA: false,
+        token: 'test-token',
         encryptionSalt: 'test-salt-base64',
       }
 
@@ -179,6 +181,7 @@ describe('authStore', () => {
       const mockResponse = {
         user: mockUser,
         requiresMFA: true,
+        token: 'test-token',
         encryptionSalt: 'test-salt-base64',
       }
 
@@ -200,7 +203,8 @@ describe('authStore', () => {
       const mockResponse = {
         user: mockUser,
         requiresMFA: false,
-        encryptionSalt: null,
+        token: 'test-token',
+        encryptionSalt: undefined,
       }
 
       vi.mocked(apiClient.login).mockResolvedValue(mockResponse)
@@ -219,6 +223,7 @@ describe('authStore', () => {
       const mockResponse = {
         user: mockUser,
         requiresMFA: false,
+        token: 'test-token',
         encryptionSalt: 'test-salt-base64',
       }
 
@@ -259,6 +264,7 @@ describe('authStore', () => {
     it('should verify MFA successfully', async () => {
       const mockResponse = {
         user: mockUser,
+        token: 'test-token',
         encryptionSalt: 'test-salt-base64',
       }
 
@@ -281,7 +287,8 @@ describe('authStore', () => {
     it('should use pending salt if response salt is missing', async () => {
       const mockResponse = {
         user: mockUser,
-        encryptionSalt: null,
+        token: 'test-token',
+        encryptionSalt: undefined,
       }
 
       vi.mocked(apiClient.verifyMFA).mockResolvedValue(mockResponse)
@@ -304,6 +311,7 @@ describe('authStore', () => {
     it('should handle encryption key derivation failure', async () => {
       const mockResponse = {
         user: mockUser,
+        token: 'test-token',
         encryptionSalt: 'test-salt-base64',
       }
 
@@ -321,6 +329,7 @@ describe('authStore', () => {
     it('should register successfully', async () => {
       const mockResponse = {
         user: mockUser,
+        token: 'test-token',
         encryptionSalt: 'test-salt-base64',
       }
 
@@ -342,7 +351,8 @@ describe('authStore', () => {
     it('should handle registration without encryption salt', async () => {
       const mockResponse = {
         user: mockUser,
-        encryptionSalt: null,
+        token: 'test-token',
+        encryptionSalt: undefined,
       }
 
       vi.mocked(apiClient.register).mockResolvedValue(mockResponse)
@@ -360,6 +370,7 @@ describe('authStore', () => {
     it('should handle encryption key derivation failure', async () => {
       const mockResponse = {
         user: mockUser,
+        token: 'test-token',
         encryptionSalt: 'test-salt-base64',
       }
 
@@ -385,7 +396,11 @@ describe('authStore', () => {
   describe('enableMFA', () => {
     it('should enable MFA successfully', async () => {
       useAuthStore.setState({ user: mockUser })
-      vi.mocked(apiClient.beginMFASetup).mockResolvedValue({ secret: 'JBSWY3DPEHPK3PXP' })
+      vi.mocked(apiClient.beginMFASetup).mockResolvedValue({
+        secret: 'JBSWY3DPEHPK3PXP',
+        qrCode:
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      })
 
       const secret = await useAuthStore.getState().enableMFA()
 

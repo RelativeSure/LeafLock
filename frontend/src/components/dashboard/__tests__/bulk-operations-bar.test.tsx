@@ -27,92 +27,113 @@ describe('BulkOperationsBar', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(useNotesStore).mockReturnValue({
+      notes: [],
       bulkDeleteNotes: vi.fn(),
       bulkRestoreNotes: vi.fn(),
       moveNotesToFolder: vi.fn(),
       addTagsToNotes: vi.fn(),
       removeTagsFromNotes: vi.fn(),
+      createTag: vi.fn(),
       folders: [],
       tags: [],
     } as any)
   })
 
   it('should render bulk operations bar', () => {
-    render(<BulkOperationsBar selectedNoteIds={['note-1']} onClearSelection={vi.fn()} />)
+    render(<BulkOperationsBar selectedNotes={['note-1']} onClose={vi.fn()} />)
     expect(screen.getByText(/selected/i)).toBeInTheDocument()
   })
 
   it('should display selected count', () => {
-    render(<BulkOperationsBar selectedNoteIds={['note-1', 'note-2']} onClearSelection={vi.fn()} />)
+    render(<BulkOperationsBar selectedNotes={['note-1', 'note-2']} onClose={vi.fn()} />)
     expect(screen.getByText(/2.*selected/i)).toBeInTheDocument()
   })
 
   it('should show action buttons', () => {
-    render(<BulkOperationsBar selectedNoteIds={['note-1']} onClearSelection={vi.fn()} />)
+    render(<BulkOperationsBar selectedNotes={['note-1']} onClose={vi.fn()} />)
     expect(screen.getAllByRole('button').length).toBeGreaterThan(0)
   })
 
   it('should handle empty selection', () => {
-    render(<BulkOperationsBar selectedNoteIds={[]} onClearSelection={vi.fn()} />)
-    expect(screen.getByText(/0.*selected/i)).toBeInTheDocument()
+    const { container } = render(<BulkOperationsBar selectedNotes={[]} onClose={vi.fn()} />)
+    // Component returns null when no notes are selected
+    expect(container.firstChild).toBeNull()
   })
 
-  it('should call onClearSelection', () => {
-    const onClearSelection = vi.fn()
-    render(<BulkOperationsBar selectedNoteIds={['note-1']} onClearSelection={onClearSelection} />)
+  it('should call onClose', () => {
+    const onClose = vi.fn()
+    render(<BulkOperationsBar selectedNotes={['note-1']} onClose={onClose} />)
 
-    const clearButton = screen.getByRole('button', { name: /clear/i })
-    clearButton.click()
+    // Find the X button (close button without text label)
+    const buttons = screen.getAllByRole('button')
+    const closeButton = buttons[0] // First button is the X close button
+    closeButton.click()
 
-    expect(onClearSelection).toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalled()
   })
 
   it('should handle bulk delete', async () => {
     const bulkDeleteNotes = vi.fn().mockResolvedValue({ successful: 2, failed: 0, errors: [] })
 
     vi.mocked(useNotesStore).mockReturnValue({
+      notes: [],
       bulkDeleteNotes,
       bulkRestoreNotes: vi.fn(),
       moveNotesToFolder: vi.fn(),
       addTagsToNotes: vi.fn(),
       removeTagsFromNotes: vi.fn(),
+      createTag: vi.fn(),
       folders: [],
       tags: [],
     } as any)
 
-    render(<BulkOperationsBar selectedNoteIds={['note-1', 'note-2']} onClearSelection={vi.fn()} />)
+    render(<BulkOperationsBar selectedNotes={['note-1', 'note-2']} onClose={vi.fn()} />)
     expect(screen.getByText(/2.*selected/i)).toBeInTheDocument()
   })
 
   it('should show folder select when folders exist', () => {
     vi.mocked(useNotesStore).mockReturnValue({
+      notes: [],
       bulkDeleteNotes: vi.fn(),
       bulkRestoreNotes: vi.fn(),
       moveNotesToFolder: vi.fn(),
       addTagsToNotes: vi.fn(),
       removeTagsFromNotes: vi.fn(),
+      createTag: vi.fn(),
       folders: [
-        { id: 'folder-1', name: 'Work', userId: '123', parentId: null, createdAt: '2024-01-01' },
+        {
+          id: 'folder-1',
+          name: 'Work',
+          userId: '123',
+          parentId: null,
+          createdAt: '2024-01-01',
+          color: '#000000',
+        },
       ],
       tags: [],
     } as any)
 
-    render(<BulkOperationsBar selectedNoteIds={['note-1']} onClearSelection={vi.fn()} />)
-    expect(screen.getByTestId('select')).toBeInTheDocument()
+    render(<BulkOperationsBar selectedNotes={['note-1']} onClose={vi.fn()} />)
+    // Verify Move button is present
+    expect(screen.getByRole('button', { name: /move/i })).toBeInTheDocument()
   })
 
   it('should show tag select when tags exist', () => {
     vi.mocked(useNotesStore).mockReturnValue({
+      notes: [],
       bulkDeleteNotes: vi.fn(),
       bulkRestoreNotes: vi.fn(),
       moveNotesToFolder: vi.fn(),
       addTagsToNotes: vi.fn(),
       removeTagsFromNotes: vi.fn(),
+      createTag: vi.fn(),
       folders: [],
-      tags: [{ id: 'tag-1', name: 'urgent', userId: '123', createdAt: '2024-01-01' }],
+      tags: [
+        { id: 'tag-1', name: 'urgent', userId: '123', createdAt: '2024-01-01', color: '#000000' },
+      ],
     } as any)
 
-    render(<BulkOperationsBar selectedNoteIds={['note-1']} onClearSelection={vi.fn()} />)
+    render(<BulkOperationsBar selectedNotes={['note-1']} onClose={vi.fn()} />)
     expect(document.body).toBeTruthy()
   })
 })

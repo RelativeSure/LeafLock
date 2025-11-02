@@ -33,7 +33,7 @@ describe('ProtectedRoute', () => {
     } as any)
 
     render(
-      <ProtectedRoute>
+      <ProtectedRoute user={mockUser}>
         <div>Protected Content</div>
       </ProtectedRoute>
     )
@@ -48,22 +48,23 @@ describe('ProtectedRoute', () => {
     } as any)
 
     render(
-      <ProtectedRoute>
+      <ProtectedRoute user={null}>
         <div>Protected Content</div>
       </ProtectedRoute>
     )
 
-    expect(screen.getByText(/Navigate to/)).toBeInTheDocument()
+    expect(screen.getByText('Unauthorized')).toBeInTheDocument()
   })
 
   it('should allow admin access', () => {
+    const adminUser = { ...mockUser, role: 'admin' as const, isAdmin: true }
     vi.mocked(useAuthStore).mockReturnValue({
       isAuthenticated: true,
-      user: { ...mockUser, role: 'admin', isAdmin: true },
+      user: adminUser,
     } as any)
 
     render(
-      <ProtectedRoute requireAdmin>
+      <ProtectedRoute user={adminUser} requiredRole="admin">
         <div>Admin Content</div>
       </ProtectedRoute>
     )
@@ -78,7 +79,7 @@ describe('ProtectedRoute', () => {
     } as any)
 
     render(
-      <ProtectedRoute requireAdmin>
+      <ProtectedRoute user={mockUser} requiredRole="admin">
         <div>Admin Content</div>
       </ProtectedRoute>
     )
