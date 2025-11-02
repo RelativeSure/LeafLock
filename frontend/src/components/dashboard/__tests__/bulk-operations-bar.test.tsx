@@ -60,16 +60,16 @@ describe('BulkOperationsBar', () => {
   it('should call onClearSelection', () => {
     const onClearSelection = vi.fn()
     render(<BulkOperationsBar selectedNoteIds={['note-1']} onClearSelection={onClearSelection} />)
-    
+
     const clearButton = screen.getByRole('button', { name: /clear/i })
     clearButton.click()
-    
+
     expect(onClearSelection).toHaveBeenCalled()
   })
 
   it('should handle bulk delete', async () => {
     const bulkDeleteNotes = vi.fn().mockResolvedValue({ successful: 2, failed: 0, errors: [] })
-    
+
     vi.mocked(useNotesStore).mockReturnValue({
       bulkDeleteNotes,
       bulkRestoreNotes: vi.fn(),
@@ -91,7 +91,9 @@ describe('BulkOperationsBar', () => {
       moveNotesToFolder: vi.fn(),
       addTagsToNotes: vi.fn(),
       removeTagsFromNotes: vi.fn(),
-      folders: [{ id: 'folder-1', name: 'Work', userId: '123', parentId: null, createdAt: '2024-01-01' }],
+      folders: [
+        { id: 'folder-1', name: 'Work', userId: '123', parentId: null, createdAt: '2024-01-01' },
+      ],
       tags: [],
     } as any)
 

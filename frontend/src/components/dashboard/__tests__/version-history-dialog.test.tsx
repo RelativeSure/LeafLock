@@ -122,7 +122,9 @@ describe('VersionHistoryDialog', () => {
     render(<VersionHistoryDialog open={true} onOpenChange={vi.fn()} noteId="note-1" />)
 
     await waitFor(() => {
-      expect(screen.getByText(/Version 1/i) || screen.getByText(/Initial version/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Version 1/i) || screen.getByText(/Initial version/i)
+      ).toBeInTheDocument()
     })
   })
 

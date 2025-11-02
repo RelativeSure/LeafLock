@@ -107,7 +107,9 @@ describe('RegisterForm', () => {
       fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'A' } })
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'test@example.com' } })
       fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!' } })
-      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123!' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'Password123!' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /create account/i }))
 
       await waitFor(() => {
@@ -121,7 +123,9 @@ describe('RegisterForm', () => {
       fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John123' } })
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'test@example.com' } })
       fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!' } })
-      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123!' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'Password123!' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /create account/i }))
 
       await waitFor(() => {
@@ -134,14 +138,22 @@ describe('RegisterForm', () => {
 
       render(<RegisterForm onToggleMode={mockOnToggleMode} />)
 
-      fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: "Mary-Jane O'Brien" } })
+      fireEvent.change(screen.getByLabelText(/full name/i), {
+        target: { value: "Mary-Jane O'Brien" },
+      })
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'test@example.com' } })
       fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!' } })
-      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123!' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'Password123!' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /create account/i }))
 
       await waitFor(() => {
-        expect(mockRegister).toHaveBeenCalledWith('test@example.com', 'Password123!', "Mary-Jane O'Brien")
+        expect(mockRegister).toHaveBeenCalledWith(
+          'test@example.com',
+          'Password123!',
+          "Mary-Jane O'Brien"
+        )
       })
     })
   })
@@ -153,7 +165,9 @@ describe('RegisterForm', () => {
       fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } })
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'invalid-email' } })
       fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!' } })
-      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123!' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'Password123!' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /create account/i }))
 
       await waitFor(() => {
@@ -167,9 +181,13 @@ describe('RegisterForm', () => {
       render(<RegisterForm onToggleMode={mockOnToggleMode} />)
 
       fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } })
-      fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'valid@example.com' } })
+      fireEvent.change(screen.getByLabelText(/^email$/i), {
+        target: { value: 'valid@example.com' },
+      })
       fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!' } })
-      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123!' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'Password123!' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /create account/i }))
 
       await waitFor(() => {
@@ -199,7 +217,9 @@ describe('RegisterForm', () => {
       fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } })
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'test@example.com' } })
       fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'password123!' } })
-      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'password123!' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'password123!' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /create account/i }))
 
       await waitFor(() => {
@@ -213,7 +233,9 @@ describe('RegisterForm', () => {
       fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } })
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'test@example.com' } })
       fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'PASSWORD123!' } })
-      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'PASSWORD123!' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'PASSWORD123!' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /create account/i }))
 
       await waitFor(() => {
@@ -227,7 +249,9 @@ describe('RegisterForm', () => {
       fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } })
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'test@example.com' } })
       fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password!' } })
-      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password!' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'Password!' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /create account/i }))
 
       await waitFor(() => {
@@ -241,7 +265,9 @@ describe('RegisterForm', () => {
       fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } })
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'test@example.com' } })
       fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123' } })
-      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'Password123' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /create account/i }))
 
       await waitFor(() => {
@@ -255,7 +281,9 @@ describe('RegisterForm', () => {
       fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } })
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'test@example.com' } })
       fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!' } })
-      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password456!' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'Password456!' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /create account/i }))
 
       await waitFor(() => {
@@ -271,7 +299,9 @@ describe('RegisterForm', () => {
       fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } })
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'test@example.com' } })
       fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!' } })
-      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123!' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'Password123!' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /create account/i }))
 
       await waitFor(() => {
@@ -289,7 +319,9 @@ describe('RegisterForm', () => {
       fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } })
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'test@example.com' } })
       fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!' } })
-      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123!' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'Password123!' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /create account/i }))
 
       await waitFor(() => {
@@ -305,7 +337,9 @@ describe('RegisterForm', () => {
       fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } })
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'test@example.com' } })
       fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!' } })
-      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123!' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'Password123!' },
+      })
 
       const submitButton = screen.getByRole('button', { name: /create account/i })
       fireEvent.click(submitButton)
@@ -325,7 +359,9 @@ describe('RegisterForm', () => {
       fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } })
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'test@example.com' } })
       fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!' } })
-      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123!' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'Password123!' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /create account/i }))
 
       await waitFor(() => {
@@ -339,9 +375,13 @@ describe('RegisterForm', () => {
       render(<RegisterForm onToggleMode={mockOnToggleMode} />)
 
       fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } })
-      fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'existing@example.com' } })
+      fireEvent.change(screen.getByLabelText(/^email$/i), {
+        target: { value: 'existing@example.com' },
+      })
       fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!' } })
-      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123!' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'Password123!' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /create account/i }))
 
       await waitFor(() => {
@@ -356,9 +396,13 @@ describe('RegisterForm', () => {
       render(<RegisterForm onToggleMode={mockOnToggleMode} />)
 
       fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } })
-      fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'existing@example.com' } })
+      fireEvent.change(screen.getByLabelText(/^email$/i), {
+        target: { value: 'existing@example.com' },
+      })
       fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!' } })
-      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123!' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'Password123!' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /create account/i }))
 
       await waitFor(() => {
@@ -395,7 +439,9 @@ describe('RegisterForm', () => {
       fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } })
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'test@example.com' } })
       fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!' } })
-      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123!' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'Password123!' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /create account/i }))
 
       await waitFor(() => {
@@ -411,12 +457,18 @@ describe('RegisterForm', () => {
       fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: '  John Doe  ' } })
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'test@example.com' } })
       fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123!' } })
-      fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'Password123!' } })
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'Password123!' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /create account/i }))
 
       // Should call register with untrimmed name (trimming is for validation only)
       await waitFor(() => {
-        expect(mockRegister).toHaveBeenCalledWith('test@example.com', 'Password123!', '  John Doe  ')
+        expect(mockRegister).toHaveBeenCalledWith(
+          'test@example.com',
+          'Password123!',
+          '  John Doe  '
+        )
       })
     })
   })

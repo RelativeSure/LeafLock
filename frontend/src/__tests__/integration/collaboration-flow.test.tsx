@@ -188,7 +188,7 @@ describe('Integration: Collaboration Flow', () => {
       const collaborators = await apiClient.getCollaborators('note-1')
 
       expect(collaborators).toHaveLength(3)
-      expect(collaborators.every(c => c.permission === 'write')).toBe(true)
+      expect(collaborators.every((c) => c.permission === 'write')).toBe(true)
     })
   })
 

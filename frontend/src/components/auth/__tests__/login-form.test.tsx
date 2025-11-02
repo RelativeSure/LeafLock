@@ -274,7 +274,9 @@ describe('LoginForm', () => {
         expect(screen.getByLabelText(/authentication code/i)).toBeInTheDocument()
       })
 
-      fireEvent.change(screen.getByLabelText(/authentication code/i), { target: { value: '000000' } })
+      fireEvent.change(screen.getByLabelText(/authentication code/i), {
+        target: { value: '000000' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /verify/i }))
 
       await waitFor(() => {
@@ -297,7 +299,9 @@ describe('LoginForm', () => {
         expect(screen.getByLabelText(/authentication code/i)).toBeInTheDocument()
       })
 
-      fireEvent.change(screen.getByLabelText(/authentication code/i), { target: { value: '123456' } })
+      fireEvent.change(screen.getByLabelText(/authentication code/i), {
+        target: { value: '123456' },
+      })
       fireEvent.click(screen.getByRole('button', { name: /verify/i }))
 
       await waitFor(() => {
@@ -344,7 +348,11 @@ describe('LoginForm', () => {
 
     it('should prevent form submission while loading', async () => {
       let resolveLogin: any
-      mockLogin.mockReturnValue(new Promise((resolve) => { resolveLogin = resolve }))
+      mockLogin.mockReturnValue(
+        new Promise((resolve) => {
+          resolveLogin = resolve
+        })
+      )
 
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 

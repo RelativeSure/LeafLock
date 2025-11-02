@@ -67,7 +67,7 @@ describe('gravatar-utils', () => {
         'blank',
       ]
 
-      types.forEach(type => {
+      types.forEach((type) => {
         const url = getGravatarUrl('user@example.com', 200, type)
         expect(url).toContain(`d=${type}`)
       })
@@ -138,10 +138,7 @@ describe('gravatar-utils', () => {
 
       await checkGravatarExists('user@example.com')
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('s=1'),
-        { method: 'HEAD' }
-      )
+      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('s=1'), { method: 'HEAD' })
     })
 
     it('should use blank default for check', async () => {
@@ -149,10 +146,9 @@ describe('gravatar-utils', () => {
 
       await checkGravatarExists('user@example.com')
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('d=blank'),
-        { method: 'HEAD' }
-      )
+      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('d=blank'), {
+        method: 'HEAD',
+      })
     })
   })
 

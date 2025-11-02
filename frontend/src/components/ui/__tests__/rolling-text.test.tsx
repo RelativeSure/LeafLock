@@ -9,9 +9,7 @@ describe('RollingText', () => {
   })
 
   it('should render with custom className', () => {
-    const { container } = render(
-      <RollingText text="Test" className="custom-class" />
-    )
+    const { container } = render(<RollingText text="Test" className="custom-class" />)
     expect(container.querySelector('.custom-class')).toBeInTheDocument()
   })
 
@@ -41,12 +39,7 @@ describe('RollingText', () => {
   })
 
   it('should handle custom transition', () => {
-    render(
-      <RollingText
-        text="Test"
-        transition={{ duration: 1, delay: 0.2, ease: 'easeIn' }}
-      />
-    )
+    render(<RollingText text="Test" transition={{ duration: 1, delay: 0.2, ease: 'easeIn' }} />)
     expect(document.body).toBeTruthy()
   })
 })

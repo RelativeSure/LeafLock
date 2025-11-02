@@ -103,7 +103,7 @@ describe('NoteEditor', () => {
 
   it('should update title when typing', async () => {
     render(<NoteEditor />)
-    
+
     const titleInput = screen.getByDisplayValue('Test Note')
     fireEvent.change(titleInput, { target: { value: 'Updated Title' } })
 
@@ -114,7 +114,7 @@ describe('NoteEditor', () => {
 
   it('should update content when typing in editor', async () => {
     render(<NoteEditor />)
-    
+
     const contentArea = screen.getByTestId('rich-text-editor').querySelector('textarea')
     fireEvent.change(contentArea!, { target: { value: 'New content' } })
 
@@ -125,9 +125,9 @@ describe('NoteEditor', () => {
 
   it('should auto-save note after delay', async () => {
     vi.useFakeTimers()
-    
+
     render(<NoteEditor />)
-    
+
     const titleInput = screen.getByDisplayValue('Test Note')
     fireEvent.change(titleInput, { target: { value: 'Auto Save Test' } })
 
@@ -147,7 +147,7 @@ describe('NoteEditor', () => {
 
   it('should call updateNote when save button clicked', async () => {
     render(<NoteEditor />)
-    
+
     const titleInput = screen.getByDisplayValue('Test Note')
     fireEvent.change(titleInput, { target: { value: 'Manual Save' } })
 
@@ -182,7 +182,7 @@ describe('NoteEditor', () => {
     } as any)
 
     render(<NoteEditor />)
-    
+
     const titleInput = screen.getByPlaceholderText(/title/i)
     fireEvent.change(titleInput, { target: { value: 'New Note' } })
 
@@ -207,7 +207,7 @@ describe('NoteEditor', () => {
 
   it('should toggle pin status', async () => {
     render(<NoteEditor />)
-    
+
     const pinButton = screen.queryByRole('button', { name: /pin/i })
     if (pinButton) {
       fireEvent.click(pinButton)
@@ -238,7 +238,7 @@ describe('NoteEditor', () => {
     mockEncryptText.mockRejectedValue(new Error('Encryption failed'))
 
     render(<NoteEditor />)
-    
+
     const titleInput = screen.getByDisplayValue('Test Note')
     fireEvent.change(titleInput, { target: { value: 'Error Test' } })
 
@@ -257,7 +257,7 @@ describe('NoteEditor', () => {
 
   it('should handle keyboard shortcuts', () => {
     render(<NoteEditor />)
-    
+
     const titleInput = screen.getByDisplayValue('Test Note')
     fireEvent.keyDown(titleInput, { key: 's', ctrlKey: true })
 

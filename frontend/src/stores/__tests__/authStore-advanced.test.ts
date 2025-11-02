@@ -197,9 +197,9 @@ describe('authStore - Advanced Scenarios', () => {
     it('should handle expired session gracefully', async () => {
       vi.mocked(apiClient.login).mockRejectedValue(new Error('Session expired'))
 
-      await expect(
-        useAuthStore.getState().login('test@example.com', 'password')
-      ).rejects.toThrow('Session expired')
+      await expect(useAuthStore.getState().login('test@example.com', 'password')).rejects.toThrow(
+        'Session expired'
+      )
 
       expect(useAuthStore.getState().isAuthenticated).toBe(false)
     })
@@ -209,9 +209,9 @@ describe('authStore - Advanced Scenarios', () => {
     it('should handle network errors during login', async () => {
       vi.mocked(apiClient.login).mockRejectedValue(new Error('Network error'))
 
-      await expect(
-        useAuthStore.getState().login('test@example.com', 'password')
-      ).rejects.toThrow('Network error')
+      await expect(useAuthStore.getState().login('test@example.com', 'password')).rejects.toThrow(
+        'Network error'
+      )
 
       expect(useAuthStore.getState().error).toBeTruthy()
     })
@@ -219,9 +219,9 @@ describe('authStore - Advanced Scenarios', () => {
     it('should handle invalid credentials', async () => {
       vi.mocked(apiClient.login).mockRejectedValue(new Error('Invalid credentials'))
 
-      await expect(
-        useAuthStore.getState().login('test@example.com', 'wrong')
-      ).rejects.toThrow('Invalid credentials')
+      await expect(useAuthStore.getState().login('test@example.com', 'wrong')).rejects.toThrow(
+        'Invalid credentials'
+      )
     })
 
     it('should handle registration errors', async () => {
@@ -342,10 +342,7 @@ describe('authStore - Advanced Scenarios', () => {
 
       vi.mocked(apiClient.logout).mockResolvedValue(undefined)
 
-      await Promise.all([
-        useAuthStore.getState().logout(),
-        useAuthStore.getState().logout(),
-      ])
+      await Promise.all([useAuthStore.getState().logout(), useAuthStore.getState().logout()])
 
       expect(useAuthStore.getState().isAuthenticated).toBe(false)
     })

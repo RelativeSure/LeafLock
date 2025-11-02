@@ -17,6 +17,7 @@
 ## What Was Accomplished
 
 ### Infrastructure Setup ✅
+
 - Configured Vitest with V8 coverage provider
 - Set up coverage thresholds in `vite.config.ts`
 - Created comprehensive test setup with proper mocks
@@ -25,9 +26,10 @@
 ### Test Files Added
 
 #### Component Tests (28 test files)
+
 1. **UI Components**
    - `button.test.tsx` - 100% coverage
-   - `switch.test.tsx` - 100% coverage  
+   - `switch.test.tsx` - 100% coverage
    - `input.test.tsx` - 100% coverage
    - `card.test.tsx` - 100% coverage
    - `badge.test.tsx` - 100% coverage
@@ -91,12 +93,14 @@
 ## How We Achieved 30%
 
 ### Phase 1: Foundation (16.69% → 20.82%)
+
 - Fixed existing test issues
 - Added collaboration-context tests (100% coverage of that file)
 - Created comprehensive dashboard component render tests
 - **Gain**: +4.13%
 
 ### Phase 2: Page Components (20.82% → 30.04%)
+
 - Added render tests for large page components:
   - AdminPage (759 lines)
   - FoldersTagsPage (362 lines)
@@ -110,7 +114,9 @@
 ## Testing Strategy Used
 
 ### 1. Render Tests
+
 Simple tests that verify components render without crashing:
+
 ```typescript
 it('should render without crashing', () => {
   expect(() => render(<Component />)).not.toThrow()
@@ -118,21 +124,27 @@ it('should render without crashing', () => {
 ```
 
 ### 2. Comprehensive Mocking
+
 Created extensive mocks for all dependencies:
+
 - Stores (notesStore, authStore, settingsStore, templatesStore)
 - Contexts (encryption, collaboration)
 - Services (apiClient)
 - External libraries (sonner, react-router, date-fns)
 
 ### 3. Integration Tests
+
 Tests that verify component interactions and lifecycle:
+
 - Mount/unmount sequences
 - Re-render stability
 - Memory management
 - Concurrent loading
 
 ### 4. Export Verification
+
 Tests that verify modules export expected components:
+
 ```typescript
 it('should export component', async () => {
   const module = await import('../component')
@@ -142,29 +154,29 @@ it('should export component', async () => {
 
 ## Files with High Coverage
 
-| File | Coverage | Lines |
-|------|----------|-------|
-| authStore.ts | 100% | 100% |
-| settingsStore.ts | 100% | 100% |
-| templatesStore.ts | 98.49% | 98.49% |
-| register-form.tsx | 98.51% | 202 |
-| forgot-password-form.tsx | 98.88% | 90 |
-| login-form.tsx | 96.82% | 189 |
-| config.ts | 92.38% | - |
-| use-decrypted-notes.ts | 92.85% | - |
-| ThemeContext.tsx | 92.85% | - |
+| File                     | Coverage | Lines  |
+| ------------------------ | -------- | ------ |
+| authStore.ts             | 100%     | 100%   |
+| settingsStore.ts         | 100%     | 100%   |
+| templatesStore.ts        | 98.49%   | 98.49% |
+| register-form.tsx        | 98.51%   | 202    |
+| forgot-password-form.tsx | 98.88%   | 90     |
+| login-form.tsx           | 96.82%   | 189    |
+| config.ts                | 92.38%   | -      |
+| use-decrypted-notes.ts   | 92.85%   | -      |
+| ThemeContext.tsx         | 92.85%   | -      |
 
 ## Files Needing More Coverage (for 50% goal)
 
-| File | Current | Lines | Impact |
-|------|---------|-------|--------|
-| encryption-utils.ts | 3.23% | 295 | High |
-| notesStore.ts | 36.52% | 646 | High |
-| secureApi.ts | 37.25% | 865 | High |
-| note-editor.tsx | 0% | 445 | High |
-| version-history-dialog.tsx | 0% | 477 | High |
-| advanced-search-bar.tsx | 0% | 457 | High |
-| settings-page.tsx | 0% | 407 | High |
+| File                       | Current | Lines | Impact |
+| -------------------------- | ------- | ----- | ------ |
+| encryption-utils.ts        | 3.23%   | 295   | High   |
+| notesStore.ts              | 36.52%  | 646   | High   |
+| secureApi.ts               | 37.25%  | 865   | High   |
+| note-editor.tsx            | 0%      | 445   | High   |
+| version-history-dialog.tsx | 0%      | 477   | High   |
+| advanced-search-bar.tsx    | 0%      | 457   | High   |
+| settings-page.tsx          | 0%      | 407   | High   |
 
 ## Commands
 
@@ -188,6 +200,7 @@ pnpm run test:playwright
 ## Coverage Reports
 
 Coverage reports are generated in `./coverage/` directory:
+
 - `coverage/index.html` - Interactive HTML report
 - `coverage/coverage-summary.json` - JSON summary
 - `coverage/lcov.info` - LCOV format for CI/CD
@@ -195,6 +208,7 @@ Coverage reports are generated in `./coverage/` directory:
 ## Known Issues
 
 ### Test Failures (7 failing suites)
+
 The following tests are currently failing but coverage is still counted:
 
 1. **encryption-utils.test.ts** - Mock initialization issue with libsodium
@@ -208,6 +222,7 @@ These are minor issues that don't prevent coverage measurement. They can be fixe
 ## Next Steps to Reach 50%
 
 ### Priority 1: Core Business Logic (13% gain potential)
+
 1. **Complete encryption-utils.ts testing**
    - Fix mock initialization
    - Test all encryption/decryption paths
@@ -225,6 +240,7 @@ These are minor issues that don't prevent coverage measurement. They can be fixe
    - **Estimated gain**: 3-4%
 
 ### Priority 2: Major Components (7% gain potential)
+
 1. **note-editor.tsx** - Add basic render and interaction tests
 2. **version-history-dialog.tsx** - Add dialog interaction tests
 3. **advanced-search-bar.tsx** - Add search functionality tests
@@ -250,7 +266,7 @@ These are minor issues that don't prevent coverage measurement. They can be fixe
 ✅ **23 passing test suites**  
 ✅ **375+ passing tests**  
 ✅ **Comprehensive mocking strategy**  
-✅ **CI/CD ready coverage reporting**  
+✅ **CI/CD ready coverage reporting**
 
 ---
 

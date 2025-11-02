@@ -53,12 +53,9 @@ describe('useConfig', () => {
 
     it('should memoize config based on overrides', () => {
       const overrides = { apiUrl: 'http://test.com/api/v1' }
-      const { result, rerender } = renderHook(
-        ({ overrides }) => useConfig(overrides),
-        {
-          initialProps: { overrides },
-        }
-      )
+      const { result, rerender } = renderHook(({ overrides }) => useConfig(overrides), {
+        initialProps: { overrides },
+      })
 
       const firstResult = result.current
 
@@ -70,12 +67,9 @@ describe('useConfig', () => {
     })
 
     it('should update when overrides change', () => {
-      const { result, rerender } = renderHook(
-        ({ overrides }) => useConfig(overrides),
-        {
-          initialProps: { overrides: { apiUrl: 'http://test1.com/api/v1' } },
-        }
-      )
+      const { result, rerender } = renderHook(({ overrides }) => useConfig(overrides), {
+        initialProps: { overrides: { apiUrl: 'http://test1.com/api/v1' } },
+      })
 
       const firstResult = result.current
 

@@ -11,7 +11,7 @@ describe('ThemeContext', () => {
     // Mock matchMedia
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
-      value: vi.fn().mockImplementation(query => ({
+      value: vi.fn().mockImplementation((query) => ({
         matches: query === '(prefers-color-scheme: dark)',
         media: query,
         onchange: null,
@@ -106,7 +106,7 @@ describe('ThemeContext', () => {
     it('should apply system theme based on matchMedia', () => {
       Object.defineProperty(window, 'matchMedia', {
         writable: true,
-        value: vi.fn().mockImplementation(query => ({
+        value: vi.fn().mockImplementation((query) => ({
           matches: true, // dark mode
           media: query,
           onchange: null,
@@ -130,7 +130,7 @@ describe('ThemeContext', () => {
     it('should apply light theme when system prefers light', () => {
       Object.defineProperty(window, 'matchMedia', {
         writable: true,
-        value: vi.fn().mockImplementation(query => ({
+        value: vi.fn().mockImplementation((query) => ({
           matches: false, // light mode
           media: query,
           onchange: null,

@@ -48,7 +48,8 @@ describe('useDecryptedNotes', () => {
   })
 
   it('should decrypt notes', async () => {
-    const mockDecryptText = vi.fn()
+    const mockDecryptText = vi
+      .fn()
       .mockResolvedValueOnce('Decrypted Title')
       .mockResolvedValueOnce('Decrypted Content')
 
@@ -91,7 +92,8 @@ describe('useDecryptedNotes', () => {
       { ...mockNote, id: 'note-2', title: 'enc-2', content: 'enc-content-2' },
     ]
 
-    const mockDecryptText = vi.fn()
+    const mockDecryptText = vi
+      .fn()
       .mockResolvedValueOnce('Dec-1')
       .mockResolvedValueOnce('Dec-Content-1')
       .mockResolvedValueOnce('Dec-2')
@@ -114,7 +116,8 @@ describe('useDecryptedNotes', () => {
   })
 
   it('should handle decryption errors gracefully', async () => {
-    const mockDecryptText = vi.fn()
+    const mockDecryptText = vi
+      .fn()
       .mockRejectedValueOnce(new Error('Decryption failed'))
       .mockRejectedValueOnce(new Error('Decryption failed'))
 

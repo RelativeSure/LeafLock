@@ -14,7 +14,7 @@ import {
 describe('Table', () => {
   it('should render table', () => {
     const { container } = render(<Table />)
-    
+
     const table = container.querySelector('table')
     expect(table).toBeInTheDocument()
   })
@@ -77,7 +77,7 @@ describe('Table', () => {
 
   it('should apply custom className to table', () => {
     const { container } = render(<Table className="custom-table" />)
-    
+
     const table = container.querySelector('table')
     expect(table).toHaveClass('custom-table')
   })

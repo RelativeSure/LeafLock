@@ -72,7 +72,7 @@ describe('TemplatesDialog', () => {
 
   it('should load templates on mount', async () => {
     const loadTemplates = vi.fn()
-    
+
     vi.mocked(useTemplatesStore).mockReturnValue({
       templates: [],
       isLoading: false,
@@ -98,7 +98,7 @@ describe('TemplatesDialog', () => {
     } as any)
 
     render(<TemplatesDialog open={true} onOpenChange={vi.fn()} onSelectTemplate={vi.fn()} />)
-    
+
     expect(screen.getByTestId('scroll-area')).toBeInTheDocument()
   })
 
@@ -112,7 +112,7 @@ describe('TemplatesDialog', () => {
     } as any)
 
     render(<TemplatesDialog open={true} onOpenChange={vi.fn()} onSelectTemplate={vi.fn()} />)
-    
+
     expect(screen.getByText(/loading/i)).toBeInTheDocument()
   })
 
@@ -126,13 +126,13 @@ describe('TemplatesDialog', () => {
     } as any)
 
     render(<TemplatesDialog open={true} onOpenChange={vi.fn()} onSelectTemplate={vi.fn()} />)
-    
+
     expect(screen.getByText(/no templates/i)).toBeInTheDocument()
   })
 
   it('should call onSelectTemplate when template is clicked', () => {
     const onSelectTemplate = vi.fn()
-    
+
     vi.mocked(useTemplatesStore).mockReturnValue({
       templates: mockTemplates,
       isLoading: false,
@@ -141,8 +141,10 @@ describe('TemplatesDialog', () => {
       deleteTemplate: vi.fn(),
     } as any)
 
-    render(<TemplatesDialog open={true} onOpenChange={vi.fn()} onSelectTemplate={onSelectTemplate} />)
-    
+    render(
+      <TemplatesDialog open={true} onOpenChange={vi.fn()} onSelectTemplate={onSelectTemplate} />
+    )
+
     const templateButton = screen.getByText('Meeting Notes')
     templateButton.click()
 
@@ -151,7 +153,7 @@ describe('TemplatesDialog', () => {
 
   it('should handle template deletion', () => {
     const deleteTemplate = vi.fn()
-    
+
     vi.mocked(useTemplatesStore).mockReturnValue({
       templates: mockTemplates,
       isLoading: false,
@@ -161,7 +163,7 @@ describe('TemplatesDialog', () => {
     } as any)
 
     render(<TemplatesDialog open={true} onOpenChange={vi.fn()} onSelectTemplate={vi.fn()} />)
-    
+
     const deleteButton = screen.queryByRole('button', { name: /delete/i })
     if (deleteButton) {
       deleteButton.click()
@@ -179,7 +181,7 @@ describe('TemplatesDialog', () => {
     } as any)
 
     render(<TemplatesDialog open={true} onOpenChange={vi.fn()} onSelectTemplate={vi.fn()} />)
-    
+
     const searchInput = screen.queryByPlaceholderText(/search/i)
     if (searchInput) {
       fireEvent.change(searchInput, { target: { value: 'meeting' } })

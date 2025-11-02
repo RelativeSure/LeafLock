@@ -396,18 +396,14 @@ describe('authStore', () => {
     it('should throw error if no user is logged in', async () => {
       useAuthStore.setState({ user: null })
 
-      await expect(
-        useAuthStore.getState().enableMFA()
-      ).rejects.toThrow('No user logged in')
+      await expect(useAuthStore.getState().enableMFA()).rejects.toThrow('No user logged in')
     })
 
     it('should handle API failure', async () => {
       useAuthStore.setState({ user: mockUser })
       vi.mocked(apiClient.beginMFASetup).mockRejectedValue(new Error('MFA setup failed'))
 
-      await expect(
-        useAuthStore.getState().enableMFA()
-      ).rejects.toThrow('MFA setup failed')
+      await expect(useAuthStore.getState().enableMFA()).rejects.toThrow('MFA setup failed')
     })
   })
 
@@ -424,24 +420,23 @@ describe('authStore', () => {
     it('should throw error if no user is logged in', async () => {
       useAuthStore.setState({ user: null })
 
-      await expect(
-        useAuthStore.getState().disableMFA()
-      ).rejects.toThrow('No user logged in')
+      await expect(useAuthStore.getState().disableMFA()).rejects.toThrow('No user logged in')
     })
 
     it('should handle API failure', async () => {
       useAuthStore.setState({ user: mockUser })
       vi.mocked(apiClient.disableMFA).mockRejectedValue(new Error('MFA disable failed'))
 
-      await expect(
-        useAuthStore.getState().disableMFA()
-      ).rejects.toThrow('MFA disable failed')
+      await expect(useAuthStore.getState().disableMFA()).rejects.toThrow('MFA disable failed')
     })
   })
 
   describe('logout', () => {
     it('should logout successfully', () => {
-      useAuthStore.setState({ user: mockUser, pendingEncryption: { password: 'test', salt: 'salt' } })
+      useAuthStore.setState({
+        user: mockUser,
+        pendingEncryption: { password: 'test', salt: 'salt' },
+      })
 
       useAuthStore.getState().logout()
 

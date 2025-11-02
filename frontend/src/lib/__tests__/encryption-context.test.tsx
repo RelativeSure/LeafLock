@@ -160,7 +160,10 @@ describe('EncryptionContext', () => {
         expect(screen.getByText('encrypted-text')).toBeInTheDocument()
       })
 
-      expect(encryptionUtils.encryptTextWithKey).toHaveBeenCalledWith('plain text', 'test-key-base64')
+      expect(encryptionUtils.encryptTextWithKey).toHaveBeenCalledWith(
+        'plain text',
+        'test-key-base64'
+      )
     })
 
     it('should throw error when encrypting without key', async () => {

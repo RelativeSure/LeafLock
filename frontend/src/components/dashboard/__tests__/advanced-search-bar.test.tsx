@@ -23,7 +23,11 @@ vi.mock('@/components/ui/popover', () => ({
 }))
 
 vi.mock('@/components/ui/select', () => ({
-  Select: ({ children, onValueChange }: any) => <div data-testid="select" onClick={() => onValueChange && onValueChange('test')}>{children}</div>,
+  Select: ({ children, onValueChange }: any) => (
+    <div data-testid="select" onClick={() => onValueChange && onValueChange('test')}>
+      {children}
+    </div>
+  ),
   SelectTrigger: ({ children }: any) => <div>{children}</div>,
   SelectContent: ({ children }: any) => <div>{children}</div>,
   SelectItem: ({ children, value }: any) => <option value={value}>{children}</option>,
@@ -44,7 +48,7 @@ describe('AdvancedSearchBar', () => {
 
   it('should accept search query', () => {
     render(<AdvancedSearchBar onSearch={mockOnSearch} />)
-    
+
     const input = screen.getByRole('textbox')
     fireEvent.change(input, { target: { value: 'search term' } })
 
@@ -53,7 +57,7 @@ describe('AdvancedSearchBar', () => {
 
   it('should call onSearch when searching', () => {
     render(<AdvancedSearchBar onSearch={mockOnSearch} />)
-    
+
     const input = screen.getByRole('textbox')
     fireEvent.change(input, { target: { value: 'test' } })
 
@@ -62,14 +66,14 @@ describe('AdvancedSearchBar', () => {
 
   it('should show advanced options button', () => {
     render(<AdvancedSearchBar onSearch={mockOnSearch} />)
-    
+
     const advancedButton = screen.getByRole('button', { name: /filter|advanced|options/i })
     expect(advancedButton).toBeInTheDocument()
   })
 
   it('should handle empty search', () => {
     render(<AdvancedSearchBar onSearch={mockOnSearch} />)
-    
+
     const input = screen.getByRole('textbox')
     fireEvent.change(input, { target: { value: '' } })
 
@@ -78,7 +82,7 @@ describe('AdvancedSearchBar', () => {
 
   it('should support date range filtering', () => {
     render(<AdvancedSearchBar onSearch={mockOnSearch} />)
-    
+
     const advancedButton = screen.getByRole('button', { name: /filter|advanced|options/i })
     fireEvent.click(advancedButton)
 
@@ -87,19 +91,19 @@ describe('AdvancedSearchBar', () => {
 
   it('should support tag filtering', () => {
     render(<AdvancedSearchBar onSearch={mockOnSearch} tags={['tag1', 'tag2']} />)
-    
+
     expect(document.body).toBeTruthy()
   })
 
   it('should support folder filtering', () => {
     render(<AdvancedSearchBar onSearch={mockOnSearch} folders={[{ id: 'f1', name: 'Folder 1' }]} />)
-    
+
     expect(document.body).toBeTruthy()
   })
 
   it('should clear search filters', () => {
     render(<AdvancedSearchBar onSearch={mockOnSearch} />)
-    
+
     const clearButton = screen.queryByRole('button', { name: /clear/i })
     if (clearButton) {
       fireEvent.click(clearButton)
@@ -109,7 +113,7 @@ describe('AdvancedSearchBar', () => {
 
   it('should handle keyboard shortcuts', () => {
     render(<AdvancedSearchBar onSearch={mockOnSearch} />)
-    
+
     const input = screen.getByRole('textbox')
     fireEvent.keyDown(input, { key: 'Enter' })
 

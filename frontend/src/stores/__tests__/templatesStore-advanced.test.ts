@@ -199,9 +199,9 @@ describe('templatesStore - Advanced Scenarios', () => {
     it('should handle delete errors', async () => {
       vi.mocked(apiClient.deleteTemplate).mockRejectedValue(new Error('Delete failed'))
 
-      await expect(
-        useTemplatesStore.getState().deleteTemplate('tpl-1')
-      ).rejects.toThrow('Delete failed')
+      await expect(useTemplatesStore.getState().deleteTemplate('tpl-1')).rejects.toThrow(
+        'Delete failed'
+      )
 
       expect(useTemplatesStore.getState().templates).toHaveLength(1)
     })
@@ -311,9 +311,7 @@ describe('templatesStore - Advanced Scenarios', () => {
 
       useTemplatesStore.setState({ templates })
 
-      const publicTemplates = useTemplatesStore
-        .getState()
-        .templates.filter((t) => t.isPublic)
+      const publicTemplates = useTemplatesStore.getState().templates.filter((t) => t.isPublic)
 
       expect(publicTemplates).toHaveLength(2)
     })

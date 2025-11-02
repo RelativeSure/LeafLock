@@ -296,9 +296,9 @@ describe('settingsStore', () => {
     it('should throw error on API failure', async () => {
       vi.mocked(apiClient.updateSettings).mockRejectedValue(new Error('Update failed'))
 
-      await expect(
-        useSettingsStore.getState().updateSettings({ theme: 'dark' })
-      ).rejects.toThrow('Update failed')
+      await expect(useSettingsStore.getState().updateSettings({ theme: 'dark' })).rejects.toThrow(
+        'Update failed'
+      )
 
       expect(console.error).toHaveBeenCalledWith('Failed to update settings:', expect.any(Error))
     })

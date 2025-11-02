@@ -11,6 +11,7 @@
 ### Tests Added in This Session
 
 #### Component Tests
+
 1. **UI Components**
    - ✅ `button.test.tsx` - Button component (100% coverage)
    - ✅ `switch.test.tsx` - Switch component (100% coverage)
@@ -53,6 +54,7 @@
 ## Files Needing Immediate Attention
 
 ### High Priority (0-20% Coverage)
+
 These files would give the biggest coverage boost:
 
 1. **`encryption-utils.ts`** (6.88% coverage)
@@ -75,6 +77,7 @@ These files would give the biggest coverage boost:
    - **Impact**: ~1-2% total coverage increase
 
 ### Medium Priority (Untested UI Components)
+
 These components have 0% coverage:
 
 1. **Dashboard Components** (0% coverage)
@@ -111,6 +114,7 @@ These components have 0% coverage:
 ## Roadmap to 50% Coverage
 
 ### Phase 1: Fix Existing Test Issues (Week 1)
+
 **Target: Get to 20% with passing tests**
 
 - [ ] Fix `encryption-utils.test.ts` mock issues
@@ -119,19 +123,18 @@ These components have 0% coverage:
 - [ ] Ensure all existing tests pass
 
 ### Phase 2: Core Business Logic (Week 2-3)
+
 **Target: Get to 35%**
 
 - [ ] Complete `encryption-utils.ts` testing (high complexity)
   - Test all encryption/decryption paths
   - Test key derivation
   - Test error handling
-  
 - [ ] Expand `notesStore.ts` testing
   - Test all CRUD operations
   - Test filtering and sorting
   - Test trash operations
   - Test sharing operations
-  
 - [ ] Expand `secureApi.ts` testing
   - Test all API endpoints
   - Test error handling
@@ -139,6 +142,7 @@ These components have 0% coverage:
   - Test request/response transformations
 
 ### Phase 3: Major UI Components (Week 4)
+
 **Target: Get to 45%**
 
 - [ ] Test `note-editor.tsx`
@@ -146,34 +150,32 @@ These components have 0% coverage:
   - Test note editing
   - Test TipTap editor integration
   - Test autosave
-  
 - [ ] Test `sidebar.tsx`
   - Test navigation
   - Test folder tree
   - Test search
-  
 - [ ] Test `notes-list.tsx`
   - Test note rendering
   - Test filtering
   - Test selection
 
 ### Phase 4: Settings & Admin (Week 5)
+
 **Target: Get to 50%+**
 
 - [ ] Test `settings-page.tsx`
   - Test all settings sections
   - Test form validation
   - Test settings persistence
-  
 - [ ] Test management components
   - Test folder CRUD
   - Test tag CRUD
-  
 - [ ] Test admin components
   - Test user management
   - Test system settings
 
 ### Phase 5: Remaining UI Components (Ongoing)
+
 **Target: Maintain 50%+, push toward 60-70%**
 
 - [ ] Test all remaining UI primitives
@@ -185,7 +187,7 @@ These components have 0% coverage:
 To quickly boost coverage from 17.5% to 30%+:
 
 1. **Complete `notesStore.ts` tests** - Would add ~5-6%
-2. **Complete `secureApi.ts` tests** - Would add ~6-7%  
+2. **Complete `secureApi.ts` tests** - Would add ~6-7%
 3. **Add basic tests for `note-editor.tsx`** - Would add ~3-4%
 4. **Add basic tests for `sidebar.tsx`** - Would add ~2-3%
 
@@ -194,16 +196,19 @@ To quickly boost coverage from 17.5% to 30%+:
 ## Testing Strategy
 
 ### Unit Tests
+
 - Focus on isolated component and function testing
 - Mock external dependencies
 - Test edge cases and error handling
 
 ### Integration Tests
+
 - Test component interactions
 - Test state management flow
 - Test API integration
 
 ### E2E Tests (Playwright)
+
 - User workflows
 - Critical paths
 - Cross-browser testing

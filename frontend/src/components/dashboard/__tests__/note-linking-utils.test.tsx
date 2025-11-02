@@ -40,16 +40,12 @@ describe('note-linking-utils', () => {
 
     it('should display backlinks', async () => {
       const mockBacklinks = {
-        backlinks: [
-          { id: 'link-1', sourceNoteId: 'note-2', targetNoteId: 'note-1' },
-        ],
+        backlinks: [{ id: 'link-1', sourceNoteId: 'note-2', targetNoteId: 'note-1' }],
       }
 
       vi.mocked(useNotesStore).mockReturnValue({
         getNoteBacklinks: vi.fn().mockResolvedValue(mockBacklinks),
-        notes: [
-          { id: 'note-2', title: 'Source Note', content: '' },
-        ],
+        notes: [{ id: 'note-2', title: 'Source Note', content: '' }],
       } as any)
 
       render(<BacklinksSection noteId="note-1" />)

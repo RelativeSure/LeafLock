@@ -46,7 +46,7 @@ describe('stores/index', () => {
     // Verify all stores are exported
     const exports = { useAuthStore, useNotesStore, useSettingsStore, useTemplatesStore }
     expect(Object.keys(exports)).toHaveLength(4)
-    expect(Object.values(exports).every(fn => typeof fn === 'function')).toBe(true)
+    expect(Object.values(exports).every((fn) => typeof fn === 'function')).toBe(true)
   })
 
   it('all store hooks return store instances', () => {

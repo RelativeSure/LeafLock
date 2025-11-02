@@ -66,7 +66,7 @@ describe('KeyboardShortcutsDialog', () => {
 
   it('should group shortcuts by category', () => {
     render(<KeyboardShortcutsDialog open={true} onOpenChange={vi.fn()} />)
-    
+
     const categories = screen.queryAllByRole('heading', { level: 3 })
     expect(categories.length).toBeGreaterThan(0)
   })
@@ -74,7 +74,7 @@ describe('KeyboardShortcutsDialog', () => {
   it('should handle dialog close', () => {
     const onOpenChange = vi.fn()
     render(<KeyboardShortcutsDialog open={true} onOpenChange={onOpenChange} />)
-    
+
     const closeButton = screen.queryByRole('button', { name: /close/i })
     if (closeButton) {
       closeButton.click()
@@ -84,24 +84,20 @@ describe('KeyboardShortcutsDialog', () => {
 
   it('should display platform-specific shortcuts', () => {
     render(<KeyboardShortcutsDialog open={true} onOpenChange={vi.fn()} />)
-    
+
     // Should show either Ctrl or Cmd based on platform
     expect(screen.getByText(/ctrl|cmd|⌘/i)).toBeInTheDocument()
   })
 
   it('should show formatting shortcuts', () => {
     render(<KeyboardShortcutsDialog open={true} onOpenChange={vi.fn()} />)
-    
-    expect(
-      screen.getByText(/bold/i) ||
-      screen.getByText(/italic/i) ||
-      document.body
-    ).toBeTruthy()
+
+    expect(screen.getByText(/bold/i) || screen.getByText(/italic/i) || document.body).toBeTruthy()
   })
 
   it('should display multiple shortcut combinations', () => {
     render(<KeyboardShortcutsDialog open={true} onOpenChange={vi.fn()} />)
-    
+
     const shortcuts = screen.getAllByText(/\+/i)
     expect(shortcuts.length).toBeGreaterThan(0)
   })

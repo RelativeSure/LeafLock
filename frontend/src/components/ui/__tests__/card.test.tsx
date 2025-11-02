@@ -1,13 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import {
-  Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from '../card'
+import { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from '../card'
 
 describe('Card Components', () => {
   describe('Card', () => {
@@ -50,9 +43,7 @@ describe('Card Components', () => {
     })
 
     it('should apply custom className', () => {
-      render(
-        <CardHeader className="custom-header" data-testid="card-header" />
-      )
+      render(<CardHeader className="custom-header" data-testid="card-header" />)
       expect(screen.getByTestId('card-header')).toHaveClass('custom-header')
     })
 
@@ -92,11 +83,7 @@ describe('Card Components', () => {
 
   describe('CardDescription', () => {
     it('should render card description', () => {
-      render(
-        <CardDescription data-testid="card-description">
-          Description
-        </CardDescription>
-      )
+      render(<CardDescription data-testid="card-description">Description</CardDescription>)
       expect(screen.getByTestId('card-description')).toBeInTheDocument()
     })
 
@@ -106,21 +93,12 @@ describe('Card Components', () => {
     })
 
     it('should apply custom className', () => {
-      render(
-        <CardDescription
-          className="custom-desc"
-          data-testid="card-description"
-        />
-      )
+      render(<CardDescription className="custom-desc" data-testid="card-description" />)
       expect(screen.getByTestId('card-description')).toHaveClass('custom-desc')
     })
 
     it('should render as p by default', () => {
-      render(
-        <CardDescription data-testid="card-description">
-          Description
-        </CardDescription>
-      )
+      render(<CardDescription data-testid="card-description">Description</CardDescription>)
       expect(screen.getByTestId('card-description').tagName).toBe('P')
     })
   })
@@ -137,9 +115,7 @@ describe('Card Components', () => {
     })
 
     it('should apply custom className', () => {
-      render(
-        <CardContent className="custom-content" data-testid="card-content" />
-      )
+      render(<CardContent className="custom-content" data-testid="card-content" />)
       expect(screen.getByTestId('card-content')).toHaveClass('custom-content')
     })
 
@@ -167,9 +143,7 @@ describe('Card Components', () => {
     })
 
     it('should apply custom className', () => {
-      render(
-        <CardFooter className="custom-footer" data-testid="card-footer" />
-      )
+      render(<CardFooter className="custom-footer" data-testid="card-footer" />)
       expect(screen.getByTestId('card-footer')).toHaveClass('custom-footer')
     })
 
@@ -244,12 +218,7 @@ describe('Card Components', () => {
 
   describe('Styling and Classes', () => {
     it('should merge custom classes with default classes', () => {
-      render(
-        <Card
-          className="bg-red-500 p-10"
-          data-testid="styled-card"
-        />
-      )
+      render(<Card className="bg-red-500 p-10" data-testid="styled-card" />)
       const card = screen.getByTestId('styled-card')
       expect(card).toHaveClass('bg-red-500')
       expect(card).toHaveClass('p-10')
@@ -272,16 +241,8 @@ describe('Card Components', () => {
 
   describe('Accessibility', () => {
     it('should support aria attributes on card', () => {
-      render(
-        <Card
-          aria-label="Information card"
-          data-testid="card"
-        />
-      )
-      expect(screen.getByTestId('card')).toHaveAttribute(
-        'aria-label',
-        'Information card'
-      )
+      render(<Card aria-label="Information card" data-testid="card" />)
+      expect(screen.getByTestId('card')).toHaveAttribute('aria-label', 'Information card')
     })
 
     it('should support role attribute', () => {

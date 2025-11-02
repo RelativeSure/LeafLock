@@ -51,14 +51,14 @@ describe('EncryptionUnlockDialog', () => {
 
   it('should show password input', () => {
     render(<EncryptionUnlockDialog open={true} onOpenChange={vi.fn()} onUnlock={mockOnUnlock} />)
-    
+
     const passwordInput = screen.getByRole('textbox') || screen.getByLabelText(/password/i)
     expect(passwordInput).toBeInTheDocument()
   })
 
   it('should accept password input', () => {
     render(<EncryptionUnlockDialog open={true} onOpenChange={vi.fn()} onUnlock={mockOnUnlock} />)
-    
+
     const input = screen.getByRole('textbox') || screen.getAllByRole('textbox')[0]
     fireEvent.change(input, { target: { value: 'mypassword' } })
 
@@ -67,20 +67,20 @@ describe('EncryptionUnlockDialog', () => {
 
   it('should show unlock button', () => {
     render(<EncryptionUnlockDialog open={true} onOpenChange={vi.fn()} onUnlock={mockOnUnlock} />)
-    
+
     expect(screen.getByRole('button', { name: /unlock/i })).toBeInTheDocument()
   })
 
   it('should disable unlock button when password is empty', () => {
     render(<EncryptionUnlockDialog open={true} onOpenChange={vi.fn()} onUnlock={mockOnUnlock} />)
-    
+
     const unlockButton = screen.getByRole('button', { name: /unlock/i })
     expect(unlockButton).toBeDisabled()
   })
 
   it('should enable unlock button when password is provided', () => {
     render(<EncryptionUnlockDialog open={true} onOpenChange={vi.fn()} onUnlock={mockOnUnlock} />)
-    
+
     const input = screen.getByRole('textbox') || screen.getAllByRole('textbox')[0]
     fireEvent.change(input, { target: { value: 'mypassword' } })
 
@@ -90,13 +90,13 @@ describe('EncryptionUnlockDialog', () => {
 
   it('should show cancel button', () => {
     render(<EncryptionUnlockDialog open={true} onOpenChange={vi.fn()} onUnlock={mockOnUnlock} />)
-    
+
     expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument()
   })
 
   it('should call onUnlock when unlock button is clicked', () => {
     render(<EncryptionUnlockDialog open={true} onOpenChange={vi.fn()} onUnlock={mockOnUnlock} />)
-    
+
     const input = screen.getByRole('textbox') || screen.getAllByRole('textbox')[0]
     fireEvent.change(input, { target: { value: 'mypassword' } })
 
@@ -108,14 +108,14 @@ describe('EncryptionUnlockDialog', () => {
 
   it('should hide password by default', () => {
     render(<EncryptionUnlockDialog open={true} onOpenChange={vi.fn()} onUnlock={mockOnUnlock} />)
-    
+
     const input = screen.getByRole('textbox') || screen.getAllByRole('textbox')[0]
     expect(input).toHaveAttribute('type', 'password')
   })
 
   it('should handle form submission', () => {
     render(<EncryptionUnlockDialog open={true} onOpenChange={vi.fn()} onUnlock={mockOnUnlock} />)
-    
+
     const input = screen.getByRole('textbox') || screen.getAllByRole('textbox')[0]
     fireEvent.change(input, { target: { value: 'mypassword' } })
 

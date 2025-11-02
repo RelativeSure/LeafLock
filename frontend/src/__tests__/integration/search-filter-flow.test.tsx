@@ -105,9 +105,7 @@ describe('Integration: Search and Filter Flow', () => {
       const searchTerm = 'meeting'
       const results = useNotesStore
         .getState()
-        .notes.filter(note =>
-          note.title.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+        .notes.filter((note) => note.title.toLowerCase().includes(searchTerm.toLowerCase()))
 
       expect(results).toHaveLength(1)
       expect(results[0].title).toBe('Meeting Notes')
@@ -117,9 +115,7 @@ describe('Integration: Search and Filter Flow', () => {
       const searchTerm = 'groceries'
       const results = useNotesStore
         .getState()
-        .notes.filter(note =>
-          note.content.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+        .notes.filter((note) => note.content.toLowerCase().includes(searchTerm.toLowerCase()))
 
       expect(results).toHaveLength(1)
       expect(results[0].title).toBe('Personal Tasks')
@@ -129,9 +125,10 @@ describe('Integration: Search and Filter Flow', () => {
       const searchTerm = 'project'
       const results = useNotesStore
         .getState()
-        .notes.filter(note =>
-          note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          note.content.toLowerCase().includes(searchTerm.toLowerCase())
+        .notes.filter(
+          (note) =>
+            note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            note.content.toLowerCase().includes(searchTerm.toLowerCase())
         )
 
       expect(results).toHaveLength(2) // 'Project Ideas' and 'Meeting Notes' (content contains "project planning")
@@ -141,9 +138,10 @@ describe('Integration: Search and Filter Flow', () => {
       const searchTerm = 'nonexistent'
       const results = useNotesStore
         .getState()
-        .notes.filter(note =>
-          note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          note.content.toLowerCase().includes(searchTerm.toLowerCase())
+        .notes.filter(
+          (note) =>
+            note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            note.content.toLowerCase().includes(searchTerm.toLowerCase())
         )
 
       expect(results).toHaveLength(0)
@@ -152,15 +150,11 @@ describe('Integration: Search and Filter Flow', () => {
     it('should be case-insensitive', () => {
       const results1 = useNotesStore
         .getState()
-        .notes.filter(note =>
-          note.title.toLowerCase().includes('meeting')
-        )
+        .notes.filter((note) => note.title.toLowerCase().includes('meeting'))
 
       const results2 = useNotesStore
         .getState()
-        .notes.filter(note =>
-          note.title.toLowerCase().includes('MEETING')
-        )
+        .notes.filter((note) => note.title.toLowerCase().includes('MEETING'))
 
       expect(results1).toEqual(results2)
     })
@@ -168,19 +162,15 @@ describe('Integration: Search and Filter Flow', () => {
 
   describe('Filter by Folder', () => {
     it('should filter notes by folder', () => {
-      const results = useNotesStore
-        .getState()
-        .notes.filter(note => note.folderId === 'folder-1')
+      const results = useNotesStore.getState().notes.filter((note) => note.folderId === 'folder-1')
 
       expect(results).toHaveLength(2)
-      expect(results.map(n => n.title)).toContain('Meeting Notes')
-      expect(results.map(n => n.title)).toContain('Project Ideas')
+      expect(results.map((n) => n.title)).toContain('Meeting Notes')
+      expect(results.map((n) => n.title)).toContain('Project Ideas')
     })
 
     it('should filter notes without folder', () => {
-      const results = useNotesStore
-        .getState()
-        .notes.filter(note => note.folderId === null)
+      const results = useNotesStore.getState().notes.filter((note) => note.folderId === null)
 
       expect(results).toHaveLength(1)
       expect(results[0].title).toBe('Archived Note')
@@ -189,7 +179,7 @@ describe('Integration: Search and Filter Flow', () => {
     it('should return empty for non-existent folder', () => {
       const results = useNotesStore
         .getState()
-        .notes.filter(note => note.folderId === 'nonexistent')
+        .notes.filter((note) => note.folderId === 'nonexistent')
 
       expect(results).toHaveLength(0)
     })
@@ -197,22 +187,18 @@ describe('Integration: Search and Filter Flow', () => {
 
   describe('Filter by Tags', () => {
     it('should filter notes by single tag', () => {
-      const results = useNotesStore
-        .getState()
-        .notes.filter(note => note.tags.includes('work'))
+      const results = useNotesStore.getState().notes.filter((note) => note.tags.includes('work'))
 
       expect(results).toHaveLength(2)
-      expect(results.map(n => n.title)).toContain('Meeting Notes')
-      expect(results.map(n => n.title)).toContain('Project Ideas')
+      expect(results.map((n) => n.title)).toContain('Meeting Notes')
+      expect(results.map((n) => n.title)).toContain('Project Ideas')
     })
 
     it('should filter notes by multiple tags (AND)', () => {
       const requiredTags = ['work', 'meeting']
       const results = useNotesStore
         .getState()
-        .notes.filter(note =>
-          requiredTags.every(tag => note.tags.includes(tag))
-        )
+        .notes.filter((note) => requiredTags.every((tag) => note.tags.includes(tag)))
 
       expect(results).toHaveLength(1)
       expect(results[0].title).toBe('Meeting Notes')
@@ -222,19 +208,15 @@ describe('Integration: Search and Filter Flow', () => {
       const anyTags = ['meeting', 'tasks']
       const results = useNotesStore
         .getState()
-        .notes.filter(note =>
-          anyTags.some(tag => note.tags.includes(tag))
-        )
+        .notes.filter((note) => anyTags.some((tag) => note.tags.includes(tag)))
 
       expect(results).toHaveLength(2)
-      expect(results.map(n => n.title)).toContain('Meeting Notes')
-      expect(results.map(n => n.title)).toContain('Personal Tasks')
+      expect(results.map((n) => n.title)).toContain('Meeting Notes')
+      expect(results.map((n) => n.title)).toContain('Personal Tasks')
     })
 
     it('should filter notes without tags', () => {
-      const results = useNotesStore
-        .getState()
-        .notes.filter(note => note.tags.length === 0)
+      const results = useNotesStore.getState().notes.filter((note) => note.tags.length === 0)
 
       expect(results).toHaveLength(1)
       expect(results[0].title).toBe('Archived Note')
@@ -243,35 +225,27 @@ describe('Integration: Search and Filter Flow', () => {
 
   describe('Filter by Status', () => {
     it('should filter pinned notes', () => {
-      const results = useNotesStore
-        .getState()
-        .notes.filter(note => note.pinned)
+      const results = useNotesStore.getState().notes.filter((note) => note.pinned)
 
       expect(results).toHaveLength(1)
       expect(results[0].title).toBe('Meeting Notes')
     })
 
     it('should filter trashed notes', () => {
-      const results = useNotesStore
-        .getState()
-        .notes.filter(note => note.isTrashed)
+      const results = useNotesStore.getState().notes.filter((note) => note.isTrashed)
 
       expect(results).toHaveLength(1)
       expect(results[0].title).toBe('Archived Note')
     })
 
     it('should filter active notes (not trashed)', () => {
-      const results = useNotesStore
-        .getState()
-        .notes.filter(note => !note.isTrashed)
+      const results = useNotesStore.getState().notes.filter((note) => !note.isTrashed)
 
       expect(results).toHaveLength(3)
     })
 
     it('should filter shared notes', () => {
-      const results = useNotesStore
-        .getState()
-        .notes.filter(note => note.sharedWith.length > 0)
+      const results = useNotesStore.getState().notes.filter((note) => note.sharedWith.length > 0)
 
       expect(results).toHaveLength(1)
       expect(results[0].title).toBe('Project Ideas')
@@ -285,10 +259,11 @@ describe('Integration: Search and Filter Flow', () => {
 
       const results = useNotesStore
         .getState()
-        .notes.filter(note =>
-          note.folderId === folderId &&
-          (note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           note.content.toLowerCase().includes(searchTerm.toLowerCase()))
+        .notes.filter(
+          (note) =>
+            note.folderId === folderId &&
+            (note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              note.content.toLowerCase().includes(searchTerm.toLowerCase()))
         )
 
       expect(results).toHaveLength(2)
@@ -300,9 +275,9 @@ describe('Integration: Search and Filter Flow', () => {
 
       const results = useNotesStore
         .getState()
-        .notes.filter(note =>
-          note.tags.includes(tag) &&
-          note.title.toLowerCase().includes(searchTerm.toLowerCase())
+        .notes.filter(
+          (note) =>
+            note.tags.includes(tag) && note.title.toLowerCase().includes(searchTerm.toLowerCase())
         )
 
       expect(results).toHaveLength(1)
@@ -316,10 +291,8 @@ describe('Integration: Search and Filter Flow', () => {
 
       const results = useNotesStore
         .getState()
-        .notes.filter(note =>
-          note.folderId === folderId &&
-          note.tags.includes(tag) &&
-          note.pinned === pinned
+        .notes.filter(
+          (note) => note.folderId === folderId && note.tags.includes(tag) && note.pinned === pinned
         )
 
       expect(results).toHaveLength(1)
@@ -334,12 +307,13 @@ describe('Integration: Search and Filter Flow', () => {
 
       const results = useNotesStore
         .getState()
-        .notes.filter(note =>
-          (!excludeTrashed || !note.isTrashed) &&
-          (folderId ? note.folderId === folderId : true) &&
-          note.tags.includes(hasTag) &&
-          (note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           note.content.toLowerCase().includes(searchTerm.toLowerCase()))
+        .notes.filter(
+          (note) =>
+            (!excludeTrashed || !note.isTrashed) &&
+            (folderId ? note.folderId === folderId : true) &&
+            note.tags.includes(hasTag) &&
+            (note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              note.content.toLowerCase().includes(searchTerm.toLowerCase()))
         )
 
       expect(results).toHaveLength(1)
@@ -350,7 +324,7 @@ describe('Integration: Search and Filter Flow', () => {
   describe('Sorting Results', () => {
     it('should sort by date (newest first)', () => {
       const sorted = [...useNotesStore.getState().notes]
-        .filter(note => !note.isTrashed)
+        .filter((note) => !note.isTrashed)
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
       expect(sorted[0].title).toBe('Project Ideas') // 2024-01-03
@@ -360,7 +334,7 @@ describe('Integration: Search and Filter Flow', () => {
 
     it('should sort by date (oldest first)', () => {
       const sorted = [...useNotesStore.getState().notes]
-        .filter(note => !note.isTrashed)
+        .filter((note) => !note.isTrashed)
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
 
       expect(sorted[0].title).toBe('Meeting Notes')
@@ -370,7 +344,7 @@ describe('Integration: Search and Filter Flow', () => {
 
     it('should sort alphabetically by title', () => {
       const sorted = [...useNotesStore.getState().notes]
-        .filter(note => !note.isTrashed)
+        .filter((note) => !note.isTrashed)
         .sort((a, b) => a.title.localeCompare(b.title))
 
       expect(sorted[0].title).toBe('Meeting Notes')
@@ -380,7 +354,7 @@ describe('Integration: Search and Filter Flow', () => {
 
     it('should sort with pinned notes first', () => {
       const sorted = [...useNotesStore.getState().notes]
-        .filter(note => !note.isTrashed)
+        .filter((note) => !note.isTrashed)
         .sort((a, b) => {
           if (a.pinned && !b.pinned) return -1
           if (!a.pinned && b.pinned) return 1

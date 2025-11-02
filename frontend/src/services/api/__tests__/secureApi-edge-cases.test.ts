@@ -196,7 +196,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => ([]),
+        json: async () => [],
       } as Response)
 
       const { apiClient } = await import('../secureApi')
@@ -238,7 +238,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => ([]),
+        json: async () => [],
       } as Response)
 
       const { apiClient } = await import('../secureApi')
@@ -268,16 +268,12 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => ([]),
+        json: async () => [],
       } as Response)
 
       const { apiClient } = await import('../secureApi')
 
-      await Promise.all([
-        apiClient.getNotes(),
-        apiClient.getFolders(),
-        apiClient.getTags(),
-      ])
+      await Promise.all([apiClient.getNotes(), apiClient.getFolders(), apiClient.getTags()])
 
       expect(global.fetch).toHaveBeenCalledTimes(3)
     })
@@ -288,17 +284,19 @@ describe('secureApi - Edge Cases and Error Paths', () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => ([]),
+        json: async () => [],
       } as Response)
 
       const { apiClient } = await import('../secureApi')
 
       const requests = [
         apiClient.getNotes(),
-        new Promise(resolve => setTimeout(() => {
-          localStorage.setItem('token', 'token-2')
-          resolve(apiClient.getFolders())
-        }, 10)),
+        new Promise((resolve) =>
+          setTimeout(() => {
+            localStorage.setItem('token', 'token-2')
+            resolve(apiClient.getFolders())
+          }, 10)
+        ),
       ]
 
       await Promise.all(requests)
@@ -379,7 +377,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
         .mockResolvedValueOnce({
           ok: true,
           status: 200,
-          json: async () => ([]),
+          json: async () => [],
         } as Response)
 
       const { apiClient } = await import('../secureApi')

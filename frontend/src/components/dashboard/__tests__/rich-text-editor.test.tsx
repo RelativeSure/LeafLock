@@ -110,7 +110,7 @@ describe('RichTextEditor', () => {
 
   it('should handle bold formatting', () => {
     render(<RichTextEditor value="" onChange={mockOnChange} />)
-    
+
     const boldButton = screen.getByRole('button', { name: /bold/i })
     fireEvent.click(boldButton)
 
@@ -119,7 +119,7 @@ describe('RichTextEditor', () => {
 
   it('should handle italic formatting', () => {
     render(<RichTextEditor value="" onChange={mockOnChange} />)
-    
+
     const italicButton = screen.getByRole('button', { name: /italic/i })
     fireEvent.click(italicButton)
 
@@ -128,7 +128,7 @@ describe('RichTextEditor', () => {
 
   it('should handle heading formatting', () => {
     render(<RichTextEditor value="" onChange={mockOnChange} />)
-    
+
     const headingButton = screen.getByRole('button', { name: /heading|h1/i })
     fireEvent.click(headingButton)
 
@@ -137,7 +137,7 @@ describe('RichTextEditor', () => {
 
   it('should handle list creation', () => {
     render(<RichTextEditor value="" onChange={mockOnChange} />)
-    
+
     const listButton = screen.getByRole('button', { name: /bullet|list/i })
     fireEvent.click(listButton)
 
@@ -146,7 +146,7 @@ describe('RichTextEditor', () => {
 
   it('should handle undo action', () => {
     render(<RichTextEditor value="" onChange={mockOnChange} />)
-    
+
     const undoButton = screen.getByRole('button', { name: /undo/i })
     fireEvent.click(undoButton)
 
@@ -155,7 +155,7 @@ describe('RichTextEditor', () => {
 
   it('should handle redo action', () => {
     render(<RichTextEditor value="" onChange={mockOnChange} />)
-    
+
     const redoButton = screen.getByRole('button', { name: /redo/i })
     fireEvent.click(redoButton)
 
@@ -179,7 +179,7 @@ describe('RichTextEditor', () => {
 
   it('should handle code formatting', () => {
     render(<RichTextEditor value="" onChange={mockOnChange} />)
-    
+
     const codeButton = screen.queryByRole('button', { name: /code/i })
     if (codeButton) {
       fireEvent.click(codeButton)
@@ -189,7 +189,7 @@ describe('RichTextEditor', () => {
 
   it('should handle blockquote', () => {
     render(<RichTextEditor value="" onChange={mockOnChange} />)
-    
+
     const quoteButton = screen.queryByRole('button', { name: /quote|blockquote/i })
     if (quoteButton) {
       fireEvent.click(quoteButton)
@@ -199,7 +199,7 @@ describe('RichTextEditor', () => {
 
   it('should handle strikethrough', () => {
     render(<RichTextEditor value="" onChange={mockOnChange} />)
-    
+
     const strikeButton = screen.queryByRole('button', { name: /strike/i })
     if (strikeButton) {
       fireEvent.click(strikeButton)
@@ -214,9 +214,9 @@ describe('RichTextEditor', () => {
 
   it('should be disabled when specified', () => {
     render(<RichTextEditor value="" onChange={mockOnChange} disabled={true} />)
-    
+
     const buttons = screen.getAllByRole('button')
-    buttons.forEach(button => {
+    buttons.forEach((button) => {
       expect(button).toBeDisabled()
     })
   })
@@ -235,7 +235,7 @@ describe('RichTextEditor', () => {
 
   it('should handle keyboard shortcuts', () => {
     render(<RichTextEditor value="" onChange={mockOnChange} />)
-    
+
     const editor = screen.getByTestId('editor-content')
     fireEvent.keyDown(editor, { key: 'b', ctrlKey: true })
 
@@ -259,7 +259,7 @@ describe('RichTextEditor', () => {
 
   it('should handle markdown mode toggle', () => {
     render(<RichTextEditor value="" onChange={mockOnChange} />)
-    
+
     const markdownButton = screen.queryByRole('button', { name: /markdown/i })
     if (markdownButton) {
       fireEvent.click(markdownButton)
@@ -269,7 +269,7 @@ describe('RichTextEditor', () => {
 
   it('should handle link insertion', () => {
     render(<RichTextEditor value="" onChange={mockOnChange} />)
-    
+
     const linkButton = screen.queryByRole('button', { name: /link/i })
     if (linkButton) {
       fireEvent.click(linkButton)
@@ -279,7 +279,7 @@ describe('RichTextEditor', () => {
 
   it('should handle image insertion', () => {
     render(<RichTextEditor value="" onChange={mockOnChange} />)
-    
+
     const imageButton = screen.queryByRole('button', { name: /image/i })
     if (imageButton) {
       fireEvent.click(imageButton)
@@ -289,7 +289,7 @@ describe('RichTextEditor', () => {
 
   it('should handle table insertion', () => {
     render(<RichTextEditor value="" onChange={mockOnChange} />)
-    
+
     const tableButton = screen.queryByRole('button', { name: /table/i })
     if (tableButton) {
       fireEvent.click(tableButton)
@@ -299,7 +299,7 @@ describe('RichTextEditor', () => {
 
   it('should handle clear formatting', () => {
     render(<RichTextEditor value="" onChange={mockOnChange} />)
-    
+
     const clearButton = screen.queryByRole('button', { name: /clear/i })
     if (clearButton) {
       fireEvent.click(clearButton)

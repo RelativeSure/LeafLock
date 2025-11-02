@@ -190,7 +190,7 @@ describe('Integration: Template Usage Flow', () => {
     it('should filter templates by tag', () => {
       const meetingTemplates = useTemplatesStore
         .getState()
-        .templates.filter(t => t.tags.includes('meeting'))
+        .templates.filter((t) => t.tags.includes('meeting'))
 
       expect(meetingTemplates).toHaveLength(1)
       expect(meetingTemplates[0].name).toBe('Meeting Notes')
@@ -207,9 +207,7 @@ describe('Integration: Template Usage Flow', () => {
     })
 
     it('should filter public templates', () => {
-      const publicTemplates = useTemplatesStore
-        .getState()
-        .templates.filter(t => t.isPublic)
+      const publicTemplates = useTemplatesStore.getState().templates.filter((t) => t.isPublic)
 
       expect(publicTemplates).toHaveLength(1)
       expect(publicTemplates[0].name).toBe('Project Plan')
@@ -226,7 +224,7 @@ describe('Integration: Template Usage Flow', () => {
 
       await useTemplatesStore.getState().updateTemplate('tpl-1', updates)
 
-      const template = useTemplatesStore.getState().templates.find(t => t.id === 'tpl-1')
+      const template = useTemplatesStore.getState().templates.find((t) => t.id === 'tpl-1')
       expect(template?.name).toBe('Updated Meeting Notes')
     })
 
@@ -236,7 +234,7 @@ describe('Integration: Template Usage Flow', () => {
       await useTemplatesStore.getState().deleteTemplate('tpl-1')
 
       expect(useTemplatesStore.getState().templates).toHaveLength(2)
-      expect(useTemplatesStore.getState().templates.find(t => t.id === 'tpl-1')).toBeUndefined()
+      expect(useTemplatesStore.getState().templates.find((t) => t.id === 'tpl-1')).toBeUndefined()
     })
   })
 
@@ -282,20 +280,18 @@ describe('Integration: Template Usage Flow', () => {
       const searchTerm = 'meeting'
       const results = useTemplatesStore
         .getState()
-        .templates.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        .templates.filter((t) => t.name.toLowerCase().includes(searchTerm.toLowerCase()))
 
       expect(results).toHaveLength(2)
-      expect(results.map(t => t.name)).toContain('Meeting Notes')
-      expect(results.map(t => t.name)).toContain('1-on-1 Meeting')
+      expect(results.map((t) => t.name)).toContain('Meeting Notes')
+      expect(results.map((t) => t.name)).toContain('1-on-1 Meeting')
     })
 
     it('should search templates by description', () => {
       const searchTerm = 'project'
       const results = useTemplatesStore
         .getState()
-        .templates.filter(t =>
-          t.description?.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+        .templates.filter((t) => t.description?.toLowerCase().includes(searchTerm.toLowerCase()))
 
       expect(results).toHaveLength(1)
       expect(results[0].name).toBe('Project Plan')
@@ -361,7 +357,7 @@ describe('Integration: Template Usage Flow', () => {
       await useTemplatesStore.getState().loadTemplates()
 
       expect(useTemplatesStore.getState().templates).toHaveLength(2)
-      expect(useTemplatesStore.getState().templates.every(t => t.isPublic)).toBe(true)
+      expect(useTemplatesStore.getState().templates.every((t) => t.isPublic)).toBe(true)
     })
   })
 
@@ -391,13 +387,12 @@ describe('Integration: Template Usage Flow', () => {
 
       vi.mocked(apiClient.deleteTemplate).mockRejectedValue(new Error('Delete failed'))
 
-      await expect(
-        useTemplatesStore.getState().deleteTemplate('tpl-1')
-      ).rejects.toThrow('Delete failed')
+      await expect(useTemplatesStore.getState().deleteTemplate('tpl-1')).rejects.toThrow(
+        'Delete failed'
+      )
 
       // Template should still exist after failed deletion
       expect(useTemplatesStore.getState().templates).toHaveLength(1)
     })
   })
 })
-

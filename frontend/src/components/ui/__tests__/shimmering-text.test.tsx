@@ -9,9 +9,7 @@ describe('ShimmeringText', () => {
   })
 
   it('should render with custom className', () => {
-    const { container } = render(
-      <ShimmeringText className="custom-class">Test</ShimmeringText>
-    )
+    const { container } = render(<ShimmeringText className="custom-class">Test</ShimmeringText>)
     expect(container.querySelector('.custom-class')).toBeInTheDocument()
   })
 
@@ -31,7 +29,7 @@ describe('ShimmeringText', () => {
   })
 
   it('should render empty children', () => {
-    const { container} = render(<ShimmeringText></ShimmeringText>)
+    const { container } = render(<ShimmeringText></ShimmeringText>)
     expect(container.firstChild).toBeInTheDocument()
   })
 

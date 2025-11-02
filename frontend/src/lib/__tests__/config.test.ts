@@ -47,7 +47,7 @@ describe('config', () => {
     const originalApiUrl = config.apiUrl
 
     expect(() => {
-      (config as any).apiUrl = 'http://hacker.com'
+      ;(config as any).apiUrl = 'http://hacker.com'
     }).toThrow()
 
     expect(config.apiUrl).toBe(originalApiUrl)

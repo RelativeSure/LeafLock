@@ -672,15 +672,18 @@ describe('notesStore', () => {
       })
 
       it('should throw error if note not found', async () => {
-        await expect(
-          useNotesStore.getState().createNoteVersion('non-existent')
-        ).rejects.toThrow('Note not found')
+        await expect(useNotesStore.getState().createNoteVersion('non-existent')).rejects.toThrow(
+          'Note not found'
+        )
       })
     })
 
     describe('getNoteVersions', () => {
       it('should get note versions', async () => {
-        const versions = [{ id: 'v1', versionNumber: 1 }, { id: 'v2', versionNumber: 2 }]
+        const versions = [
+          { id: 'v1', versionNumber: 1 },
+          { id: 'v2', versionNumber: 2 },
+        ]
         vi.mocked(apiClient.getNoteVersions).mockResolvedValue(versions as any)
 
         const result = await useNotesStore.getState().getNoteVersions('note-1')

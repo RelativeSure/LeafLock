@@ -83,9 +83,7 @@ describe('encryption-utils', () => {
       })
       mockSodium.from_string.mockReturnValueOnce(new Uint8Array(20)) // Wrong length
 
-      await expect(deriveKey(password, salt)).rejects.toThrow(
-        'Invalid encryption salt format'
-      )
+      await expect(deriveKey(password, salt)).rejects.toThrow('Invalid encryption salt format')
     })
 
     it('should handle quoted salt strings', async () => {
@@ -173,20 +171,14 @@ describe('encryption-utils', () => {
 
       mockSodium.from_base64.mockReturnValueOnce(new Uint8Array(32))
       mockSodium.randombytes_buf.mockReturnValueOnce(new Uint8Array(24))
-      mockSodium.from_string.mockReturnValueOnce(
-        new Uint8Array(plaintext.length)
-      )
-      mockSodium.crypto_aead_xchacha20poly1305_ietf_encrypt.mockReturnValueOnce(
-        new Uint8Array(10)
-      )
+      mockSodium.from_string.mockReturnValueOnce(new Uint8Array(plaintext.length))
+      mockSodium.crypto_aead_xchacha20poly1305_ietf_encrypt.mockReturnValueOnce(new Uint8Array(10))
       mockSodium.to_base64.mockReturnValueOnce('encrypted-base64')
 
       const encrypted = await encryptTextWithKey(plaintext, keyBase64)
 
       expect(encrypted).toBe('encrypted-base64')
-      expect(
-        mockSodium.crypto_aead_xchacha20poly1305_ietf_encrypt
-      ).toHaveBeenCalled()
+      expect(mockSodium.crypto_aead_xchacha20poly1305_ietf_encrypt).toHaveBeenCalled()
     })
   })
 
@@ -198,9 +190,7 @@ describe('encryption-utils', () => {
       mockSodium.from_base64
         .mockReturnValueOnce(new Uint8Array(34)) // payload (24 nonce + 10 ciphertext)
         .mockReturnValueOnce(new Uint8Array(32)) // key
-      mockSodium.crypto_aead_xchacha20poly1305_ietf_decrypt.mockReturnValueOnce(
-        new Uint8Array(5)
-      )
+      mockSodium.crypto_aead_xchacha20poly1305_ietf_decrypt.mockReturnValueOnce(new Uint8Array(5))
       mockSodium.to_string.mockReturnValueOnce('decrypted text')
 
       const decrypted = await decryptTextWithKey(encryptedBase64, keyBase64)
@@ -265,10 +255,7 @@ describe('encryption-utils', () => {
 
       setStoredKey('new-key-base64')
 
-      expect(mockSetItem).toHaveBeenCalledWith(
-        ENCRYPTION_KEY_STORAGE_KEY,
-        'new-key-base64'
-      )
+      expect(mockSetItem).toHaveBeenCalledWith(ENCRYPTION_KEY_STORAGE_KEY, 'new-key-base64')
       expect(mockDispatchEvent).toHaveBeenCalled()
     })
 
@@ -314,9 +301,7 @@ describe('encryption-utils', () => {
       mockSodium.from_base64.mockReturnValueOnce(new Uint8Array(32))
       mockSodium.randombytes_buf.mockReturnValueOnce(new Uint8Array(24))
       mockSodium.from_string.mockReturnValueOnce(new Uint8Array(5))
-      mockSodium.crypto_aead_xchacha20poly1305_ietf_encrypt.mockReturnValueOnce(
-        new Uint8Array(10)
-      )
+      mockSodium.crypto_aead_xchacha20poly1305_ietf_encrypt.mockReturnValueOnce(new Uint8Array(10))
       mockSodium.to_base64.mockReturnValueOnce('encrypted')
 
       const encrypted = await encryptTextWithStoredKey('test')
@@ -331,9 +316,7 @@ describe('encryption-utils', () => {
         writable: true,
       })
 
-      await expect(encryptTextWithStoredKey('test')).rejects.toThrow(
-        'Encryption key not available'
-      )
+      await expect(encryptTextWithStoredKey('test')).rejects.toThrow('Encryption key not available')
     })
   })
 
@@ -348,9 +331,7 @@ describe('encryption-utils', () => {
       mockSodium.from_base64
         .mockReturnValueOnce(new Uint8Array(34))
         .mockReturnValueOnce(new Uint8Array(32))
-      mockSodium.crypto_aead_xchacha20poly1305_ietf_decrypt.mockReturnValueOnce(
-        new Uint8Array(5)
-      )
+      mockSodium.crypto_aead_xchacha20poly1305_ietf_decrypt.mockReturnValueOnce(new Uint8Array(5))
       mockSodium.to_string.mockReturnValueOnce('decrypted')
 
       const decrypted = await decryptTextWithStoredKey('encrypted-base64')
@@ -390,10 +371,7 @@ describe('encryption-utils', () => {
 
       await (await import('../encryption-utils')).setStoredSalt('test-salt')
 
-      expect(mockSetItem).toHaveBeenCalledWith(
-        ENCRYPTION_SALT_STORAGE_KEY,
-        expect.any(String)
-      )
+      expect(mockSetItem).toHaveBeenCalledWith(ENCRYPTION_SALT_STORAGE_KEY, expect.any(String))
     })
 
     it('should handle quoted salt input', async () => {
@@ -445,10 +423,7 @@ describe('encryption-utils', () => {
       const testSalt = 'invalid-salt'
       await (await import('../encryption-utils')).setStoredSalt(testSalt)
 
-      expect(mockSetItem).toHaveBeenCalledWith(
-        ENCRYPTION_SALT_STORAGE_KEY,
-        expect.any(String)
-      )
+      expect(mockSetItem).toHaveBeenCalledWith(ENCRYPTION_SALT_STORAGE_KEY, expect.any(String))
     })
 
     it('should handle hex salt format', async () => {
@@ -464,9 +439,7 @@ describe('encryption-utils', () => {
       mockSodium.from_hex.mockReturnValueOnce(new Uint8Array(16))
       mockSodium.to_base64.mockReturnValueOnce('normalized-salt-base64')
 
-      await (
-        await import('../encryption-utils')
-      ).setStoredSalt('0123456789abcdef0123456789abcdef')
+      await (await import('../encryption-utils')).setStoredSalt('0123456789abcdef0123456789abcdef')
 
       expect(mockSodium.from_hex).toHaveBeenCalled()
     })
@@ -480,11 +453,9 @@ describe('encryption-utils', () => {
       mockSodium.from_base64
         .mockReturnValueOnce(new Uint8Array(10))
         .mockReturnValueOnce(new Uint8Array(32))
-      mockSodium.crypto_aead_xchacha20poly1305_ietf_decrypt.mockImplementation(
-        () => {
-          throw new Error('decryption failed')
-        }
-      )
+      mockSodium.crypto_aead_xchacha20poly1305_ietf_decrypt.mockImplementation(() => {
+        throw new Error('decryption failed')
+      })
 
       const decrypted = await decryptTextWithKey(encryptedBase64, keyBase64)
 

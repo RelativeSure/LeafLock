@@ -265,7 +265,14 @@ describe('secureApi - ApiClient', () => {
 
     it('should get all folders', async () => {
       const mockFolders = [
-        { id: 'folder-1', name: 'Work', color: 'blue', userId: '123', parentId: null, createdAt: '2024-01-01' },
+        {
+          id: 'folder-1',
+          name: 'Work',
+          color: 'blue',
+          userId: '123',
+          parentId: null,
+          createdAt: '2024-01-01',
+        },
       ]
 
       vi.mocked(global.fetch).mockResolvedValue({
@@ -281,7 +288,13 @@ describe('secureApi - ApiClient', () => {
     })
 
     it('should create a folder', async () => {
-      const newFolder = { id: 'folder-1', name: 'Projects', userId: '123', parentId: null, createdAt: '2024-01-01' }
+      const newFolder = {
+        id: 'folder-1',
+        name: 'Projects',
+        userId: '123',
+        parentId: null,
+        createdAt: '2024-01-01',
+      }
 
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
@@ -319,7 +332,15 @@ describe('secureApi - ApiClient', () => {
 
     it('should get all templates', async () => {
       const mockTemplates = [
-        { id: 'tpl-1', name: 'Meeting Notes', content: 'Template', tags: [], isPublic: false, usageCount: 0, createdAt: '2024-01-01' },
+        {
+          id: 'tpl-1',
+          name: 'Meeting Notes',
+          content: 'Template',
+          tags: [],
+          isPublic: false,
+          usageCount: 0,
+          createdAt: '2024-01-01',
+        },
       ]
 
       vi.mocked(global.fetch).mockResolvedValue({
@@ -335,7 +356,15 @@ describe('secureApi - ApiClient', () => {
     })
 
     it('should get a single template', async () => {
-      const mockTemplate = { id: 'tpl-1', name: 'Meeting Notes', content: 'Template', tags: [], isPublic: false, usageCount: 0, createdAt: '2024-01-01' }
+      const mockTemplate = {
+        id: 'tpl-1',
+        name: 'Meeting Notes',
+        content: 'Template',
+        tags: [],
+        isPublic: false,
+        usageCount: 0,
+        createdAt: '2024-01-01',
+      }
 
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
@@ -350,7 +379,15 @@ describe('secureApi - ApiClient', () => {
     })
 
     it('should create a template', async () => {
-      const newTemplate = { id: 'tpl-1', name: 'Daily Log', content: '', tags: [], isPublic: false, usageCount: 0, createdAt: '2024-01-01' }
+      const newTemplate = {
+        id: 'tpl-1',
+        name: 'Daily Log',
+        content: '',
+        tags: [],
+        isPublic: false,
+        usageCount: 0,
+        createdAt: '2024-01-01',
+      }
 
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
@@ -434,9 +471,7 @@ describe('secureApi - ApiClient', () => {
     })
 
     it('should get collaborators for a note', async () => {
-      const mockCollaborators = [
-        { id: '1', email: 'user1@example.com', permission: 'read' },
-      ]
+      const mockCollaborators = [{ id: '1', email: 'user1@example.com', permission: 'read' }]
 
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
@@ -465,7 +500,14 @@ describe('secureApi - ApiClient', () => {
 
     it('should get shared notes', async () => {
       const mockSharedNotes = [
-        { id: 'note-1', title: 'Shared Note', content: 'Content', encrypted: true, createdAt: '2024-01-01', updatedAt: '2024-01-01' },
+        {
+          id: 'note-1',
+          title: 'Shared Note',
+          content: 'Content',
+          encrypted: true,
+          createdAt: '2024-01-01',
+          updatedAt: '2024-01-01',
+        },
       ]
 
       vi.mocked(global.fetch).mockResolvedValue({
@@ -593,7 +635,7 @@ describe('secureApi - ApiClient', () => {
         ok: true,
         status: 200,
         headers: new Headers({ 'content-type': 'application/json' }),
-        json: async () => ([]),
+        json: async () => [],
       } as Response)
 
       const { apiClient } = await import('../secureApi')
@@ -620,7 +662,7 @@ describe('secureApi - ApiClient', () => {
           ok: true,
           status: 200,
           headers: new Headers({ 'content-type': 'application/json' }),
-          json: async () => ([]),
+          json: async () => [],
         } as Response
       })
 
@@ -634,7 +676,7 @@ describe('secureApi - ApiClient', () => {
         ok: true,
         status: 200,
         headers: new Headers({ 'content-type': 'application/json' }),
-        json: async () => ([]),
+        json: async () => [],
       } as Response)
 
       await apiClient.getNotes()
@@ -753,7 +795,9 @@ describe('secureApi - ApiClient', () => {
       const result = await apiClient.deleteNote('note-1')
 
       // deleteNote may return undefined for 204 responses
-      expect(result === undefined || result === null || Object.keys(result || {}).length === 0).toBe(true)
+      expect(
+        result === undefined || result === null || Object.keys(result || {}).length === 0
+      ).toBe(true)
     })
 
     it('should handle empty response with content-length 0', async () => {
@@ -771,7 +815,9 @@ describe('secureApi - ApiClient', () => {
       const result = await apiClient.deleteNote('note-1')
 
       // Empty responses may return undefined or empty object
-      expect(result === undefined || result === null || Object.keys(result || {}).length === 0).toBe(true)
+      expect(
+        result === undefined || result === null || Object.keys(result || {}).length === 0
+      ).toBe(true)
     })
 
     it('should handle non-JSON content types', async () => {
@@ -789,7 +835,12 @@ describe('secureApi - ApiClient', () => {
       const result = await apiClient.getNotes()
 
       // Non-JSON responses may return empty array or empty object
-      expect(Array.isArray(result) || result === undefined || result === null || Object.keys(result || {}).length === 0).toBe(true)
+      expect(
+        Array.isArray(result) ||
+          result === undefined ||
+          result === null ||
+          Object.keys(result || {}).length === 0
+      ).toBe(true)
     })
 
     it('should parse JSON responses correctly', async () => {
@@ -827,7 +878,7 @@ describe('secureApi - ApiClient', () => {
         ok: true,
         status: 200,
         headers: new Headers({ 'content-type': 'application/json' }),
-        json: async () => ([]),
+        json: async () => [],
       } as Response)
 
       const { apiClient } = await import('../secureApi')

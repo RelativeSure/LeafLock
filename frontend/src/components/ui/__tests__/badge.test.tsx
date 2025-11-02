@@ -134,10 +134,7 @@ describe('Badge', () => {
           5
         </Badge>
       )
-      expect(screen.getByTestId('badge')).toHaveAttribute(
-        'aria-label',
-        'notification count'
-      )
+      expect(screen.getByTestId('badge')).toHaveAttribute('aria-label', 'notification count')
     })
 
     it('should support role attribute', () => {
@@ -155,10 +152,7 @@ describe('Badge', () => {
           3
         </Badge>
       )
-      expect(screen.getByTestId('badge')).toHaveAttribute(
-        'aria-live',
-        'polite'
-      )
+      expect(screen.getByTestId('badge')).toHaveAttribute('aria-live', 'polite')
     })
   })
 
@@ -201,21 +195,14 @@ describe('Badge', () => {
           Badge
         </Badge>
       )
-      expect(screen.getByTestId('badge')).toHaveAttribute(
-        'data-custom',
-        'value'
-      )
+      expect(screen.getByTestId('badge')).toHaveAttribute('data-custom', 'value')
     })
   })
 
   describe('combinations', () => {
     it('should render secondary variant with custom class', () => {
       render(
-        <Badge
-          variant="secondary"
-          className="custom"
-          data-testid="badge"
-        >
+        <Badge variant="secondary" className="custom" data-testid="badge">
           Badge
         </Badge>
       )
@@ -236,12 +223,7 @@ describe('Badge', () => {
 
     it('should render outline variant with aria attributes', () => {
       render(
-        <Badge
-          variant="outline"
-          aria-label="status"
-          role="status"
-          data-testid="badge"
-        >
+        <Badge variant="outline" aria-label="status" role="status" data-testid="badge">
           Active
         </Badge>
       )

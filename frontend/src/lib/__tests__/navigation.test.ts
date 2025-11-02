@@ -63,7 +63,7 @@ describe('navigation utils', () => {
   describe('safeRedirectToLogin', () => {
     it('should redirect to login if not on auth route', () => {
       ;(window as any).location.pathname = '/dashboard'
-      
+
       safeRedirectToLogin()
 
       expect(window.location.replace).toHaveBeenCalledWith('/login')
@@ -71,7 +71,7 @@ describe('navigation utils', () => {
 
     it('should not redirect if already on auth route', () => {
       ;(window as any).location.pathname = '/login'
-      
+
       safeRedirectToLogin()
 
       expect(window.location.replace).not.toHaveBeenCalled()
@@ -79,7 +79,7 @@ describe('navigation utils', () => {
 
     it('should not redirect if on register page', () => {
       ;(window as any).location.pathname = '/register'
-      
+
       safeRedirectToLogin()
 
       expect(window.location.replace).not.toHaveBeenCalled()

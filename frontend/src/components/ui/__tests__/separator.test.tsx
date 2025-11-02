@@ -59,24 +59,14 @@ describe('Separator', () => {
 
   describe('styling', () => {
     it('should merge custom classes with default classes', () => {
-      render(
-        <Separator
-          className="bg-red-500 h-1"
-          data-testid="separator"
-        />
-      )
+      render(<Separator className="bg-red-500 h-1" data-testid="separator" />)
       const separator = screen.getByTestId('separator')
       expect(separator).toHaveClass('bg-red-500')
       expect(separator).toHaveClass('h-1')
     })
 
     it('should apply inline styles', () => {
-      render(
-        <Separator
-          style={{ backgroundColor: 'blue' }}
-          data-testid="separator"
-        />
-      )
+      render(<Separator style={{ backgroundColor: 'blue' }} data-testid="separator" />)
       expect(screen.getByTestId('separator')).toHaveStyle({
         backgroundColor: 'blue',
       })
@@ -140,12 +130,7 @@ describe('Separator', () => {
     })
 
     it('should handle custom data attributes', () => {
-      render(
-        <Separator
-          data-testid="separator"
-          data-custom="value"
-        />
-      )
+      render(<Separator data-testid="separator" data-custom="value" />)
       const separator = screen.getByTestId('separator')
       expect(separator).toHaveAttribute('data-custom', 'value')
     })

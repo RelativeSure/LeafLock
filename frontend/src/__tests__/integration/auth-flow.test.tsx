@@ -338,9 +338,9 @@ describe('Integration: Complete Auth Flow', () => {
       // Step 1: Network error
       vi.mocked(apiClient.login).mockRejectedValueOnce(new Error('Network error'))
 
-      await expect(
-        useAuthStore.getState().login('user@example.com', 'password')
-      ).rejects.toThrow('Network error')
+      await expect(useAuthStore.getState().login('user@example.com', 'password')).rejects.toThrow(
+        'Network error'
+      )
 
       expect(useAuthStore.getState().isAuthenticated).toBe(false)
 

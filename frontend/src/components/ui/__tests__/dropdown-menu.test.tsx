@@ -117,12 +117,8 @@ describe('DropdownMenu', () => {
       <DropdownMenu defaultOpen={true}>
         <DropdownMenuTrigger>Menu</DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuCheckboxItem checked={true}>
-            Show Toolbar
-          </DropdownMenuCheckboxItem>
-          <DropdownMenuCheckboxItem checked={false}>
-            Show Sidebar
-          </DropdownMenuCheckboxItem>
+          <DropdownMenuCheckboxItem checked={true}>Show Toolbar</DropdownMenuCheckboxItem>
+          <DropdownMenuCheckboxItem checked={false}>Show Sidebar</DropdownMenuCheckboxItem>
         </DropdownMenuContent>
       </DropdownMenu>
     )
@@ -137,12 +133,8 @@ describe('DropdownMenu', () => {
         <DropdownMenuTrigger>Menu</DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuRadioGroup value="option1">
-            <DropdownMenuRadioItem value="option1">
-              Option 1
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="option2">
-              Option 2
-            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="option1">Option 1</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="option2">Option 2</DropdownMenuRadioItem>
           </DropdownMenuRadioGroup>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -223,10 +215,7 @@ describe('DropdownMenu', () => {
       <DropdownMenu defaultOpen={true}>
         <DropdownMenuTrigger>Menu</DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuCheckboxItem 
-            checked={false} 
-            onCheckedChange={handleChange}
-          >
+          <DropdownMenuCheckboxItem checked={false} onCheckedChange={handleChange}>
             Toggle Option
           </DropdownMenuCheckboxItem>
         </DropdownMenuContent>

@@ -187,10 +187,7 @@ describe('templatesStore', () => {
         userId: '789',
       }
 
-      vi.mocked(apiClient.getTemplates).mockResolvedValue([
-        mockUserTemplate,
-        anotherUserTemplate,
-      ])
+      vi.mocked(apiClient.getTemplates).mockResolvedValue([mockUserTemplate, anotherUserTemplate])
 
       await useTemplatesStore.getState().loadTemplates()
 
@@ -236,17 +233,17 @@ describe('templatesStore', () => {
     it('should throw error if no user is logged in', async () => {
       localStorage.removeItem('user')
 
-      await expect(
-        useTemplatesStore.getState().createTemplate({ name: 'Test' })
-      ).rejects.toThrow('No user logged in')
+      await expect(useTemplatesStore.getState().createTemplate({ name: 'Test' })).rejects.toThrow(
+        'No user logged in'
+      )
     })
 
     it('should handle API errors', async () => {
       vi.mocked(apiClient.createTemplate).mockRejectedValue(new Error('Create failed'))
 
-      await expect(
-        useTemplatesStore.getState().createTemplate({ name: 'Test' })
-      ).rejects.toThrow('Create failed')
+      await expect(useTemplatesStore.getState().createTemplate({ name: 'Test' })).rejects.toThrow(
+        'Create failed'
+      )
 
       expect(console.error).toHaveBeenCalledWith('Failed to create template:', expect.any(Error))
     })
@@ -266,9 +263,7 @@ describe('templatesStore', () => {
       }
 
       vi.mocked(apiClient.updateTemplate).mockResolvedValue(undefined)
-      vi.mocked(apiClient.getTemplates).mockResolvedValue([
-        { ...mockUserTemplate, ...updates },
-      ])
+      vi.mocked(apiClient.getTemplates).mockResolvedValue([{ ...mockUserTemplate, ...updates }])
 
       await useTemplatesStore.getState().updateTemplate('template-1', updates)
 
@@ -370,9 +365,9 @@ describe('templatesStore', () => {
     it('should handle API errors', async () => {
       vi.mocked(apiClient.deleteTemplate).mockRejectedValue(new Error('Delete failed'))
 
-      await expect(
-        useTemplatesStore.getState().deleteTemplate('template-1')
-      ).rejects.toThrow('Delete failed')
+      await expect(useTemplatesStore.getState().deleteTemplate('template-1')).rejects.toThrow(
+        'Delete failed'
+      )
     })
   })
 
@@ -394,9 +389,9 @@ describe('templatesStore', () => {
     it('should handle API errors', async () => {
       vi.mocked(apiClient.useTemplate).mockRejectedValue(new Error('Apply failed'))
 
-      await expect(
-        useTemplatesStore.getState().applyTemplate('template-1')
-      ).rejects.toThrow('Apply failed')
+      await expect(useTemplatesStore.getState().applyTemplate('template-1')).rejects.toThrow(
+        'Apply failed'
+      )
     })
   })
 
@@ -407,9 +402,7 @@ describe('templatesStore', () => {
 
     it('should share a template publicly', async () => {
       vi.mocked(apiClient.updateTemplate).mockResolvedValue(undefined)
-      vi.mocked(apiClient.getTemplates).mockResolvedValue([
-        { ...mockUserTemplate, isPublic: true },
-      ])
+      vi.mocked(apiClient.getTemplates).mockResolvedValue([{ ...mockUserTemplate, isPublic: true }])
 
       await useTemplatesStore.getState().shareTemplate('template-1', true)
 
@@ -436,9 +429,9 @@ describe('templatesStore', () => {
     it('should handle API errors', async () => {
       vi.mocked(apiClient.updateTemplate).mockRejectedValue(new Error('Share failed'))
 
-      await expect(
-        useTemplatesStore.getState().shareTemplate('template-1', true)
-      ).rejects.toThrow('Share failed')
+      await expect(useTemplatesStore.getState().shareTemplate('template-1', true)).rejects.toThrow(
+        'Share failed'
+      )
     })
   })
 

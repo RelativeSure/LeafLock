@@ -174,12 +174,7 @@ describe('Dashboard Components Basic Render Tests', () => {
 
       expect(() => {
         render(
-          <SaveTemplateDialog
-            isOpen={true}
-            onClose={vi.fn()}
-            title="Test"
-            content="Test content"
-          />
+          <SaveTemplateDialog isOpen={true} onClose={vi.fn()} title="Test" content="Test content" />
         )
       }).not.toThrow()
     })
@@ -212,12 +207,7 @@ describe('Dashboard Components Basic Render Tests', () => {
       unmount2()
 
       const { unmount: unmount3 } = render(
-        <SaveTemplateDialog
-          isOpen={true}
-          onClose={vi.fn()}
-          title="Test"
-          content="Test"
-        />
+        <SaveTemplateDialog isOpen={true} onClose={vi.fn()} title="Test" content="Test" />
       )
       unmount3()
 
@@ -250,9 +240,7 @@ describe('Dashboard Components Basic Render Tests', () => {
     it('should handle open/close states for dialogs', async () => {
       const { EncryptionUnlockDialog } = await import('../encryption-unlock-dialog')
 
-      const { rerender } = render(
-        <EncryptionUnlockDialog isOpen={false} onClose={vi.fn()} />
-      )
+      const { rerender } = render(<EncryptionUnlockDialog isOpen={false} onClose={vi.fn()} />)
 
       rerender(<EncryptionUnlockDialog isOpen={true} onClose={vi.fn()} />)
       rerender(<EncryptionUnlockDialog isOpen={false} onClose={vi.fn()} />)
@@ -317,7 +305,7 @@ describe('Dashboard Components Basic Render Tests', () => {
         instances.push(render(<NoteStats />))
       }
 
-      instances.forEach(instance => instance.unmount())
+      instances.forEach((instance) => instance.unmount())
 
       expect(true).toBe(true)
     })

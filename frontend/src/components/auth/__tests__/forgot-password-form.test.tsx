@@ -131,7 +131,7 @@ describe('ForgotPasswordForm', () => {
   it('should disable submit button while loading', async () => {
     const { apiClient } = await import('@/services/api/secureApi')
     vi.mocked(apiClient.requestPasswordReset).mockImplementation(
-      () => new Promise(resolve => setTimeout(resolve, 1000))
+      () => new Promise((resolve) => setTimeout(resolve, 1000))
     )
 
     renderWithRouter(<ForgotPasswordForm />)

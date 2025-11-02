@@ -133,7 +133,9 @@ describe('Integration: Complete Note Lifecycle', () => {
 
       vi.mocked(apiClient.createNoteVersion).mockResolvedValue(version)
 
-      const createdVersion = await useNotesStore.getState().createNoteVersion('note-1', 'First save')
+      const createdVersion = await useNotesStore
+        .getState()
+        .createNoteVersion('note-1', 'First save')
 
       expect(createdVersion.versionNumber).toBe(1)
 
