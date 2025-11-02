@@ -68,7 +68,7 @@ describe('note-linking-utils', () => {
 
     it('should handle loading state', () => {
       vi.mocked(useNotesStore).mockReturnValue({
-        getNoteBacklinks: vi.fn(() => new Promise(() => {})), // Never resolves
+        getNoteBacklinks: vi.fn(() => new Promise(vi.fn())), // Never resolves
         notes: [],
       } as any)
 

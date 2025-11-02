@@ -4,7 +4,7 @@ import { AppErrorBoundary } from '../AppErrorBoundary'
 
 describe('AppErrorBoundary', () => {
   beforeEach(() => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'error').mockImplementation(vi.fn())
   })
 
   afterEach(() => {

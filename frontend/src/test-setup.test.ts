@@ -5,7 +5,7 @@ describe('test-setup', () => {
   it('should have testing-library matchers', () => {
     const element = document.createElement('div')
     element.textContent = 'test'
-    expect(element).toBeInTheDocument
+    expect(element).toBeInTheDocument()
   })
 
   it('should have document available', () => {

@@ -19,7 +19,7 @@ describe('EncryptionContext', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'error').mockImplementation(vi.fn())
   })
 
   afterEach(() => {
@@ -256,7 +256,7 @@ describe('EncryptionContext', () => {
       vi.mocked(encryptionUtils.getStoredKey).mockReturnValue(null)
       vi.mocked(encryptionUtils.getStoredSalt).mockReturnValue('stored-salt')
       vi.mocked(encryptionUtils.deriveKey).mockResolvedValue('derived-key-base64')
-      vi.mocked(encryptionUtils.setStoredKey).mockImplementation(() => {})
+      vi.mocked(encryptionUtils.setStoredKey).mockImplementation(vi.fn())
 
       function TestComponent() {
         const { setEncryptionKey, isUnlocked } = useEncryption()

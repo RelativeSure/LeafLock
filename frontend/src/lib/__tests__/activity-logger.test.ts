@@ -3,7 +3,7 @@ import { ActivityLogger } from '../activity-logger'
 
 describe('ActivityLogger', () => {
   beforeEach(() => {
-    vi.spyOn(console, 'log').mockImplementation(() => {})
+    vi.spyOn(console, 'log').mockImplementation(vi.fn())
   })
 
   afterEach(() => {

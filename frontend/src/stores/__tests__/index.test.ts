@@ -22,23 +22,23 @@ describe('stores/index', () => {
     expect(typeof useTemplatesStore).toBe('function')
   })
 
-  it('re-exports from authStore module', () => {
-    const { useAuthStore: DirectAuthStore } = require('../authStore')
+  it('re-exports from authStore module', async () => {
+    const { useAuthStore: DirectAuthStore } = await import('../authStore')
     expect(useAuthStore).toBe(DirectAuthStore)
   })
 
-  it('re-exports from notesStore module', () => {
-    const { useNotesStore: DirectNotesStore } = require('../notesStore')
+  it('re-exports from notesStore module', async () => {
+    const { useNotesStore: DirectNotesStore } = await import('../notesStore')
     expect(useNotesStore).toBe(DirectNotesStore)
   })
 
-  it('re-exports from settingsStore module', () => {
-    const { useSettingsStore: DirectSettingsStore } = require('../settingsStore')
+  it('re-exports from settingsStore module', async () => {
+    const { useSettingsStore: DirectSettingsStore } = await import('../settingsStore')
     expect(useSettingsStore).toBe(DirectSettingsStore)
   })
 
-  it('re-exports from templatesStore module', () => {
-    const { useTemplatesStore: DirectTemplatesStore } = require('../templatesStore')
+  it('re-exports from templatesStore module', async () => {
+    const { useTemplatesStore: DirectTemplatesStore } = await import('../templatesStore')
     expect(useTemplatesStore).toBe(DirectTemplatesStore)
   })
 

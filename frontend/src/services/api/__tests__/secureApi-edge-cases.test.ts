@@ -22,7 +22,7 @@ describe('secureApi - Edge Cases and Error Paths', () => {
     localStorage.clear()
     vi.clearAllMocks()
     vi.mocked(global.fetch).mockReset()
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'error').mockImplementation(vi.fn())
   })
 
   afterEach(() => {

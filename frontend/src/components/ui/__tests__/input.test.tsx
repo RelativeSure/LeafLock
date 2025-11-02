@@ -23,7 +23,7 @@ describe('Input', () => {
     })
 
     it('should render with controlled value', () => {
-      render(<Input value="controlled" onChange={() => {}} />)
+      render(<Input value="controlled" onChange={vi.fn()} />)
       const input = screen.getByRole('textbox') as HTMLInputElement
       expect(input.value).toBe('controlled')
     })
@@ -195,7 +195,7 @@ describe('Input', () => {
 
   describe('edge cases', () => {
     it('should handle empty string value', () => {
-      render(<Input value="" onChange={() => {}} />)
+      render(<Input value="" onChange={vi.fn()} />)
       const input = screen.getByRole('textbox') as HTMLInputElement
       expect(input.value).toBe('')
     })

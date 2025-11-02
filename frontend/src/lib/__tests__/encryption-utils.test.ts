@@ -506,8 +506,8 @@ describe('encryption-utils', () => {
   })
 
   describe('ENCRYPTION_VERSION constant', () => {
-    it('should export ENCRYPTION_VERSION', () => {
-      const { ENCRYPTION_VERSION } = require('../encryption-utils')
+    it('should export ENCRYPTION_VERSION', async () => {
+      const { ENCRYPTION_VERSION } = await import('../encryption-utils')
       expect(ENCRYPTION_VERSION).toBeDefined()
       expect(typeof ENCRYPTION_VERSION).toBe('number')
     })

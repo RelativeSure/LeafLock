@@ -221,7 +221,7 @@ describe('VersionHistoryDialog', () => {
 
   it('should show loading state', () => {
     vi.mocked(useNotesStore).mockReturnValue({
-      getNoteVersions: vi.fn(() => new Promise(() => {})), // Never resolves
+      getNoteVersions: vi.fn(() => new Promise(vi.fn())), // Never resolves
       restoreNoteVersion: vi.fn(),
       deleteNoteVersion: vi.fn(),
       compareNoteVersions: vi.fn(),

@@ -70,10 +70,11 @@ func TestAuthHandler_Register_InvalidJSON(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -100,10 +101,11 @@ func TestAuthHandler_Register_MissingEmail(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -135,10 +137,11 @@ func TestAuthHandler_Login_InvalidJSON(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -165,10 +168,11 @@ func TestAuthHandler_Login_MissingCredentials(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -200,10 +204,11 @@ func TestAuthHandler_BeginMFASetup_InvalidRequest(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -232,10 +237,11 @@ func TestAuthHandler_EnableMFA_MissingToken(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -268,10 +274,11 @@ func TestAuthHandler_DisableMFA_Request(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -300,10 +307,11 @@ func TestAuthHandler_VerifyMFA_InvalidJSON(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -330,10 +338,11 @@ func TestAuthHandler_RequestPasswordReset_InvalidEmail(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -365,10 +374,11 @@ func TestAuthHandler_ConfirmPasswordReset_InvalidToken(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -401,10 +411,11 @@ func TestAuthHandler_Logout_ValidRequest(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -434,10 +445,11 @@ func TestAuthHandler_GetMFAStatus_ValidRequest(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -468,10 +480,11 @@ func TestAuthHandler_GetRegistrationStatus_Check(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -497,10 +510,11 @@ func TestAuthHandler_RegenerateBackupCodes_Request(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -529,10 +543,11 @@ func TestAuthHandler_VerifyResetToken_InvalidToken(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -558,10 +573,11 @@ func TestAuthHandler_Register_WeakPassword(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -594,10 +610,11 @@ func TestAuthHandler_Login_InvalidEmail(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -630,10 +647,11 @@ func TestAuthHandler_VerifyMFA_MissingToken(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -665,10 +683,11 @@ func TestAuthHandler_EnableMFA_InvalidToken(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -705,10 +724,11 @@ func TestAuthHandler_RequestPasswordReset_MissingEmail(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -739,10 +759,11 @@ func TestAuthHandler_ConfirmPasswordReset_MissingNewPassword(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -776,10 +797,11 @@ func TestAuthHandler_Register_DuplicateEmail(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -819,10 +841,11 @@ func TestAuthHandler_Login_EmptyPassword(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -855,10 +878,11 @@ func TestAuthHandler_VerifyMFA_InvalidSessionID(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -891,10 +915,11 @@ func TestAuthHandler_BeginMFASetup_AlreadyEnabled(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -923,10 +948,11 @@ func TestAuthHandler_ConfirmPasswordReset_WeakNewPassword(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -959,10 +985,11 @@ func TestAuthHandler_Logout_MissingSessionID(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -991,10 +1018,11 @@ func TestAuthHandler_Register_EmptyEmail(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
@@ -1027,10 +1055,11 @@ func TestAuthHandler_VerifyMFA_EmptyToken(t *testing.T) {
 	if rdb == nil {
 		t.Skip("Redis not available")
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	require.NoError(t, err)
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")

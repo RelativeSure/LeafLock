@@ -78,8 +78,8 @@ describe('templatesStore', () => {
     vi.clearAllMocks()
 
     // Mock console methods to reduce noise
-    vi.spyOn(console, 'log').mockImplementation(() => {})
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'log').mockImplementation(vi.fn())
+    vi.spyOn(console, 'error').mockImplementation(vi.fn())
   })
 
   afterEach(() => {
