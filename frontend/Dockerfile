@@ -1,8 +1,8 @@
-FROM node:24-alpine@sha256:f36fed0b2129a8492535e2853c64fbdbd2d29dc1219ee3217023ca48aebd3787 AS builder
+FROM node:22-alpine@sha256:bd26af08779f746650d95a2e4d653b0fd3c8030c44284b6b98d701c9b5eb66b9 AS builder
 
 # CRITICAL: Railway cache buster - change this line to force rebuild
 RUN set -eux \
-  && echo "Force rebuild: 2025-10-05-18-00-REBUILD-ALL" \
+  && echo "Force rebuild: 2025-10-24-11-00-VITE-MIGRATION" \
   && apk --no-cache add git
 
 WORKDIR /app
@@ -10,7 +10,7 @@ WORKDIR /app
 ARG VITE_API_URL=http://localhost:8080
 ENV VITE_API_URL=$VITE_API_URL
 
-RUN npm install -g pnpm@10.17.1
+RUN npm install -g pnpm@10.18.3
 
 COPY package.json pnpm-lock.yaml ./
 

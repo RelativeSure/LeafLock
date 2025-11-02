@@ -1,8 +1,11 @@
 package utils
 
 import (
+	"context"
 	"database/sql"
+	"io"
 	"net"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -112,6 +115,17 @@ func TestFormatNullTime(t *testing.T) {
 	})
 }
 
+func TestContextHelpers(t *testing.T) {
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, ContextKeyClientIP, "203.0.113.5")
+	ctx = context.WithValue(ctx, ContextKeyUserAgent, "LeafLockTest/1.0")
+
+	assert.Equal(t, "203.0.113.5", GetClientIPFromContext(ctx))
+	assert.Equal(t, "LeafLockTest/1.0", GetUserAgentFromContext(ctx))
+	assert.Equal(t, "", GetClientIPFromContext(context.Background()))
+	assert.Equal(t, "", GetUserAgentFromContext(context.Background()))
+}
+
 // Test network.go functions
 
 func TestIsPublicIP(t *testing.T) {
@@ -153,73 +167,49 @@ func TestIsPublicIP(t *testing.T) {
 }
 
 func TestClientIP(t *testing.T) {
+	TrustProxyHeaders.Store(false)
+
 	app := fiber.New()
-
-	t.Run("No proxy headers - trust disabled", func(t *testing.T) {
-		TrustProxyHeaders.Store(false)
-
-		app.Get("/test", func(c *fiber.Ctx) error {
-			ip := ClientIP(c)
-			assert.NotEmpty(t, ip)
-			return c.SendString(ip)
-		})
+	app.Get("/client", func(c *fiber.Ctx) error {
+		return c.SendString(ClientIP(c))
 	})
 
-	t.Run("CF-Connecting-IP header - trust enabled", func(t *testing.T) {
-		TrustProxyHeaders.Store(true)
+	resp, err := app.Test(httptest.NewRequest("GET", "/client", nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+	resp.Body.Close()
 
-		app.Get("/test-cf", func(c *fiber.Ctx) error {
-			c.Request().Header.Set("CF-Connecting-IP", "1.2.3.4")
-			ip := ClientIP(c)
-			assert.Equal(t, "1.2.3.4", ip)
-			return c.SendString(ip)
+	TrustProxyHeaders.Store(true)
+
+	tests := []struct {
+		name   string
+		header string
+		value  string
+		expect string
+	}{
+		{"CF connecting", "CF-Connecting-IP", "1.2.3.4", "1.2.3.4"},
+		{"XFF public", "X-Forwarded-For", "8.8.8.8, 10.0.0.1", "8.8.8.8"},
+		{"XFF private fallback", "X-Forwarded-For", "10.0.0.1, 192.168.1.1", "10.0.0.1"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/client", nil)
+			req.Header.Set("X-Real-IP", "203.0.113.1")
+			if tc.header != "" {
+				req.Header.Set(tc.header, tc.value)
+			}
+			resp, err := app.Test(req, -1)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			assert.Equal(t, tc.expect, string(body))
 		})
-	})
-
-	t.Run("X-Forwarded-For with public IP - trust enabled", func(t *testing.T) {
-		TrustProxyHeaders.Store(true)
-
-		app.Get("/test-xff", func(c *fiber.Ctx) error {
-			c.Request().Header.Set("X-Forwarded-For", "8.8.8.8, 10.0.0.1")
-			ip := ClientIP(c)
-			assert.Equal(t, "8.8.8.8", ip)
-			return c.SendString(ip)
-		})
-	})
-
-	t.Run("X-Forwarded-For with only private IPs - trust enabled", func(t *testing.T) {
-		TrustProxyHeaders.Store(true)
-
-		app.Get("/test-xff-private", func(c *fiber.Ctx) error {
-			c.Request().Header.Set("X-Forwarded-For", "10.0.0.1, 192.168.1.1")
-			ip := ClientIP(c)
-			// Should return the first private IP as fallback
-			assert.Equal(t, "10.0.0.1", ip)
-			return c.SendString(ip)
-		})
-	})
-
-	t.Run("X-Real-IP header - trust enabled", func(t *testing.T) {
-		TrustProxyHeaders.Store(true)
-
-		app.Get("/test-real-ip", func(c *fiber.Ctx) error {
-			c.Request().Header.Set("X-Real-IP", "9.9.9.9")
-			ip := ClientIP(c)
-			assert.Equal(t, "9.9.9.9", ip)
-			return c.SendString(ip)
-		})
-	})
-
-	t.Run("X-Client-IP header - trust enabled", func(t *testing.T) {
-		TrustProxyHeaders.Store(true)
-
-		app.Get("/test-client-ip", func(c *fiber.Ctx) error {
-			c.Request().Header.Set("X-Client-IP", "7.7.7.7")
-			ip := ClientIP(c)
-			assert.Equal(t, "7.7.7.7", ip)
-			return c.SendString(ip)
-		})
-	})
+	}
 }
 
 // Test validation.go functions

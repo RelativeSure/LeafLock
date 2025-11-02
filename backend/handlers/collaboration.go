@@ -230,6 +230,19 @@ func (h *CollaborationHandler) GetCollaborators(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"collaborators": collaborators})
 }
 
+// RemoveCollaborator godoc
+// @Summary Remove collaborator from note
+// @Description Remove a user's access to a shared note
+// @Tags Collaboration
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Note ID"
+// @Param userId path string true "User ID to remove"
+// @Success 200 {object} map[string]interface{} "Collaborator removed successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid note ID or user ID"
+// @Failure 404 {object} map[string]interface{} "Note not found or collaboration not found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes/{id}/collaborators/{userId} [delete]
 func (h *CollaborationHandler) RemoveCollaborator(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 	noteID, err := uuid.Parse(c.Params("id"))
@@ -279,6 +292,15 @@ func (h *CollaborationHandler) RemoveCollaborator(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Collaborator removed successfully"})
 }
 
+// GetSharedNotes godoc
+// @Summary Get shared notes
+// @Description Get all notes shared with the authenticated user
+// @Tags Collaboration
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "List of shared notes"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes/shared [get]
 func (h *CollaborationHandler) GetSharedNotes(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 	ctx := context.Background()

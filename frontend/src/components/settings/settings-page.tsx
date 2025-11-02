@@ -1,0 +1,497 @@
+'use client'
+
+import { useNotesStore } from '../../stores/notesStore'
+import { useTemplatesStore } from '../../stores/templatesStore'
+import { useAuthStore } from '../../stores/authStore'
+import { useSettingsStore } from '../../stores/settingsStore'
+import { Button } from '@/components/ui/button'
+import {
+  Download,
+  User,
+  Shield,
+  Settings as SettingsIcon,
+  Database,
+  FolderPlus,
+  Tag as TagIcon,
+} from 'lucide-react'
+import { Label } from '@/components/ui/label'
+import { useToast } from '@/hooks/use-toast'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Separator } from '@/components/ui/separator'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { UserAvatar } from '@/components/ui/user-avatar'
+import { useState } from 'react'
+
+export function SettingsPage() {
+  const { notes, folders, tags, createNote, createFolder, createTag } = useNotesStore()
+  const { templates, createTemplate } = useTemplatesStore()
+  const { user } = useAuthStore()
+  const { settings, updateSettings } = useSettingsStore()
+  const { toast } = useToast()
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
+
+  const handleExportNotes = () => {
+    const data = {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      user: {
+        id: user?.id,
+        email: user?.email,
+        name: user?.name,
+      },
+      notes: (notes || []).map((note) => ({
+        ...note,
+        encrypted: note.encrypted || false,
+      })),
+      folders: folders || [],
+      tags: tags || [],
+      templates: templates || [],
+    }
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: 'application/json',
+    })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `leaflock-backup-${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+
+    toast.success('Your data has been exported successfully.')
+
+    // Log the export activity
+    console.log('Export activity:', { userId: user?.id, action: 'export_data' })
+  }
+
+  const handleImportNotes = async (file: File) => {
+    try {
+      const text = await file.text()
+      const data = JSON.parse(text)
+
+      if (!data.version || !data.notes) {
+        throw new Error('Invalid backup file format')
+      }
+
+      // Import folders
+      if (data.folders) {
+        for (const folder of data.folders) {
+          await createFolder({
+            name: folder.name,
+            color: folder.color,
+          })
+        }
+      }
+
+      // Import tags
+      if (data.tags) {
+        for (const tag of data.tags) {
+          await createTag({
+            name: tag.name,
+            color: tag.color,
+          })
+        }
+      }
+
+      // Import notes
+      for (const note of data.notes) {
+        await createNote({
+          title: note.title,
+          content: note.content,
+          folderId: note.folderId,
+          tags: note.tags || [],
+          encrypted: note.encrypted || false,
+        })
+      }
+
+      // Import templates
+      if (data.templates) {
+        for (const template of data.templates) {
+          await createTemplate({
+            name: template.name,
+            content: template.content,
+            tags: template.tags || [],
+            isPublic: template.isPublic || false,
+          })
+        }
+      }
+
+      toast.success('Your data has been imported successfully.')
+
+      // Log the import activity
+      console.log('Import activity:', { userId: user?.id, action: 'import_data' })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to import data')
+    }
+  }
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      handleImportNotes(file)
+    }
+  }
+
+  const handleProfilePictureChange = async (type: 'gravatar' | 'initials' | 'custom') => {
+    setIsUpdatingProfile(true)
+    try {
+      await updateSettings({
+        profilePicture: {
+          type,
+          customUrl: type === 'custom' ? settings.profilePicture.customUrl : undefined,
+        },
+      })
+      toast.success('Your profile picture settings have been updated.')
+    } catch (error) {
+      toast.error('Failed to update profile picture settings.')
+    } finally {
+      setIsUpdatingProfile(false)
+    }
+  }
+
+  return (
+    <div className="container mx-auto p-6 max-w-6xl">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">Settings</h1>
+        <p className="text-muted-foreground mt-2">Manage your account settings and preferences.</p>
+      </div>
+
+      <Tabs defaultValue="profile" className="flex gap-6 h-full">
+        {/* Vertical Tabs List - Sidebar */}
+        <div className="w-64 flex-shrink-0 border-r pr-4">
+          <TabsList className="flex-col h-fit w-full">
+            <TabsTrigger value="profile" className="w-full justify-start gap-2">
+              <User className="h-4 w-4" />
+              Profile
+            </TabsTrigger>
+            <TabsTrigger value="backup" className="w-full justify-start gap-2">
+              <Database className="h-4 w-4" />
+              Backup & Restore
+            </TabsTrigger>
+            <TabsTrigger value="security" className="w-full justify-start gap-2">
+              <Shield className="h-4 w-4" />
+              Security
+            </TabsTrigger>
+            <TabsTrigger value="preferences" className="w-full justify-start gap-2">
+              <SettingsIcon className="h-4 w-4" />
+              Preferences
+            </TabsTrigger>
+            <TabsTrigger value="manage" className="w-full justify-start gap-2">
+              <FolderPlus className="h-4 w-4" />
+              Manage Folders & Tags
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* Tab Content */}
+        <div className="flex-1">
+          <TabsContent value="profile" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Profile Information</CardTitle>
+                <CardDescription>Manage your profile picture and account details.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Profile Picture */}
+                <div className="space-y-4">
+                  <Label>Profile Picture</Label>
+                  <div className="flex items-center gap-4">
+                    <UserAvatar user={user} size={80} />
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Button
+                          variant={
+                            settings.profilePicture.type === 'gravatar' ? 'default' : 'outline'
+                          }
+                          size="sm"
+                          onClick={() => handleProfilePictureChange('gravatar')}
+                          disabled={isUpdatingProfile}
+                        >
+                          Gravatar
+                        </Button>
+                        <Button
+                          variant={
+                            settings.profilePicture.type === 'initials' ? 'default' : 'outline'
+                          }
+                          size="sm"
+                          onClick={() => handleProfilePictureChange('initials')}
+                          disabled={isUpdatingProfile}
+                        >
+                          Initials
+                        </Button>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {settings.profilePicture.type === 'gravatar'
+                          ? 'Using Gravatar based on your email address'
+                          : 'Using your name initials'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Account Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">Name</Label>
+                    <Input id="name" value={user?.name || ''} disabled />
+                  </div>
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" value={user?.email || ''} disabled />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="backup" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="h-5 w-5" />
+                  Data Backup & Restore
+                </CardTitle>
+                <CardDescription>
+                  Export your notes, folders, tags, and templates to a backup file, or restore from
+                  a previous backup.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Export Data</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Download a complete backup of your data including notes, folders, tags, and
+                      templates.
+                    </p>
+                    <Button onClick={handleExportNotes} className="w-full">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Backup
+                    </Button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Import Data</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Restore your data from a previous backup file.
+                    </p>
+                    <div className="space-y-2">
+                      <Input
+                        type="file"
+                        accept=".json"
+                        onChange={handleFileUpload}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Select a .json backup file to restore
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Data Summary</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-4 border rounded-lg">
+                      <div className="text-2xl font-bold text-primary">{notes?.length || 0}</div>
+                      <div className="text-sm text-muted-foreground">Notes</div>
+                    </div>
+                    <div className="text-center p-4 border rounded-lg">
+                      <div className="text-2xl font-bold text-primary">{folders?.length || 0}</div>
+                      <div className="text-sm text-muted-foreground">Folders</div>
+                    </div>
+                    <div className="text-center p-4 border rounded-lg">
+                      <div className="text-2xl font-bold text-primary">{tags?.length || 0}</div>
+                      <div className="text-sm text-muted-foreground">Tags</div>
+                    </div>
+                    <div className="text-center p-4 border rounded-lg">
+                      <div className="text-2xl font-bold text-primary">
+                        {templates?.length || 0}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Templates</div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="security" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Security Settings
+                </CardTitle>
+                <CardDescription>
+                  Manage your security preferences and encryption settings.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Encryption Status</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Your notes are encrypted using AES-256 encryption for maximum security.
+                  </p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Auto-save</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Automatically save changes to your notes
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.autoSave}
+                    onCheckedChange={(checked) => updateSettings({ autoSave: checked })}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="preferences" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <SettingsIcon className="h-5 w-5" />
+                  Application Preferences
+                </CardTitle>
+                <CardDescription>Customize your application experience.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Notifications</Label>
+                    <p className="text-sm text-muted-foreground">Enable desktop notifications</p>
+                  </div>
+                  <Switch
+                    checked={settings.notificationsEnabled}
+                    onCheckedChange={(checked) => updateSettings({ notificationsEnabled: checked })}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Email Notifications</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Receive email notifications for important events
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.emailNotifications}
+                    onCheckedChange={(checked) => updateSettings({ emailNotifications: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Default Note Behavior</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Choose what happens when you open the dashboard
+                    </p>
+                  </div>
+                  <Select
+                    value={settings.defaultNoteBehavior}
+                    onValueChange={(value: 'last-seen' | 'new-note') =>
+                      updateSettings({ defaultNoteBehavior: value })
+                    }
+                  >
+                    <SelectTrigger className="w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="last-seen">Last Seen Note</SelectItem>
+                      <SelectItem value="new-note">New Note</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="manage" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FolderPlus className="h-5 w-5" />
+                  Folder Management
+                </CardTitle>
+                <CardDescription>Create, edit, and organize your folders.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Current Folders</Label>
+                  <div className="border rounded-lg p-3 space-y-2 max-h-96 overflow-y-auto">
+                    {folders && folders.length > 0 ? (
+                      folders.map((folder) => (
+                        <div
+                          key={folder.id}
+                          className="flex items-center gap-2 p-2 hover:bg-accent rounded"
+                        >
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: folder.color }}
+                          />
+                          <span className="flex-1">{folder.name}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No folders yet</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TagIcon className="h-5 w-5" />
+                  Tag Management
+                </CardTitle>
+                <CardDescription>Manage your note tags.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Current Tags</Label>
+                  <div className="border rounded-lg p-3 space-y-2 max-h-96 overflow-y-auto">
+                    {tags && tags.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {tags.map((tag) => (
+                          <span
+                            key={tag.id}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-accent text-sm"
+                          >
+                            <TagIcon className="h-3 w-3" />
+                            {tag.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No tags yet</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </div>
+      </Tabs>
+    </div>
+  )
+}

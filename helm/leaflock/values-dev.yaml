@@ -3,6 +3,10 @@
 # Reduce resource requirements for development
 backend:
   replicaCount: 1
+  env:
+    ENABLE_DEFAULT_ADMIN: "true"
+    DEFAULT_ADMIN_EMAIL: "REDACTED_EMAIL"
+    DEFAULT_ADMIN_PASSWORD: "REDACTED_PASSWORD"
   resources:
     requests:
       cpu: 50m

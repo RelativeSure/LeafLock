@@ -1,0 +1,998 @@
+
+> leaflock-frontend@0.0.1-rc.20250910210438 test:coverage /home/rasmus/repos/LeafLock/frontend
+> vitest run --coverage
+
+
+ RUN  v3.2.4 /home/rasmus/repos/LeafLock/frontend
+      Coverage enabled with v8
+
+ ❯ src/components/ui/__tests__/alert.test.tsx (39 tests | 3 failed) 1107ms
+   ✓ Alert Components > Alert > should render alert element 166ms
+   ✓ Alert Components > Alert > should render with children 33ms
+   ✓ Alert Components > Alert > should apply custom className 29ms
+   ✓ Alert Components > Alert > should render default variant 17ms
+   ✓ Alert Components > Alert > should render destructive variant 21ms
+   ✓ Alert Components > Alert > should render as div by default 8ms
+   ✓ Alert Components > Alert > should apply role attribute 14ms
+   ✓ Alert Components > AlertTitle > should render alert title 12ms
+   ✓ Alert Components > AlertTitle > should render with text content 13ms
+   ✓ Alert Components > AlertTitle > should apply custom className 11ms
+   × Alert Components > AlertTitle > should render as h5 by default 40ms
+     → expected 'DIV' to be 'H5' // Object.is equality
+   ✓ Alert Components > AlertDescription > should render alert description 18ms
+   ✓ Alert Components > AlertDescription > should render with text content 13ms
+   ✓ Alert Components > AlertDescription > should apply custom className 15ms
+   ✓ Alert Components > AlertDescription > should render as div by default 5ms
+   ✓ Alert Components > Complete Alert Structure > should render complete alert with all components 17ms
+   ✓ Alert Components > Complete Alert Structure > should render alert without title 15ms
+   ✓ Alert Components > Complete Alert Structure > should render alert without description 7ms
+   ✓ Alert Components > Complete Alert Structure > should render alert with icon 20ms
+   ✓ Alert Components > Variants > should render default variant with all parts 37ms
+   ✓ Alert Components > Variants > should render destructive variant with all parts 5ms
+   ✓ Alert Components > Styling and Classes > should merge custom classes with default classes 4ms
+   ✓ Alert Components > Styling and Classes > should apply different styles to different alert parts 13ms
+   × Alert Components > Styling and Classes > should apply inline styles 387ms
+     → [2mexpect([22m[31melement[39m[2m).toHaveStyle()[22m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- backgroundColor: blue;[39m
+   ✓ Alert Components > Accessibility > should have alert role by default 5ms
+   ✓ Alert Components > Accessibility > should support aria-label 3ms
+   ✓ Alert Components > Accessibility > should support aria-describedby 17ms
+   × Alert Components > Accessibility > should have proper semantic structure 17ms
+     → expected 'DIV' to be 'H5' // Object.is equality
+   ✓ Alert Components > Edge Cases > should handle empty alert 3ms
+   ✓ Alert Components > Edge Cases > should handle null children 17ms
+   ✓ Alert Components > Edge Cases > should handle undefined children 12ms
+   ✓ Alert Components > Edge Cases > should handle mixed content types 16ms
+   ✓ Alert Components > Edge Cases > should handle long text content 6ms
+   ✓ Alert Components > Real World Usage > should render success alert 16ms
+   ✓ Alert Components > Real World Usage > should render error alert 21ms
+   ✓ Alert Components > Real World Usage > should render warning alert 15ms
+   ✓ Alert Components > Real World Usage > should render info alert 6ms
+   ✓ Alert Components > Multiple Alerts > should render multiple alerts 16ms
+   ✓ Alert Components > Multiple Alerts > should render alerts with different variants 4ms
+ ❯ src/components/ui/__tests__/avatar.test.tsx (34 tests | 6 failed) 1506ms
+   ✓ Avatar Components > Avatar > should render avatar element 125ms
+   ✓ Avatar Components > Avatar > should render with children 25ms
+   ✓ Avatar Components > Avatar > should apply custom className 36ms
+   ✓ Avatar Components > Avatar > should render as span by default 11ms
+   × Avatar Components > AvatarImage > should render avatar image 82ms
+     → Unable to find an element with the alt text: User avatar
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"relative flex size-8 shrink-0 overflow-hidden rounded-full transition-all duration-200 hover:scale-105 hover:shadow-md"[39m
+      [33mdata-slot[39m=[32m"avatar"[39m
+    [36m/>[39m
+  [36m</div>[39m
+[36m</body>[39m
+   × Avatar Components > AvatarImage > should apply custom className to image 30ms
+     → Unable to find an element with the alt text: User
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"relative flex size-8 shrink-0 overflow-hidden rounded-full transition-all duration-200 hover:scale-105 hover:shadow-md"[39m
+      [33mdata-slot[39m=[32m"avatar"[39m
+    [36m/>[39m
+  [36m</div>[39m
+[36m</body>[39m
+   ✓ Avatar Components > AvatarImage > should handle missing src gracefully 9ms
+   × Avatar Components > AvatarImage > should render with data attributes 18ms
+     → Unable to find an element by: [data-testid="avatar-image"]
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"relative flex size-8 shrink-0 overflow-hidden rounded-full transition-all duration-200 hover:scale-105 hover:shadow-md"[39m
+      [33mdata-slot[39m=[32m"avatar"[39m
+    [36m/>[39m
+  [36m</div>[39m
+[36m</body>[39m
+   ✓ Avatar Components > AvatarFallback > should render fallback text 22ms
+   ✓ Avatar Components > AvatarFallback > should render fallback with initials 26ms
+   ✓ Avatar Components > AvatarFallback > should apply custom className to fallback 12ms
+   ✓ Avatar Components > AvatarFallback > should render fallback with single character 16ms
+   ✓ Avatar Components > AvatarFallback > should render fallback with icon 29ms
+   ✓ Avatar Components > Complete Avatar Structure > should render avatar with image and fallback 21ms
+   ✓ Avatar Components > Complete Avatar Structure > should show fallback when image fails to load 99ms
+   ✓ Avatar Components > Complete Avatar Structure > should render multiple avatars 7ms
+   ✓ Avatar Components > Styling > should apply size classes 14ms
+   ✓ Avatar Components > Styling > should apply border radius 4ms
+   ✓ Avatar Components > Styling > should apply custom background color 4ms
+   × Avatar Components > Styling > should apply inline styles 665ms
+     → [2mexpect([22m[31melement[39m[2m).toHaveStyle()[22m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- border: 2px solid red;[39m
+   × Avatar Components > Accessibility > should have alt text for images 11ms
+     → Unable to find an element with the alt text: John Doe avatar
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"relative flex size-8 shrink-0 overflow-hidden rounded-full transition-all duration-200 hover:scale-105 hover:shadow-md"[39m
+      [33mdata-slot[39m=[32m"avatar"[39m
+    [36m/>[39m
+  [36m</div>[39m
+[36m</body>[39m
+   ✓ Avatar Components > Accessibility > should support aria-label 17ms
+   ✓ Avatar Components > Accessibility > should be keyboard accessible 10ms
+   ✓ Avatar Components > Real World Usage > should render user avatar with initials 6ms
+   × Avatar Components > Real World Usage > should render user avatar with image 92ms
+     → Unable to find an element with the alt text: Jane Smith
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"relative flex size-8 shrink-0 overflow-hidden rounded-full transition-all duration-200 hover:scale-105 hover:shadow-md"[39m
+      [33mdata-slot[39m=[32m"avatar"[39m
+    [36m>[39m
+      [36m<span[39m
+        [33mclass[39m=[32m"bg-muted flex size-full items-center justify-center rounded-full transition-all duration-200 animate-in fade-in-50"[39m
+        [33mdata-slot[39m=[32m"avatar-fallback"[39m
+      [36m>[39m
+        [0mJS[0m
+      [36m</span>[39m
+    [36m</span>[39m
+  [36m</div>[39m
+[36m</body>[39m
+   ✓ Avatar Components > Real World Usage > should render avatar in a list 7ms
+   ✓ Avatar Components > Edge Cases > should handle empty fallback 12ms
+   ✓ Avatar Components > Edge Cases > should handle very long initials 11ms
+   ✓ Avatar Components > Edge Cases > should handle special characters in fallback 17ms
+   ✓ Avatar Components > Edge Cases > should handle null children 9ms
+   ✓ Avatar Components > Edge Cases > should handle undefined image src 8ms
+   ✓ Avatar Components > Different Sizes > should render small avatar 8ms
+   ✓ Avatar Components > Different Sizes > should render medium avatar 4ms
+   ✓ Avatar Components > Different Sizes > should render large avatar 27ms
+ ❯ src/components/ui/__tests__/separator.test.tsx (20 tests | 2 failed) 1306ms
+   ✓ Separator > basic rendering > should render separator element 240ms
+   ✓ Separator > basic rendering > should render with horizontal orientation by default 16ms
+   ✓ Separator > basic rendering > should render with vertical orientation 19ms
+   ✓ Separator > basic rendering > should apply custom className 28ms
+   ✓ Separator > orientation variants > should render horizontal separator 26ms
+   ✓ Separator > orientation variants > should render vertical separator 7ms
+   ✓ Separator > decorative prop > should be decorative by default 15ms
+   ✓ Separator > decorative prop > should accept decorative prop 6ms
+   ✓ Separator > decorative prop > should work without decorative prop 24ms
+   ✓ Separator > styling > should merge custom classes with default classes 16ms
+   × Separator > styling > should apply inline styles 737ms
+     → [2mexpect([22m[31melement[39m[2m).toHaveStyle()[22m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- backgroundColor: blue;[39m
+   × Separator > accessibility > should have separator role 7ms
+     → [2mexpect([22m[31melement[39m[2m).toHaveAttribute([22m[32m[32m"role"[32m[39m[2m, [22m[32m[32m"separator"[32m[39m[2m) // element.getAttribute("role") === "separator"[22m
+
+Expected the element to have attribute:
+[32m  role="separator"[39m
+Received:
+[31m  role="none"[39m
+   ✓ Separator > accessibility > should support aria-orientation 27ms
+   ✓ Separator > usage in layouts > should work in horizontal layout 44ms
+   ✓ Separator > usage in layouts > should work in vertical layout 16ms
+   ✓ Separator > edge cases > should handle multiple separators 17ms
+   ✓ Separator > edge cases > should handle custom data attributes 14ms
+   ✓ Separator > composition > should work within a card 14ms
+   ✓ Separator > composition > should work in a navigation menu 6ms
+   ✓ Separator > composition > should work in a list 13ms
+ ❯ src/components/ui/__tests__/badge.test.tsx (30 tests | 1 failed) 1706ms
+   ✓ Badge > basic rendering > should render badge element 272ms
+   ✓ Badge > basic rendering > should render with text content 44ms
+   ✓ Badge > basic rendering > should render with children 48ms
+   × Badge > basic rendering > should render as div by default 123ms
+     → expected 'SPAN' to be 'DIV' // Object.is equality
+   ✓ Badge > variants > should render default variant 17ms
+   ✓ Badge > variants > should render secondary variant 17ms
+   ✓ Badge > variants > should render destructive variant 7ms
+   ✓ Badge > variants > should render outline variant 20ms
+   ✓ Badge > styling > should apply custom className 30ms
+   ✓ Badge > styling > should merge custom classes with default classes 62ms
+   ✓ Badge > styling > should apply inline styles  817ms
+   ✓ Badge > content types > should render with number content 16ms
+   ✓ Badge > content types > should render with icon 4ms
+   ✓ Badge > content types > should render with mixed content 24ms
+   ✓ Badge > content types > should render with empty content 3ms
+   ✓ Badge > accessibility > should support aria-label 28ms
+   ✓ Badge > accessibility > should support role attribute 17ms
+   ✓ Badge > accessibility > should support aria-live for dynamic content 23ms
+   ✓ Badge > edge cases > should handle null children 2ms
+   ✓ Badge > edge cases > should handle undefined children 2ms
+   ✓ Badge > edge cases > should handle empty string 2ms
+   ✓ Badge > edge cases > should handle zero as content 11ms
+   ✓ Badge > edge cases > should handle boolean false 2ms
+   ✓ Badge > data attributes > should apply data-testid attribute 3ms
+   ✓ Badge > data attributes > should apply custom data attributes 3ms
+   ✓ Badge > combinations > should render secondary variant with custom class 3ms
+   ✓ Badge > combinations > should render destructive variant with icon 46ms
+   ✓ Badge > combinations > should render outline variant with aria attributes 3ms
+   ✓ Badge > complex children > should render nested components 13ms
+   ✓ Badge > complex children > should render multiple text nodes 35ms
+ ❯ src/components/ui/__tests__/card.test.tsx (38 tests | 3 failed) 492ms
+   ✓ Card Components > Card > should render card element 92ms
+   ✓ Card Components > Card > should render with children 19ms
+   ✓ Card Components > Card > should apply custom className 15ms
+   ✓ Card Components > Card > should render as div by default 9ms
+   ✓ Card Components > Card > should apply default card styles 16ms
+   ✓ Card Components > CardHeader > should render card header 11ms
+   ✓ Card Components > CardHeader > should render with children 5ms
+   ✓ Card Components > CardHeader > should apply custom className 9ms
+   ✓ Card Components > CardHeader > should render multiple children 20ms
+   ✓ Card Components > CardTitle > should render card title 3ms
+   ✓ Card Components > CardTitle > should render with text content 7ms
+   ✓ Card Components > CardTitle > should apply custom className 9ms
+   × Card Components > CardTitle > should render as h3 by default 26ms
+     → expected 'DIV' to be 'H3' // Object.is equality
+   ✓ Card Components > CardDescription > should render card description 10ms
+   ✓ Card Components > CardDescription > should render with text content 5ms
+   ✓ Card Components > CardDescription > should apply custom className 11ms
+   × Card Components > CardDescription > should render as p by default 14ms
+     → expected 'DIV' to be 'P' // Object.is equality
+   ✓ Card Components > CardContent > should render card content 4ms
+   ✓ Card Components > CardContent > should render with children 4ms
+   ✓ Card Components > CardContent > should apply custom className 8ms
+   ✓ Card Components > CardContent > should render complex children 7ms
+   ✓ Card Components > CardFooter > should render card footer 30ms
+   ✓ Card Components > CardFooter > should render with children 3ms
+   ✓ Card Components > CardFooter > should apply custom className 10ms
+   ✓ Card Components > CardFooter > should render buttons in footer 7ms
+   ✓ Card Components > Complete Card Structure > should render complete card with all components 18ms
+   ✓ Card Components > Complete Card Structure > should render card without header 7ms
+   ✓ Card Components > Complete Card Structure > should render card without footer 13ms
+   ✓ Card Components > Complete Card Structure > should render card with only content 3ms
+   ✓ Card Components > Styling and Classes > should merge custom classes with default classes 13ms
+   ✓ Card Components > Styling and Classes > should apply different styles to different card parts 5ms
+   ✓ Card Components > Accessibility > should support aria attributes on card 8ms
+   ✓ Card Components > Accessibility > should support role attribute 8ms
+   × Card Components > Accessibility > should have proper semantic structure 15ms
+     → expected 'DIV' to be 'H3' // Object.is equality
+   ✓ Card Components > Edge Cases > should handle empty card 3ms
+   ✓ Card Components > Edge Cases > should handle null children 23ms
+   ✓ Card Components > Edge Cases > should handle undefined children 8ms
+   ✓ Card Components > Edge Cases > should handle mixed content types 6ms
+ ❯ src/components/ui/__tests__/input.test.tsx (38 tests | 2 failed) 5126ms
+   ✓ Input > basic rendering > should render input element  939ms
+   ✓ Input > basic rendering > should render with placeholder 7ms
+   ✓ Input > basic rendering > should render with default value 223ms
+   ✓ Input > basic rendering > should render with controlled value 229ms
+   × Input > input types > should render with text type by default 179ms
+     → [2mexpect([22m[31melement[39m[2m).toHaveAttribute([22m[32m[32m"type"[32m[39m[2m, [22m[32m[32m"text"[32m[39m[2m) // element.getAttribute("type") === "text"[22m
+
+Expected the element to have attribute:
+[32m  type="text"[39m
+Received:
+[31m  null[39m
+   ✓ Input > input types > should render with email type 33ms
+   ✓ Input > input types > should render with password type 6ms
+   ✓ Input > input types > should render with number type 10ms
+   ✓ Input > user interactions > should call onChange when value changes 126ms
+   ✓ Input > user interactions > should update value on user input 241ms
+   ✓ Input > user interactions > should call onFocus when focused 194ms
+   ✓ Input > user interactions > should call onBlur when blurred 87ms
+   ✓ Input > user interactions > should call onKeyDown when key is pressed 145ms
+   ✓ Input > attributes and props > should apply className prop 171ms
+   ✓ Input > attributes and props > should be disabled when disabled prop is true 93ms
+   ✓ Input > attributes and props > should be required when required prop is true 74ms
+   ✓ Input > attributes and props > should apply maxLength attribute 144ms
+   ✓ Input > attributes and props > should apply minLength attribute 120ms
+   ✓ Input > attributes and props > should apply pattern attribute 153ms
+   ✓ Input > attributes and props > should apply readOnly attribute 174ms
+   ✓ Input > attributes and props > should apply autoComplete attribute 68ms
+   × Input > attributes and props > should apply autoFocus attribute 89ms
+     → [2mexpect([22m[31melement[39m[2m).toHaveAttribute([22m[32m[32m"autoFocus"[32m[39m[2m) // element.hasAttribute("autoFocus")[22m
+
+Expected the element to have attribute:
+[32m  autoFocus[39m
+Received:
+[31m  null[39m
+   ✓ Input > attributes and props > should apply id attribute 101ms
+   ✓ Input > attributes and props > should apply name attribute 56ms
+   ✓ Input > attributes and props > should apply aria-label attribute 74ms
+   ✓ Input > attributes and props > should apply aria-describedby attribute 83ms
+   ✓ Input > attributes and props > should apply data attributes 3ms
+   ✓ Input > edge cases > should handle empty string value 137ms
+   ✓ Input > edge cases > should handle null placeholder 76ms
+   ✓ Input > edge cases > should handle multiple className values 115ms
+   ✓ Input > edge cases > should not be disabled by default 196ms
+   ✓ Input > edge cases > should not be required by default 72ms
+   ✓ Input > form integration > should work within a form 216ms
+   ✓ Input > form integration > should validate required field 123ms
+   ✓ Input > accessibility > should be focusable 75ms
+   ✓ Input > accessibility > should have proper role 69ms
+   ✓ Input > accessibility > should support aria-invalid attribute 88ms
+   ✓ Input > accessibility > should support aria-required attribute 69ms
+ ✓ src/__tests__/switch.test.tsx (4 tests) 1360ms
+   ✓ Switch Component > renders unchecked by default  862ms
+ ❯ src/components/auth/__tests__/forgot-password-form.test.tsx (22 tests | 2 failed | 4 skipped) 11808ms
+   ✓ ForgotPasswordForm > initial render > should render forgot password form with email field  1506ms
+   ✓ ForgotPasswordForm > initial render > should show instructions 47ms
+   ✓ ForgotPasswordForm > initial render > should have back to login button  378ms
+   ✓ ForgotPasswordForm > form input > should update email field on change 60ms
+   ✓ ForgotPasswordForm > form input > should have email type for input 48ms
+   ✓ ForgotPasswordForm > form input > should have required email field 30ms
+   ✓ ForgotPasswordForm > form input > should have placeholder text 24ms
+   ✓ ForgotPasswordForm > form submission > should show loading state during submission  1636ms
+   ✓ ForgotPasswordForm > form submission > should show success toast on successful submission  1381ms
+   ✓ ForgotPasswordForm > form submission > should show success screen after submission  1683ms
+   ✓ ForgotPasswordForm > form submission > should handle form submission with Enter key  1070ms
+   ↓ ForgotPasswordForm > success screen > should show email address in success message
+   ↓ ForgotPasswordForm > success screen > should show helpful instructions
+   ↓ ForgotPasswordForm > success screen > should have try again button
+   ↓ ForgotPasswordForm > success screen > should have back to login button on success screen
+   × ForgotPasswordForm > success screen > should return to form when clicking try again 1432ms
+     → Unable to find role="button" and name `/try again/i`
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-all duration-300 w-full max-w-md mx-auto"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 text-center"[39m
+      [36m>[39m
+        [36m<h1[39m
+          [33mclass[39m=[32m"text-2xl font-bold text-white"[39m
+        [36m>[39m
+          [0mReset your password[0m
+        [36m</h1>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-slate-400"[39m
+        [36m>[39m
+          [0mEnter your email address and we'll send you a link to reset your password.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0"[39m
+      [36m>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"space-y-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"space-y-2"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 transition-colors duration-200 hover:text-foreground/80"[39m
+              [33mdata-slot[39m=[32m"label"[39m
+              [33mfor[39m=[32m"email"[39m
+            [36m>[39m
+              [0mEmail[0m
+            [36m</label>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"relative"[39m
+            [36m>[39m
+              [36m<svg[39m
+                [33mclass[39m=[32m"lucide lucide-mail absolute left-3 top-3 h-4 w-4 text-muted transition-smooth"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"24"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"2"[39m
+                [33mviewBox[39m=[32m"0 0 24 24"[39m
+                [33mwidth[39m=[32m"24"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<rect[39m
+                  [33mheight[39m=[32m"16"[39m
+                  [33mrx[39m=[32m"2"[39m
+                  [33mwidth[39m=[32m"20"[39m
+                  [33mx[39m=[32m"2"[39m
+                  [33my[39m=[32m"4"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+              [36m<input[39m
+                [33mclass[39m=[32m"file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-md border bg-transparent text-base shadow-xs transition-all duration-200 outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm px-3 py-1 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:shadow-md hover:border-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive pl-10"[39m
+                [33mdata-slot[39m=[32m"input"[39m
+                [33mid[39m=[32m"email"[39m
+                [33mplaceholder[39m=[32m"you@example.com"[39m
+                [33mrequired[39m=[32m""[39m
+                [33mtype[39m=[32m"email"[39m
+                [33mvalue[39m=[32m"test@example.com"[39m
+              [36m/>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border border-transparent active:scale-[0.98] bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md h-9 px-4 py-2 has-[>svg]:px-3 w-full transition-bounce hover-lift"[39m
+            [33mdata-slot[39m=[32m"button"[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"submit"[39m
+          [36m>[39m
+            [0mSending...[0m
+          [36m</button>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"text-center"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border border-transparent active:scale-[0.98] hover:shadow-sm hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 h-9 px-4 py-2 has-[>svg]:px-3 text-sm"[39m
+              [33mdata-slot[39m=[32m"button"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [36m<svg[39m
+                [33mclass[39m=[32m"lucide lucide-arrow-left w-4 h-4 mr-2"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"24"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"2"[39m
+                [33mviewBox[39m=[32m"0 0 24 24"[39m
+                [33mwidth[39m=[32m"24"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"m12 19-7-7 7-7"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M19 12H5"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+              [0mBack to login[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</form>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-all duration-300 w-full max-w-md mx-auto"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 text-center"[39m
+        [36m>[39m
+          [36m<h1[39m
+            [33mclass[39m=[32m"text-2xl font-bold text-white"[39m
+          [36m>[39m
+            [0mReset your password[0m
+          [36m</h1>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-sm text-slate-400"[39m
+          [36m>[39m
+            [0mEnter your email address and we'll send you a link to reset your password.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"p-6 pt-0"[39m
+        [36m>[39m
+          [36m<form[39m
+            [33mclass[39m=[32m"space-y-4"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"space-y-2"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mclass[39m=[32m"flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 transition-colors duration-200 hover:text-foreground/80"[39m
+                [33mdata-slot[39m=[32m"label"[39m
+                [33mfor[39m=[32m"email"[39m
+              [36m>[39m
+                [0mEmail[0m
+              [36m</label>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"relative"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33mclass[39m=[32m"lucide lucide-mail absolute left-3 top-3 h-4 w-4 text-muted transition-smooth"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<rect[39m
+                    [33mheight[39m=[32m"16"[39m
+                    [33mrx[39m=[32m"2"[39m
+                    [33mwidth[39m=[32m"20"[39m
+                    [33mx[39m=[32m"2"[39m
+                    [33my[39m=[32m"4"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<input[39m
+                  [33mclass[39m=[32m"file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-md border bg-transparent text-base shadow-xs transition-all duration-200 outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm px-3 py-1 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:shadow-md hover:border-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive pl-10"[39m
+                  [33mdata-slot[39m=[32m"input"[39m
+                  [33mid[39m=[32m"email"[39m
+                  [33mplaceholder[39m=[32m"you@example.com"[39m
+                  [33mrequired[39m=[32m""[39m
+                  [33mtype[39m=[32m"email"[39m
+                  [33mvalue[39m=[32m"test@example.com"[39m
+                [36m/>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border border-transparent active:scale-[0.98] bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md h-9 px-4 py-2 has-[>svg]:px-3 w-full transition-bounce hover-lift"[39m
+              [33mdata-slot[39m=[32m"button"[39m
+              [33mdisabled[39m=[32m""[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0mSending...[0m
+            [36m</button>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-center"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border border-transparent active:scale-[0.98] hover:shadow-sm hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 h-9 px-4 py-2 has-[>svg]:px-3 text-sm"[39m
+                [33mdata-slot[39m=[32m"button"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33mclass[39m=[32m"lucide lucide-arrow-left w-4 h-4 mr-2"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m12 19-7-7 7-7"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M19 12H5"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [0mBack to login[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</form>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m
+   × ForgotPasswordForm > success screen > should preserve email when returning from success screen 1334ms
+     → Unable to find role="button" and name `/try again/i`
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-all duration-300 w-full max-w-md mx-auto"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 text-center"[39m
+      [36m>[39m
+        [36m<h1[39m
+          [33mclass[39m=[32m"text-2xl font-bold text-white"[39m
+        [36m>[39m
+          [0mReset your password[0m
+        [36m</h1>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-sm text-slate-400"[39m
+        [36m>[39m
+          [0mEnter your email address and we'll send you a link to reset your password.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"p-6 pt-0"[39m
+      [36m>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"space-y-4"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"space-y-2"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 transition-colors duration-200 hover:text-foreground/80"[39m
+              [33mdata-slot[39m=[32m"label"[39m
+              [33mfor[39m=[32m"email"[39m
+            [36m>[39m
+              [0mEmail[0m
+            [36m</label>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"relative"[39m
+            [36m>[39m
+              [36m<svg[39m
+                [33mclass[39m=[32m"lucide lucide-mail absolute left-3 top-3 h-4 w-4 text-muted transition-smooth"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"24"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"2"[39m
+                [33mviewBox[39m=[32m"0 0 24 24"[39m
+                [33mwidth[39m=[32m"24"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<rect[39m
+                  [33mheight[39m=[32m"16"[39m
+                  [33mrx[39m=[32m"2"[39m
+                  [33mwidth[39m=[32m"20"[39m
+                  [33mx[39m=[32m"2"[39m
+                  [33my[39m=[32m"4"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+              [36m<input[39m
+                [33mclass[39m=[32m"file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-md border bg-transparent text-base shadow-xs transition-all duration-200 outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm px-3 py-1 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:shadow-md hover:border-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive pl-10"[39m
+                [33mdata-slot[39m=[32m"input"[39m
+                [33mid[39m=[32m"email"[39m
+                [33mplaceholder[39m=[32m"you@example.com"[39m
+                [33mrequired[39m=[32m""[39m
+                [33mtype[39m=[32m"email"[39m
+                [33mvalue[39m=[32m"test@example.com"[39m
+              [36m/>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border border-transparent active:scale-[0.98] bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md h-9 px-4 py-2 has-[>svg]:px-3 w-full transition-bounce hover-lift"[39m
+            [33mdata-slot[39m=[32m"button"[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"submit"[39m
+          [36m>[39m
+            [0mSending...[0m
+          [36m</button>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"text-center"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border border-transparent active:scale-[0.98] hover:shadow-sm hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 h-9 px-4 py-2 has-[>svg]:px-3 text-sm"[39m
+              [33mdata-slot[39m=[32m"button"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [36m<svg[39m
+                [33mclass[39m=[32m"lucide lucide-arrow-left w-4 h-4 mr-2"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"24"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"2"[39m
+                [33mviewBox[39m=[32m"0 0 24 24"[39m
+                [33mwidth[39m=[32m"24"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"m12 19-7-7 7-7"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M19 12H5"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+              [0mBack to login[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</form>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-all duration-300 w-full max-w-md mx-auto"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex flex-col space-y-1.5 p-6 text-center"[39m
+        [36m>[39m
+          [36m<h1[39m
+            [33mclass[39m=[32m"text-2xl font-bold text-white"[39m
+          [36m>[39m
+            [0mReset your password[0m
+          [36m</h1>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-sm text-slate-400"[39m
+          [36m>[39m
+            [0mEnter your email address and we'll send you a link to reset your password.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"p-6 pt-0"[39m
+        [36m>[39m
+          [36m<form[39m
+            [33mclass[39m=[32m"space-y-4"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"space-y-2"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mclass[39m=[32m"flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 transition-colors duration-200 hover:text-foreground/80"[39m
+                [33mdata-slot[39m=[32m"label"[39m
+                [33mfor[39m=[32m"email"[39m
+              [36m>[39m
+                [0mEmail[0m
+              [36m</label>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"relative"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33mclass[39m=[32m"lucide lucide-mail absolute left-3 top-3 h-4 w-4 text-muted transition-smooth"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<rect[39m
+                    [33mheight[39m=[32m"16"[39m
+                    [33mrx[39m=[32m"2"[39m
+                    [33mwidth[39m=[32m"20"[39m
+                    [33mx[39m=[32m"2"[39m
+                    [33my[39m=[32m"4"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<input[39m
+                  [33mclass[39m=[32m"file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-md border bg-transparent text-base shadow-xs transition-all duration-200 outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm px-3 py-1 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:shadow-md hover:border-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive pl-10"[39m
+                  [33mdata-slot[39m=[32m"input"[39m
+                  [33mid[39m=[32m"email"[39m
+                  [33mplaceholder[39m=[32m"you@example.com"[39m
+                  [33mrequired[39m=[32m""[39m
+                  [33mtype[39m=[32m"email"[39m
+                  [33mvalue[39m=[32m"test@example.com"[39m
+                [36m/>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border border-transparent active:scale-[0.98] bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md h-9 px-4 py-2 has-[>svg]:px-3 w-full transition-bounce hover-lift"[39m
+              [33mdata-slot[39m=[32m"button"[39m
+              [33mdisabled[39m=[32m""[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0mSending...[0m
+            [36m</button>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"text-center"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border border-transparent active:scale-[0.98] hover:shadow-sm hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 h-9 px-4 py-2 has-[>svg]:px-3 text-sm"[39m
+                [33mdata-slot[39m=[32m"button"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33mclass[39m=[32m"lucide lucide-arrow-left w-4 h-4 mr-2"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                  [33mstroke-linecap[39m=[32m"round"[39m
+                  [33mstroke-linejoin[39m=[32m"round"[39m
+                  [33mstroke-width[39m=[32m"2"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"m12 19-7-7 7-7"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M19 12H5"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [0mBack to login[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</form>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m
+   ✓ ForgotPasswordForm > navigation > should call onToggleMode when clicking back to login from form 297ms
+   ✓ ForgotPasswordForm > navigation > should call onToggleMode when clicking back to login from success screen  676ms
+   ✓ ForgotPasswordForm > error handling > should have error handling structure in place 121ms
+   ✓ ForgotPasswordForm > edge cases > should accept various email formats in input 67ms
+   ✓ ForgotPasswordForm > edge cases > should handle empty email submission attempt 16ms
+ ✓ src/__tests__/button.test.tsx (4 tests) 1300ms
+   ✓ Button Component > renders with default props  716ms
+ ✓ src/components/ui/__tests__/skeleton.test.tsx (29 tests) 853ms
+   ✓ Skeleton > styling > should apply inline styles  492ms
+ ✓ src/components/auth/__tests__/login-form.test.tsx (20 tests) 6578ms
+   ✓ LoginForm > initial render > should render login form with email and password fields  1073ms
+   ✓ LoginForm > login submission > should call login with email and password on form submit  664ms
+   ✓ LoginForm > login submission > should show loading state during login  570ms
+   ✓ LoginForm > login submission > should display error message on login failure  526ms
+   ✓ LoginForm > login submission > should clear error message on new submission  431ms
+   ✓ LoginForm > MFA flow > should show MFA form when login requires MFA  346ms
+   ✓ LoginForm > MFA flow > should accept MFA code input and verify  483ms
+   ✓ LoginForm > MFA flow > should only accept numeric MFA code  385ms
+   ✓ LoginForm > MFA flow > should limit MFA code to 6 digits  363ms
+   ✓ LoginForm > MFA flow > should show error on invalid MFA code  415ms
+   ✓ LoginForm > MFA flow > should show error on MFA verification failure  433ms
+ ✓ src/components/__tests__/theme-toggle.test.tsx (7 tests) 7890ms
+   ✓ ThemeToggle > should render theme toggle button  895ms
+   ✓ ThemeToggle > should open dropdown menu when clicked  1702ms
+   ✓ ThemeToggle > should change theme to light when Light option is clicked  2382ms
+   ✓ ThemeToggle > should change theme to dark when Dark option is clicked  1629ms
+   ✓ ThemeToggle > should change theme to system when System option is clicked  1200ms
+ ✓ src/lib/__tests__/navigation.test.ts (21 tests) 281ms
+ ✓ src/hooks/__tests__/use-decrypted-notes.test.ts (9 tests) 616ms
+ ✓ src/lib/__tests__/config.test.ts (30 tests) 372ms
+ ✓ src/hooks/__tests__/useConfig.test.ts (20 tests) 268ms
+ ✓ src/components/auth/__tests__/register-form.test.tsx (28 tests) 11312ms
+   ✓ RegisterForm > initial render > should render registration form with all required fields  1006ms
+   ✓ RegisterForm > name validation > should show error for name shorter than 2 characters  832ms
+   ✓ RegisterForm > name validation > should show error for name with invalid characters  712ms
+   ✓ RegisterForm > name validation > should accept valid names with spaces, hyphens, and apostrophes  369ms
+   ✓ RegisterForm > email validation > should show error for invalid email format  1326ms
+   ✓ RegisterForm > email validation > should accept valid email addresses  449ms
+   ✓ RegisterForm > password validation > should show error if password is too short  333ms
+   ✓ RegisterForm > password validation > should show error if password lacks uppercase  480ms
+   ✓ RegisterForm > password validation > should show error if password lacks lowercase  463ms
+   ✓ RegisterForm > password validation > should show error if password lacks number  474ms
+   ✓ RegisterForm > password validation > should show error if passwords do not match  531ms
+   ✓ RegisterForm > password validation > should accept valid password meeting all requirements  520ms
+   ✓ RegisterForm > registration submission > should call register with email, password, and name  415ms
+   ✓ RegisterForm > registration submission > should show loading state during registration  409ms
+   ✓ RegisterForm > registration submission > should redirect to dashboard on successful registration  444ms
+   ✓ RegisterForm > registration submission > should display error message on registration failure  388ms
+   ✓ RegisterForm > registration submission > should clear error message on new submission  624ms
+   ✓ RegisterForm > edge cases > should handle non-Error exceptions during registration  338ms
+ ✓ src/stores/__tests__/templatesStore.test.ts (34 tests) 135ms
+ ✓ src/services/api/__tests__/secureApi.test.ts (22 tests) 145ms
+ ✓ src/stores/__tests__/notesStore.test.ts (30 tests) 149ms
+ ✓ src/__tests__/utils.test.ts (4 tests) 35ms
+ ✓ src/stores/__tests__/authStore.test.ts (29 tests) 109ms
+ ✓ src/lib/__tests__/gravatar-utils.test.ts (36 tests) 66ms
+ ✓ src/stores/__tests__/settingsStore.test.ts (25 tests) 109ms
+ ✓ src/lib/__tests__/activity-logger.test.ts (3 tests) 13ms
+ ✓ src/hooks/__tests__/use-toast.test.ts (4 tests) 8ms
+ ✓ src/lib/__tests__/permission-utils.test.ts (23 tests) 10ms
+
+ Test Files  8 failed | 20 passed (28)
+      Tests  19 failed | 580 passed | 4 skipped (603)
+   Start at  22:23:46
+   Duration  27.92s (transform 2.54s, setup 6.40s, collect 13.10s, tests 54.66s, environment 77.25s, prepare 7.96s)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   17.56 |    87.87 |   52.29 |   17.56 |                   
+ frontend          |       0 |        0 |       0 |       0 |                   
+  ...nt.config.mjs |       0 |        0 |       0 |       0 | 1-168             
+ frontend/src      |       0 |        0 |       0 |       0 |                   
+  App.tsx          |       0 |        0 |       0 |       0 | 1-43              
+  router.tsx       |       0 |        0 |       0 |       0 | 1-307             
+ ...src/components |    26.5 |      100 |     100 |    26.5 |                   
+  ...e-consent.tsx |       0 |      100 |     100 |       0 | 3-74              
+  theme-toggle.tsx |     100 |      100 |     100 |     100 |                   
+ ...mponents/admin |       0 |        0 |       0 |       0 |                   
+  admin-page.tsx   |       0 |        0 |       0 |       0 | 1-759             
+ ...omponents/auth |   97.92 |     92.5 |   84.21 |   97.92 |                   
+  ...word-form.tsx |   98.88 |     90.9 |      75 |   98.88 | 29                
+  login-form.tsx   |   96.82 |    86.66 |      75 |   96.82 | 31-37             
+  ...ster-form.tsx |   98.51 |    97.43 |     100 |   98.51 | 64-66             
+ ...ponents/common |       0 |    33.33 |   33.33 |       0 |                   
+  ...rBoundary.tsx |       0 |        0 |       0 |       0 | 1-63              
+  ...ctedRoute.tsx |       0 |      100 |     100 |       0 | 3-84              
+  index.ts         |       0 |        0 |       0 |       0 | 1                 
+ ...ents/dashboard |       0 |    76.47 |   76.47 |       0 |                   
+  ...earch-bar.tsx |       0 |      100 |     100 |       0 | 3-560             
+  ...tions-bar.tsx |       0 |      100 |     100 |       0 | 3-384             
+  ...ation-bar.tsx |       0 |      100 |     100 |       0 | 3-53              
+  ...ck-dialog.tsx |       0 |      100 |     100 |       0 | 3-125             
+  ...ts-dialog.tsx |       0 |      100 |     100 |       0 | 3-68              
+  note-editor.tsx  |       0 |      100 |     100 |       0 | 2-582             
+  ...ing-utils.tsx |       0 |      100 |     100 |       0 | 3-421             
+  note-list.tsx    |       0 |        0 |       0 |       0 | 1-342             
+  note-stats.tsx   |       0 |      100 |     100 |       0 | 3-36              
+  ...xt-editor.tsx |       0 |      100 |     100 |       0 | 3-254             
+  ...te-dialog.tsx |       0 |      100 |     100 |       0 | 3-109             
+  search-bar.tsx   |       0 |      100 |     100 |       0 | 3-161             
+  ...te-dialog.tsx |       0 |      100 |     100 |       0 | 3-155             
+  sidebar.tsx      |       0 |        0 |       0 |       0 | 1-288             
+  ...es-dialog.tsx |       0 |        0 |       0 |       0 | 1-319             
+  trash-dialog.tsx |       0 |        0 |       0 |       0 | 1-204             
+  ...ry-dialog.tsx |       0 |      100 |     100 |       0 | 3-591             
+ ...mponents/debug |       0 |        0 |       0 |       0 |                   
+  ConfigDebug.tsx  |       0 |        0 |       0 |       0 | 1-106             
+ ...nts/management |       0 |      100 |     100 |       0 |                   
+  ...tags-page.tsx |       0 |      100 |     100 |       0 | 3-362             
+ ...nts/navigation |       0 |      100 |     100 |       0 |                   
+  ...avigation.tsx |       0 |      100 |     100 |       0 | 4-189             
+ ...nents/settings |       0 |      100 |     100 |       0 |                   
+  ...e-minimal.tsx |       0 |      100 |     100 |       0 | 3-25              
+  ...ings-page.tsx |       0 |      100 |     100 |       0 | 3-497             
+ ...omponents/tags |       0 |      100 |     100 |       0 |                   
+  tags-page.tsx    |       0 |      100 |     100 |       0 | 3-181             
+ ...ents/templates |       0 |      100 |     100 |       0 |                   
+  ...ates-page.tsx |       0 |      100 |     100 |       0 | 3-303             
+ .../components/ui |   17.49 |     87.5 |   68.96 |   17.49 |                   
+  alert-dialog.tsx |       0 |      100 |     100 |       0 | 3-109             
+  alert.tsx        |     100 |      100 |     100 |     100 |                   
+  avatar.tsx       |     100 |      100 |     100 |     100 |                   
+  badge.tsx        |     100 |       50 |     100 |     100 | 31                
+  button.tsx       |     100 |       50 |     100 |     100 | 44                
+  card.tsx         |     100 |      100 |     100 |     100 |                   
+  checkbox.tsx     |       0 |      100 |     100 |       0 | 3-32              
+  collapsible.tsx  |       0 |      100 |     100 |       0 | 3-32              
+  context-menu.tsx |       0 |      100 |     100 |       0 | 3-177             
+  dialog.tsx       |       0 |      100 |     100 |       0 | 3-141             
+  drawer.tsx       |       0 |      100 |     100 |       0 | 3-93              
+  ...down-menu.tsx |   38.41 |      100 |   16.66 |   38.41 | ...87-202,209-220 
+  hover-card.tsx   |       0 |      100 |     100 |       0 | 3-33              
+  input.tsx        |     100 |      100 |     100 |     100 |                   
+  ...d-pattern.tsx |       0 |      100 |     100 |       0 | 2-100             
+  item.tsx         |       0 |        0 |       0 |       0 | 1-200             
+  label.tsx        |     100 |      100 |     100 |     100 |                   
+  menubar.tsx      |       0 |      100 |     100 |       0 | 3-212             
+  ...tion-menu.tsx |       0 |        0 |       0 |       0 | 1-162             
+  popover.tsx      |       0 |      100 |     100 |       0 | 3-37              
+  rolling-text.tsx |       0 |      100 |     100 |       0 | 3-87              
+  scroll-area.tsx  |       0 |      100 |     100 |       0 | 3-58              
+  select.tsx       |       0 |        0 |       0 |       0 | 1-138             
+  separator.tsx    |     100 |      100 |     100 |     100 |                   
+  sheet.tsx        |       0 |      100 |     100 |       0 | 3-123             
+  ...ring-text.tsx |       0 |      100 |     100 |       0 | 2-83              
+  skeleton.tsx     |     100 |      100 |     100 |     100 |                   
+  slider.tsx       |       0 |      100 |     100 |       0 | 3-23              
+  sonner.tsx       |       0 |      100 |     100 |       0 | 3-27              
+  switch.tsx       |     100 |      100 |     100 |     100 |                   
+  table.tsx        |       0 |      100 |     100 |       0 | 3-131             
+  tabs.tsx         |       0 |      100 |     100 |       0 | 3-72              
+  tooltip.tsx      |       0 |        0 |       0 |       0 | 1-59              
+  user-avatar.tsx  |       0 |      100 |     100 |       0 | 3-65              
+ ...nd/src/context |   90.69 |       70 |      75 |   90.69 |                   
+  ThemeContext.tsx |   92.85 |    77.77 |     100 |   92.85 | 35,63-64          
+  index.ts         |       0 |        0 |       0 |       0 | 1                 
+ ...tend/src/hooks |   94.94 |    84.37 |     100 |   94.94 |                   
+  ...pted-notes.ts |   92.85 |    78.26 |     100 |   92.85 | 47-48,53-55       
+  use-toast.ts     |     100 |      100 |     100 |     100 |                   
+  useConfig.ts     |     100 |      100 |     100 |     100 |                   
+ frontend/src/lib  |   36.68 |    93.33 |   68.42 |   36.68 |                   
+  ...ity-logger.ts |     100 |      100 |     100 |     100 |                   
+  ...n-context.tsx |       0 |      100 |     100 |       0 | 9-24              
+  config.ts        |   92.38 |    90.69 |     100 |   92.38 | ...41,46-47,89-90 
+  ...n-context.tsx |       0 |        0 |       0 |       0 | 1-139             
+  ...tion-utils.ts |    3.23 |      100 |       0 |    3.23 | ...79-186,189-295 
+  ...atar-utils.ts |     100 |      100 |     100 |     100 |                   
+  navigation.ts    |     100 |    92.85 |     100 |     100 | 9                 
+  ...sion-utils.ts |     100 |      100 |     100 |     100 |                   
+  utils.ts         |     100 |      100 |     100 |     100 |                   
+ ...c/services/api |   37.25 |    78.37 |   13.88 |   37.25 |                   
+  secureApi.ts     |   37.25 |    78.37 |   13.88 |   37.25 | ...56-858,861-865 
+ ...end/src/stores |   61.15 |    90.04 |    50.9 |   61.15 |                   
+  authStore.ts     |     100 |     91.3 |     100 |     100 | 92,151,163,174    
+  index.ts         |       0 |      100 |     100 |       0 | 3-10              
+  notesStore.ts    |   36.52 |     90.9 |   22.85 |   36.52 | ...31-637,640-646 
+  settingsStore.ts |     100 |      100 |     100 |     100 |                   
+  ...latesStore.ts |   98.49 |    86.15 |     100 |   98.49 | 99-100            
+ ...tend/src/types |       0 |        0 |       0 |       0 |                   
+  index.ts         |       0 |        0 |       0 |       0 |                   
+  libsodium.d.ts   |       0 |        0 |       0 |       0 |                   
+-------------------|---------|----------|---------|---------|-------------------
+ ELIFECYCLE  Command failed with exit code 1.

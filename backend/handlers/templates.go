@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"log"
 	"time"
 
@@ -51,7 +52,7 @@ func (h *TemplatesHandler) GetTemplates(c *fiber.Ctx) error {
 	ctx := context.Background()
 
 	rows, err := h.db.Query(ctx, `
-		SELECT id, name_encrypted, description_encrypted, content_encrypted, tags, icon, is_public, usage_count, created_at, updated_at
+		SELECT id, user_id, name_encrypted, description_encrypted, content_encrypted, tags, icon, is_public, usage_count, created_at, updated_at
 		FROM templates
 		WHERE user_id = $1 OR is_public = true
 		ORDER BY created_at DESC
@@ -65,13 +66,14 @@ func (h *TemplatesHandler) GetTemplates(c *fiber.Ctx) error {
 	for rows.Next() {
 		var id uuid.UUID
 		var nameEncrypted, descriptionEncrypted, contentEncrypted []byte
+		var ownerID sql.NullString
 		var tags []string
 		var icon string
 		var isPublic bool
 		var usageCount int
 		var createdAt, updatedAt time.Time
 
-		err := rows.Scan(&id, &nameEncrypted, &descriptionEncrypted, &contentEncrypted, &tags, &icon, &isPublic, &usageCount, &createdAt, &updatedAt)
+		err := rows.Scan(&id, &ownerID, &nameEncrypted, &descriptionEncrypted, &contentEncrypted, &tags, &icon, &isPublic, &usageCount, &createdAt, &updatedAt)
 		if err != nil {
 			continue
 		}
@@ -104,6 +106,12 @@ func (h *TemplatesHandler) GetTemplates(c *fiber.Ctx) error {
 			"updated_at":  updatedAt,
 		}
 
+		if ownerID.Valid {
+			template["user_id"] = ownerID.String
+		} else {
+			template["user_id"] = nil
+		}
+
 		templates = append(templates, template)
 	}
 
@@ -119,6 +127,7 @@ func (h *TemplatesHandler) GetTemplate(c *fiber.Ctx) error {
 
 	ctx := context.Background()
 	var nameEncrypted, descriptionEncrypted, contentEncrypted []byte
+	var ownerID sql.NullString
 	var tags []string
 	var icon string
 	var isPublic bool
@@ -126,10 +135,10 @@ func (h *TemplatesHandler) GetTemplate(c *fiber.Ctx) error {
 	var createdAt, updatedAt time.Time
 
 	err = h.db.QueryRow(ctx, `
-		SELECT name_encrypted, description_encrypted, content_encrypted, tags, icon, is_public, usage_count, created_at, updated_at
+		SELECT user_id, name_encrypted, description_encrypted, content_encrypted, tags, icon, is_public, usage_count, created_at, updated_at
 		FROM templates
 		WHERE id = $1 AND (user_id = $2 OR is_public = true)
-	`, templateID, userID).Scan(&nameEncrypted, &descriptionEncrypted, &contentEncrypted, &tags, &icon, &isPublic, &usageCount, &createdAt, &updatedAt)
+	`, templateID, userID).Scan(&ownerID, &nameEncrypted, &descriptionEncrypted, &contentEncrypted, &tags, &icon, &isPublic, &usageCount, &createdAt, &updatedAt)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Template not found"})
 	}
@@ -166,6 +175,12 @@ func (h *TemplatesHandler) GetTemplate(c *fiber.Ctx) error {
 		"usage_count": usageCount,
 		"created_at":  createdAt,
 		"updated_at":  updatedAt,
+	}
+
+	if ownerID.Valid {
+		template["user_id"] = ownerID.String
+	} else {
+		template["user_id"] = nil
 	}
 
 	return c.JSON(template)
@@ -206,18 +221,30 @@ func (h *TemplatesHandler) CreateTemplate(c *fiber.Ctx) error {
 
 	ctx := context.Background()
 	var templateID uuid.UUID
+	var createdAt time.Time
+	var updatedAt time.Time
+	var usageCount int
 	err = h.db.QueryRow(ctx, `
 		INSERT INTO templates (user_id, name_encrypted, description_encrypted, content_encrypted, tags, icon, is_public)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id
-	`, userID, nameEncrypted, descriptionEncrypted, contentEncrypted, req.Tags, icon, req.IsPublic).Scan(&templateID)
+		RETURNING id, created_at, updated_at, usage_count
+	`, userID, nameEncrypted, descriptionEncrypted, contentEncrypted, req.Tags, icon, req.IsPublic).Scan(&templateID, &createdAt, &updatedAt, &usageCount)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create template"})
 	}
 
 	return c.Status(201).JSON(fiber.Map{
-		"id":      templateID,
-		"message": "Template created successfully",
+		"id":          templateID,
+		"name":        req.Name,
+		"description": req.Description,
+		"content":     req.Content,
+		"tags":        req.Tags,
+		"icon":        icon,
+		"is_public":   req.IsPublic,
+		"usage_count": usageCount,
+		"user_id":     userID.String(),
+		"created_at":  createdAt,
+		"updated_at":  updatedAt,
 	})
 }
 
@@ -272,7 +299,30 @@ func (h *TemplatesHandler) UpdateTemplate(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Template not found or access denied"})
 	}
 
-	return c.JSON(fiber.Map{"message": "Template updated successfully"})
+	var usageCount int
+	var createdAt, updatedAt time.Time
+	err = h.db.QueryRow(ctx, `
+		SELECT usage_count, created_at, updated_at
+		FROM templates
+		WHERE id = $1
+	`, templateID).Scan(&usageCount, &createdAt, &updatedAt)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to load updated template"})
+	}
+
+	return c.JSON(fiber.Map{
+		"id":          templateID,
+		"name":        req.Name,
+		"description": req.Description,
+		"content":     req.Content,
+		"tags":        req.Tags,
+		"icon":        icon,
+		"is_public":   req.IsPublic,
+		"usage_count": usageCount,
+		"user_id":     userID.String(),
+		"created_at":  createdAt,
+		"updated_at":  updatedAt,
+	})
 }
 
 func (h *TemplatesHandler) DeleteTemplate(c *fiber.Ctx) error {

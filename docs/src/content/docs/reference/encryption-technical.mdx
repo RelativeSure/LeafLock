@@ -177,6 +177,10 @@ CREATE TABLE notes (
 );
 ```
 
+#### Client-Side Encryption Pipeline (v1)
+
+Notes are encrypted in the browser with libsodium's `crypto_aead_xchacha20poly1305_ietf` using a per-user key derived via Argon2id. Each payload is serialized as `nonce || ciphertext || tag`, base64 encoded, and shipped to the API. The backend stores the raw bytes as opaque blobs; it never sees decrypted content. Every response now carries `encryption_version: 1` so clients can rotate algorithms in the future without breaking old records.
+
 ### Workspace Key Encryption
 
 ```sql
@@ -189,6 +193,11 @@ CREATE TABLE workspaces (
 ```
 
 Each workspace has its own encryption key, encrypted with the owner's master key.
+
+### Persistence & Caching
+
+- Postgres remains the system of record for encrypted note blobs and version history.
+- Redis is reserved for ephemeral concerns (presence, search caches, optimistic collaboration state) and must never store authoritative note bodies.
 
 ## JWT Token Security
 

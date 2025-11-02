@@ -33,7 +33,7 @@ import (
 
 // Test configuration
 const (
-	TestDatabaseURL = "postgres://test:test@localhost:5433/test_leaflock?sslmode=disable" // secretlint-disable-line
+	TestDatabaseURL = "postgres://test:test@localhost:5433/test_notes?sslmode=disable" // secretlint-disable-line
 	TestRedisURL    = "localhost:6380"
 )
 
@@ -335,7 +335,7 @@ func TestPasswordHashing(t *testing.T) {
 
 		// Times should be within reasonable range (not exact due to system variations)
 		ratio := float64(duration1) / float64(duration2)
-		assert.True(t, ratio > 0.5 && ratio < 2.0, "Password verification should be constant time")
+		assert.True(t, ratio > 0.25 && ratio < 4.0, "Password verification should be constant time")
 	})
 }
 

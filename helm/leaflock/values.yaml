@@ -117,6 +117,9 @@ backend:
     PORT: "8080"
     CORS_ORIGINS: "https://localhost:3000"
     ENABLE_METRICS: "true"
+    ENABLE_DEFAULT_ADMIN: "true"
+    DEFAULT_ADMIN_EMAIL: "REDACTED_EMAIL"
+    DEFAULT_ADMIN_PASSWORD: "REDACTED_PASSWORD"
 
   # Volume mounts for temporary files
   volumeMounts:

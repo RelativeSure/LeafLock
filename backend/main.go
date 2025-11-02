@@ -24,15 +24,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/redis/go-redis/v9"
+	"leaflock/auth"
 	appconfig "leaflock/config"
 	appcrypto "leaflock/crypto"
 	appdb "leaflock/database"
+	_ "leaflock/docs"     // Import docs for Swagger
+	_ "leaflock/handlers" // Import handlers for Swagger
 	appserver "leaflock/server"
 	"leaflock/services"
 	"leaflock/utils"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/redis/go-redis/v9"
 )
 
 // AUTOMATIC DATABASE SETUP - Runs migrations on startup
@@ -141,9 +145,16 @@ func main() {
 	// Begin async initialization of non-critical components
 	initStart := time.Now()
 
-	// Note: Admin user creation now handled by modern auth package
-	// Admin users created via registration flow with admin flag
-	log.Println("✅ Modern auth package enabled")
+	// Create default admin user if enabled and no users exist
+	adminStart := time.Now()
+	authService := auth.NewService(db, rdb, crypto, string(config.JWTSecret))
+	if err := authService.EnsureDefaultAdmin(context.Background(), config.DefaultAdminEnabled, config.DefaultAdminEmail, config.DefaultAdminPassword); err != nil {
+		log.Printf("⚠️  Failed to create default admin user: %v", err)
+	} else if config.DefaultAdminEnabled {
+		log.Printf("✅ Default admin user created: %s", config.DefaultAdminEmail)
+		log.Printf("⚠️  SECURITY WARNING: Change the default admin password immediately!")
+	}
+	log.Printf("⏱️  Admin initialization completed in %v", time.Since(adminStart))
 	readyState.MarkAdminReady()
 
 	// Initialize templates

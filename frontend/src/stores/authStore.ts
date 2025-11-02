@@ -1,124 +1,189 @@
 import { create } from 'zustand'
-
-interface MfaStatus {
-  enabled: boolean
-  has_secret: boolean
-}
-
-interface MfaSetup {
-  secret: string
-  otpauth_url: string
-  issuer?: string
-  account?: string
-}
+import { persist } from 'zustand/middleware'
+import type { User } from '../types'
+import { apiClient } from '../services/api/secureApi'
+import { deriveKey, setStoredKey, setStoredSalt } from '@/lib/encryption-utils'
 
 interface AuthState {
-  // Authentication state
-  isAuthenticated: boolean
-  token: string | null
-  userId: string | null
-  workspaceId: string | null
-  isAdmin: boolean
-
-  // MFA state
-  mfaStatus: MfaStatus | null
-  mfaSetup: MfaSetup | null
-  mfaBackupCodes: string[] | null
-  mfaVerificationPending: boolean
-  mfaSessionToken: string | null
-
-  // Actions
-  setAuthenticated: (token: string, userId: string, workspaceId?: string) => void
-  setMfaRequired: (sessionToken: string) => void
-  setMfaStatus: (status: MfaStatus) => void
-  setMfaSetup: (setup: MfaSetup | null) => void
-  setBackupCodes: (codes: string[] | null) => void
-  completeMfaVerification: (token: string, userId: string, workspaceId?: string) => void
-  setAdmin: (isAdmin: boolean) => void
+  user: User | null
+  isLoading: boolean
+  pendingEncryption: { password: string; salt?: string | null } | null
+  login: (email: string, password: string) => Promise<{ requiresMFA: boolean }>
+  verifyMFA: (code: string) => Promise<boolean>
   logout: () => void
-  reset: () => void
+  register: (email: string, password: string, name: string) => Promise<void>
+  enableMFA: () => Promise<string>
+  disableMFA: () => Promise<void>
+  initialize: () => Promise<void>
 }
 
-const initialState = {
-  isAuthenticated: false,
-  token: null,
-  userId: null,
-  workspaceId: null,
-  isAdmin: false,
-  mfaStatus: null,
-  mfaSetup: null,
-  mfaBackupCodes: null,
-  mfaVerificationPending: false,
-  mfaSessionToken: null,
-}
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      isLoading: true,
+      pendingEncryption: null,
 
-export const useAuthStore = create<AuthState>((set) => ({
-  ...initialState,
+      initialize: async () => {
+        console.log('Auth store initializing...')
+        const storedUser = localStorage.getItem('user')
+        const storedToken = localStorage.getItem('token')
 
-  setAuthenticated: (token, userId, workspaceId) =>
-    set({
-      isAuthenticated: true,
-      token,
-      userId,
-      workspaceId: workspaceId || null,
-      mfaVerificationPending: false,
-      mfaSessionToken: null,
+        if (storedUser && storedToken) {
+          try {
+            const userData = JSON.parse(storedUser)
+            set({ user: userData })
+            console.log('Found stored user:', userData.email)
+            // Don't validate health check on initial load - it can cause redirect loops
+            // The API client will handle 401 errors on actual API calls
+            console.log('Token found in storage')
+          } catch (error) {
+            console.error('Error parsing stored user or token invalid:', error)
+            localStorage.removeItem('user')
+            localStorage.removeItem('token')
+            set({ user: null })
+          }
+        } else {
+          // Ensure we clear any stale in-memory user if token is missing
+          if (storedUser || storedToken) {
+            localStorage.removeItem('user')
+            localStorage.removeItem('token')
+          }
+          set({ user: null })
+          console.log('No stored user/token found; clearing user state')
+        }
+        console.log('Auth store initialization complete, setting isLoading to false')
+        set({ isLoading: false })
+      },
+
+      login: async (email: string, password: string) => {
+        try {
+          const response = await apiClient.login(email, password)
+
+          if (response.requiresMFA) {
+            if (response.encryptionSalt) {
+              await setStoredSalt(response.encryptionSalt)
+            }
+            set({ pendingEncryption: { password, salt: response.encryptionSalt } })
+            return { requiresMFA: true }
+          }
+
+          set({ user: { ...response.user, isAdmin: response.user.role === 'admin' } })
+
+          if (response.encryptionSalt) {
+            console.log('[Auth] Received salt on login (success)', {
+              len: response.encryptionSalt.length,
+              prefix: response.encryptionSalt.slice(0, 12),
+            })
+            await setStoredSalt(response.encryptionSalt)
+            try {
+              const derivedKey = await deriveKey(password, response.encryptionSalt)
+              setStoredKey(derivedKey)
+            } catch (deriveError) {
+              console.error('Failed to derive encryption key:', deriveError)
+              setStoredKey(null)
+            }
+          }
+
+          set({ pendingEncryption: null })
+
+          return { requiresMFA: false }
+        } catch (error) {
+          throw new Error(error instanceof Error ? error.message : 'Login failed')
+        }
+      },
+
+      verifyMFA: async (code: string) => {
+        try {
+          const response = await apiClient.verifyMFA(code)
+          set({ user: { ...response.user, isAdmin: response.user.role === 'admin' } })
+
+          const { pendingEncryption } = get()
+          const salt = response.encryptionSalt || pendingEncryption?.salt
+          if (salt) {
+            console.log('[Auth] Received salt on verifyMFA', {
+              len: salt.length,
+              prefix: salt.slice(0, 12),
+            })
+            await setStoredSalt(salt)
+          }
+
+          if (pendingEncryption?.password && salt) {
+            try {
+              const derivedKey = await deriveKey(pendingEncryption.password, salt)
+              setStoredKey(derivedKey)
+            } catch (deriveError) {
+              console.error('Failed to derive encryption key after MFA verification:', deriveError)
+              setStoredKey(null)
+            }
+          }
+
+          set({ pendingEncryption: null })
+          return true
+        } catch (error) {
+          console.error('MFA verification failed:', error)
+          return false
+        }
+      },
+
+      register: async (email: string, password: string, name: string) => {
+        try {
+          const response = await apiClient.register(email, password, name)
+          set({ user: { ...response.user, isAdmin: response.user.role === 'admin' } })
+
+          if (response.encryptionSalt) {
+            console.log('[Auth] Received salt on register', {
+              len: response.encryptionSalt.length,
+              prefix: response.encryptionSalt.slice(0, 12),
+            })
+            await setStoredSalt(response.encryptionSalt)
+            try {
+              const derivedKey = await deriveKey(password, response.encryptionSalt)
+              setStoredKey(derivedKey)
+            } catch (deriveError) {
+              console.error('Failed to derive encryption key after registration:', deriveError)
+              setStoredKey(null)
+            }
+          }
+
+          set({ pendingEncryption: null })
+        } catch (error) {
+          throw new Error(error instanceof Error ? error.message : 'Registration failed')
+        }
+      },
+
+      enableMFA: async () => {
+        const { user } = get()
+        if (!user) throw new Error('No user logged in')
+
+        try {
+          const response = await apiClient.beginMFASetup()
+          return response.secret
+        } catch (error) {
+          throw new Error(error instanceof Error ? error.message : 'Failed to enable MFA')
+        }
+      },
+
+      disableMFA: async () => {
+        const { user } = get()
+        if (!user) throw new Error('No user logged in')
+
+        try {
+          await apiClient.disableMFA()
+        } catch (error) {
+          throw new Error(error instanceof Error ? error.message : 'Failed to disable MFA')
+        }
+      },
+
+      logout: () => {
+        apiClient.logout()
+        set({ user: null, pendingEncryption: null })
+        setStoredKey(null)
+      },
     }),
-
-  setMfaRequired: (sessionToken) =>
-    set({
-      mfaVerificationPending: true,
-      mfaSessionToken: sessionToken,
-      isAuthenticated: false,
-    }),
-
-  setMfaStatus: (status) =>
-    set({
-      mfaStatus: status,
-    }),
-
-  setMfaSetup: (setup) =>
-    set({
-      mfaSetup: setup,
-    }),
-
-  setBackupCodes: (codes) =>
-    set({
-      mfaBackupCodes: codes,
-    }),
-
-  completeMfaVerification: (token, userId, workspaceId) =>
-    set({
-      isAuthenticated: true,
-      token,
-      userId,
-      workspaceId: workspaceId || null,
-      mfaVerificationPending: false,
-      mfaSessionToken: null,
-    }),
-
-  setAdmin: (isAdmin) =>
-    set({
-      isAdmin,
-    }),
-
-  logout: () =>
-    set({
-      isAuthenticated: false,
-      token: null,
-      userId: null,
-      workspaceId: null,
-      mfaVerificationPending: false,
-      mfaSessionToken: null,
-    }),
-
-  reset: () => set(initialState),
-}))
-
-// Selectors
-export const selectIsAuthenticated = (state: AuthState) => state.isAuthenticated
-export const selectToken = (state: AuthState) => state.token
-export const selectUserId = (state: AuthState) => state.userId
-export const selectMfaStatus = (state: AuthState) => state.mfaStatus
-export const selectMfaVerificationPending = (state: AuthState) => state.mfaVerificationPending
-export const selectMfaSessionToken = (state: AuthState) => state.mfaSessionToken
+    {
+      name: 'auth-storage',
+      partialize: (state) => ({ user: state.user }),
+    }
+  )
+)
