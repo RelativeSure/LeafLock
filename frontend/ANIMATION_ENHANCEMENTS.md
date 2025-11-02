@@ -89,11 +89,11 @@ This document summarizes all animation and visual feedback enhancements added to
 
 ### Notes List (`src/features/notes/notes.css`)
 **Enhancements:**
-- `.notes-card`: 
+- `.notes-card`:
   - Changed to `transition-all duration-300`
   - Selected state: `shadow-md transform scale-[1.02]`
   - Hover state: `shadow-sm transform scale-[1.01]`
-- `.notes-card-button`: 
+- `.notes-card-button`:
   - `transition-all duration-200`
   - `active:scale-[0.99]`
 - `.notes-action-*` buttons:
@@ -134,7 +134,7 @@ This document summarizes all animation and visual feedback enhancements added to
 **Enhancements:**
 - Button: `transition-transform duration-200 hover:rotate-12 active:scale-95`
 - Dropdown: `animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200`
-- Menu items: 
+- Menu items:
   - Stagger animation with `animationDelay`
   - `hover:translate-x-1`
   - Active state with animated checkmark: `animate-in zoom-in-50`
