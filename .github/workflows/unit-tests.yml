@@ -35,8 +35,8 @@ jobs:
           echo "⏳ Waiting for Railway to deploy backend commit $COMMIT_SHA..."
           
           # Link to project and backend service
-          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
-          railway service backend
+          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
+          railway service --service backend
           
           while true; do
             # Get deployment status
@@ -140,8 +140,8 @@ jobs:
           echo "⏳ Waiting for Railway to deploy frontend commit $COMMIT_SHA..."
           
           # Link to project and frontend service
-          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
-          railway service frontend
+          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
+          railway service --service frontend
           
           while true; do
             STATUS_JSON=$(railway status --json 2>/dev/null || echo '{}')

@@ -33,8 +33,8 @@ jobs:
           
           echo "⏳ Waiting for Railway to deploy frontend commit $COMMIT_SHA..."
           
-          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
-          railway service frontend
+          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
+          railway service --service frontend
           
           while true; do
             STATUS_JSON=$(railway status --json 2>/dev/null || echo '{}')
