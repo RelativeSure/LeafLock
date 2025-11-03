@@ -131,7 +131,7 @@ jobs:
       - name: Link to Railway project
         run: |
           echo "🔗 Linking to Railway project..."
-          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
           railway status
 
       - name: Wait for Railway frontend deployment
