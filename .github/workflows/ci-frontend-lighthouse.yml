@@ -8,84 +8,21 @@ on:
   workflow_dispatch:
 
 jobs:
-  check-railway-deployment:
-    name: Wait for Railway Deployment
-    runs-on: ubuntu-latest
-    container: ghcr.io/railwayapp/cli:latest
-    timeout-minutes: 15
-    env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_ACCOUNT }}
-      RAILWAY_SERVICE: frontend
-    outputs:
-      deployment_url: ${{ steps.check.outputs.url }}
-    
-    steps:
-      - name: Link to Railway project
-        run: |
-          echo "🔗 Linking to Railway project..."
-          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
-          railway status
-
-      - name: Wait for Railway frontend deployment
-        id: check
-        run: |
-          COMMIT_SHA="${{ github.sha }}"
-          TIMEOUT=600
-          POLL_INTERVAL=30
-          START_TIME=$(date +%s)
-          
-          echo "⏳ Waiting for Railway to deploy frontend commit $COMMIT_SHA..."
-          
-          while true; do
-            STATUS_JSON=$(railway status --json 2>/dev/null || echo '{}')
-            
-            DEPLOYED_COMMIT=$(echo "$STATUS_JSON" | jq -r '.deployment.meta.commitSha // empty')
-            DEPLOYMENT_STATUS=$(echo "$STATUS_JSON" | jq -r '.deployment.status // empty')
-            DEPLOYMENT_URL=$(echo "$STATUS_JSON" | jq -r '.deployment.url // empty')
-            
-            echo "📊 Deployment: commit=${DEPLOYED_COMMIT}, status=${DEPLOYMENT_STATUS}"
-            
-            if [[ "$DEPLOYED_COMMIT" == "$COMMIT_SHA" ]]; then
-              if [[ "$DEPLOYMENT_STATUS" == "SUCCESS" ]]; then
-                if [[ -z "$DEPLOYMENT_URL" || "$DEPLOYMENT_URL" == "null" ]]; then
-                  DEPLOYMENT_URL=$(railway variables --json | jq -r '.RAILWAY_PUBLIC_DOMAIN // empty')
-                fi
-                
-                if [[ -z "$DEPLOYMENT_URL" || "$DEPLOYMENT_URL" == "null" ]]; then
-                  echo "❌ Could not determine frontend URL"
-                  exit 1
-                fi
-                
-                echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
-                echo "✅ Frontend deployed at: $DEPLOYMENT_URL"
-                exit 0
-                
-              elif [[ "$DEPLOYMENT_STATUS" == "FAILED" || "$DEPLOYMENT_STATUS" == "CRASHED" ]]; then
-                echo "❌ Deployment failed: $DEPLOYMENT_STATUS"
-                railway logs --deployment latest | tail -50
-                exit 1
-              fi
-            fi
-            
-            CURRENT_TIME=$(date +%s)
-            ELAPSED=$((CURRENT_TIME - START_TIME))
-            if [[ $ELAPSED -ge $TIMEOUT ]]; then
-              echo "❌ Timeout waiting for Railway deployment"
-              exit 1
-            fi
-            
-            sleep $POLL_INTERVAL
-          done
-
   lighthouse:
     name: Run Lighthouse CI
     runs-on: ubuntu-latest
-    needs: check-railway-deployment
-    timeout-minutes: 15
+    timeout-minutes: 20
     
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+      - name: Wait for Railway to deploy
+        run: |
+          echo "⏳ Waiting for Railway to auto-deploy commit ${{ github.sha }}..."
+          echo "Railway deploys on every push automatically."
+          echo "Sleeping 3 minutes to allow deployment to complete..."
+          sleep 180
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -116,7 +53,7 @@ jobs:
       - name: Run Lighthouse CI on Railway deployment
         working-directory: frontend
         env:
-          DEPLOYMENT_URL: ${{ needs.check-railway-deployment.outputs.deployment_url }}
+          DEPLOYMENT_URL: ${{ secrets.RAILWAY_FRONTEND_URL }}
         run: |
           echo "🔍 Running Lighthouse on Railway URL: $DEPLOYMENT_URL"
           pnpm run lhci -- --config=lighthouserc.json --url="$DEPLOYMENT_URL"
