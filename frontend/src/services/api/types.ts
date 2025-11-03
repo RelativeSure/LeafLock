@@ -22,6 +22,7 @@ export interface LoginResponse {
     createdAt: string
   }
   requiresMFA?: boolean
+  mfaSession?: string
   encryptionSalt?: string
   encryptionVersion?: number
 }

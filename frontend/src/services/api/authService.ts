@@ -8,6 +8,26 @@ class AuthService extends ApiClient {
       body: JSON.stringify({ email, password }),
     })
 
+    // Handle MFA-required response (no token yet)
+    if (response.mfa_required && !response.token) {
+      return {
+        token: '',
+        user: {
+          id: response.user_id || '',
+          email: email,
+          name: '',
+          role: response.is_admin ? 'admin' : 'user',
+          mfaEnabled: true,
+          createdAt: new Date().toISOString(),
+        },
+        requiresMFA: true,
+        mfaSession: response.session_token,
+        encryptionSalt: response.encryption_salt,
+        encryptionVersion: response.encryption_version,
+      }
+    }
+
+    // Handle successful login with token
     if (response.token) {
       this.setToken(response.token)
 
@@ -34,6 +54,7 @@ class AuthService extends ApiClient {
       return transformedResponse
     }
 
+    // Fallback for unexpected response format
     return response
   }
 
@@ -50,10 +71,13 @@ class AuthService extends ApiClient {
     }
   }
 
-  async verifyMFA(code: string): Promise<LoginResponse> {
+  async verifyMFA(code: string, sessionToken?: string): Promise<LoginResponse> {
     const response = await this.request<any>('/auth/mfa/verify', {
       method: 'POST',
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ 
+        code,
+        session_token: sessionToken 
+      }),
     })
 
     if (response.token) {
@@ -137,7 +161,7 @@ class AuthService extends ApiClient {
   }
 
   async requestPasswordReset(email: string): Promise<void> {
-    await this.request('/auth/password-reset/request', {
+    await this.request('/auth/password/reset-request', {
       method: 'POST',
       body: JSON.stringify({ email }),
     })

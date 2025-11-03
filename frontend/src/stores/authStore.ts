@@ -8,6 +8,7 @@ interface AuthState {
   user: User | null
   isLoading: boolean
   pendingEncryption: { password: string; salt?: string | null } | null
+  mfaSession: string | null
   registrationEnabled: boolean | null
   login: (email: string, password: string) => Promise<{ requiresMFA: boolean }>
   verifyMFA: (code: string) => Promise<boolean>
@@ -25,6 +26,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isLoading: true,
       pendingEncryption: null,
+      mfaSession: null,
       registrationEnabled: null,
 
       initialize: async () => {
@@ -67,7 +69,10 @@ export const useAuthStore = create<AuthState>()(
             if (response.encryptionSalt) {
               await setStoredSalt(response.encryptionSalt)
             }
-            set({ pendingEncryption: { password, salt: response.encryptionSalt } })
+            set({ 
+              pendingEncryption: { password, salt: response.encryptionSalt },
+              mfaSession: response.mfaSession || null
+            })
             return { requiresMFA: true }
           }
 
@@ -98,7 +103,8 @@ export const useAuthStore = create<AuthState>()(
 
       verifyMFA: async (code: string) => {
         try {
-          const response = await authService.verifyMFA(code)
+          const { mfaSession } = get()
+          const response = await authService.verifyMFA(code, mfaSession || undefined)
           set({ user: { ...response.user, isAdmin: response.user.role === 'admin' } })
 
           const { pendingEncryption } = get()
@@ -121,7 +127,7 @@ export const useAuthStore = create<AuthState>()(
             }
           }
 
-          set({ pendingEncryption: null })
+          set({ pendingEncryption: null, mfaSession: null })
           return true
         } catch (error) {
           console.error('MFA verification failed:', error)
@@ -192,7 +198,7 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         authService.logout()
-        set({ user: null, pendingEncryption: null })
+        set({ user: null, pendingEncryption: null, mfaSession: null })
         setStoredKey(null)
       },
     }),
