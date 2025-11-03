@@ -23,9 +23,10 @@ jobs:
           railway --version
 
       - name: Wait for Railway frontend deployment
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
+          # Export Railway token for CLI authentication
+          export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
+          
           COMMIT_SHA="${{ github.sha }}"
           TIMEOUT=600
           POLL_INTERVAL=30
