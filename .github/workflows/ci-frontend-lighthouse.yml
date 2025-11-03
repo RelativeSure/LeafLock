@@ -12,6 +12,8 @@ jobs:
     name: Run Lighthouse CI
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
     steps:
       - name: Checkout
@@ -24,9 +26,6 @@ jobs:
 
       - name: Wait for Railway frontend deployment
         run: |
-          # Export Railway token for CLI authentication
-          export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
-          
           COMMIT_SHA="${{ github.sha }}"
           TIMEOUT=600
           POLL_INTERVAL=30
