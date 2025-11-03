@@ -14,61 +14,206 @@ jobs:
   backend-tests:
     name: Backend Unit Tests
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: backend
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
-      - name: Set up Go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
-        with:
-          go-version-file: backend/go.mod
-          cache: true
+      - name: Install Railway CLI
+        run: |
+          npm install -g @railway/cli
+          railway --version
 
-      - name: Cache Go build artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('backend/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+      - name: Wait for Railway backend deployment
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          COMMIT_SHA="${{ github.sha }}"
+          TIMEOUT=600  # 10 minutes
+          POLL_INTERVAL=30
+          START_TIME=$(date +%s)
+          
+          echo "⏳ Waiting for Railway to deploy backend commit $COMMIT_SHA..."
+          
+          # Link to project and backend service
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+          railway service backend
+          
+          while true; do
+            # Get deployment status
+            STATUS_JSON=$(railway status --json 2>/dev/null || echo '{}')
+            
+            # Extract deployed commit SHA and status
+            DEPLOYED_COMMIT=$(echo "$STATUS_JSON" | jq -r '.deployment.meta.commitSha // empty')
+            DEPLOYMENT_STATUS=$(echo "$STATUS_JSON" | jq -r '.deployment.status // empty')
+            DEPLOYMENT_URL=$(echo "$STATUS_JSON" | jq -r '.deployment.url // empty')
+            
+            echo "📊 Current deployment: commit=${DEPLOYED_COMMIT}, status=${DEPLOYMENT_STATUS}"
+            
+            if [[ "$DEPLOYED_COMMIT" == "$COMMIT_SHA" ]]; then
+              if [[ "$DEPLOYMENT_STATUS" == "SUCCESS" ]]; then
+                echo "✅ Backend deployed successfully!"
+                
+                # Get backend URL from Railway
+                if [[ -z "$DEPLOYMENT_URL" || "$DEPLOYMENT_URL" == "null" ]]; then
+                  # Backend might be private, try getting from variables
+                  DEPLOYMENT_URL=$(railway variables --json | jq -r '.RAILWAY_PUBLIC_DOMAIN // .RAILWAY_PRIVATE_DOMAIN // empty')
+                fi
+                
+                if [[ -z "$DEPLOYMENT_URL" || "$DEPLOYMENT_URL" == "null" ]]; then
+                  echo "❌ Could not determine backend URL"
+                  exit 1
+                fi
+                
+                echo "BACKEND_URL=$DEPLOYMENT_URL" >> $GITHUB_ENV
+                echo "🌐 Backend URL: $DEPLOYMENT_URL"
+                exit 0
+                
+              elif [[ "$DEPLOYMENT_STATUS" == "FAILED" || "$DEPLOYMENT_STATUS" == "CRASHED" ]]; then
+                echo "❌ Railway backend deployment failed: $DEPLOYMENT_STATUS"
+                echo "📋 Recent logs:"
+                railway logs --deployment latest | tail -50
+                exit 1
+                
+              else
+                echo "⏳ Backend deployment status: $DEPLOYMENT_STATUS (waiting...)"
+              fi
+            else
+              echo "⏳ Waiting for commit $COMMIT_SHA to deploy (current: ${DEPLOYED_COMMIT:-none})"
+            fi
+            
+            CURRENT_TIME=$(date +%s)
+            ELAPSED=$((CURRENT_TIME - START_TIME))
+            if [[ $ELAPSED -ge $TIMEOUT ]]; then
+              echo "❌ Timeout: Railway deployment not completed in $TIMEOUT seconds"
+              echo "📋 Recent logs:"
+              railway logs | tail -50
+              exit 1
+            fi
+            
+            sleep $POLL_INTERVAL
+          done
 
-      - name: Install backend dependencies
-        run: go mod download
-
-      - name: Run backend unit tests
-        run: make test
+      - name: Test Railway backend deployment
+        run: |
+          echo "🧪 Testing Railway backend at: $BACKEND_URL"
+          
+          # Wait for backend to be fully ready (health endpoint)
+          for i in {1..30}; do
+            if curl -f -s "$BACKEND_URL/api/v1/health/live" > /dev/null 2>&1; then
+              echo "✅ Backend health/live endpoint is responding"
+              break
+            fi
+            echo "⏳ Waiting for backend to be ready... ($i/30)"
+            sleep 5
+          done
+          
+          # Run health checks
+          echo "🔍 Checking /api/v1/health/live..."
+          curl -f -v "$BACKEND_URL/api/v1/health/live" || exit 1
+          
+          echo "🔍 Checking /api/v1/health/ready..."
+          curl -f -v "$BACKEND_URL/api/v1/health/ready" || exit 1
+          
+          echo "✅ All backend health checks passed!"
 
   frontend-tests:
     name: Frontend Unit Tests
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: frontend
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.19.0
+      - name: Install Railway CLI
+        run: |
+          npm install -g @railway/cli
+          railway --version
 
-      - name: Set up Node.js
-        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6
-        with:
-          node-version: 22
-          cache: 'pnpm'
-          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Wait for Railway frontend deployment
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          COMMIT_SHA="${{ github.sha }}"
+          TIMEOUT=600
+          POLL_INTERVAL=30
+          START_TIME=$(date +%s)
+          
+          echo "⏳ Waiting for Railway to deploy frontend commit $COMMIT_SHA..."
+          
+          # Link to project and frontend service
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+          railway service frontend
+          
+          while true; do
+            STATUS_JSON=$(railway status --json 2>/dev/null || echo '{}')
+            
+            DEPLOYED_COMMIT=$(echo "$STATUS_JSON" | jq -r '.deployment.meta.commitSha // empty')
+            DEPLOYMENT_STATUS=$(echo "$STATUS_JSON" | jq -r '.deployment.status // empty')
+            DEPLOYMENT_URL=$(echo "$STATUS_JSON" | jq -r '.deployment.url // empty')
+            
+            echo "📊 Current deployment: commit=${DEPLOYED_COMMIT}, status=${DEPLOYMENT_STATUS}"
+            
+            if [[ "$DEPLOYED_COMMIT" == "$COMMIT_SHA" ]]; then
+              if [[ "$DEPLOYMENT_STATUS" == "SUCCESS" ]]; then
+                echo "✅ Frontend deployed successfully!"
+                
+                # Get frontend URL (should be public)
+                if [[ -z "$DEPLOYMENT_URL" || "$DEPLOYMENT_URL" == "null" ]]; then
+                  DEPLOYMENT_URL=$(railway variables --json | jq -r '.RAILWAY_PUBLIC_DOMAIN // empty')
+                fi
+                
+                if [[ -z "$DEPLOYMENT_URL" || "$DEPLOYMENT_URL" == "null" ]]; then
+                  echo "❌ Could not determine frontend URL"
+                  exit 1
+                fi
+                
+                echo "FRONTEND_URL=$DEPLOYMENT_URL" >> $GITHUB_ENV
+                echo "🌐 Frontend URL: $DEPLOYMENT_URL"
+                exit 0
+                
+              elif [[ "$DEPLOYMENT_STATUS" == "FAILED" || "$DEPLOYMENT_STATUS" == "CRASHED" ]]; then
+                echo "❌ Railway frontend deployment failed: $DEPLOYMENT_STATUS"
+                echo "📋 Recent logs:"
+                railway logs --deployment latest | tail -50
+                exit 1
+                
+              else
+                echo "⏳ Frontend deployment status: $DEPLOYMENT_STATUS (waiting...)"
+              fi
+            else
+              echo "⏳ Waiting for commit $COMMIT_SHA to deploy (current: ${DEPLOYED_COMMIT:-none})"
+            fi
+            
+            CURRENT_TIME=$(date +%s)
+            ELAPSED=$((CURRENT_TIME - START_TIME))
+            if [[ $ELAPSED -ge $TIMEOUT ]]; then
+              echo "❌ Timeout: Railway deployment not completed in $TIMEOUT seconds"
+              echo "📋 Recent logs:"
+              railway logs | tail -50
+              exit 1
+            fi
+            
+            sleep $POLL_INTERVAL
+          done
 
-      - name: Install frontend dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run frontend unit tests
-        run: pnpm test
+      - name: Test Railway frontend deployment
+        run: |
+          echo "🧪 Testing Railway frontend at: $FRONTEND_URL"
+          
+          # Wait for frontend to be fully ready
+          for i in {1..30}; do
+            if curl -f -s "$FRONTEND_URL/health" > /dev/null 2>&1; then
+              echo "✅ Frontend health endpoint is responding"
+              break
+            fi
+            echo "⏳ Waiting for frontend to be ready... ($i/30)"
+            sleep 5
+          done
+          
+          # Run health checks
+          echo "🔍 Checking /health..."
+          curl -f -v "$FRONTEND_URL/health" || exit 1
+          
+          echo "🔍 Checking /api/v1/health/ready (via frontend proxy)..."
+          curl -f -v "$FRONTEND_URL/api/v1/health/ready" || exit 1
+          
+          echo "✅ All frontend health checks passed!"
