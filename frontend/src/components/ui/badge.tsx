@@ -25,10 +25,10 @@ const badgeVariants = cva(
 )
 
 const Badge = React.forwardRef<
-  HTMLSpanElement,
-  React.ComponentProps<'span'> & VariantProps<typeof badgeVariants> & { asChild?: boolean }
+  HTMLDivElement,
+  React.ComponentProps<'div'> & VariantProps<typeof badgeVariants> & { asChild?: boolean }
 >(({ className, variant, asChild = false, ...props }, ref) => {
-  const Comp = asChild ? Slot : 'span'
+  const Comp = asChild ? Slot : 'div'
 
   return (
     <Comp

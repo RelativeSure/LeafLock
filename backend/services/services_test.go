@@ -138,10 +138,8 @@ func TestStartCleanupService(t *testing.T) {
 }
 
 // Test Templates Service
-// TODO: Rewrite these tests to use real crypto.CryptoService instead of mock
-// func TestSeedDefaultTemplates(t *testing.T) {
-// 	Tests commented out - need to be rewritten after auth migration
-// }
+// Note: TestSeedDefaultTemplates was removed as seeding is now handled by templates handler
+// The default templates are tested via TestDefaultTemplatesStructure below
 
 func TestDefaultTemplatesStructure(t *testing.T) {
 	t.Run("all templates have required fields", func(t *testing.T) {

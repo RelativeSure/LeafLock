@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manual Registration Test</title>
+</head>
+<body>
+    <h1>Manual Registration Status Test</h1>
+    <p>This page is for manually testing the registration status functionality.</p>
+
+    <h2>Test Steps:</h2>
+    <ol>
+        <li>Navigate to <a href="http://localhost:3000/register" target="_blank">http://localhost:3000/register</a></li>
+        <li>Check browser console for API call to <code>/api/v1/auth/registration</code></li>
+        <li>Verify one of the following:
+            <ul>
+                <li><strong>If backend is running with registration enabled:</strong> Registration form should appear</li>
+                <li><strong>If backend is running with registration disabled:</strong> "Registration Disabled" message should appear</li>
+                <li><strong>If backend is NOT running:</strong> Error handling should show "Registration Disabled" (fail-safe default)</li>
+            </ul>
+        </li>
+    </ol>
+
+    <h2>Expected Behavior:</h2>
+    <ul>
+        <li>✅ Shows loading spinner while checking registration status</li>
+        <li>✅ Hides form fields when registration is disabled</li>
+        <li>✅ Shows "Back to Sign In" button when disabled</li>
+        <li>✅ Caches the registration status (only one API call)</li>
+        <li>✅ Login page hides "Sign up" link when registration is disabled</li>
+    </ul>
+
+    <h2>Quick Backend Test:</h2>
+    <pre>
+# Start backend (if not running)
+cd /home/rasmus/repos/LeafLock/backend
+go run main.go
+
+# Check registration status endpoint
+curl http://localhost:8080/api/v1/auth/registration
+# Should return: {"enabled":true} or {"enabled":false}
+    </pre>
+</body>
+</html>

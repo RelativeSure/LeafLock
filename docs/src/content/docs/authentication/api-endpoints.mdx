@@ -21,17 +21,12 @@ Request:
   "password": "SecureP@ss123"
 }
 
-Response (201):
+Response (202):
 {
-  "token": "eyJhbGc...",
-  "user_id": "550e8400-e29b-41d4-a716-446655440000",
-  "workspace_id": "660e8400-e29b-41d4-a716-446655440000",
-  "is_admin": false,
-  "expires_at": "2025-10-22T10:00:00Z"
+  "message": "Registration request accepted. If this email can be used, you'll receive further instructions shortly."
 }
 
 Errors:
-- 409 EMAIL_EXISTS - Email already registered
 - 400 VALIDATION_FAILED - Weak password or invalid email
 - 400 REGISTRATION_DISABLED - Registration not allowed
 
@@ -303,7 +298,7 @@ Notes:
 - Public endpoint
 - Always returns success (prevents email enumeration)
 - TODO: Email sending not implemented
-- Token valid for 1 hour
+- Token valid for 15 minutes
 - Token stored as SHA-256 hash in database
 
 Implementation: backend/auth/handlers.go:390
@@ -326,6 +321,7 @@ Response (400):
 Notes:
 - Public endpoint
 - Checks token exists, not expired, not used
+- Rate limit: 10 verification attempts per token every 15 minutes
 - Does not consume token
 
 Implementation: backend/auth/handlers.go:421

@@ -109,6 +109,17 @@ const registerRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'register',
   component: () => <AuthComponent mode="register" />,
+  beforeLoad: async () => {
+    // Check if registration is enabled before showing the register page
+    const { checkRegistrationEnabled } = useAuthStore.getState()
+    const enabled = await checkRegistrationEnabled()
+
+    if (!enabled) {
+      // Redirect to login if registration is disabled
+      window.location.href = '/login'
+      throw new Error('Registration is disabled')
+    }
+  },
 })
 
 const forgotRoute = createRoute({

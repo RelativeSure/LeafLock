@@ -1,10 +1,15 @@
 package handlers
 
 import (
+	"bytes"
 	"crypto/sha256"
+	"errors"
 	"io"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -20,9 +25,63 @@ type AttachmentsHandler struct {
 	crypto *crypto.CryptoService
 }
 
+var allowedAttachmentMIMEs = map[string]bool{
+	"image/jpeg":      true,
+	"image/png":       true,
+	"image/gif":       true,
+	"image/webp":      true,
+	"text/plain":      true,
+	"text/markdown":   true,
+	"application/pdf": true,
+}
+
+var (
+	errUnsupportedAttachmentType = errors.New("File content type not allowed")
+	errAttachmentTypeMismatch    = errors.New("File type does not match content")
+	errAttachmentEmptyFile       = errors.New("File is empty")
+)
+
 // NewAttachmentsHandler creates an attachments handler.
 func NewAttachmentsHandler(db database.Database, cryptoService *crypto.CryptoService) *AttachmentsHandler {
 	return &AttachmentsHandler{db: db, crypto: cryptoService}
+}
+
+// sanitizeFilename removes dangerous characters from filenames to prevent header injection
+func sanitizeFilename(filename string) string {
+	// If empty, return default immediately
+	if strings.TrimSpace(filename) == "" {
+		return "download"
+	}
+
+	// Remove path components (security: prevent directory traversal)
+	filename = filepath.Base(filename)
+
+	// Remove control characters, newlines, and dangerous characters
+	// This prevents HTTP header injection attacks
+	filename = strings.Map(func(r rune) rune {
+		// Remove control characters (0-31, 127)
+		if r < 32 || r == 127 {
+			return -1
+		}
+		// Remove characters that could break HTTP headers
+		if r == '"' || r == '\\' || r == '\r' || r == '\n' {
+			return -1
+		}
+		return r
+	}, filename)
+
+	// Limit length to prevent buffer issues
+	const maxFilenameLength = 255
+	if len(filename) > maxFilenameLength {
+		filename = filename[:maxFilenameLength]
+	}
+
+	// If filename becomes empty after sanitization, use a default
+	if strings.TrimSpace(filename) == "" || filename == "." || filename == ".." {
+		filename = "download"
+	}
+
+	return filename
 }
 
 type AttachmentUploadRequest struct {
@@ -74,17 +133,7 @@ func (h *AttachmentsHandler) UploadAttachment(c *fiber.Ctx) error {
 	}
 
 	// Security: Validate file type
-	allowedTypes := map[string]bool{
-		"image/jpeg":      true,
-		"image/png":       true,
-		"image/gif":       true,
-		"image/webp":      true,
-		"text/plain":      true,
-		"application/pdf": true,
-		"text/markdown":   true,
-	}
-
-	if file.Header.Get("Content-Type") != "" && !allowedTypes[file.Header.Get("Content-Type")] {
+	if contentType := file.Header.Get("Content-Type"); contentType != "" && !allowedAttachmentMIMEs[contentType] {
 		return c.Status(400).JSON(fiber.Map{"error": "File type not allowed"})
 	}
 
@@ -100,6 +149,11 @@ func (h *AttachmentsHandler) UploadAttachment(c *fiber.Ctx) error {
 	content, err := io.ReadAll(fileContent)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to read file content"})
+	}
+
+	mimeType, err := resolveAttachmentMIME(content, file.Header.Get("Content-Type"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	// Calculate checksum
@@ -118,11 +172,6 @@ func (h *AttachmentsHandler) UploadAttachment(c *fiber.Ctx) error {
 
 	// Save to database
 	attachmentID := uuid.New()
-	mimeType := file.Header.Get("Content-Type")
-	if mimeType == "" {
-		mimeType = "application/octet-stream"
-	}
-
 	_, err = h.db.Exec(c.Context(), `
 		INSERT INTO attachments (id, note_id, filename_encrypted, content_encrypted, mime_type, size_bytes, checksum, created_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
@@ -251,9 +300,12 @@ func (h *AttachmentsHandler) DownloadAttachment(c *fiber.Ctx) error {
 
 	filename := string(filenameBytes)
 
+	// Security: Sanitize filename to prevent header injection attacks
+	safeFilename := sanitizeFilename(filename)
+
 	// Set appropriate headers
 	c.Set("Content-Type", mimeType)
-	c.Set("Content-Disposition", "attachment; filename=\""+filename+"\"")
+	c.Set("Content-Disposition", "attachment; filename=\""+safeFilename+"\"")
 	c.Set("Content-Length", strconv.Itoa(len(content)))
 
 	return c.Send(content)
@@ -291,4 +343,86 @@ func (h *AttachmentsHandler) DeleteAttachment(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"message": "Attachment deleted successfully"})
+}
+
+func resolveAttachmentMIME(content []byte, declared string) (string, error) {
+	declared = strings.TrimSpace(declared)
+
+	detected, err := detectAttachmentMIME(content)
+	if err != nil {
+		return "", err
+	}
+
+	if declared != "" && !allowedAttachmentMIMEs[declared] {
+		return "", errUnsupportedAttachmentType
+	}
+
+	switch detected {
+	case "text/plain":
+		if declared == "" || declared == "text/plain" {
+			return "text/plain", nil
+		}
+		if declared == "text/markdown" {
+			return "text/markdown", nil
+		}
+		return "", errAttachmentTypeMismatch
+	default:
+		if declared != "" && declared != detected {
+			return "", errAttachmentTypeMismatch
+		}
+		return detected, nil
+	}
+}
+
+func detectAttachmentMIME(content []byte) (string, error) {
+	if len(content) == 0 {
+		return "", errAttachmentEmptyFile
+	}
+
+	switch {
+	case len(content) >= 3 && content[0] == 0xFF && content[1] == 0xD8 && content[2] == 0xFF:
+		return "image/jpeg", nil
+	case len(content) >= 8 && bytes.Equal(content[:8], []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}):
+		return "image/png", nil
+	case len(content) >= 6 && (bytes.Equal(content[:6], []byte("GIF87a")) || bytes.Equal(content[:6], []byte("GIF89a"))):
+		return "image/gif", nil
+	case len(content) >= 12 && string(content[:4]) == "RIFF" && string(content[8:12]) == "WEBP":
+		return "image/webp", nil
+	case len(content) >= 5 && bytes.Equal(content[:5], []byte("%PDF-")):
+		return "application/pdf", nil
+	case looksLikeText(content):
+		return "text/plain", nil
+	default:
+		return "", errUnsupportedAttachmentType
+	}
+}
+
+func looksLikeText(content []byte) bool {
+	if len(content) == 0 {
+		return false
+	}
+
+	sample := content
+	if len(sample) > 4096 {
+		sample = sample[:4096]
+	}
+
+	if !utf8.Valid(sample) {
+		return false
+	}
+
+	for _, b := range sample {
+		switch b {
+		case '\n', '\r', '\t', '\f':
+			continue
+		}
+		if b == 0 {
+			return false
+		}
+		if b < 0x20 {
+			return false
+		}
+	}
+
+	return true
 }

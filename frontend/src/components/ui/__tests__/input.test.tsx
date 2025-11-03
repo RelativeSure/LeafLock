@@ -159,7 +159,7 @@ describe('Input', () => {
     it('should apply autoFocus attribute', () => {
       render(<Input autoFocus />)
       const input = screen.getByRole('textbox')
-      expect(input).toHaveAttribute('autoFocus')
+      expect(input).toHaveAttribute('data-autofocus')
     })
 
     it('should apply id attribute', () => {

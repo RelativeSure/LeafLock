@@ -1,17 +1,18 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { useAuthStore } from '../authStore'
-import { apiClient } from '@/services/api/secureApi'
+import { authService } from '@/services/api'
 import * as encryptionUtils from '@/lib/encryption-utils'
 
 // Mock dependencies
-vi.mock('@/services/api/secureApi', () => ({
-  apiClient: {
+vi.mock('@/services/api', () => ({
+  authService: {
     login: vi.fn(),
     verifyMFA: vi.fn(),
     register: vi.fn(),
     beginMFASetup: vi.fn(),
     disableMFA: vi.fn(),
     logout: vi.fn(),
+    isRegistrationEnabled: vi.fn(),
   },
 }))
 
@@ -142,7 +143,7 @@ describe('authStore', () => {
         encryptionSalt: 'test-salt-base64',
       }
 
-      vi.mocked(apiClient.login).mockResolvedValue(mockResponse)
+      vi.mocked(authService.login).mockResolvedValue(mockResponse)
       vi.mocked(encryptionUtils.deriveKey).mockResolvedValue('derived-key')
 
       const result = await useAuthStore.getState().login('test@example.com', 'password123')
@@ -166,7 +167,7 @@ describe('authStore', () => {
         encryptionSalt: 'test-salt-base64',
       }
 
-      vi.mocked(apiClient.login).mockResolvedValue(mockResponse)
+      vi.mocked(authService.login).mockResolvedValue(mockResponse)
       vi.mocked(encryptionUtils.deriveKey).mockResolvedValue('derived-key')
 
       await useAuthStore.getState().login('admin@example.com', 'password123')
@@ -185,7 +186,7 @@ describe('authStore', () => {
         encryptionSalt: 'test-salt-base64',
       }
 
-      vi.mocked(apiClient.login).mockResolvedValue(mockResponse)
+      vi.mocked(authService.login).mockResolvedValue(mockResponse)
 
       const result = await useAuthStore.getState().login('test@example.com', 'password123')
 
@@ -207,7 +208,7 @@ describe('authStore', () => {
         encryptionSalt: undefined,
       }
 
-      vi.mocked(apiClient.login).mockResolvedValue(mockResponse)
+      vi.mocked(authService.login).mockResolvedValue(mockResponse)
 
       await useAuthStore.getState().login('test@example.com', 'password123')
 
@@ -227,7 +228,7 @@ describe('authStore', () => {
         encryptionSalt: 'test-salt-base64',
       }
 
-      vi.mocked(apiClient.login).mockResolvedValue(mockResponse)
+      vi.mocked(authService.login).mockResolvedValue(mockResponse)
       vi.mocked(encryptionUtils.deriveKey).mockRejectedValue(new Error('Derivation failed'))
 
       await useAuthStore.getState().login('test@example.com', 'password123')
@@ -240,7 +241,7 @@ describe('authStore', () => {
     })
 
     it('should handle login API failure', async () => {
-      vi.mocked(apiClient.login).mockRejectedValue(new Error('Invalid credentials'))
+      vi.mocked(authService.login).mockRejectedValue(new Error('Invalid credentials'))
 
       await expect(
         useAuthStore.getState().login('test@example.com', 'wrong-password')
@@ -268,7 +269,7 @@ describe('authStore', () => {
         encryptionSalt: 'test-salt-base64',
       }
 
-      vi.mocked(apiClient.verifyMFA).mockResolvedValue(mockResponse)
+      vi.mocked(authService.verifyMFA).mockResolvedValue(mockResponse)
       vi.mocked(encryptionUtils.deriveKey).mockResolvedValue('derived-key')
 
       const result = await useAuthStore.getState().verifyMFA('123456')
@@ -291,7 +292,7 @@ describe('authStore', () => {
         encryptionSalt: undefined,
       }
 
-      vi.mocked(apiClient.verifyMFA).mockResolvedValue(mockResponse)
+      vi.mocked(authService.verifyMFA).mockResolvedValue(mockResponse)
       vi.mocked(encryptionUtils.deriveKey).mockResolvedValue('derived-key')
 
       await useAuthStore.getState().verifyMFA('123456')
@@ -300,7 +301,7 @@ describe('authStore', () => {
     })
 
     it('should handle MFA verification failure', async () => {
-      vi.mocked(apiClient.verifyMFA).mockRejectedValue(new Error('Invalid MFA code'))
+      vi.mocked(authService.verifyMFA).mockRejectedValue(new Error('Invalid MFA code'))
 
       const result = await useAuthStore.getState().verifyMFA('wrong-code')
 
@@ -315,7 +316,7 @@ describe('authStore', () => {
         encryptionSalt: 'test-salt-base64',
       }
 
-      vi.mocked(apiClient.verifyMFA).mockResolvedValue(mockResponse)
+      vi.mocked(authService.verifyMFA).mockResolvedValue(mockResponse)
       vi.mocked(encryptionUtils.deriveKey).mockRejectedValue(new Error('Derivation failed'))
 
       const result = await useAuthStore.getState().verifyMFA('123456')
@@ -326,64 +327,23 @@ describe('authStore', () => {
   })
 
   describe('register', () => {
-    it('should register successfully', async () => {
-      const mockResponse = {
-        user: mockUser,
-        token: 'test-token',
-        encryptionSalt: 'test-salt-base64',
-      }
+    it('should register successfully and return message', async () => {
+      vi.mocked(authService.register).mockResolvedValue({ message: 'Registration accepted' })
 
-      vi.mocked(apiClient.register).mockResolvedValue(mockResponse)
-      vi.mocked(encryptionUtils.deriveKey).mockResolvedValue('derived-key')
+      const message = await useAuthStore
+        .getState()
+        .register('test@example.com', 'password123', 'Test User')
 
-      await useAuthStore.getState().register('test@example.com', 'password123', 'Test User')
-
-      expect(useAuthStore.getState().user).toEqual({
-        ...mockUser,
-        isAdmin: false,
-      })
-      expect(encryptionUtils.setStoredSalt).toHaveBeenCalledWith('test-salt-base64')
-      expect(encryptionUtils.deriveKey).toHaveBeenCalledWith('password123', 'test-salt-base64')
-      expect(encryptionUtils.setStoredKey).toHaveBeenCalledWith('derived-key')
+      expect(message).toBe('Registration accepted')
+      expect(useAuthStore.getState().user).toBeNull()
+      expect(encryptionUtils.setStoredSalt).not.toHaveBeenCalled()
+      expect(encryptionUtils.deriveKey).not.toHaveBeenCalled()
+      expect(encryptionUtils.setStoredKey).not.toHaveBeenCalled()
       expect(useAuthStore.getState().pendingEncryption).toBeNull()
     })
 
-    it('should handle registration without encryption salt', async () => {
-      const mockResponse = {
-        user: mockUser,
-        token: 'test-token',
-        encryptionSalt: undefined,
-      }
-
-      vi.mocked(apiClient.register).mockResolvedValue(mockResponse)
-
-      await useAuthStore.getState().register('test@example.com', 'password123', 'Test User')
-
-      expect(useAuthStore.getState().user).toEqual({
-        ...mockUser,
-        isAdmin: false,
-      })
-      expect(encryptionUtils.setStoredSalt).not.toHaveBeenCalled()
-      expect(encryptionUtils.deriveKey).not.toHaveBeenCalled()
-    })
-
-    it('should handle encryption key derivation failure', async () => {
-      const mockResponse = {
-        user: mockUser,
-        token: 'test-token',
-        encryptionSalt: 'test-salt-base64',
-      }
-
-      vi.mocked(apiClient.register).mockResolvedValue(mockResponse)
-      vi.mocked(encryptionUtils.deriveKey).mockRejectedValue(new Error('Derivation failed'))
-
-      await useAuthStore.getState().register('test@example.com', 'password123', 'Test User')
-
-      expect(encryptionUtils.setStoredKey).toHaveBeenCalledWith(null)
-    })
-
     it('should handle registration API failure', async () => {
-      vi.mocked(apiClient.register).mockRejectedValue(new Error('Email already exists'))
+      vi.mocked(authService.register).mockRejectedValue(new Error('Email already exists'))
 
       await expect(
         useAuthStore.getState().register('test@example.com', 'password123', 'Test User')
@@ -396,7 +356,7 @@ describe('authStore', () => {
   describe('enableMFA', () => {
     it('should enable MFA successfully', async () => {
       useAuthStore.setState({ user: mockUser })
-      vi.mocked(apiClient.beginMFASetup).mockResolvedValue({
+      vi.mocked(authService.beginMFASetup).mockResolvedValue({
         secret: 'JBSWY3DPEHPK3PXP',
         qrCode:
           'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
@@ -405,7 +365,7 @@ describe('authStore', () => {
       const secret = await useAuthStore.getState().enableMFA()
 
       expect(secret).toBe('JBSWY3DPEHPK3PXP')
-      expect(apiClient.beginMFASetup).toHaveBeenCalled()
+      expect(authService.beginMFASetup).toHaveBeenCalled()
     })
 
     it('should throw error if no user is logged in', async () => {
@@ -416,7 +376,7 @@ describe('authStore', () => {
 
     it('should handle API failure', async () => {
       useAuthStore.setState({ user: mockUser })
-      vi.mocked(apiClient.beginMFASetup).mockRejectedValue(new Error('MFA setup failed'))
+      vi.mocked(authService.beginMFASetup).mockRejectedValue(new Error('MFA setup failed'))
 
       await expect(useAuthStore.getState().enableMFA()).rejects.toThrow('MFA setup failed')
     })
@@ -425,11 +385,11 @@ describe('authStore', () => {
   describe('disableMFA', () => {
     it('should disable MFA successfully', async () => {
       useAuthStore.setState({ user: { ...mockUser, mfaEnabled: true } })
-      vi.mocked(apiClient.disableMFA).mockResolvedValue(undefined)
+      vi.mocked(authService.disableMFA).mockResolvedValue(undefined)
 
       await useAuthStore.getState().disableMFA()
 
-      expect(apiClient.disableMFA).toHaveBeenCalled()
+      expect(authService.disableMFA).toHaveBeenCalled()
     })
 
     it('should throw error if no user is logged in', async () => {
@@ -440,7 +400,7 @@ describe('authStore', () => {
 
     it('should handle API failure', async () => {
       useAuthStore.setState({ user: mockUser })
-      vi.mocked(apiClient.disableMFA).mockRejectedValue(new Error('MFA disable failed'))
+      vi.mocked(authService.disableMFA).mockRejectedValue(new Error('MFA disable failed'))
 
       await expect(useAuthStore.getState().disableMFA()).rejects.toThrow('MFA disable failed')
     })
@@ -455,7 +415,7 @@ describe('authStore', () => {
 
       useAuthStore.getState().logout()
 
-      expect(apiClient.logout).toHaveBeenCalled()
+      expect(authService.logout).toHaveBeenCalled()
       expect(useAuthStore.getState().user).toBeNull()
       expect(useAuthStore.getState().pendingEncryption).toBeNull()
       expect(encryptionUtils.setStoredKey).toHaveBeenCalledWith(null)
@@ -466,8 +426,123 @@ describe('authStore', () => {
 
       useAuthStore.getState().logout()
 
-      expect(apiClient.logout).toHaveBeenCalled()
+      expect(authService.logout).toHaveBeenCalled()
       expect(useAuthStore.getState().user).toBeNull()
+    })
+  })
+
+  describe('checkRegistrationEnabled', () => {
+    beforeEach(() => {
+      // Reset registration status in store
+      useAuthStore.setState({ registrationEnabled: null })
+    })
+
+    it('should check registration status and return true when enabled', async () => {
+      vi.mocked(authService.isRegistrationEnabled).mockResolvedValue(true)
+
+      const result = await useAuthStore.getState().checkRegistrationEnabled()
+
+      expect(result).toBe(true)
+      expect(authService.isRegistrationEnabled).toHaveBeenCalledTimes(1)
+      expect(useAuthStore.getState().registrationEnabled).toBe(true)
+    })
+
+    it('should check registration status and return false when disabled', async () => {
+      vi.mocked(authService.isRegistrationEnabled).mockResolvedValue(false)
+
+      const result = await useAuthStore.getState().checkRegistrationEnabled()
+
+      expect(result).toBe(false)
+      expect(authService.isRegistrationEnabled).toHaveBeenCalledTimes(1)
+      expect(useAuthStore.getState().registrationEnabled).toBe(false)
+    })
+
+    it('should return cached value on subsequent calls without calling API', async () => {
+      vi.mocked(authService.isRegistrationEnabled).mockResolvedValue(true)
+
+      // First call
+      const result1 = await useAuthStore.getState().checkRegistrationEnabled()
+      expect(result1).toBe(true)
+      expect(authService.isRegistrationEnabled).toHaveBeenCalledTimes(1)
+
+      // Second call - should use cached value
+      const result2 = await useAuthStore.getState().checkRegistrationEnabled()
+      expect(result2).toBe(true)
+      expect(authService.isRegistrationEnabled).toHaveBeenCalledTimes(1) // Still 1, not 2
+
+      // Third call - should still use cached value
+      const result3 = await useAuthStore.getState().checkRegistrationEnabled()
+      expect(result3).toBe(true)
+      expect(authService.isRegistrationEnabled).toHaveBeenCalledTimes(1) // Still 1, not 3
+    })
+
+    it('should cache false value and return it on subsequent calls', async () => {
+      vi.mocked(authService.isRegistrationEnabled).mockResolvedValue(false)
+
+      // First call
+      const result1 = await useAuthStore.getState().checkRegistrationEnabled()
+      expect(result1).toBe(false)
+
+      // Second call - should use cached value
+      const result2 = await useAuthStore.getState().checkRegistrationEnabled()
+      expect(result2).toBe(false)
+      expect(authService.isRegistrationEnabled).toHaveBeenCalledTimes(1)
+    })
+
+    it('should return false and cache it when API call fails', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(vi.fn())
+      vi.mocked(authService.isRegistrationEnabled).mockRejectedValue(new Error('Network error'))
+
+      const result = await useAuthStore.getState().checkRegistrationEnabled()
+
+      expect(result).toBe(false)
+      expect(useAuthStore.getState().registrationEnabled).toBe(false)
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to check registration status:',
+        expect.any(Error)
+      )
+
+      consoleErrorSpy.mockRestore()
+    })
+
+    it('should return cached false value after API error without retrying', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(vi.fn())
+      vi.mocked(authService.isRegistrationEnabled).mockRejectedValue(new Error('Network error'))
+
+      // First call - API fails
+      const result1 = await useAuthStore.getState().checkRegistrationEnabled()
+      expect(result1).toBe(false)
+      expect(authService.isRegistrationEnabled).toHaveBeenCalledTimes(1)
+
+      // Second call - should use cached false value
+      const result2 = await useAuthStore.getState().checkRegistrationEnabled()
+      expect(result2).toBe(false)
+      expect(authService.isRegistrationEnabled).toHaveBeenCalledTimes(1) // No retry
+
+      consoleErrorSpy.mockRestore()
+    })
+
+    it('should have correct initial state for registrationEnabled', () => {
+      const state = useAuthStore.getState()
+      expect(state.registrationEnabled).toBeNull()
+    })
+
+    it('should update store state when registration status changes', async () => {
+      // Initially null
+      expect(useAuthStore.getState().registrationEnabled).toBeNull()
+
+      // Set to true
+      vi.mocked(authService.isRegistrationEnabled).mockResolvedValue(true)
+      await useAuthStore.getState().checkRegistrationEnabled()
+      expect(useAuthStore.getState().registrationEnabled).toBe(true)
+
+      // Manually reset cache to simulate app restart
+      useAuthStore.setState({ registrationEnabled: null })
+
+      // Set to false
+      vi.mocked(authService.isRegistrationEnabled).mockResolvedValue(false)
+      await useAuthStore.getState().checkRegistrationEnabled()
+      expect(useAuthStore.getState().registrationEnabled).toBe(false)
     })
   })
 })

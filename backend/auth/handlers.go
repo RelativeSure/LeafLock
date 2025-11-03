@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -15,15 +16,22 @@ import (
 	"github.com/google/uuid"
 )
 
+// EmailService interface for sending emails
+type EmailService interface {
+	SendPasswordResetEmail(toEmail string, resetToken string, ipAddress string) error
+}
+
 // Handler provides HTTP handlers for auth endpoints
 type Handler struct {
-	service *Service
+	service      *Service
+	emailService EmailService
 }
 
 // NewHandler creates a new auth handler
-func NewHandler(service *Service) *Handler {
+func NewHandler(service *Service, emailService EmailService) *Handler {
 	return &Handler{
-		service: service,
+		service:      service,
+		emailService: emailService,
 	}
 }
 
@@ -75,13 +83,13 @@ func (h *Handler) Register(c *fiber.Ctx) error {
 	// Add client info to context
 	ctx := context.WithValue(c.Context(), utils.ContextKeyClientIP, utils.ClientIP(c))
 	ctx = context.WithValue(ctx, utils.ContextKeyUserAgent, c.Get("User-Agent"))
+	ctx = WithSkipAutoLogin(ctx)
 
-	response, err := h.service.Register(ctx, req.Email, req.Password)
+	_, err = h.service.Register(ctx, req.Email, req.Password)
 	if err != nil {
-		if strings.Contains(err.Error(), "already exists") {
-			return c.Status(fiber.StatusConflict).JSON(ErrorResponse{
-				Error: err.Error(),
-				Code:  ErrCodeEmailExists,
+		if errors.Is(err, ErrEmailAlreadyExists) {
+			return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+				"message": "If an account with this email can be created, you'll receive further instructions shortly.",
 			})
 		}
 		if strings.Contains(err.Error(), "password") {
@@ -96,7 +104,9 @@ func (h *Handler) Register(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(response)
+	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+		"message": "If an account with this email can be created, you'll receive further instructions shortly.",
+	})
 }
 
 // Login handles user login
@@ -196,25 +206,31 @@ func (h *Handler) VerifyMFA(c *fiber.Ctx) error {
 // @Failure 500 {object} ErrorResponse
 // @Router /auth/logout [post]
 func (h *Handler) Logout(c *fiber.Ctx) error {
-	// Get token from Authorization header
-	authHeader := c.Get("Authorization")
-	if authHeader == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
-			Error: "No authorization token provided",
-			Code:  ErrCodeInvalidToken,
-		})
+	tokenValue := c.Locals("token")
+	var token string
+
+	if tokenStr, ok := tokenValue.(string); ok && strings.TrimSpace(tokenStr) != "" {
+		token = tokenStr
+	} else {
+		authHeader := c.Get("Authorization")
+		if authHeader == "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
+				Error: "No authorization token provided",
+				Code:  ErrCodeInvalidToken,
+			})
+		}
+
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
+				Error: "Invalid authorization format",
+				Code:  ErrCodeInvalidToken,
+			})
+		}
+
+		token = parts[1]
 	}
 
-	// Extract token (format: "Bearer <token>")
-	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || parts[0] != "Bearer" {
-		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
-			Error: "Invalid authorization format",
-			Code:  ErrCodeInvalidToken,
-		})
-	}
-
-	token := parts[1]
 	ctx := c.Context()
 
 	if err := h.service.Logout(ctx, token); err != nil {
@@ -433,6 +449,14 @@ func (h *Handler) RequestPasswordReset(c *fiber.Ctx) error {
 		})
 	}
 
+	// Validate email is provided
+	if req.Email == "" || strings.TrimSpace(req.Email) == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
+			Error: "Email is required",
+			Code:  ErrCodeValidationFailed,
+		})
+	}
+
 	// Look up user by email (same logic as login)
 	emailBytes := []byte(strings.ToLower(strings.TrimSpace(req.Email)))
 	searchHash := sha256.Sum256(append(emailBytes, []byte("search-salt")...))
@@ -459,15 +483,20 @@ func (h *Handler) RequestPasswordReset(c *fiber.Ctx) error {
 	token, err := h.service.password.CreateResetToken(c.Context(), userID, ipAddress, userAgent)
 	if err != nil {
 		// Log error but don't expose it to prevent information disclosure
+		log.Printf("Failed to create reset token for user %s: %v", userID.String(), err)
 		return c.JSON(fiber.Map{
 			"message": "If the email exists, a password reset link has been sent",
 		})
 	}
 
-	// TODO: Send email with reset link
-	// For now, we'll log the token for development purposes
-	// In production, this should be sent via email
-	log.Printf("Password reset token for user %s: %s", userID.String(), token)
+	// Send password reset email
+	if err := h.emailService.SendPasswordResetEmail(req.Email, token, ipAddress); err != nil {
+		// Log error but don't expose it to prevent information disclosure
+		log.Printf("Failed to send password reset email to %s: %v", req.Email, err)
+		// Still return success to prevent email enumeration
+	} else {
+		log.Printf("✅ Password reset email sent to %s", req.Email)
+	}
 
 	return c.JSON(fiber.Map{
 		"message": "If the email exists, a password reset link has been sent",

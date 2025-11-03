@@ -20,13 +20,27 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onToggle
     setIsLoading(true)
 
     try {
-      // TODO: Implement actual password reset API call
-      await new Promise((resolve) => setTimeout(resolve, 1000)) // Simulate API call
+      const apiUrl = import.meta.env.VITE_API_URL || window.location.origin
+      const response = await fetch(`${apiUrl}/api/v1/auth/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
 
-      setIsSubmitted(true)
-      toast.success('Password reset link sent to your email')
+      const data = await response.json()
+
+      if (response.ok) {
+        setIsSubmitted(true)
+        toast.success('If the email exists, a password reset link has been sent')
+      } else {
+        // Backend returns same message for security, but handle errors gracefully
+        toast.error(data.error || 'Failed to send password reset link')
+      }
     } catch (error) {
-      toast.error('Failed to send password reset link')
+      console.error('Password reset error:', error)
+      toast.error('Network error. Please try again.')
     } finally {
       setIsLoading(false)
     }

@@ -1,4 +1,11 @@
 import '@testing-library/jest-dom'
+import { server } from './mocks/server'
+import { beforeAll, afterEach, afterAll } from 'vitest'
+
+// Setup MSW server
+beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }))
+afterEach(() => server.resetHandlers())
+afterAll(() => server.close())
 
 const prototype = Element.prototype as Element & {
   setPointerCapture?: (pointerId: number) => void

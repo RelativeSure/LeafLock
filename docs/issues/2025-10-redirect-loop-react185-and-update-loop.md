@@ -24,7 +24,7 @@ What we changed (chronological, highlights)
   - On login page, ensured auth store is initialized and clears stale in-memory user when token is missing.
 
 - API 401 handling
-  - Centralized in `secureApi`: clear storage, skip redirect on auth routes, and debounce redirects.
+  - Centralized in `ApiClient`: clear storage, skip redirect on auth routes, and debounce redirects.
 
 - Minification and build mode
   - Disabled minification globally; later tried dev-like build to surface full stacks.
@@ -75,7 +75,7 @@ Request for help / review
 
 References (key diffs already merged)
 - `frontend/src/lib/navigation.ts`: safe redirect helpers
-- `frontend/src/services/api/secureApi.ts`: 401 handling with debounce and auth-route guard
+- `frontend/src/services/api/apiClient.ts`: 401 handling with debounce and auth-route guard
 - `frontend/src/stores/authStore.ts`: clear stale user when no token; guarded initialize
 - `frontend/src/router.tsx`: guarded dashboard init; notes bootstrap once; staged dashboard enablement
 - `frontend/src/components/dashboard/note-editor.tsx`: decrypt conditional sets; last-saved snapshot for autosave

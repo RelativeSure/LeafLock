@@ -8,11 +8,23 @@ import (
 
 	appcrypto "leaflock/crypto"
 
+	miniredis "github.com/alicebob/miniredis/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/redis/go-redis/v9"
 )
+
+func newTestRedis(t *testing.T) (*redis.Client, func()) {
+	t.Helper()
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	cleanup := func() {
+		_ = rdb.Close()
+		mr.Close()
+	}
+	return rdb, cleanup
+}
 
 // TestLogin_InvalidCredentials tests login with non-existent user
 func TestLogin_InvalidCredentials(t *testing.T) {
@@ -25,7 +37,8 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 	}
 
 	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
-	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
+	rdb, cleanup := newTestRedis(t)
+	defer cleanup()
 	service := NewService(mockDB, rdb, cryptoSvc, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
 	_, err := service.Login(context.Background(), "nonexistent@example.com", "password", "")
@@ -84,7 +97,8 @@ func TestLogin_WrongPassword(t *testing.T) {
 		},
 	}
 
-	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
+	rdb, cleanup := newTestRedis(t)
+	defer cleanup()
 	service := NewService(mockDB, rdb, cryptoSvc, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
 	_, err := service.Login(context.Background(), "user@example.com", "WrongPassword123!", "")
@@ -134,7 +148,8 @@ func TestLogin_AccountLocked(t *testing.T) {
 	}
 
 	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
-	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
+	rdb, cleanup := newTestRedis(t)
+	defer cleanup()
 	service := NewService(mockDB, rdb, cryptoSvc, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
 	_, err := service.Login(context.Background(), "locked@example.com", "password", "")
@@ -192,7 +207,8 @@ func TestLogin_MFAEnabledNoCode(t *testing.T) {
 		},
 	}
 
-	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
+	rdb, cleanup := newTestRedis(t)
+	defer cleanup()
 	service := NewService(mockDB, rdb, cryptoSvc, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
 	resp, err := service.Login(context.Background(), "mfa-user@example.com", "Password123!", "")
@@ -214,7 +230,7 @@ func TestLogin_MFAWithInvalidCode(t *testing.T) {
 	pm := NewPasswordManager(nil, cryptoSvc)
 	salt, _ := pm.GenerateSalt()
 	passwordHash := pm.HashPassword("Password123!", salt)
-	
+
 	// Encrypt a TOTP secret
 	mfaSecret, _ := cryptoSvc.EncryptBytes([]byte("JBSWY3DPEHPK3PXP"))
 
@@ -260,7 +276,8 @@ func TestLogin_MFAWithInvalidCode(t *testing.T) {
 		},
 	}
 
-	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
+	rdb, cleanup := newTestRedis(t)
+	defer cleanup()
 	service := NewService(mockDB, rdb, cryptoSvc, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
 	_, err := service.Login(context.Background(), "mfa-user@example.com", "Password123!", "000000")
@@ -318,7 +335,8 @@ func TestLogin_MFADecryptionError(t *testing.T) {
 		},
 	}
 
-	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
+	rdb, cleanup := newTestRedis(t)
+	defer cleanup()
 	service := NewService(mockDB, rdb, cryptoSvc, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
 	_, err := service.Login(context.Background(), "mfa-user@example.com", "Password123!", "123456")

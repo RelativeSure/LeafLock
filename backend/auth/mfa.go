@@ -60,8 +60,8 @@ func (mm *MFAManager) VerifyTOTP(secret, code string) bool {
 	return totp.Validate(code, secret)
 }
 
-// GenerateBackupCodes generates backup codes
-func (mm *MFAManager) GenerateBackupCodes() ([]string, [][]byte, error) {
+// GenerateBackupCodes generates backup codes with a per-user salt
+func (mm *MFAManager) GenerateBackupCodes(userSalt []byte) ([]string, [][]byte, error) {
 	codes := make([]string, BackupCodeCount)
 	hashes := make([][]byte, BackupCodeCount)
 
@@ -78,8 +78,8 @@ func (mm *MFAManager) GenerateBackupCodes() ([]string, [][]byte, error) {
 		code := mm.formatBackupCode(encoded[:12])
 		codes[i] = code
 
-		// Hash the code for storage (Argon2id)
-		hash := mm.hashBackupCode(code)
+		// Hash the code for storage (Argon2id) with per-user salt
+		hash := mm.hashBackupCode(code, userSalt)
 		hashes[i] = hash
 	}
 
@@ -91,23 +91,29 @@ func (mm *MFAManager) VerifyBackupCode(ctx context.Context, userID uuid.UUID, co
 	// Normalize code
 	normalized := mm.normalizeBackupCode(code)
 
-	// Get user's backup codes
+	// Get user's backup codes and salt
 	query := `
-		SELECT mfa_backup_codes, mfa_backup_codes_used
+		SELECT mfa_backup_codes, mfa_backup_codes_used, mfa_backup_code_salt
 		FROM users
 		WHERE id = $1
 	`
 
 	var backupCodes [][]byte
 	var usedCodes [][]byte
+	var userSalt []byte
 
-	err := mm.db.QueryRow(ctx, query, userID).Scan(&backupCodes, &usedCodes)
+	err := mm.db.QueryRow(ctx, query, userID).Scan(&backupCodes, &usedCodes, &userSalt)
 	if err != nil {
 		return false, fmt.Errorf("failed to get backup codes: %w", err)
 	}
 
+	// If user has no salt (legacy user), regenerate backup codes on first use
+	if len(userSalt) == 0 {
+		return false, fmt.Errorf("backup codes need to be regenerated for security update")
+	}
+
 	// Check each backup code
-	codeHash := mm.hashBackupCode(normalized)
+	codeHash := mm.hashBackupCode(normalized, userSalt)
 	matchedIndex := -1
 
 	for i, storedHash := range backupCodes {
@@ -162,24 +168,31 @@ func (mm *MFAManager) EnableMFA(ctx context.Context, userID uuid.UUID, secret st
 		return nil, fmt.Errorf("failed to encrypt TOTP secret: %w", err)
 	}
 
-	// Generate backup codes
-	plainCodes, hashedCodes, err := mm.GenerateBackupCodes()
+	// Generate per-user salt for backup codes (32 bytes for security)
+	userSalt := make([]byte, 32)
+	if _, err := rand.Read(userSalt); err != nil {
+		return nil, fmt.Errorf("failed to generate backup code salt: %w", err)
+	}
+
+	// Generate backup codes with per-user salt
+	plainCodes, hashedCodes, err := mm.GenerateBackupCodes(userSalt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate backup codes: %w", err)
 	}
 
-	// Update user in database
+	// Update user in database including the salt
 	query := `
 		UPDATE users
 		SET mfa_enabled = true,
 		    mfa_secret_encrypted = $1,
 		    mfa_backup_codes = $2,
 		    mfa_backup_codes_used = ARRAY[]::bytea[],
+		    mfa_backup_code_salt = $3,
 		    updated_at = NOW()
-		WHERE id = $3
+		WHERE id = $4
 	`
 
-	_, err = mm.db.Exec(ctx, query, encryptedSecret, hashedCodes, userID)
+	_, err = mm.db.Exec(ctx, query, encryptedSecret, hashedCodes, userSalt, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to enable MFA: %w", err)
 	}
@@ -258,22 +271,29 @@ func (mm *MFAManager) RegenerateBackupCodes(ctx context.Context, userID uuid.UUI
 		return nil, fmt.Errorf("invalid password")
 	}
 
-	// Generate new backup codes
-	plainCodes, hashedCodes, err := mm.GenerateBackupCodes()
+	// Generate new per-user salt for backup codes (32 bytes for security)
+	userSalt := make([]byte, 32)
+	if _, err := rand.Read(userSalt); err != nil {
+		return nil, fmt.Errorf("failed to generate backup code salt: %w", err)
+	}
+
+	// Generate new backup codes with per-user salt
+	plainCodes, hashedCodes, err := mm.GenerateBackupCodes(userSalt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate backup codes: %w", err)
 	}
 
-	// Update in database
+	// Update in database including the new salt
 	updateQuery := `
 		UPDATE users
 		SET mfa_backup_codes = $1,
 		    mfa_backup_codes_used = ARRAY[]::bytea[],
+		    mfa_backup_code_salt = $2,
 		    updated_at = NOW()
-		WHERE id = $2
+		WHERE id = $3
 	`
 
-	_, err = mm.db.Exec(ctx, updateQuery, hashedCodes, userID)
+	_, err = mm.db.Exec(ctx, updateQuery, hashedCodes, userSalt, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update backup codes: %w", err)
 	}
@@ -325,10 +345,10 @@ func (mm *MFAManager) GetDecryptedTOTPSecret(ctx context.Context, userID uuid.UU
 
 // Helper functions
 
-func (mm *MFAManager) hashBackupCode(code string) []byte {
-	// Use Argon2id for consistent hashing with deterministic salt
-	salt := []byte("backup-code-salt-" + code[:4]) // Use first 4 chars as salt component
-	hash := argon2.IDKey([]byte(code), salt, 3, 64*1024, 4, 32)
+func (mm *MFAManager) hashBackupCode(code string, userSalt []byte) []byte {
+	// Use Argon2id for consistent hashing with per-user random salt
+	// This prevents rainbow table attacks even if the database is compromised
+	hash := argon2.IDKey([]byte(code), userSalt, 3, 64*1024, 4, 32)
 	return hash
 }
 

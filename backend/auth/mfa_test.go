@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"crypto/rand"
 	"testing"
 	"time"
 
@@ -45,8 +46,13 @@ func TestVerifyTOTP_Invalid(t *testing.T) {
 
 func TestGenerateBackupCodes(t *testing.T) {
 	mm := &MFAManager{}
-	
-	codes, hashes, err := mm.GenerateBackupCodes()
+
+	// Generate a test salt
+	testSalt := make([]byte, 32)
+	_, err := rand.Read(testSalt)
+	require.NoError(t, err)
+
+	codes, hashes, err := mm.GenerateBackupCodes(testSalt)
 	require.NoError(t, err)
 	assert.Equal(t, BackupCodeCount, len(codes))
 	assert.Equal(t, BackupCodeCount, len(hashes))
@@ -110,8 +116,11 @@ func TestCompareHashes(t *testing.T) {
 
 func TestGenerateBackupCodes_Uniqueness(t *testing.T) {
 	mm := &MFAManager{}
-	
-	codes, _, err := mm.GenerateBackupCodes()
+
+	testSalt := make([]byte, 32)
+	rand.Read(testSalt)
+
+	codes, _, err := mm.GenerateBackupCodes(testSalt)
 	require.NoError(t, err)
 	
 	// Verify all codes are unique
@@ -203,8 +212,11 @@ func TestGenerateTOTPSecret_MultipleAccounts(t *testing.T) {
 
 func TestBackupCodeFormat_Length(t *testing.T) {
 	mm := &MFAManager{}
-	
-	codes, _, err := mm.GenerateBackupCodes()
+
+	testSalt := make([]byte, 32)
+	rand.Read(testSalt)
+
+	codes, _, err := mm.GenerateBackupCodes(testSalt)
 	require.NoError(t, err)
 	
 	for _, code := range codes {

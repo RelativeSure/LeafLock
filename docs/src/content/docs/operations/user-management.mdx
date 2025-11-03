@@ -135,11 +135,11 @@ ORDER BY usage_percent DESC;`}
 
 ## Registration Controls
 
-Public registration is disabled by default. Enable it deliberately:
+LeafLock ships with public registration disabled. Incoming signup requests receive a generic “accepted” response but no account is created until an administrator flips the switch.
 
 <Code code={`ENABLE_REGISTRATION=true`} language="env" />
 
-The admin panel writes the same value into `app_settings.registration_enabled`. Bootstrapping reads from the environment only when the setting is missing.
+Use the admin panel (or `app_settings.registration_enabled`) to temporarily enable onboarding, then revert to `false` once finished. The backend only reads the environment variable when seeding the setting, so remember to reapply the safer value afterwards.
 
 ## Operational Guardrails
 

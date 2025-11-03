@@ -138,17 +138,24 @@ describe('EncryptionContext', () => {
     it('should encrypt text when key is set', async () => {
       vi.mocked(encryptionUtils.ensureEncryptionReady).mockResolvedValue()
       vi.mocked(encryptionUtils.getStoredKey).mockReturnValue('test-key-base64')
-      vi.mocked(encryptionUtils.encryptTextWithKey).mockResolvedValue('encrypted-text')
+      vi.mocked(encryptionUtils.encryptTextWithKey).mockResolvedValue(
+        'encrypted-text'
+      )
 
       function TestComponent() {
-        const { encryptText } = useEncryption()
+        const { encryptText, isUnlocked } = useEncryption()
         const [result, setResult] = React.useState<string>('')
 
         React.useEffect(() => {
-          encryptText('plain text').then(setResult)
-        }, [encryptText])
+          // Only try to encrypt when unlocked
+          if (isUnlocked) {
+            encryptText('plain text').then(setResult).catch(() => {
+              /* ignore */
+            })
+          }
+        }, [encryptText, isUnlocked])
 
-        return <div>{result}</div>
+        return <div>{result || 'waiting'}</div>
       }
 
       render(
@@ -198,17 +205,24 @@ describe('EncryptionContext', () => {
     it('should decrypt text when key is set', async () => {
       vi.mocked(encryptionUtils.ensureEncryptionReady).mockResolvedValue()
       vi.mocked(encryptionUtils.getStoredKey).mockReturnValue('test-key-base64')
-      vi.mocked(encryptionUtils.decryptTextWithKey).mockResolvedValue('decrypted-text')
+      vi.mocked(encryptionUtils.decryptTextWithKey).mockResolvedValue(
+        'decrypted-text'
+      )
 
       function TestComponent() {
-        const { decryptText } = useEncryption()
+        const { decryptText, isUnlocked } = useEncryption()
         const [result, setResult] = React.useState<string>('')
 
         React.useEffect(() => {
-          decryptText('encrypted-payload').then(setResult)
-        }, [decryptText])
+          // Only try to decrypt when unlocked
+          if (isUnlocked) {
+            decryptText('encrypted-payload').then(setResult).catch(() => {
+              /* ignore */
+            })
+          }
+        }, [decryptText, isUnlocked])
 
-        return <div>{result}</div>
+        return <div>{result || 'waiting'}</div>
       }
 
       render(

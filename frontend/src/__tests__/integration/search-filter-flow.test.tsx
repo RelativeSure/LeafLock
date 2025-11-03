@@ -1,14 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useNotesStore } from '@/stores/notesStore'
-import { apiClient } from '@/services/api/secureApi'
+import { contentService, organizationService } from '@/services/api'
 import type { Note } from '@/types'
 
-vi.mock('@/services/api/secureApi', () => ({
-  apiClient: {
+vi.mock('@/services/api', () => ({
+  contentService: {
     getNotes: vi.fn(),
     getFolders: vi.fn(),
-    getTags: vi.fn(),
     searchNotes: vi.fn(),
+  },
+  organizationService: {
+    getTags: vi.fn(),
   },
 }))
 
@@ -162,13 +164,16 @@ describe('Integration: Search and Filter Flow', () => {
     })
 
     it('should be case-insensitive', () => {
+      const lowercaseTerm = 'meeting'
+      const uppercaseTerm = 'MEETING'
+
       const results1 = useNotesStore
         .getState()
-        .notes.filter((note) => note.title.toLowerCase().includes('meeting'))
+        .notes.filter((note) => note.title.toLowerCase().includes(lowercaseTerm))
 
       const results2 = useNotesStore
         .getState()
-        .notes.filter((note) => note.title.toLowerCase().includes('MEETING'))
+        .notes.filter((note) => note.title.toLowerCase().includes(uppercaseTerm.toLowerCase()))
 
       expect(results1).toEqual(results2)
     })
@@ -383,24 +388,24 @@ describe('Integration: Search and Filter Flow', () => {
   describe('API Search Integration', () => {
     it('should call API search endpoint', async () => {
       const searchResults = [mockNotes[0], mockNotes[2]]
-      vi.mocked(apiClient.searchNotes).mockResolvedValue(searchResults as any)
+      vi.mocked(contentService.searchNotes).mockResolvedValue(searchResults as any)
 
-      const results = await apiClient.searchNotes('project')
+      const results = await contentService.searchNotes('project')
 
-      expect(apiClient.searchNotes).toHaveBeenCalledWith('project')
+      expect(contentService.searchNotes).toHaveBeenCalledWith('project')
       expect(results).toHaveLength(2)
     })
 
     it('should handle API search errors', async () => {
-      vi.mocked(apiClient.searchNotes).mockRejectedValue(new Error('Search failed'))
+      vi.mocked(contentService.searchNotes).mockRejectedValue(new Error('Search failed'))
 
-      await expect(apiClient.searchNotes('query')).rejects.toThrow('Search failed')
+      await expect(contentService.searchNotes('query')).rejects.toThrow('Search failed')
     })
 
     it('should return empty results for no matches', async () => {
-      vi.mocked(apiClient.searchNotes).mockResolvedValue([])
+      vi.mocked(contentService.searchNotes).mockResolvedValue([])
 
-      const results = await apiClient.searchNotes('nonexistent')
+      const results = await contentService.searchNotes('nonexistent')
 
       expect(results).toHaveLength(0)
     })

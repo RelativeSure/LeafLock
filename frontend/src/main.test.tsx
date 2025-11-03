@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock ReactDOM
 vi.mock('react-dom/client', () => ({
@@ -18,7 +18,20 @@ vi.mock('libsodium-wrappers-sumo', () => ({
   ready: Promise.resolve(),
 }))
 
+// Mock QueryClientProvider
+vi.mock('@tanstack/react-query', () => ({
+  QueryClient: vi.fn(() => ({})),
+  QueryClientProvider: ({ children }: any) => children,
+}))
+
 describe('main', () => {
+  beforeEach(() => {
+    // Create root element for main.tsx
+    const root = document.createElement('div')
+    root.id = 'root'
+    document.body.appendChild(root)
+  })
+
   it('should import main module', async () => {
     const mainModule = await import('./main')
     expect(mainModule).toBeDefined()

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import * as React from 'react'
-import { useAuthStore } from '../../stores/authStore'
+import { useAuthStore } from '@/stores/authStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,13 +14,28 @@ export function LoginForm({
   onToggleMode: () => void
   animatedTitle?: React.ReactNode
 }) {
-  const { login, verifyMFA, user } = useAuthStore()
+  const { login, verifyMFA, user, checkRegistrationEnabled } = useAuthStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [mfaCode, setMfaCode] = useState('')
   const [requiresMFA, setRequiresMFA] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [registrationEnabled, setRegistrationEnabled] = useState<boolean | null>(null)
+
+  // Check registration status on mount
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const enabled = await checkRegistrationEnabled()
+        setRegistrationEnabled(enabled)
+      } catch (error) {
+        console.error('Failed to check registration status:', error)
+        setRegistrationEnabled(false)
+      }
+    }
+    checkStatus()
+  }, [checkRegistrationEnabled])
 
   // Redirect to dashboard after successful login
   // Use useRef to prevent multiple redirects
@@ -195,16 +210,18 @@ export function LoginForm({
           </Button>
 
           <div className="text-center text-sm text-muted-foreground space-y-2">
-            <div>
-              Don't have an account?{' '}
-              <button
-                type="button"
-                onClick={onToggleMode}
-                className="text-primary hover:underline transition-smooth"
-              >
-                Sign up
-              </button>
-            </div>
+            {registrationEnabled && (
+              <div>
+                Don't have an account?{' '}
+                <button
+                  type="button"
+                  onClick={onToggleMode}
+                  className="text-primary hover:underline transition-smooth"
+                >
+                  Sign up
+                </button>
+              </div>
+            )}
             <div>
               <button
                 type="button"

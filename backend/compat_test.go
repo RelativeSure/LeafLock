@@ -19,6 +19,13 @@ import (
 	websocketpkg "leaflock/websocket"
 )
 
+// MockEmailService is a mock email service for testing
+type MockEmailServiceCompat struct{}
+
+func (m *MockEmailServiceCompat) SendPasswordResetEmail(toEmail string, resetToken string, ipAddress string) error {
+	return nil
+}
+
 // Expose configuration and crypto types used across tests.
 type Config = appconfig.Config
 
@@ -86,7 +93,7 @@ func SetupDatabase(url string) (*pgxpool.Pool, error) {
 func JWTMiddleware(secret []byte, redis *redis.Client, crypto *appcrypto.CryptoService) fiber.Handler {
 	// Use new auth package middleware
 	authService := auth.NewService(nil, redis, crypto, string(secret))
-	authHandler := auth.NewHandler(authService)
+	authHandler := auth.NewHandler(authService, &MockEmailServiceCompat{})
 	return authHandler.JWTMiddleware
 }
 
@@ -113,7 +120,7 @@ func (h *AuthHandler) handler() *auth.Handler {
 		panic("AuthHandler requires *pgxpool.Pool, not database.Database interface")
 	}
 	authService := auth.NewService(db, h.redis, h.crypto, string(h.config.JWTSecret))
-	return auth.NewHandler(authService)
+	return auth.NewHandler(authService, &MockEmailServiceCompat{})
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {

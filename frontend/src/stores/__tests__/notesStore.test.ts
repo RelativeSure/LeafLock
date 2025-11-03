@@ -1,26 +1,23 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { useNotesStore } from '../notesStore'
-import { apiClient } from '@/services/api/secureApi'
+import { contentService, organizationService, socialService } from '@/services/api'
 import * as encryptionUtils from '@/lib/encryption-utils'
 import type { Note, Folder, Tag } from '../../types'
 
 // Mock dependencies
-vi.mock('@/services/api/secureApi', () => ({
-  apiClient: {
+vi.mock('@/services/api', () => ({
+  contentService: {
     getNotes: vi.fn(),
     getFolders: vi.fn(),
-    getTags: vi.fn(),
     createNote: vi.fn(),
     updateNote: vi.fn(),
     deleteNote: vi.fn(),
-    createFolder: vi.fn(),
-    updateFolder: vi.fn(),
-    deleteFolder: vi.fn(),
-    createTag: vi.fn(),
-    deleteTag: vi.fn(),
     restoreNote: vi.fn(),
     permanentlyDeleteNote: vi.fn(),
     getTrash: vi.fn(),
+    createFolder: vi.fn(),
+    updateFolder: vi.fn(),
+    deleteFolder: vi.fn(),
     createNoteVersion: vi.fn(),
     getNoteVersions: vi.fn(),
     restoreNoteVersion: vi.fn(),
@@ -33,6 +30,13 @@ vi.mock('@/services/api/secureApi', () => ({
     moveNotesToFolder: vi.fn(),
     addTagsToNotes: vi.fn(),
     removeTagsFromNotes: vi.fn(),
+  },
+  organizationService: {
+    getTags: vi.fn(),
+    createTag: vi.fn(),
+    deleteTag: vi.fn(),
+  },
+  socialService: {
     createNoteLink: vi.fn(),
     getNoteLinks: vi.fn(),
     getNoteBacklinks: vi.fn(),
@@ -145,9 +149,9 @@ describe('notesStore', () => {
     it('should load notes, folders, and tags successfully', async () => {
       localStorage.setItem('user', JSON.stringify(mockUser))
 
-      vi.mocked(apiClient.getNotes).mockResolvedValue([mockNote])
-      vi.mocked(apiClient.getFolders).mockResolvedValue([mockFolder])
-      vi.mocked(apiClient.getTags).mockResolvedValue([mockTag])
+      vi.mocked(contentService.getNotes).mockResolvedValue([mockNote])
+      vi.mocked(contentService.getFolders).mockResolvedValue([mockFolder])
+      vi.mocked(organizationService.getTags).mockResolvedValue([mockTag])
 
       await useNotesStore.getState().loadData()
 
@@ -161,17 +165,17 @@ describe('notesStore', () => {
     it('should not load data if no user is logged in', async () => {
       await useNotesStore.getState().loadData()
 
-      expect(apiClient.getNotes).not.toHaveBeenCalled()
-      expect(apiClient.getFolders).not.toHaveBeenCalled()
-      expect(apiClient.getTags).not.toHaveBeenCalled()
+      expect(contentService.getNotes).not.toHaveBeenCalled()
+      expect(contentService.getFolders).not.toHaveBeenCalled()
+      expect(organizationService.getTags).not.toHaveBeenCalled()
     })
 
     it('should handle API errors gracefully', async () => {
       localStorage.setItem('user', JSON.stringify(mockUser))
 
-      vi.mocked(apiClient.getNotes).mockRejectedValue(new Error('API error'))
-      vi.mocked(apiClient.getFolders).mockResolvedValue([])
-      vi.mocked(apiClient.getTags).mockResolvedValue([])
+      vi.mocked(contentService.getNotes).mockRejectedValue(new Error('API error'))
+      vi.mocked(contentService.getFolders).mockResolvedValue([])
+      vi.mocked(organizationService.getTags).mockResolvedValue([])
 
       await useNotesStore.getState().loadData()
 
@@ -185,12 +189,12 @@ describe('notesStore', () => {
 
       let loadingDuringCall = false
 
-      vi.mocked(apiClient.getNotes).mockImplementation(async () => {
+      vi.mocked(contentService.getNotes).mockImplementation(async () => {
         loadingDuringCall = useNotesStore.getState().isLoading
         return [mockNote]
       })
-      vi.mocked(apiClient.getFolders).mockResolvedValue([])
-      vi.mocked(apiClient.getTags).mockResolvedValue([])
+      vi.mocked(contentService.getFolders).mockResolvedValue([])
+      vi.mocked(organizationService.getTags).mockResolvedValue([])
 
       await useNotesStore.getState().loadData()
 
@@ -216,13 +220,13 @@ describe('notesStore', () => {
         .mockResolvedValueOnce('encrypted-title')
         .mockResolvedValueOnce('encrypted-content')
 
-      vi.mocked(apiClient.createNote).mockResolvedValue(mockNote)
+      vi.mocked(contentService.createNote).mockResolvedValue(mockNote)
 
       const createdNote = await useNotesStore.getState().createNote(noteInput)
 
       expect(encryptionUtils.encryptTextWithStoredKey).toHaveBeenCalledWith('My Note')
       expect(encryptionUtils.encryptTextWithStoredKey).toHaveBeenCalledWith('Note content')
-      expect(apiClient.createNote).toHaveBeenCalledWith({
+      expect(contentService.createNote).toHaveBeenCalledWith({
         title: 'encrypted-title',
         content: 'encrypted-content',
         folderId: null,
@@ -244,11 +248,11 @@ describe('notesStore', () => {
         .mockResolvedValueOnce('encrypted-title')
         .mockResolvedValueOnce('encrypted-content')
 
-      vi.mocked(apiClient.createNote).mockResolvedValue(mockNote)
+      vi.mocked(contentService.createNote).mockResolvedValue(mockNote)
 
       await useNotesStore.getState().createNote({ title: 'Test', content: 'Content' })
 
-      expect(apiClient.createNote).toHaveBeenCalledWith(
+      expect(contentService.createNote).toHaveBeenCalledWith(
         expect.objectContaining({
           folderId: 'folder-1',
         })
@@ -262,7 +266,7 @@ describe('notesStore', () => {
         .mockResolvedValueOnce('encrypted-title')
         .mockResolvedValueOnce('encrypted-content')
 
-      vi.mocked(apiClient.createNote).mockResolvedValue(mockNote)
+      vi.mocked(contentService.createNote).mockResolvedValue(mockNote)
 
       await useNotesStore.getState().createNote({
         title: 'Test',
@@ -270,7 +274,7 @@ describe('notesStore', () => {
         folderId: 'folder-2',
       })
 
-      expect(apiClient.createNote).toHaveBeenCalledWith(
+      expect(contentService.createNote).toHaveBeenCalledWith(
         expect.objectContaining({
           folderId: 'folder-2',
         })
@@ -290,7 +294,7 @@ describe('notesStore', () => {
         .mockResolvedValueOnce('encrypted-empty')
         .mockResolvedValueOnce('encrypted-empty')
 
-      vi.mocked(apiClient.createNote).mockResolvedValue(mockNote)
+      vi.mocked(contentService.createNote).mockResolvedValue(mockNote)
 
       await useNotesStore.getState().createNote({})
 
@@ -315,13 +319,13 @@ describe('notesStore', () => {
         .mockResolvedValueOnce('encrypted-updated-content')
 
       const updatedNote = { ...mockNote, ...updates }
-      vi.mocked(apiClient.updateNote).mockResolvedValue(updatedNote)
+      vi.mocked(contentService.updateNote).mockResolvedValue(updatedNote)
 
       const result = await useNotesStore.getState().updateNote('note-1', updates)
 
       expect(encryptionUtils.encryptTextWithStoredKey).toHaveBeenCalledWith('Updated Title')
       expect(encryptionUtils.encryptTextWithStoredKey).toHaveBeenCalledWith('Updated Content')
-      expect(apiClient.updateNote).toHaveBeenCalled()
+      expect(contentService.updateNote).toHaveBeenCalled()
       expect(result).toEqual(updatedNote)
     })
 
@@ -345,7 +349,7 @@ describe('notesStore', () => {
       }
 
       const updatedNote = { ...mockNote, ...updates }
-      vi.mocked(apiClient.updateNote).mockResolvedValue(updatedNote)
+      vi.mocked(contentService.updateNote).mockResolvedValue(updatedNote)
 
       await useNotesStore.getState().updateNote('note-1', updates)
 
@@ -358,7 +362,7 @@ describe('notesStore', () => {
       }
 
       const updatedNote = { ...mockNote, pinned: true }
-      vi.mocked(apiClient.updateNote).mockResolvedValue(updatedNote)
+      vi.mocked(contentService.updateNote).mockResolvedValue(updatedNote)
 
       await useNotesStore.getState().updateNote('note-1', updates)
 
@@ -367,7 +371,7 @@ describe('notesStore', () => {
     })
 
     it('should return current note if no meaningful changes', async () => {
-      vi.mocked(apiClient.updateNote).mockResolvedValue(mockNote)
+      vi.mocked(contentService.updateNote).mockResolvedValue(mockNote)
 
       const result = await useNotesStore.getState().updateNote('note-1', {})
 
@@ -381,11 +385,11 @@ describe('notesStore', () => {
     })
 
     it('should delete a note successfully', async () => {
-      vi.mocked(apiClient.deleteNote).mockResolvedValue(undefined)
+      vi.mocked(contentService.deleteNote).mockResolvedValue(undefined)
 
       await useNotesStore.getState().deleteNote('note-1')
 
-      expect(apiClient.deleteNote).toHaveBeenCalledWith('note-1')
+      expect(contentService.deleteNote).toHaveBeenCalledWith('note-1')
       expect(useNotesStore.getState().notes).toEqual([])
       expect(useNotesStore.getState().selectedNote).toBeNull()
     })
@@ -394,7 +398,7 @@ describe('notesStore', () => {
       const anotherNote = { ...mockNote, id: 'note-2' }
       useNotesStore.setState({ notes: [mockNote, anotherNote], selectedNote: mockNote })
 
-      vi.mocked(apiClient.deleteNote).mockResolvedValue(undefined)
+      vi.mocked(contentService.deleteNote).mockResolvedValue(undefined)
 
       await useNotesStore.getState().deleteNote('note-2')
 
@@ -402,7 +406,7 @@ describe('notesStore', () => {
     })
 
     it('should throw error on API failure', async () => {
-      vi.mocked(apiClient.deleteNote).mockRejectedValue(new Error('Delete failed'))
+      vi.mocked(contentService.deleteNote).mockRejectedValue(new Error('Delete failed'))
 
       await expect(useNotesStore.getState().deleteNote('note-1')).rejects.toThrow('Delete failed')
     })
@@ -465,11 +469,11 @@ describe('notesStore', () => {
         parentId: null,
       }
 
-      vi.mocked(apiClient.createFolder).mockResolvedValue(mockFolder)
+      vi.mocked(contentService.createFolder).mockResolvedValue(mockFolder)
 
       const createdFolder = await useNotesStore.getState().createFolder(folderInput)
 
-      expect(apiClient.createFolder).toHaveBeenCalledWith({
+      expect(contentService.createFolder).toHaveBeenCalledWith({
         ...folderInput,
         userId: '123',
       })
@@ -486,7 +490,7 @@ describe('notesStore', () => {
     })
 
     it('should handle API error', async () => {
-      vi.mocked(apiClient.createFolder).mockRejectedValue(new Error('Create folder failed'))
+      vi.mocked(contentService.createFolder).mockRejectedValue(new Error('Create folder failed'))
 
       await expect(useNotesStore.getState().createFolder({ name: 'Test' })).rejects.toThrow(
         'Create folder failed'
@@ -518,16 +522,16 @@ describe('notesStore', () => {
     })
 
     it('should delete a tag and remove it from all notes', async () => {
-      vi.mocked(apiClient.deleteTag).mockResolvedValue(undefined)
+      vi.mocked(organizationService.deleteTag).mockResolvedValue(undefined)
 
       await useNotesStore.getState().deleteTag('tag-1')
 
-      expect(apiClient.deleteTag).toHaveBeenCalledWith('tag-1')
+      expect(organizationService.deleteTag).toHaveBeenCalledWith('tag-1')
       expect(useNotesStore.getState().tags).toEqual([])
     })
 
     it('should handle API error', async () => {
-      vi.mocked(apiClient.deleteTag).mockRejectedValue(new Error('Delete tag failed'))
+      vi.mocked(organizationService.deleteTag).mockRejectedValue(new Error('Delete tag failed'))
 
       await expect(useNotesStore.getState().deleteTag('tag-1')).rejects.toThrow('Delete tag failed')
     })
@@ -567,18 +571,18 @@ describe('notesStore', () => {
     })
 
     it('should move note to trash', async () => {
-      vi.mocked(apiClient.deleteNote).mockResolvedValue(undefined)
+      vi.mocked(contentService.deleteNote).mockResolvedValue(undefined)
 
       await useNotesStore.getState().moveToTrash('note-1')
 
-      expect(apiClient.deleteNote).toHaveBeenCalledWith('note-1')
+      expect(contentService.deleteNote).toHaveBeenCalledWith('note-1')
       const note = useNotesStore.getState().notes.find((n) => n.id === 'note-1')
       expect(note?.isTrashed).toBe(true)
       expect(note?.trashedAt).toBeDefined()
     })
 
     it('should clear selectedNote if trashing selected note', async () => {
-      vi.mocked(apiClient.deleteNote).mockResolvedValue(undefined)
+      vi.mocked(contentService.deleteNote).mockResolvedValue(undefined)
 
       await useNotesStore.getState().moveToTrash('note-1')
 
@@ -593,11 +597,11 @@ describe('notesStore', () => {
     })
 
     it('should restore note from trash', async () => {
-      vi.mocked(apiClient.restoreNote).mockResolvedValue(undefined)
+      vi.mocked(contentService.restoreNote).mockResolvedValue(undefined)
 
       await useNotesStore.getState().restoreFromTrash('note-1')
 
-      expect(apiClient.restoreNote).toHaveBeenCalledWith('note-1')
+      expect(contentService.restoreNote).toHaveBeenCalledWith('note-1')
       const note = useNotesStore.getState().notes.find((n) => n.id === 'note-1')
       expect(note?.isTrashed).toBe(false)
       expect(note?.trashedAt).toBeUndefined()
@@ -613,11 +617,11 @@ describe('notesStore', () => {
     })
 
     it('should permanently delete all trashed notes', async () => {
-      vi.mocked(apiClient.permanentlyDeleteNote).mockResolvedValue(undefined)
+      vi.mocked(contentService.permanentlyDeleteNote).mockResolvedValue(undefined)
 
       await useNotesStore.getState().emptyTrash()
 
-      expect(apiClient.permanentlyDeleteNote).toHaveBeenCalledTimes(2)
+      expect(contentService.permanentlyDeleteNote).toHaveBeenCalledTimes(2)
       expect(useNotesStore.getState().notes).toHaveLength(1)
       expect(useNotesStore.getState().notes[0].id).toBe('note-3')
     })
@@ -626,16 +630,16 @@ describe('notesStore', () => {
   describe('getTrashedNotes', () => {
     it('should get trashed notes from API', async () => {
       const trashedNote = { ...mockNote, isTrashed: true }
-      vi.mocked(apiClient.getTrash).mockResolvedValue([trashedNote])
+      vi.mocked(contentService.getTrash).mockResolvedValue([trashedNote])
 
       const result = await useNotesStore.getState().getTrashedNotes()
 
-      expect(apiClient.getTrash).toHaveBeenCalled()
+      expect(contentService.getTrash).toHaveBeenCalled()
       expect(result).toEqual([trashedNote])
     })
 
     it('should return empty array on error', async () => {
-      vi.mocked(apiClient.getTrash).mockRejectedValue(new Error('API error'))
+      vi.mocked(contentService.getTrash).mockRejectedValue(new Error('API error'))
 
       const result = await useNotesStore.getState().getTrashedNotes()
 
@@ -660,11 +664,11 @@ describe('notesStore', () => {
           changeDescription: 'Initial version',
           createdAt: new Date().toISOString(),
         }
-        vi.mocked(apiClient.createNoteVersion).mockResolvedValue(mockVersion)
+        vi.mocked(contentService.createNoteVersion).mockResolvedValue(mockVersion)
 
         const result = await useNotesStore.getState().createNoteVersion('note-1', 'Initial version')
 
-        expect(apiClient.createNoteVersion).toHaveBeenCalledWith({
+        expect(contentService.createNoteVersion).toHaveBeenCalledWith({
           noteId: 'note-1',
           title: mockNote.title,
           content: mockNote.content,
@@ -686,16 +690,16 @@ describe('notesStore', () => {
           { id: 'v1', versionNumber: 1 },
           { id: 'v2', versionNumber: 2 },
         ]
-        vi.mocked(apiClient.getNoteVersions).mockResolvedValue(versions as any)
+        vi.mocked(contentService.getNoteVersions).mockResolvedValue(versions as any)
 
         const result = await useNotesStore.getState().getNoteVersions('note-1')
 
-        expect(apiClient.getNoteVersions).toHaveBeenCalledWith('note-1')
+        expect(contentService.getNoteVersions).toHaveBeenCalledWith('note-1')
         expect(result).toEqual(versions)
       })
 
       it('should return empty array on error', async () => {
-        vi.mocked(apiClient.getNoteVersions).mockRejectedValue(new Error('API error'))
+        vi.mocked(contentService.getNoteVersions).mockRejectedValue(new Error('API error'))
 
         const result = await useNotesStore.getState().getNoteVersions('note-1')
 
@@ -710,11 +714,11 @@ describe('notesStore', () => {
 
       it('should restore a note version', async () => {
         const restoredNote = { ...mockNote, title: 'Restored Title' }
-        vi.mocked(apiClient.restoreNoteVersion).mockResolvedValue(restoredNote)
+        vi.mocked(contentService.restoreNoteVersion).mockResolvedValue(restoredNote)
 
         await useNotesStore.getState().restoreNoteVersion('version-1')
 
-        expect(apiClient.restoreNoteVersion).toHaveBeenCalledWith('version-1')
+        expect(contentService.restoreNoteVersion).toHaveBeenCalledWith('version-1')
         expect(useNotesStore.getState().notes[0].title).toBe('Restored Title')
         expect(useNotesStore.getState().selectedNote?.title).toBe('Restored Title')
       })
@@ -722,11 +726,11 @@ describe('notesStore', () => {
 
     describe('deleteNoteVersion', () => {
       it('should delete a note version', async () => {
-        vi.mocked(apiClient.deleteNoteVersion).mockResolvedValue(undefined)
+        vi.mocked(contentService.deleteNoteVersion).mockResolvedValue(undefined)
 
         await useNotesStore.getState().deleteNoteVersion('version-1')
 
-        expect(apiClient.deleteNoteVersion).toHaveBeenCalledWith('version-1')
+        expect(contentService.deleteNoteVersion).toHaveBeenCalledWith('version-1')
       })
     })
 
@@ -736,11 +740,11 @@ describe('notesStore', () => {
           v1: { id: 'v1', versionNumber: 1 } as any,
           v2: { id: 'v2', versionNumber: 2 } as any,
         }
-        vi.mocked(apiClient.compareNoteVersions).mockResolvedValue(comparison)
+        vi.mocked(contentService.compareNoteVersions).mockResolvedValue(comparison)
 
         const result = await useNotesStore.getState().compareNoteVersions('note-1', 1, 2)
 
-        expect(apiClient.compareNoteVersions).toHaveBeenCalledWith('note-1', 1, 2)
+        expect(contentService.compareNoteVersions).toHaveBeenCalledWith('note-1', 1, 2)
         expect(result).toEqual(comparison)
       })
     })
@@ -754,20 +758,20 @@ describe('notesStore', () => {
     describe('bulkDeleteNotes', () => {
       it('should bulk delete notes', async () => {
         const result = { successful: 2, failed: 0, errors: [] }
-        vi.mocked(apiClient.bulkDeleteNotes).mockResolvedValue(result)
-        vi.mocked(apiClient.getNotes).mockResolvedValue([])
-        vi.mocked(apiClient.getFolders).mockResolvedValue([])
-        vi.mocked(apiClient.getTags).mockResolvedValue([])
+        vi.mocked(contentService.bulkDeleteNotes).mockResolvedValue(result)
+        vi.mocked(contentService.getNotes).mockResolvedValue([])
+        vi.mocked(contentService.getFolders).mockResolvedValue([])
+        vi.mocked(organizationService.getTags).mockResolvedValue([])
 
         const deleteResult = await useNotesStore.getState().bulkDeleteNotes(['note-1', 'note-2'])
 
-        expect(apiClient.bulkDeleteNotes).toHaveBeenCalledWith(['note-1', 'note-2'])
+        expect(contentService.bulkDeleteNotes).toHaveBeenCalledWith(['note-1', 'note-2'])
         expect(deleteResult).toEqual(result)
-        expect(apiClient.getNotes).toHaveBeenCalled()
+        expect(contentService.getNotes).toHaveBeenCalled()
       })
 
       it('should handle bulk delete errors', async () => {
-        vi.mocked(apiClient.bulkDeleteNotes).mockRejectedValue(new Error('Bulk delete failed'))
+        vi.mocked(contentService.bulkDeleteNotes).mockRejectedValue(new Error('Bulk delete failed'))
 
         await expect(
           useNotesStore.getState().bulkDeleteNotes(['note-1', 'note-2'])
@@ -778,14 +782,14 @@ describe('notesStore', () => {
     describe('bulkRestoreNotes', () => {
       it('should bulk restore notes', async () => {
         const result = { successful: 2, failed: 0, errors: [] }
-        vi.mocked(apiClient.bulkRestoreNotes).mockResolvedValue(result)
-        vi.mocked(apiClient.getNotes).mockResolvedValue([])
-        vi.mocked(apiClient.getFolders).mockResolvedValue([])
-        vi.mocked(apiClient.getTags).mockResolvedValue([])
+        vi.mocked(contentService.bulkRestoreNotes).mockResolvedValue(result)
+        vi.mocked(contentService.getNotes).mockResolvedValue([])
+        vi.mocked(contentService.getFolders).mockResolvedValue([])
+        vi.mocked(organizationService.getTags).mockResolvedValue([])
 
         const restoreResult = await useNotesStore.getState().bulkRestoreNotes(['note-1', 'note-2'])
 
-        expect(apiClient.bulkRestoreNotes).toHaveBeenCalledWith(['note-1', 'note-2'])
+        expect(contentService.bulkRestoreNotes).toHaveBeenCalledWith(['note-1', 'note-2'])
         expect(restoreResult).toEqual(result)
       })
     })
@@ -793,16 +797,16 @@ describe('notesStore', () => {
     describe('bulkPermanentlyDeleteNotes', () => {
       it('should bulk permanently delete notes', async () => {
         const result = { successful: 2, failed: 0, errors: [] }
-        vi.mocked(apiClient.bulkPermanentlyDeleteNotes).mockResolvedValue(result)
-        vi.mocked(apiClient.getNotes).mockResolvedValue([])
-        vi.mocked(apiClient.getFolders).mockResolvedValue([])
-        vi.mocked(apiClient.getTags).mockResolvedValue([])
+        vi.mocked(contentService.bulkPermanentlyDeleteNotes).mockResolvedValue(result)
+        vi.mocked(contentService.getNotes).mockResolvedValue([])
+        vi.mocked(contentService.getFolders).mockResolvedValue([])
+        vi.mocked(organizationService.getTags).mockResolvedValue([])
 
         const deleteResult = await useNotesStore
           .getState()
           .bulkPermanentlyDeleteNotes(['note-1', 'note-2'])
 
-        expect(apiClient.bulkPermanentlyDeleteNotes).toHaveBeenCalledWith(['note-1', 'note-2'])
+        expect(contentService.bulkPermanentlyDeleteNotes).toHaveBeenCalledWith(['note-1', 'note-2'])
         expect(deleteResult).toEqual(result)
       })
     })
@@ -815,11 +819,11 @@ describe('notesStore', () => {
       })
 
       it('should move notes to a folder', async () => {
-        vi.mocked(apiClient.moveNotesToFolder).mockResolvedValue(undefined)
+        vi.mocked(contentService.moveNotesToFolder).mockResolvedValue(undefined)
 
         await useNotesStore.getState().moveNotesToFolder(['note-1', 'note-2'], 'folder-1')
 
-        expect(apiClient.moveNotesToFolder).toHaveBeenCalledWith(['note-1', 'note-2'], 'folder-1')
+        expect(contentService.moveNotesToFolder).toHaveBeenCalledWith(['note-1', 'note-2'], 'folder-1')
         expect(useNotesStore.getState().notes[0].folderId).toBe('folder-1')
         expect(useNotesStore.getState().notes[1].folderId).toBe('folder-1')
       })
@@ -833,17 +837,17 @@ describe('notesStore', () => {
       })
 
       it('should add tags to notes', async () => {
-        vi.mocked(apiClient.addTagsToNotes).mockResolvedValue(undefined)
+        vi.mocked(contentService.addTagsToNotes).mockResolvedValue(undefined)
 
         await useNotesStore.getState().addTagsToNotes(['note-1', 'note-2'], ['new-tag'])
 
-        expect(apiClient.addTagsToNotes).toHaveBeenCalledWith(['note-1', 'note-2'], ['new-tag'])
+        expect(contentService.addTagsToNotes).toHaveBeenCalledWith(['note-1', 'note-2'], ['new-tag'])
         expect(useNotesStore.getState().notes[0].tags).toContain('new-tag')
         expect(useNotesStore.getState().notes[1].tags).toContain('new-tag')
       })
 
       it('should not duplicate existing tags', async () => {
-        vi.mocked(apiClient.addTagsToNotes).mockResolvedValue(undefined)
+        vi.mocked(contentService.addTagsToNotes).mockResolvedValue(undefined)
 
         await useNotesStore.getState().addTagsToNotes(['note-1'], ['existing'])
 
@@ -860,11 +864,11 @@ describe('notesStore', () => {
       })
 
       it('should remove tags from notes', async () => {
-        vi.mocked(apiClient.removeTagsFromNotes).mockResolvedValue(undefined)
+        vi.mocked(contentService.removeTagsFromNotes).mockResolvedValue(undefined)
 
         await useNotesStore.getState().removeTagsFromNotes(['note-1', 'note-2'], ['tag1'])
 
-        expect(apiClient.removeTagsFromNotes).toHaveBeenCalledWith(['note-1', 'note-2'], ['tag1'])
+        expect(contentService.removeTagsFromNotes).toHaveBeenCalledWith(['note-1', 'note-2'], ['tag1'])
         expect(useNotesStore.getState().notes[0].tags).not.toContain('tag1')
         expect(useNotesStore.getState().notes[1].tags).not.toContain('tag1')
       })
@@ -877,11 +881,11 @@ describe('notesStore', () => {
     })
 
     it('should update note retention policy', async () => {
-      vi.mocked(apiClient.updateRetentionPolicy).mockResolvedValue(undefined)
+      vi.mocked(contentService.updateRetentionPolicy).mockResolvedValue(undefined)
 
       await useNotesStore.getState().updateRetentionPolicy('note-1', 30)
 
-      expect(apiClient.updateRetentionPolicy).toHaveBeenCalledWith('note-1', 30)
+      expect(contentService.updateRetentionPolicy).toHaveBeenCalledWith('note-1', 30)
       expect((useNotesStore.getState().notes[0] as any).retentionPolicy).toBe(30)
     })
   })
@@ -890,12 +894,13 @@ describe('notesStore', () => {
     describe('createNoteLink', () => {
       it('should create a note link', async () => {
         const mockLink = { id: 'link-1', sourceNoteId: 'note-1', targetNoteId: 'note-2' }
-        vi.mocked(apiClient.createNoteLink).mockResolvedValue(mockLink as any)
+        vi.mocked(socialService.createNoteLink).mockResolvedValue(mockLink as any)
 
-        // TODO: createNoteLink not implemented in NotesState
-        const result = await apiClient.createNoteLink('note-1', 'note-2', 'Related note')
+        const result = await useNotesStore
+          .getState()
+          .createNoteLink('note-1', 'note-2', 'Related note')
 
-        expect(apiClient.createNoteLink).toHaveBeenCalledWith('note-1', 'note-2', 'Related note')
+        expect(socialService.createNoteLink).toHaveBeenCalledWith('note-1', 'note-2', 'Related note')
         expect(result).toEqual(mockLink)
       })
     })
@@ -903,12 +908,11 @@ describe('notesStore', () => {
     describe('getNoteLinks', () => {
       it('should get note links', async () => {
         const links = [{ id: 'link-1' }, { id: 'link-2' }]
-        vi.mocked(apiClient.getNoteLinks).mockResolvedValue(links as any)
+        vi.mocked(socialService.getNoteLinks).mockResolvedValue({ links } as any)
 
-        // TODO: getNoteLinks not implemented in NotesState
-        const result = await apiClient.getNoteLinks('note-1')
+        const result = await useNotesStore.getState().getNoteLinks('note-1')
 
-        expect(apiClient.getNoteLinks).toHaveBeenCalledWith('note-1')
+        expect(socialService.getNoteLinks).toHaveBeenCalledWith('note-1')
         expect(result).toEqual(links)
       })
     })
@@ -916,24 +920,22 @@ describe('notesStore', () => {
     describe('getNoteBacklinks', () => {
       it('should get note backlinks', async () => {
         const backlinks = [{ id: 'link-1' }, { id: 'link-2' }]
-        vi.mocked(apiClient.getNoteBacklinks).mockResolvedValue(backlinks as any)
+        vi.mocked(socialService.getNoteBacklinks).mockResolvedValue({ backlinks } as any)
 
-        // TODO: getNoteBacklinks not implemented in NotesState
-        const result = await apiClient.getNoteBacklinks('note-1')
+        const result = await useNotesStore.getState().getNoteBacklinks('note-1')
 
-        expect(apiClient.getNoteBacklinks).toHaveBeenCalledWith('note-1')
+        expect(socialService.getNoteBacklinks).toHaveBeenCalledWith('note-1')
         expect(result).toEqual(backlinks)
       })
     })
 
     describe('deleteNoteLink', () => {
       it('should delete a note link', async () => {
-        vi.mocked(apiClient.deleteNoteLink).mockResolvedValue(undefined)
+        vi.mocked(socialService.deleteNoteLink).mockResolvedValue(undefined)
 
-        // TODO: deleteNoteLink not implemented in NotesState
-        await apiClient.deleteNoteLink('note-1', 'link-1')
+        await useNotesStore.getState().deleteNoteLink('note-1', 'link-1')
 
-        expect(apiClient.deleteNoteLink).toHaveBeenCalledWith('note-1', 'link-1')
+        expect(socialService.deleteNoteLink).toHaveBeenCalledWith('note-1', 'link-1')
       })
     })
   })
