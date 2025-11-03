@@ -1,17 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { LoginForm } from '../login-form'
 
 // Mock the auth store
 const mockLogin = vi.fn()
 const mockVerifyMFA = vi.fn()
 const mockUser = null
+const mockCheckRegistrationEnabled = vi.fn()
 
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: () => ({
     login: mockLogin,
     verifyMFA: mockVerifyMFA,
     user: mockUser,
+    checkRegistrationEnabled: mockCheckRegistrationEnabled,
   }),
 }))
 
@@ -26,55 +28,63 @@ describe('LoginForm', () => {
     vi.clearAllMocks()
     localStorage.clear()
     window.location.href = ''
+    mockCheckRegistrationEnabled.mockResolvedValue(true)
   })
 
+  const getLoginElements = async () => {
+    const emailInput = (await screen.findByLabelText(/email/i)) as HTMLInputElement
+    const passwordInput = (await screen.findByLabelText(/password/i)) as HTMLInputElement
+    const submitButton = await screen.findByRole('button', { name: /sign in/i })
+    return { emailInput, passwordInput, submitButton }
+  }
+
   describe('initial render', () => {
-    it('should render login form with email and password fields', () => {
+    it('should render login form with email and password fields', async () => {
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
-      expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
+      expect(await screen.findByLabelText(/email/i)).toBeInTheDocument()
+      expect(await screen.findByLabelText(/password/i)).toBeInTheDocument()
+      expect(await screen.findByRole('button', { name: /sign in/i })).toBeInTheDocument()
     })
 
-    it('should render animated title if provided', () => {
+    it('should render animated title if provided', async () => {
       const animatedTitle = <div data-testid="animated-title">Welcome Back</div>
       render(<LoginForm onToggleMode={mockOnToggleMode} animatedTitle={animatedTitle} />)
 
-      expect(screen.getByTestId('animated-title')).toBeInTheDocument()
+      expect(await screen.findByTestId('animated-title')).toBeInTheDocument()
     })
 
-    it('should have toggle mode link for registration', () => {
+    it('should have toggle mode link for registration', async () => {
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
-      const toggleLink = screen.getByText(/don't have an account/i)
+      const toggleLink = await screen.findByText(/don't have an account/i)
       expect(toggleLink).toBeInTheDocument()
     })
   })
 
   describe('form validation and input', () => {
-    it('should update email field on change', () => {
+    it('should update email field on change', async () => {
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
-      const emailInput = screen.getByLabelText(/email/i) as HTMLInputElement
+      const { emailInput } = await getLoginElements()
       fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
 
       expect(emailInput.value).toBe('test@example.com')
     })
 
-    it('should update password field on change', () => {
+    it('should update password field on change', async () => {
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
-      const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement
+      const { passwordInput } = await getLoginElements()
       fireEvent.change(passwordInput, { target: { value: 'password123' } })
 
       expect(passwordInput.value).toBe('password123')
     })
 
-    it('should mask password input', () => {
+    it('should mask password input', async () => {
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
-      const passwordInput = screen.getByLabelText(/password/i)
+      const { passwordInput } = await getLoginElements()
       expect(passwordInput).toHaveAttribute('type', 'password')
     })
   })
@@ -85,9 +95,7 @@ describe('LoginForm', () => {
 
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
-      const emailInput = screen.getByLabelText(/email/i)
-      const passwordInput = screen.getByLabelText(/password/i)
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const { emailInput, passwordInput, submitButton } = await getLoginElements()
 
       fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
       fireEvent.change(passwordInput, { target: { value: 'password123' } })
@@ -103,9 +111,7 @@ describe('LoginForm', () => {
 
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
-      const emailInput = screen.getByLabelText(/email/i)
-      const passwordInput = screen.getByLabelText(/password/i)
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const { emailInput, passwordInput, submitButton } = await getLoginElements()
 
       fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
       fireEvent.change(passwordInput, { target: { value: 'password123' } })
@@ -124,9 +130,7 @@ describe('LoginForm', () => {
 
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
-      const emailInput = screen.getByLabelText(/email/i)
-      const passwordInput = screen.getByLabelText(/password/i)
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const { emailInput, passwordInput, submitButton } = await getLoginElements()
 
       fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
       fireEvent.change(passwordInput, { target: { value: 'wrong-password' } })
@@ -143,9 +147,7 @@ describe('LoginForm', () => {
 
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
-      const emailInput = screen.getByLabelText(/email/i)
-      const passwordInput = screen.getByLabelText(/password/i)
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const { emailInput, passwordInput, submitButton } = await getLoginElements()
 
       // First attempt - error
       fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
@@ -172,9 +174,7 @@ describe('LoginForm', () => {
 
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
-      const emailInput = screen.getByLabelText(/email/i)
-      const passwordInput = screen.getByLabelText(/password/i)
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const { emailInput, passwordInput, submitButton } = await getLoginElements()
 
       fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
       fireEvent.change(passwordInput, { target: { value: 'password123' } })
@@ -193,11 +193,10 @@ describe('LoginForm', () => {
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
       // Login first
-      const emailInput = screen.getByLabelText(/email/i)
-      const passwordInput = screen.getByLabelText(/password/i)
+      const { emailInput, passwordInput, submitButton } = await getLoginElements()
       fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
       fireEvent.change(passwordInput, { target: { value: 'password123' } })
-      fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
+      fireEvent.click(submitButton)
 
       // Wait for MFA form
       await waitFor(() => {
@@ -223,9 +222,10 @@ describe('LoginForm', () => {
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
       // Login to show MFA form
-      fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } })
-      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'password123' } })
-      fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
+      const { emailInput, passwordInput, submitButton } = await getLoginElements()
+      fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+      fireEvent.change(passwordInput, { target: { value: 'password123' } })
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
         expect(screen.getByLabelText(/authentication code/i)).toBeInTheDocument()
@@ -244,9 +244,10 @@ describe('LoginForm', () => {
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
       // Login to show MFA form
-      fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } })
-      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'password123' } })
-      fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
+      const { emailInput, passwordInput, submitButton } = await getLoginElements()
+      fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+      fireEvent.change(passwordInput, { target: { value: 'password123' } })
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
         expect(screen.getByLabelText(/authentication code/i)).toBeInTheDocument()
@@ -266,9 +267,10 @@ describe('LoginForm', () => {
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
       // Login and enter MFA
-      fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } })
-      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'password123' } })
-      fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
+      const { emailInput, passwordInput, submitButton } = await getLoginElements()
+      fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+      fireEvent.change(passwordInput, { target: { value: 'password123' } })
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
         expect(screen.getByLabelText(/authentication code/i)).toBeInTheDocument()
@@ -291,9 +293,10 @@ describe('LoginForm', () => {
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
       // Login and enter MFA
-      fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } })
-      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'password123' } })
-      fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
+      const { emailInput, passwordInput, submitButton } = await getLoginElements()
+      fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+      fireEvent.change(passwordInput, { target: { value: 'password123' } })
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
         expect(screen.getByLabelText(/authentication code/i)).toBeInTheDocument()
@@ -311,10 +314,10 @@ describe('LoginForm', () => {
   })
 
   describe('toggle mode', () => {
-    it('should call onToggleMode when clicking registration link', () => {
+    it('should call onToggleMode when clicking registration link', async () => {
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
-      const toggleLink = screen.getByText(/sign up/i)
+      const toggleLink = await screen.findByText(/sign up/i)
       fireEvent.click(toggleLink)
 
       expect(mockOnToggleMode).toHaveBeenCalled()
@@ -322,11 +325,10 @@ describe('LoginForm', () => {
   })
 
   describe('edge cases', () => {
-    it('should have required fields for email and password', () => {
+    it('should have required fields for email and password', async () => {
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
-      const emailInput = screen.getByLabelText(/email/i)
-      const passwordInput = screen.getByLabelText(/password/i)
+      const { emailInput, passwordInput } = await getLoginElements()
 
       expect(emailInput).toBeRequired()
       expect(passwordInput).toBeRequired()
@@ -337,9 +339,10 @@ describe('LoginForm', () => {
 
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
-      fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } })
-      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'password123' } })
-      fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
+      const { emailInput, passwordInput, submitButton } = await getLoginElements()
+      fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+      fireEvent.change(passwordInput, { target: { value: 'password123' } })
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
         expect(screen.getByText(/login failed/i)).toBeInTheDocument()
@@ -356,10 +359,9 @@ describe('LoginForm', () => {
 
       render(<LoginForm onToggleMode={mockOnToggleMode} />)
 
-      fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } })
-      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'password123' } })
-
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const { emailInput, passwordInput, submitButton } = await getLoginElements()
+      fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+      fireEvent.change(passwordInput, { target: { value: 'password123' } })
       fireEvent.click(submitButton)
 
       // Try to submit again while loading
@@ -368,7 +370,13 @@ describe('LoginForm', () => {
       // Should only call login once
       expect(mockLogin).toHaveBeenCalledTimes(1)
 
-      resolveLogin({ requiresMFA: false })
+      await act(async () => {
+        resolveLogin({ requiresMFA: false })
+      })
+
+      await waitFor(() => {
+        expect(submitButton).not.toBeDisabled()
+      })
     })
   })
 })

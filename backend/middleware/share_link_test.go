@@ -83,16 +83,17 @@ func TestShareLinkMiddlewareSuccessWithCache(t *testing.T) {
 }
 
 type shareLinkStubDB struct {
-	execCalled   bool
-	isActive     bool
-	passwordHash *string
-	noteID       uuid.UUID
-	permission   string
-	expiresAt    *time.Time
-	maxUses      *int
-	useCount     int
-	queryErr     error
-	execErr      error
+	execCalled       bool
+	isActive         bool
+	passwordHash     *string
+	noteID           uuid.UUID
+	permission       string
+	expiresAt        *time.Time
+	maxUses          *int
+	useCount         int
+	queryErr         error
+	execErr          error
+	shouldFailUpdate bool // For testing race condition prevention
 }
 
 func (db *shareLinkStubDB) QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row {
@@ -116,6 +117,12 @@ func (db *shareLinkStubDB) Exec(ctx context.Context, sql string, args ...interfa
 		return pgconn.CommandTag{}, db.execErr
 	}
 	db.execCalled = true
+
+	// Simulate race condition: update fails because WHERE clause doesn't match
+	if db.shouldFailUpdate {
+		return pgconn.NewCommandTag("UPDATE 0"), nil
+	}
+
 	return pgconn.NewCommandTag("UPDATE 1"), nil
 }
 
@@ -384,4 +391,58 @@ func bytesRepeated(n int, b byte) []byte {
 		buf[i] = b
 	}
 	return buf
+}
+
+// TestShareLinkMiddlewareRaceConditionPrevention tests that the atomic update prevents race conditions
+func TestShareLinkMiddlewareRaceConditionPrevention(t *testing.T) {
+	minidb := miniredis.RunT(t)
+	redisClient := redis.NewClient(&redis.Options{Addr: minidb.Addr()})
+	crypto := appcrypto.NewCryptoService(bytesRepeated(32, 'z'))
+
+	limit := 5
+	db := &shareLinkStubDB{
+		isActive:   true,
+		noteID:     uuid.New(),
+		permission: "read",
+		maxUses:    &limit,
+		useCount:   4, // One use remaining
+	}
+
+	// First request should succeed (use count 4 -> 5)
+	app := fiber.New()
+	app.Get("/share/:token", ShareLinkMiddleware(db, crypto, redisClient), func(c *fiber.Ctx) error {
+		return c.SendStatus(fiber.StatusOK)
+	})
+
+	resp, err := app.Test(httptest.NewRequest("GET", "/share/racing", nil), -1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		t.Fatalf("first request should succeed, got %d", resp.StatusCode)
+	}
+
+	// Simulate race condition: second concurrent request with same use_count
+	// In a real race condition, both requests would read use_count=4 before either updates
+	// Our fix ensures the UPDATE with WHERE clause prevents this
+	db.useCount = 5 // Now at limit
+	db.shouldFailUpdate = true // Simulate RowsAffected() == 0
+
+	resp2, err := app.Test(httptest.NewRequest("GET", "/share/racing", nil), -1)
+	if err != nil {
+		t.Fatalf("unexpected error on second request: %v", err)
+	}
+	if resp2.StatusCode != fiber.StatusForbidden {
+		t.Fatalf("second request should fail with 403 when limit reached atomically, got %d", resp2.StatusCode)
+	}
+
+	var body map[string]interface{}
+	if err := json.NewDecoder(resp2.Body).Decode(&body); err != nil {
+		t.Fatalf("failed to parse error response: %v", err)
+	}
+	resp2.Body.Close()
+
+	if !strings.Contains(body["error"].(string), "usage limit") {
+		t.Fatalf("expected usage limit error, got: %v", body["error"])
+	}
 }

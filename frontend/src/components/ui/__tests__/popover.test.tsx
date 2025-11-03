@@ -33,7 +33,7 @@ describe('Popover', () => {
       </Popover>
     )
 
-    const content = screen.getByText('Content').parentElement
+    const content = screen.getByText('Content')
     expect(content).toHaveClass('custom-popover')
   })
 })

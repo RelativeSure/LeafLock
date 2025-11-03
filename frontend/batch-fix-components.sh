@@ -16,8 +16,8 @@ sed -i 's/<ProtectedRoute>/<ProtectedRoute user={{ id: "1", email: "test@example
 # Fix NoteStats - add content prop
 sed -i 's/<NoteStats \/>/<NoteStats content="" \/>/g' src/components/dashboard/__tests__/note-stats.test.tsx
 
-# Fix shareNote calls - remove third argument
-sed -i "s/shareNote([^,]*,[^,]*, '[^']*')/shareNote(\1, \2)/g" src/services/api/__tests__/secureApi.test.ts
+# Fix shareNote calls - remove third argument in API tests
+sed -i "s/shareNote([^,]*,[^,]*, '[^']*')/shareNote(\1, \2)/g" src/services/api/__tests__/socialService.test.ts
 
 # Fix beginMFASetup - add qrCode property
 sed -i '/secret:.*JBSWY3DPEHPK3PXP/{ N; /}/! s/}/}, qrCode: "data:image\/png;base64,test" }/; }' src/stores/__tests__/authStore.test.ts

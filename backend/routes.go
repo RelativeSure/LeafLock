@@ -22,6 +22,7 @@ import (
 	"leaflock/metrics"
 	"leaflock/middleware"
 	appserver "leaflock/server"
+	"leaflock/services"
 	websocketpkg "leaflock/websocket"
 )
 
@@ -59,10 +60,15 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 
 	// CSRF protection
 	app.Use(csrf.New(csrf.Config{
-		KeyLookup:      "header:X-CSRF-Token",
-		CookieName:     "csrf_token",
-		CookieSameSite: "Strict",
-		CookieSecure:   true,
+		KeyLookup:  "header:X-CSRF-Token",
+		CookieName: "csrf_token",
+		CookieSameSite: func() string {
+			if appconfig.GetEnvOrDefault("APP_ENV", "development") == "production" {
+				return "Strict"
+			}
+			return "Lax"
+		}(),
+		CookieSecure:   appconfig.GetEnvOrDefault("APP_ENV", "development") != "development",
 		CookieHTTPOnly: true,
 		Expiration:     time.Hour,
 		KeyGenerator:   uuid.NewString,
@@ -117,9 +123,12 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	// Initialize rate limiters
 	rateLimits := middleware.NewRateLimitConfig(rdb)
 
+	// Initialize email service
+	emailService := services.NewEmailService(config)
+
 	// Initialize modern auth package
 	authService := auth.NewService(db, rdb, crypto, string(config.JWTSecret))
-	authHandler := auth.NewHandler(authService)
+	authHandler := auth.NewHandler(authService, emailService)
 
 	// Initialize other handlers
 	accountHandler := handlers.NewAccountHandler(db, rdb, crypto, config)
@@ -135,6 +144,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	shareLinksHandler := handlers.NewShareLinksHandler(db, crypto, rdb)
 	announcementsHandler := handlers.NewAnnouncementsHandler(db)
 	noteLinksHandler := handlers.NewNoteLinksHandler(db)
+	adminHandler := handlers.NewAdminHandler(db)
 
 	// API group
 	api := app.Group("/api/v1")
@@ -262,12 +272,19 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	protected.Delete("/account", rateLimits.ImportExportLimiter, accountHandler.DeleteAccount)
 	protected.Get("/account/export", rateLimits.ImportExportLimiter, accountHandler.ExportData)
 
-	// Admin announcement routes - Tier 4: Standard CRUD (admin only)
+	// Admin routes - Tier 4: Standard CRUD (admin only)
 	admin := protected.Group("/admin", authHandler.RequireAdminMiddleware)
+	// Announcements
 	admin.Get("/announcements", rateLimits.StandardCRUDLimiter, announcementsHandler.GetAllAnnouncements)
 	admin.Post("/announcements", rateLimits.StandardCRUDLimiter, announcementsHandler.CreateAnnouncement)
 	admin.Put("/announcements/:id", rateLimits.StandardCRUDLimiter, announcementsHandler.UpdateAnnouncement)
 	admin.Delete("/announcements/:id", rateLimits.StandardCRUDLimiter, announcementsHandler.DeleteAnnouncement)
+	// User management
+	admin.Get("/stats", rateLimits.StandardCRUDLimiter, adminHandler.GetSystemStats)
+	admin.Get("/users", rateLimits.StandardCRUDLimiter, adminHandler.GetAllUsers)
+	admin.Patch("/users/:id/role", rateLimits.StandardCRUDLimiter, adminHandler.UpdateUserRole)
+	admin.Delete("/users/:id", rateLimits.StandardCRUDLimiter, adminHandler.DeleteUser)
+	admin.Post("/users/:id/unlock", rateLimits.StandardCRUDLimiter, adminHandler.UnlockUser)
 
 	// WebSocket setup
 	hub := websocketpkg.NewHub()

@@ -1,6 +1,5 @@
 import { create } from 'zustand'
-import type { Template } from '../types'
-import { apiClient } from '../services/api/secureApi'
+import { contentService, type Template } from '@/services/api'
 
 interface TemplatesState {
   templates: Template[]
@@ -30,7 +29,7 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
 
     set({ isLoading: true })
     try {
-      const templatesData = await apiClient.getTemplates()
+      const templatesData = await contentService.getTemplates()
       const isStarterTemplate = (template: Template) =>
         (template.tags || []).map((tag) => tag.toLowerCase()).includes('system')
 
@@ -54,10 +53,36 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
 
   createTemplate: async (template: Partial<Template>) => {
     const storedUser = localStorage.getItem('user')
-    if (!storedUser) throw new Error('No user logged in')
+    let userId: string | null = null
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser)
+        if (parsed?.id) {
+          userId = parsed.id
+        }
+      } catch (error) {
+        console.warn('Failed to parse stored user while creating template:', error)
+      }
+    }
+
+    const trimmedName = template.name?.trim()
+    if (!trimmedName) {
+      throw new Error('Template name is required')
+    }
+    const content = template.content
+    if (!content || content.trim().length === 0) {
+      throw new Error('Template content is required')
+    }
 
     try {
-      const newTemplate = await apiClient.createTemplate(template)
+      const payload: Partial<Template> = {
+        ...template,
+        name: trimmedName,
+        content,
+        userId: userId ?? template.userId ?? undefined,
+      }
+
+      const newTemplate = await contentService.createTemplate(payload)
       await get().loadTemplates()
       return newTemplate
     } catch (error) {
@@ -78,7 +103,7 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
 
       if (!baseTemplate || !baseTemplate.content) {
         try {
-          baseTemplate = await apiClient.getTemplate(id)
+          baseTemplate = await contentService.getTemplate(id)
         } catch (error) {
           console.error('Failed to fetch template before update:', error)
         }
@@ -110,7 +135,7 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
         isPublic: updates.isPublic ?? baseTemplate.isPublic ?? false,
       }
 
-      await apiClient.updateTemplate(id, payload)
+      await contentService.updateTemplate(id, payload)
       await get().loadTemplates()
     } catch (error) {
       console.error('Failed to update template:', error)
@@ -120,7 +145,7 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
 
   deleteTemplate: async (id: string) => {
     try {
-      await apiClient.deleteTemplate(id)
+      await contentService.deleteTemplate(id)
       set((state) => ({
         templates: state.templates.filter((template) => template.id !== id),
         starterTemplates: state.starterTemplates.filter((template) => template.id !== id),
@@ -134,7 +159,7 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
 
   applyTemplate: async (templateId: string) => {
     try {
-      const note = await apiClient.useTemplate(templateId)
+      const note = await contentService.useTemplate(templateId)
       return {
         content: note.content,
         tags: note.tags,

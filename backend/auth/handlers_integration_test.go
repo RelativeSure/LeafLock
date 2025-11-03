@@ -78,7 +78,7 @@ func TestAuthHandler_Register_InvalidJSON(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/register", handler.Register)
@@ -109,7 +109,7 @@ func TestAuthHandler_Register_MissingEmail(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/register", handler.Register)
@@ -145,7 +145,7 @@ func TestAuthHandler_Login_InvalidJSON(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/login", handler.Login)
@@ -176,7 +176,7 @@ func TestAuthHandler_Login_MissingCredentials(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/login", handler.Login)
@@ -212,7 +212,7 @@ func TestAuthHandler_BeginMFASetup_InvalidRequest(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/mfa/setup", func(c *fiber.Ctx) error {
@@ -245,7 +245,7 @@ func TestAuthHandler_EnableMFA_MissingToken(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/mfa/enable", func(c *fiber.Ctx) error {
@@ -282,7 +282,7 @@ func TestAuthHandler_DisableMFA_Request(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/mfa/disable", func(c *fiber.Ctx) error {
@@ -315,7 +315,7 @@ func TestAuthHandler_VerifyMFA_InvalidJSON(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/mfa/verify", handler.VerifyMFA)
@@ -346,7 +346,7 @@ func TestAuthHandler_RequestPasswordReset_InvalidEmail(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/password/reset-request", handler.RequestPasswordReset)
@@ -382,7 +382,7 @@ func TestAuthHandler_ConfirmPasswordReset_InvalidToken(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/password/reset", handler.ConfirmPasswordReset)
@@ -419,7 +419,7 @@ func TestAuthHandler_Logout_ValidRequest(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/logout", func(c *fiber.Ctx) error {
@@ -453,7 +453,7 @@ func TestAuthHandler_GetMFAStatus_ValidRequest(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Get("/auth/mfa/status", func(c *fiber.Ctx) error {
@@ -488,7 +488,7 @@ func TestAuthHandler_GetRegistrationStatus_Check(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Get("/auth/registration/status", handler.GetRegistrationStatus)
@@ -518,7 +518,7 @@ func TestAuthHandler_RegenerateBackupCodes_Request(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/mfa/backup-codes/regenerate", func(c *fiber.Ctx) error {
@@ -551,7 +551,7 @@ func TestAuthHandler_VerifyResetToken_InvalidToken(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Get("/auth/password/verify-token/:token", handler.VerifyResetToken)
@@ -581,7 +581,7 @@ func TestAuthHandler_Register_WeakPassword(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/register", handler.Register)
@@ -618,7 +618,7 @@ func TestAuthHandler_Login_InvalidEmail(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/login", handler.Login)
@@ -655,7 +655,7 @@ func TestAuthHandler_VerifyMFA_MissingToken(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/mfa/verify", handler.VerifyMFA)
@@ -691,7 +691,7 @@ func TestAuthHandler_EnableMFA_InvalidToken(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/mfa/enable", func(c *fiber.Ctx) error {
@@ -714,9 +714,7 @@ func TestAuthHandler_EnableMFA_InvalidToken(t *testing.T) {
 }
 
 // TestAuthHandler_RequestPasswordReset_MissingEmail tests password reset without email
-// TODO: Fix this test - handler returns 200 even with missing email when SMTP is disabled
 func TestAuthHandler_RequestPasswordReset_MissingEmail(t *testing.T) {
-	t.Skip("TODO: Handler validation issue - returns 200 instead of 400 for missing email")
 	pool, cleanup := setupAuthTestDB(t)
 	defer cleanup()
 
@@ -732,7 +730,7 @@ func TestAuthHandler_RequestPasswordReset_MissingEmail(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/password/reset-request", handler.RequestPasswordReset)
@@ -767,7 +765,7 @@ func TestAuthHandler_ConfirmPasswordReset_MissingNewPassword(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/password/reset", handler.ConfirmPasswordReset)
@@ -805,7 +803,7 @@ func TestAuthHandler_Register_DuplicateEmail(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/register", handler.Register)
@@ -849,7 +847,7 @@ func TestAuthHandler_Login_EmptyPassword(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/login", handler.Login)
@@ -886,7 +884,7 @@ func TestAuthHandler_VerifyMFA_InvalidSessionID(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/mfa/verify", handler.VerifyMFA)
@@ -923,7 +921,7 @@ func TestAuthHandler_BeginMFASetup_AlreadyEnabled(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/mfa/setup", func(c *fiber.Ctx) error {
@@ -956,7 +954,7 @@ func TestAuthHandler_ConfirmPasswordReset_WeakNewPassword(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/password/reset", handler.ConfirmPasswordReset)
@@ -993,7 +991,7 @@ func TestAuthHandler_Logout_MissingSessionID(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/logout", func(c *fiber.Ctx) error {
@@ -1026,7 +1024,7 @@ func TestAuthHandler_Register_EmptyEmail(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/register", handler.Register)
@@ -1063,7 +1061,7 @@ func TestAuthHandler_VerifyMFA_EmptyToken(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, cryptoSvc, "test-jwt-secret")
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/mfa/verify", handler.VerifyMFA)

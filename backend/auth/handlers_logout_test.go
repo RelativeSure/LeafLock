@@ -24,33 +24,40 @@ func newTestService(t *testing.T) (*Service, *SessionManager, *miniredis.Minired
 
 	cryptoSvc := appcrypto.NewCryptoService(key)
 	session := NewSessionManager(redis.NewClient(&redis.Options{Addr: mr.Addr()}), cryptoSvc)
-	return &Service{session: session}, session, mr
+	return &Service{session: session, jwtSecret: "unit-test-secret"}, session, mr
 }
 
 func TestHandlerLogoutSuccess(t *testing.T) {
 	service, session, _ := newTestService(t)
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	ctx := context.Background()
 	userID := uuid.New()
-	_, token, err := session.CreateSession(ctx, userID, "127.0.0.1", "agent", true)
+	_, _, err := session.CreateSession(ctx, userID, "127.0.0.1", "agent", true)
+	require.NoError(t, err)
+	jwtToken, err := service.GenerateJWT(userID, false)
 	require.NoError(t, err)
 
 	app := fiber.New()
 	app.Post("/auth/logout", func(c *fiber.Ctx) error {
 		c.Locals("user_id", userID)
-		c.Request().Header.Set("Authorization", "Bearer "+token)
+		c.Locals("token", jwtToken)
+		c.Request().Header.Set("Authorization", "Bearer "+jwtToken)
 		return handler.Logout(c)
 	})
 
 	resp, err := app.Test(httptest.NewRequest("POST", "/auth/logout", nil))
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+	isBlacklisted, err := session.IsJWTBlacklisted(ctx, jwtToken)
+	require.NoError(t, err)
+	assert.True(t, isBlacklisted)
 }
 
 func TestHandlerLogoutMissingToken(t *testing.T) {
 	service, _, _ := newTestService(t)
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/logout", func(c *fiber.Ctx) error {
@@ -64,7 +71,7 @@ func TestHandlerLogoutMissingToken(t *testing.T) {
 
 func TestHandlerLogoutInvalidFormat(t *testing.T) {
 	service, _, _ := newTestService(t)
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
 	app.Post("/auth/logout", func(c *fiber.Ctx) error {
@@ -79,11 +86,13 @@ func TestHandlerLogoutInvalidFormat(t *testing.T) {
 
 func TestHandlerLogoutInternalError(t *testing.T) {
 	service, session, mr := newTestService(t)
-	handler := NewHandler(service)
+	handler := NewHandler(service, &MockEmailService{})
 
 	ctx := context.Background()
 	userID := uuid.New()
-	_, token, err := session.CreateSession(ctx, userID, "127.0.0.1", "agent", true)
+	_, _, err := session.CreateSession(ctx, userID, "127.0.0.1", "agent", true)
+	require.NoError(t, err)
+	jwtToken, err := service.GenerateJWT(userID, false)
 	require.NoError(t, err)
 
 	require.NoError(t, session.redis.Close())
@@ -91,7 +100,8 @@ func TestHandlerLogoutInternalError(t *testing.T) {
 
 	app := fiber.New()
 	app.Post("/auth/logout", func(c *fiber.Ctx) error {
-		c.Request().Header.Set("Authorization", "Bearer "+token)
+		c.Locals("token", jwtToken)
+		c.Request().Header.Set("Authorization", "Bearer "+jwtToken)
 		return handler.Logout(c)
 	})
 

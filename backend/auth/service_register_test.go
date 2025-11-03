@@ -63,8 +63,8 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected error for duplicate email, got nil")
 	}
-	if err.Error() != "email already exists" {
-		t.Errorf("Expected 'email already exists' error, got: %v", err)
+	if !errors.Is(err, ErrEmailAlreadyExists) {
+		t.Errorf("Expected ErrEmailAlreadyExists, got: %v", err)
 	}
 }
 

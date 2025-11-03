@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useAuthStore } from '@/stores/authStore'
-import { apiClient } from '@/services/api/secureApi'
+import { authService } from '@/services/api'
 
-vi.mock('@/services/api/secureApi', () => ({
-  apiClient: {
+vi.mock('@/services/api', () => ({
+  authService: {
     login: vi.fn(),
     register: vi.fn(),
     logout: vi.fn(),
@@ -41,7 +41,7 @@ describe('Integration: Complete Auth Flow', () => {
         encryptionSalt: 'salt-123',
       }
 
-      vi.mocked(apiClient.register).mockResolvedValue(registerResponse as any)
+      vi.mocked(authService.register).mockResolvedValue(registerResponse as any)
 
       await useAuthStore.getState().register('newuser@example.com', 'password123', 'New User')
 
@@ -50,7 +50,7 @@ describe('Integration: Complete Auth Flow', () => {
       expect(localStorage.getItem('token')).toBe('register-token')
 
       // Step 2: Logout
-      vi.mocked(apiClient.logout).mockResolvedValue(undefined)
+      vi.mocked(authService.logout).mockResolvedValue(undefined)
 
       await useAuthStore.getState().logout()
 
@@ -65,7 +65,7 @@ describe('Integration: Complete Auth Flow', () => {
         encryptionSalt: 'salt-123',
       }
 
-      vi.mocked(apiClient.login).mockResolvedValue(loginResponse as any)
+      vi.mocked(authService.login).mockResolvedValue(loginResponse as any)
 
       await useAuthStore.getState().login('newuser@example.com', 'password123')
 
@@ -75,7 +75,7 @@ describe('Integration: Complete Auth Flow', () => {
 
     it('should handle registration failure and retry', async () => {
       // Step 1: Failed registration (email exists)
-      vi.mocked(apiClient.register).mockRejectedValueOnce(new Error('Email already exists'))
+      vi.mocked(authService.register).mockRejectedValueOnce(new Error('Email already exists'))
 
       await expect(
         useAuthStore.getState().register('existing@example.com', 'password', 'User')
@@ -97,7 +97,7 @@ describe('Integration: Complete Auth Flow', () => {
         encryptionSalt: 'salt',
       }
 
-      vi.mocked(apiClient.register).mockResolvedValue(registerResponse as any)
+      vi.mocked(authService.register).mockResolvedValue(registerResponse as any)
 
       await useAuthStore.getState().register('newemail@example.com', 'password', 'User')
 
@@ -121,7 +121,7 @@ describe('Integration: Complete Auth Flow', () => {
         encryptionSalt: 'salt',
       }
 
-      vi.mocked(apiClient.login).mockResolvedValue(loginResponse as any)
+      vi.mocked(authService.login).mockResolvedValue(loginResponse as any)
 
       await useAuthStore.getState().login('user@example.com', 'password')
 
@@ -133,16 +133,16 @@ describe('Integration: Complete Auth Flow', () => {
         qrCode: 'data:image/png;base64,ABC',
       }
 
-      vi.mocked(apiClient.beginMFASetup).mockResolvedValue(setupResponse)
+      vi.mocked(authService.beginMFASetup).mockResolvedValue(setupResponse)
 
       const mfaSecret = await useAuthStore.getState().enableMFA()
 
       expect(mfaSecret).toBe('JBSWY3DPEHPK3PXP')
 
       // Step 3: Enable MFA with code (call API directly)
-      vi.mocked(apiClient.enableMFA).mockResolvedValue(undefined)
+      vi.mocked(authService.enableMFA).mockResolvedValue(undefined)
 
-      await apiClient.enableMFA('123456')
+      await authService.enableMFA('123456')
 
       // Update user state to reflect MFA enabled
       useAuthStore.setState({
@@ -152,7 +152,7 @@ describe('Integration: Complete Auth Flow', () => {
       expect(useAuthStore.getState().user?.mfaEnabled).toBe(true)
 
       // Step 4: Logout
-      vi.mocked(apiClient.logout).mockResolvedValue(undefined)
+      vi.mocked(authService.logout).mockResolvedValue(undefined)
       await useAuthStore.getState().logout()
 
       // Step 5: Login with MFA required
@@ -162,7 +162,7 @@ describe('Integration: Complete Auth Flow', () => {
         encryptionSalt: 'salt',
       }
 
-      vi.mocked(apiClient.login).mockResolvedValue(mfaLoginResponse as any)
+      vi.mocked(authService.login).mockResolvedValue(mfaLoginResponse as any)
 
       await useAuthStore.getState().login('user@example.com', 'password')
 
@@ -174,7 +174,7 @@ describe('Integration: Complete Auth Flow', () => {
         user: mfaLoginResponse.user,
       }
 
-      vi.mocked(apiClient.verifyMFA).mockResolvedValue(verifyResponse as any)
+      vi.mocked(authService.verifyMFA).mockResolvedValue(verifyResponse as any)
 
       await useAuthStore.getState().verifyMFA('123456')
 
@@ -197,7 +197,7 @@ describe('Integration: Complete Auth Flow', () => {
       })
 
       // Step 1: First MFA attempt fails
-      vi.mocked(apiClient.verifyMFA).mockRejectedValueOnce(new Error('Invalid code'))
+      vi.mocked(authService.verifyMFA).mockRejectedValueOnce(new Error('Invalid code'))
 
       await expect(useAuthStore.getState().verifyMFA('000000')).rejects.toThrow('Invalid code')
 
@@ -216,7 +216,7 @@ describe('Integration: Complete Auth Flow', () => {
         },
       }
 
-      vi.mocked(apiClient.verifyMFA).mockResolvedValue(verifyResponse as any)
+      vi.mocked(authService.verifyMFA).mockResolvedValue(verifyResponse as any)
 
       await useAuthStore.getState().verifyMFA('123456')
 
@@ -238,7 +238,7 @@ describe('Integration: Complete Auth Flow', () => {
       })
 
       // Step 1: Disable MFA
-      vi.mocked(apiClient.disableMFA).mockResolvedValue(undefined)
+      vi.mocked(authService.disableMFA).mockResolvedValue(undefined)
 
       await useAuthStore.getState().disableMFA()
 
@@ -248,7 +248,7 @@ describe('Integration: Complete Auth Flow', () => {
       })
 
       // Step 2: Logout and login without MFA
-      vi.mocked(apiClient.logout).mockResolvedValue(undefined)
+      vi.mocked(authService.logout).mockResolvedValue(undefined)
       await useAuthStore.getState().logout()
 
       const loginResponse = {
@@ -264,7 +264,7 @@ describe('Integration: Complete Auth Flow', () => {
         encryptionSalt: 'salt',
       }
 
-      vi.mocked(apiClient.login).mockResolvedValue(loginResponse as any)
+      vi.mocked(authService.login).mockResolvedValue(loginResponse as any)
 
       await useAuthStore.getState().login('user@example.com', 'password123')
 
@@ -317,7 +317,7 @@ describe('Integration: Complete Auth Flow', () => {
         encryptionSalt: 'salt',
       }
 
-      vi.mocked(apiClient.login).mockResolvedValue(loginResponse as any)
+      vi.mocked(authService.login).mockResolvedValue(loginResponse as any)
 
       await useAuthStore.getState().login('user@example.com', 'password')
 
@@ -329,7 +329,7 @@ describe('Integration: Complete Auth Flow', () => {
   describe('Error Recovery Flow', () => {
     it('should recover from network errors during login', async () => {
       // Step 1: Network error
-      vi.mocked(apiClient.login).mockRejectedValueOnce(new Error('Network error'))
+      vi.mocked(authService.login).mockRejectedValueOnce(new Error('Network error'))
 
       await expect(useAuthStore.getState().login('user@example.com', 'password')).rejects.toThrow(
         'Network error'
@@ -351,7 +351,7 @@ describe('Integration: Complete Auth Flow', () => {
         encryptionSalt: 'salt',
       }
 
-      vi.mocked(apiClient.login).mockResolvedValue(loginResponse as any)
+      vi.mocked(authService.login).mockResolvedValue(loginResponse as any)
 
       await useAuthStore.getState().login('user@example.com', 'password')
 
@@ -375,7 +375,7 @@ describe('Integration: Complete Auth Flow', () => {
       localStorage.setItem('token', 'token')
 
       // Logout fails but local state is cleared anyway
-      vi.mocked(apiClient.logout).mockRejectedValue(new Error('Server error'))
+      vi.mocked(authService.logout).mockRejectedValue(new Error('Server error'))
 
       await useAuthStore.getState().logout()
 

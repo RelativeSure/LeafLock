@@ -179,7 +179,7 @@ func (s *EmailService) SendPasswordResetEmail(toEmail string, resetToken string,
 		Subject: "LeafLock Password Reset Request",
 		Data: map[string]interface{}{
 			"reset_url":    resetURL,
-			"expires_in":   "1 hour",
+			"expires_in":   "15 minutes",
 			"ip_address":   ipAddress,
 			"request_time": time.Now().Format("2006-01-02 15:04:05 MST"),
 		},

@@ -18,7 +18,7 @@ import (
 )
 
 // MigrationSchemaVersion tracks the current schema version
-const MigrationSchemaVersion = "2025.10.26.001" // Updated for note versioning enhancements, note links, and mobile/bulk features
+const MigrationSchemaVersion = "2025.11.03.002" // Security fixes: MFA salt + reset token rate limiting
 
 // Database interface for dependency injection and testing
 type Database interface {

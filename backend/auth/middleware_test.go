@@ -1,17 +1,22 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	miniredis "github.com/alicebob/miniredis/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
+	appcrypto "leaflock/crypto"
 )
 
 // AuthMiddlewareTestSuite tests auth middleware
@@ -26,7 +31,8 @@ type AuthMiddlewareTestSuite struct {
 func (suite *AuthMiddlewareTestSuite) SetupTest() {
 	suite.mockService = &MockMiddlewareService{}
 	suite.handler = &TestableHandler{
-		validator: suite.mockService,
+		validator:        suite.mockService,
+		blacklistChecker: suite.mockService,
 	}
 	suite.validToken = "valid-jwt-token-123"
 	suite.validUserID = uuid.New()
@@ -34,12 +40,18 @@ func (suite *AuthMiddlewareTestSuite) SetupTest() {
 
 // TestableHandler wraps Handler with injectable validator
 type TestableHandler struct {
-	validator JWTValidator
+	validator        JWTValidator
+	blacklistChecker JWTBlacklistChecker
 }
 
 // JWTValidator interface for testing
 type JWTValidator interface {
 	ValidateJWT(token string) (uuid.UUID, bool, error)
+}
+
+// JWTBlacklistChecker interface for testing JWT revocation checks
+type JWTBlacklistChecker interface {
+	IsJWTBlacklisted(ctx context.Context, token string) (bool, error)
 }
 
 // Middleware methods for TestableHandler (copy from Handler with validator injection)
@@ -61,6 +73,16 @@ func (h *TestableHandler) JWTMiddleware(c *fiber.Ctx) error {
 	}
 
 	token := parts[1]
+
+	if h.blacklistChecker != nil {
+		if blacklisted, err := h.blacklistChecker.IsJWTBlacklisted(c.Context(), token); err == nil && blacklisted {
+			return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
+				Error: "Token has been revoked",
+				Code:  ErrCodeInvalidToken,
+			})
+		}
+	}
+
 	userID, isAdmin, err := h.validator.ValidateJWT(token)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
@@ -88,6 +110,13 @@ func (h *TestableHandler) OptionalJWTMiddleware(c *fiber.Ctx) error {
 	}
 
 	token := parts[1]
+
+	if h.blacklistChecker != nil {
+		if blacklisted, err := h.blacklistChecker.IsJWTBlacklisted(c.Context(), token); err == nil && blacklisted {
+			return c.Next()
+		}
+	}
+
 	userID, isAdmin, err := h.validator.ValidateJWT(token)
 	if err != nil {
 		return c.Next()
@@ -146,6 +175,7 @@ func (suite *AuthMiddlewareTestSuite) TestJWTMiddleware_ValidToken() {
 		})
 	})
 
+	suite.mockService.On("IsJWTBlacklisted", mock.Anything, suite.validToken).Return(false, nil)
 	suite.mockService.On("ValidateJWT", suite.validToken).Return(suite.validUserID, false, nil)
 
 	req := httptest.NewRequest("GET", "/protected", nil)
@@ -165,6 +195,7 @@ func (suite *AuthMiddlewareTestSuite) TestJWTMiddleware_ValidTokenAdmin() {
 		return c.JSON(fiber.Map{"is_admin": isAdmin})
 	})
 
+	suite.mockService.On("IsJWTBlacklisted", mock.Anything, suite.validToken).Return(false, nil)
 	suite.mockService.On("ValidateJWT", suite.validToken).Return(suite.validUserID, true, nil)
 
 	req := httptest.NewRequest("GET", "/protected", nil)
@@ -173,6 +204,24 @@ func (suite *AuthMiddlewareTestSuite) TestJWTMiddleware_ValidTokenAdmin() {
 	resp, err := app.Test(req)
 	suite.NoError(err)
 	suite.Equal(200, resp.StatusCode)
+}
+
+func (suite *AuthMiddlewareTestSuite) TestJWTMiddleware_BlacklistedToken() {
+	app := fiber.New()
+
+	app.Use(suite.handler.JWTMiddleware)
+	app.Get("/protected", func(c *fiber.Ctx) error {
+		return c.SendString("should not reach")
+	})
+
+	suite.mockService.On("IsJWTBlacklisted", mock.Anything, suite.validToken).Return(true, nil)
+
+	req := httptest.NewRequest("GET", "/protected", nil)
+	req.Header.Set("Authorization", "Bearer "+suite.validToken)
+
+	resp, err := app.Test(req)
+	suite.NoError(err)
+	suite.Equal(fiber.StatusUnauthorized, resp.StatusCode)
 }
 
 func (suite *AuthMiddlewareTestSuite) TestJWTMiddleware_MissingAuthHeader() {
@@ -228,6 +277,7 @@ func (suite *AuthMiddlewareTestSuite) TestJWTMiddleware_ExpiredToken() {
 	})
 
 	expiredToken := "expired-jwt-token"
+	suite.mockService.On("IsJWTBlacklisted", mock.Anything, expiredToken).Return(false, nil)
 	suite.mockService.On("ValidateJWT", expiredToken).Return(uuid.Nil, false, fmt.Errorf("token expired"))
 
 	req := httptest.NewRequest("GET", "/protected", nil)
@@ -246,6 +296,7 @@ func (suite *AuthMiddlewareTestSuite) TestJWTMiddleware_InvalidToken() {
 	})
 
 	invalidToken := "invalid-jwt-token"
+	suite.mockService.On("IsJWTBlacklisted", mock.Anything, invalidToken).Return(false, nil)
 	suite.mockService.On("ValidateJWT", invalidToken).Return(uuid.Nil, false, fmt.Errorf("invalid token"))
 
 	req := httptest.NewRequest("GET", "/protected", nil)
@@ -272,6 +323,7 @@ func (suite *AuthMiddlewareTestSuite) TestOptionalJWTMiddleware_ValidToken() {
 		return c.JSON(fiber.Map{"authenticated": false})
 	})
 
+	suite.mockService.On("IsJWTBlacklisted", mock.Anything, suite.validToken).Return(false, nil)
 	suite.mockService.On("ValidateJWT", suite.validToken).Return(suite.validUserID, false, nil)
 
 	req := httptest.NewRequest("GET", "/public", nil)
@@ -326,6 +378,7 @@ func (suite *AuthMiddlewareTestSuite) TestOptionalJWTMiddleware_InvalidToken() {
 	})
 
 	invalidToken := "invalid-token"
+	suite.mockService.On("IsJWTBlacklisted", mock.Anything, invalidToken).Return(false, nil)
 	suite.mockService.On("ValidateJWT", invalidToken).Return(uuid.Nil, false, fmt.Errorf("invalid"))
 
 	req := httptest.NewRequest("GET", "/public", nil)
@@ -334,6 +387,25 @@ func (suite *AuthMiddlewareTestSuite) TestOptionalJWTMiddleware_InvalidToken() {
 	resp, err := app.Test(req)
 	suite.NoError(err)
 	suite.Equal(200, resp.StatusCode) // Should continue without auth
+}
+
+func (suite *AuthMiddlewareTestSuite) TestOptionalJWTMiddleware_BlacklistedToken() {
+	app := fiber.New()
+
+	app.Use(suite.handler.OptionalJWTMiddleware)
+	app.Get("/public", func(c *fiber.Ctx) error {
+		userID := c.Locals("user_id")
+		return c.JSON(fiber.Map{"authenticated": userID != nil})
+	})
+
+	suite.mockService.On("IsJWTBlacklisted", mock.Anything, suite.validToken).Return(true, nil)
+
+	req := httptest.NewRequest("GET", "/public", nil)
+	req.Header.Set("Authorization", "Bearer "+suite.validToken)
+
+	resp, err := app.Test(req)
+	suite.NoError(err)
+	suite.Equal(200, resp.StatusCode)
 }
 
 // =====================================
@@ -615,6 +687,7 @@ func (suite *AuthMiddlewareTestSuite) TestMiddlewareChain_JWTThenRequireAuth() {
 		return c.SendString("OK")
 	})
 
+	suite.mockService.On("IsJWTBlacklisted", mock.Anything, suite.validToken).Return(false, nil)
 	suite.mockService.On("ValidateJWT", suite.validToken).Return(suite.validUserID, false, nil)
 
 	req := httptest.NewRequest("GET", "/protected", nil)
@@ -634,6 +707,7 @@ func (suite *AuthMiddlewareTestSuite) TestMiddlewareChain_JWTThenRequireAdmin() 
 		return c.SendString("Admin OK")
 	})
 
+	suite.mockService.On("IsJWTBlacklisted", mock.Anything, suite.validToken).Return(false, nil)
 	suite.mockService.On("ValidateJWT", suite.validToken).Return(suite.validUserID, true, nil)
 
 	req := httptest.NewRequest("GET", "/admin", nil)
@@ -653,6 +727,7 @@ func (suite *AuthMiddlewareTestSuite) TestMiddlewareChain_NonAdminAccessingAdmin
 		return c.SendString("Admin OK")
 	})
 
+	suite.mockService.On("IsJWTBlacklisted", mock.Anything, suite.validToken).Return(false, nil)
 	suite.mockService.On("ValidateJWT", suite.validToken).Return(suite.validUserID, false, nil) // Not admin
 
 	req := httptest.NewRequest("GET", "/admin", nil)
@@ -674,6 +749,11 @@ type MockMiddlewareService struct {
 func (m *MockMiddlewareService) ValidateJWT(token string) (uuid.UUID, bool, error) {
 	args := m.Called(token)
 	return args.Get(0).(uuid.UUID), args.Bool(1), args.Error(2)
+}
+
+func (m *MockMiddlewareService) IsJWTBlacklisted(ctx context.Context, token string) (bool, error) {
+	args := m.Called(ctx, token)
+	return args.Bool(0), args.Error(1)
 }
 
 func TestHandlerJWTMiddlewareValidToken(t *testing.T) {
@@ -802,9 +882,23 @@ func TestHandlerRequireAdminMiddleware(t *testing.T) {
 
 func createHandlerWithToken(t *testing.T, isAdmin bool) (*Handler, uuid.UUID, string) {
 	t.Helper()
-	svc := &Service{jwtSecret: "unit-test-secret"}
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
+	sessionMgr := NewSessionManager(rdb, cryptoSvc)
+
+	svc := &Service{
+		session:   sessionMgr,
+		jwtSecret: "unit-test-secret",
+	}
 	userID := uuid.New()
 	token, err := svc.GenerateJWT(userID, isAdmin)
 	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		require.NoError(t, rdb.Close())
+		mr.Close()
+	})
+
 	return &Handler{service: svc}, userID, token
 }

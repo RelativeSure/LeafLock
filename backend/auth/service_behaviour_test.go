@@ -168,6 +168,14 @@ func (m *mockSessionManager) DeleteSession(ctx context.Context, token string) er
 	return nil
 }
 
+func (m *mockSessionManager) BlacklistJWT(ctx context.Context, token string, expiresAt time.Time) error {
+	return nil
+}
+
+func (m *mockSessionManager) IsJWTBlacklisted(ctx context.Context, token string) (bool, error) {
+	return false, nil
+}
+
 func TestCreateAuthResponsePopulatesFields(t *testing.T) {
 	userID := uuid.New()
 	workspaceID := uuid.New()

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
 	"testing"
 
 	appcrypto "leaflock/crypto"
@@ -57,13 +58,28 @@ func TestVerifyBackupCodeSuccess(t *testing.T) {
 	crypto := appcrypto.NewCryptoService(make([]byte, 32))
 	mgr := NewMFAManager(&mfaMockDB{}, crypto)
 
+	testSalt := make([]byte, 32)
+	rand.Read(testSalt)
+
 	code := mgr.formatBackupCode("ABCDEFGHIJKL")
 	normalized := mgr.normalizeBackupCode(code)
-	hash := mgr.hashBackupCode(normalized)
+	hash := mgr.hashBackupCode(normalized, testSalt)
 
 	mdb := &mfaMockDB{
 		queryRowFuncs: []func(dest ...interface{}) error{
 			func(dest ...interface{}) error {
+				if len(dest) >= 3 {
+					if codes, ok := dest[0].(*[][]byte); ok {
+						*codes = [][]byte{hash}
+					}
+					if used, ok := dest[1].(*[][]byte); ok {
+						*used = [][]byte{}
+					}
+					if salt, ok := dest[2].(*[]byte); ok {
+						*salt = testSalt
+					}
+					return nil
+				}
 				if len(dest) >= 2 {
 					if codes, ok := dest[0].(*[][]byte); ok {
 						*codes = [][]byte{hash}
@@ -100,19 +116,25 @@ func TestVerifyBackupCodeAlreadyUsed(t *testing.T) {
 	crypto := appcrypto.NewCryptoService(make([]byte, 32))
 	mgr := NewMFAManager(&mfaMockDB{}, crypto)
 
+	testSalt := make([]byte, 32)
+	rand.Read(testSalt)
+
 	code := mgr.formatBackupCode("MNOPQRSTUVWZ")
 	normalized := mgr.normalizeBackupCode(code)
-	hash := mgr.hashBackupCode(normalized)
+	hash := mgr.hashBackupCode(normalized, testSalt)
 
 	mdb := &mfaMockDB{
 		queryRowFuncs: []func(dest ...interface{}) error{
 			func(dest ...interface{}) error {
-				if len(dest) >= 2 {
+				if len(dest) >= 3 {
 					if codes, ok := dest[0].(*[][]byte); ok {
 						*codes = [][]byte{hash}
 					}
 					if used, ok := dest[1].(*[][]byte); ok {
 						*used = [][]byte{hash}
+					}
+					if salt, ok := dest[2].(*[]byte); ok {
+						*salt = testSalt
 					}
 				}
 				return nil
@@ -132,6 +154,9 @@ func TestDisableMFAWithBackupCode(t *testing.T) {
 	crypto := appcrypto.NewCryptoService(make([]byte, 32))
 	mgr := NewMFAManager(&mfaMockDB{}, crypto)
 
+	testSalt := make([]byte, 32)
+	rand.Read(testSalt)
+
 	secret := []byte("totp-secret-value")
 	encryptedSecret, err := crypto.EncryptBytes(secret)
 	if err != nil {
@@ -140,7 +165,7 @@ func TestDisableMFAWithBackupCode(t *testing.T) {
 
 	code := mgr.formatBackupCode("ZYXWVUTSRQPO")
 	normalized := mgr.normalizeBackupCode(code)
-	hash := mgr.hashBackupCode(normalized)
+	hash := mgr.hashBackupCode(normalized, testSalt)
 
 	mdb := &mfaMockDB{
 		queryRowFuncs: []func(dest ...interface{}) error{
@@ -151,6 +176,18 @@ func TestDisableMFAWithBackupCode(t *testing.T) {
 				return nil
 			},
 			func(dest ...interface{}) error {
+				if len(dest) >= 3 {
+					if codes, ok := dest[0].(*[][]byte); ok {
+						*codes = [][]byte{hash}
+					}
+					if used, ok := dest[1].(*[][]byte); ok {
+						*used = [][]byte{}
+					}
+					if salt, ok := dest[2].(*[]byte); ok {
+						*salt = testSalt
+					}
+					return nil
+				}
 				if len(dest) >= 2 {
 					if codes, ok := dest[0].(*[][]byte); ok {
 						*codes = [][]byte{hash}

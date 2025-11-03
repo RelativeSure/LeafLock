@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -18,6 +19,24 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
+
+var ErrEmailAlreadyExists = errors.New("email already exists")
+
+type registerOptionKey string
+
+const skipAutoLoginKey registerOptionKey = "skip_auto_login"
+
+func WithSkipAutoLogin(ctx context.Context) context.Context {
+	return context.WithValue(ctx, skipAutoLoginKey, true)
+}
+
+func shouldSkipAutoLogin(ctx context.Context) bool {
+	if ctx == nil {
+		return false
+	}
+	value, _ := ctx.Value(skipAutoLoginKey).(bool)
+	return value
+}
 
 // Service coordinates all auth operations
 type Service struct {
@@ -35,6 +54,8 @@ type sessionManager interface {
 	GetMFASession(ctx context.Context, token string) (*MFASession, error)
 	DeleteMFASession(ctx context.Context, token string) error
 	DeleteSession(ctx context.Context, token string) error
+	BlacklistJWT(ctx context.Context, token string, expiresAt time.Time) error
+	IsJWTBlacklisted(ctx context.Context, token string) (bool, error)
 }
 
 const defaultEncryptionVersion = 1
@@ -120,7 +141,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (*AuthRe
 	).Scan(&userID)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique") {
-			return nil, fmt.Errorf("email already exists")
+			return nil, ErrEmailAlreadyExists
 		}
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
@@ -190,6 +211,16 @@ func (s *Service) Register(ctx context.Context, email, password string) (*AuthRe
 		"email":        email,
 		"workspace_id": workspaceID.String(),
 	})
+
+	if shouldSkipAutoLogin(ctx) {
+		return &AuthResponse{
+			UserID:            userID.String(),
+			WorkspaceID:       workspaceID.String(),
+			IsAdmin:           false,
+			EncryptionSalt:    base64.StdEncoding.EncodeToString(salt),
+			EncryptionVersion: defaultEncryptionVersion,
+		}, nil
+	}
 
 	// Create session and generate JWT
 	ipAddress := utils.GetClientIPFromContext(ctx)
@@ -389,7 +420,45 @@ func (s *Service) VerifyMFA(ctx context.Context, sessionToken, code string) (*Au
 
 // Logout logs out a user
 func (s *Service) Logout(ctx context.Context, token string) error {
-	return s.session.DeleteSession(ctx, token)
+	parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(s.jwtSecret), nil
+	})
+
+	var expiresAt time.Time
+
+	if err == nil && parsedToken.Valid {
+		if claims, ok := parsedToken.Claims.(jwt.MapClaims); ok {
+			if expValue, ok := claims["exp"]; ok {
+				switch v := expValue.(type) {
+				case float64:
+					expiresAt = time.Unix(int64(v), 0)
+				case json.Number:
+					if parsed, parseErr := v.Int64(); parseErr == nil {
+						expiresAt = time.Unix(parsed, 0)
+					}
+				case int64:
+					expiresAt = time.Unix(v, 0)
+				case int:
+					expiresAt = time.Unix(int64(v), 0)
+				}
+			}
+		}
+	}
+
+	if !expiresAt.IsZero() {
+		if err := s.session.BlacklistJWT(ctx, token, expiresAt); err != nil {
+			return fmt.Errorf("failed to revoke token: %w", err)
+		}
+	}
+
+	if err := s.session.DeleteSession(ctx, token); err != nil {
+		return fmt.Errorf("failed to delete session: %w", err)
+	}
+
+	return nil
 }
 
 // GenerateJWT generates a JWT token

@@ -188,7 +188,19 @@ export function AdminPage() {
 
   const handleUserStatusChange = async (userId: string, newStatus: string) => {
     try {
-      // TODO: Implement API call
+      const apiUrl = import.meta.env.VITE_API_URL || window.location.origin
+      const token = localStorage.getItem('token')
+
+      // If unlocking, use unlock endpoint
+      if (newStatus === 'active') {
+        await fetch(`${apiUrl}/api/v1/admin/users/${userId}/unlock`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+      }
+
       setUsers((prev) =>
         prev.map((user) => (user.id === userId ? { ...user, status: newStatus as any } : user))
       )
@@ -200,7 +212,18 @@ export function AdminPage() {
 
   const handleUserRoleChange = async (userId: string, newRole: string) => {
     try {
-      // TODO: Implement API call
+      const apiUrl = import.meta.env.VITE_API_URL || window.location.origin
+      const token = localStorage.getItem('token')
+
+      await fetch(`${apiUrl}/api/v1/admin/users/${userId}/role`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ isAdmin: newRole === 'admin' }),
+      })
+
       setUsers((prev) =>
         prev.map((user) => (user.id === userId ? { ...user, role: newRole as any } : user))
       )
@@ -212,7 +235,16 @@ export function AdminPage() {
 
   const handleDeleteUser = async (userId: string) => {
     try {
-      // TODO: Implement API call
+      const apiUrl = import.meta.env.VITE_API_URL || window.location.origin
+      const token = localStorage.getItem('token')
+
+      await fetch(`${apiUrl}/api/v1/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
       setUsers((prev) => prev.filter((user) => user.id !== userId))
       toast.success('User deleted successfully')
     } catch (error) {
@@ -566,9 +598,35 @@ export function AdminPage() {
                       <div className="flex items-center gap-2">
                         <Switch
                           checked={announcement.isActive}
-                          onCheckedChange={() => {
-                            // TODO: Implement API call
-                            toast.info('Announcement status updated')
+                          onCheckedChange={async (checked) => {
+                            try {
+                              const apiUrl = import.meta.env.VITE_API_URL || window.location.origin
+                              const token = localStorage.getItem('token')
+
+                              await fetch(
+                                `${apiUrl}/api/v1/admin/announcements/${announcement.id}`,
+                                {
+                                  method: 'PUT',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                    Authorization: `Bearer ${token}`,
+                                  },
+                                  body: JSON.stringify({
+                                    ...announcement,
+                                    isActive: checked,
+                                  }),
+                                }
+                              )
+
+                              setAnnouncements((prev) =>
+                                prev.map((a) =>
+                                  a.id === announcement.id ? { ...a, isActive: checked } : a
+                                )
+                              )
+                              toast.success('Announcement status updated')
+                            } catch (error) {
+                              toast.error('Failed to update announcement')
+                            }
                           }}
                         />
                         <Button variant="ghost" size="sm">

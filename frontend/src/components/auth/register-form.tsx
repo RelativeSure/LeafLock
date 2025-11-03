@@ -1,10 +1,10 @@
-import { useState } from 'react'
-import { useAuthStore } from '../../stores/authStore'
+import { useState, useEffect } from 'react'
+import { useAuthStore } from '@/stores/authStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Lock, Mail, User, Check, X } from 'lucide-react'
+import { Lock, Mail, User, Check, X, AlertCircle } from 'lucide-react'
 
 export function RegisterForm({
   onToggleMode,
@@ -13,13 +13,33 @@ export function RegisterForm({
   onToggleMode: () => void
   animatedTitle?: React.ReactNode
 }) {
-  const { register } = useAuthStore()
+  const { register, checkRegistrationEnabled } = useAuthStore()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [registrationEnabled, setRegistrationEnabled] = useState<boolean | null>(null)
+  const [checkingStatus, setCheckingStatus] = useState(true)
+
+  // Check registration status on mount
+  useEffect(() => {
+    const checkStatus = async () => {
+      setCheckingStatus(true)
+      try {
+        const enabled = await checkRegistrationEnabled()
+        setRegistrationEnabled(enabled)
+      } catch (error) {
+        console.error('Failed to check registration status:', error)
+        setRegistrationEnabled(false)
+      } finally {
+        setCheckingStatus(false)
+      }
+    }
+    checkStatus()
+  }, [checkRegistrationEnabled])
 
   // Name validation
   const nameValid = name.trim().length >= 2
@@ -47,6 +67,7 @@ export function RegisterForm({
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setSuccessMessage('')
 
     // Validate name
     if (!nameValid) {
@@ -74,9 +95,16 @@ export function RegisterForm({
     setIsLoading(true)
 
     try {
-      await register(email, password, name)
-      // Registration successful, redirect to dashboard (root route)
-      window.location.href = '/'
+      const message = await register(email, password, name)
+      const successText =
+        typeof message === 'string' && message.trim().length > 0
+          ? message
+          : 'Registration request accepted. If this email is eligible, you will receive further instructions shortly.'
+      setSuccessMessage(successText)
+      setName('')
+      setEmail('')
+      setPassword('')
+      setConfirmPassword('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed')
     } finally {
@@ -94,6 +122,66 @@ export function RegisterForm({
       <span className={valid ? 'text-green-500' : 'text-muted-foreground'}>{text}</span>
     </div>
   )
+
+  // Show loading state while checking registration status
+  if (checkingStatus) {
+    return (
+      <Card className="w-full max-w-md animate-scale-in hover-lift">
+        <CardHeader className="space-y-4">
+          <div className="flex items-center justify-center mx-auto">
+            <h1 className="text-4xl font-semibold tracking-tight text-slate-100">
+              {animatedTitle ? null : 'LeafLock'}
+            </h1>
+            {animatedTitle}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center text-muted-foreground py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4">Checking registration status...</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Show disabled message if registration is disabled
+  if (registrationEnabled === false) {
+    return (
+      <Card className="w-full max-w-md animate-scale-in hover-lift">
+        <CardHeader className="space-y-4">
+          <div className="flex items-center justify-center mx-auto">
+            <h1 className="text-4xl font-semibold tracking-tight text-slate-100">
+              {animatedTitle ? null : 'LeafLock'}
+            </h1>
+            {animatedTitle}
+          </div>
+          <div className="space-y-2">
+            <p className="text-center text-base text-slate-300 font-normal">
+              End-to-End Encrypted Note Taking
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-4 bg-warning/10 border border-warning/20 rounded-md">
+              <AlertCircle className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-warning">Registration Disabled</p>
+                <p className="text-sm text-muted-foreground">
+                  New user registration is currently disabled by the administrator. Please contact
+                  support if you need access.
+                </p>
+              </div>
+            </div>
+            <Button onClick={onToggleMode} variant="outline" className="w-full">
+              Back to Sign In
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card className="w-full max-w-md animate-scale-in hover-lift">
@@ -212,6 +300,12 @@ export function RegisterForm({
               </div>
             )}
           </div>
+
+          {successMessage && (
+            <div className="text-sm text-emerald-500 bg-emerald-500/10 p-3 rounded-md animate-slide-in">
+              {successMessage}
+            </div>
+          )}
 
           {error && (
             <div className="text-sm text-danger bg-danger/10 p-3 rounded-md animate-slide-in">

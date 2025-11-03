@@ -248,8 +248,9 @@ describe('NoteEditor', () => {
     await renderEditor()
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to decrypt note. The password may be incorrect.'))
-        .toBeInTheDocument()
+      expect(
+        screen.getByText('Failed to decrypt note. The password may be incorrect.')
+      ).toBeInTheDocument()
     })
   })
 

@@ -20,13 +20,20 @@ import (
 	appcrypto "leaflock/crypto"
 )
 
+// MockEmailService is a mock email service for testing
+type MockEmailService struct{}
+
+func (m *MockEmailService) SendPasswordResetEmail(toEmail string, resetToken string, ipAddress string) error {
+	return nil
+}
+
 // AuthHandlersTestSuite tests auth Handler
 type AuthHandlersTestSuite struct {
 	suite.Suite
-	handler    *Handler
-	mockSvc    *MockAuthService
-	cryptoSvc  *appcrypto.CryptoService
-	jwtSecret  string
+	handler   *Handler
+	mockSvc   *MockAuthService
+	cryptoSvc *appcrypto.CryptoService
+	jwtSecret string
 }
 
 func (suite *AuthHandlersTestSuite) SetupTest() {
@@ -36,7 +43,7 @@ func (suite *AuthHandlersTestSuite) SetupTest() {
 	mockService := &Service{}
 	suite.mockSvc.service = mockService
 
-	suite.handler = NewHandler(mockService)
+	suite.handler = NewHandler(mockService, &MockEmailService{})
 
 	key := make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {
@@ -65,11 +72,8 @@ func (suite *AuthHandlersTestSuite) TestRegister_Success() {
 	body, _ := json.Marshal(reqBody)
 
 	// Mock successful registration
-	expectedResponse := &AuthResponse{
-		Token:  "mock-jwt-token",
-		UserID: uuid.New().String(),
-	}
-	suite.mockSvc.On("Register", mock.Anything, "test@example.com", "SecureP@ssw0rd123!").Return(expectedResponse, nil)
+	suite.mockSvc.On("Register", mock.Anything, "test@example.com", "SecureP@ssw0rd123!").
+		Return(&AuthResponse{UserID: uuid.New().String()}, nil)
 
 	// Mock registration enabled check
 	mockRow := &MockHandlerRow{}
@@ -87,12 +91,12 @@ func (suite *AuthHandlersTestSuite) TestRegister_Success() {
 
 	resp, err := app.Test(req)
 	suite.NoError(err)
-	suite.Equal(200, resp.StatusCode)
+	suite.Equal(fiber.StatusAccepted, resp.StatusCode)
 
-	var response AuthResponse
+	var response map[string]string
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	suite.NoError(err)
-	suite.Equal(expectedResponse.Token, response.Token)
+	suite.Contains(response["message"], "email")
 }
 
 func (suite *AuthHandlersTestSuite) TestRegister_InvalidRequestBody() {
@@ -198,21 +202,21 @@ func (suite *AuthHandlersTestSuite) TestRegister_EmailAlreadyExists() {
 		}
 	}).Return(nil)
 
-	// Mock service returns "already exists" error
+	// Mock service returns duplicate email error
 	suite.mockSvc.On("Register", mock.Anything, "existing@example.com", "SecureP@ssw0rd123!").
-		Return((*AuthResponse)(nil), fmt.Errorf("email already exists"))
+		Return((*AuthResponse)(nil), ErrEmailAlreadyExists)
 
 	req := httptest.NewRequest("POST", "/auth/register", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
 	suite.NoError(err)
-	suite.Equal(409, resp.StatusCode) // Conflict
+	suite.Equal(fiber.StatusAccepted, resp.StatusCode)
 
-	var errResp ErrorResponse
-	err = json.NewDecoder(resp.Body).Decode(&errResp)
+	var response map[string]string
+	err = json.NewDecoder(resp.Body).Decode(&response)
 	suite.NoError(err)
-	suite.Equal(ErrCodeEmailExists, errResp.Code)
+	suite.Contains(response["message"], "email")
 }
 
 func (suite *AuthHandlersTestSuite) TestRegister_WeakPassword() {

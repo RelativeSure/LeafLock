@@ -1,11 +1,15 @@
 package auth
 
 import (
+	"context"
+	"crypto/rand"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewService(t *testing.T) {
@@ -106,7 +110,10 @@ func TestPasswordManager_ValidatePasswordStrength(t *testing.T) {
 func TestMFAManager_GenerateBackupCodes(t *testing.T) {
 	mm := &MFAManager{}
 
-	codes, hashes, err := mm.GenerateBackupCodes()
+	testSalt := make([]byte, 32)
+	rand.Read(testSalt)
+
+	codes, hashes, err := mm.GenerateBackupCodes(testSalt)
 	if err != nil {
 		t.Fatalf("GenerateBackupCodes failed: %v", err)
 	}
@@ -241,6 +248,106 @@ func TestServiceValidateJWTExpiredToken(t *testing.T) {
 	if _, _, err := svc.ValidateJWT(signed); err == nil {
 		t.Fatal("expected error for expired token")
 	}
+}
+
+func TestServiceLogout_BlacklistsAndDeletesToken(t *testing.T) {
+	stub := &logoutSessionStub{}
+	svc := &Service{session: stub, jwtSecret: "unit-test-secret"}
+
+	userID := uuid.New()
+	token, err := svc.GenerateJWT(userID, false)
+	require.NoError(t, err)
+
+	err = svc.Logout(context.Background(), token)
+	require.NoError(t, err)
+	require.Len(t, stub.blacklistCalls, 1)
+	require.Equal(t, token, stub.blacklistCalls[0].token)
+
+	parsed, err := jwt.Parse(token, func(tkn *jwt.Token) (interface{}, error) {
+		return []byte(svc.jwtSecret), nil
+	})
+	require.NoError(t, err)
+	claims, ok := parsed.Claims.(jwt.MapClaims)
+	require.True(t, ok)
+	expFloat, ok := claims["exp"].(float64)
+	require.True(t, ok)
+	expectedExpiry := time.Unix(int64(expFloat), 0)
+	require.WithinDuration(t, expectedExpiry, stub.blacklistCalls[0].expiresAt, time.Second)
+
+	require.Len(t, stub.deletedTokens, 1)
+	require.Equal(t, token, stub.deletedTokens[0])
+}
+
+func TestServiceLogout_BlacklistErrorPropagates(t *testing.T) {
+	stub := &logoutSessionStub{blacklistErr: errors.New("redis down")}
+	svc := &Service{session: stub, jwtSecret: "unit-test-secret"}
+
+	token, err := svc.GenerateJWT(uuid.New(), false)
+	require.NoError(t, err)
+
+	err = svc.Logout(context.Background(), token)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to revoke token")
+	require.Empty(t, stub.deletedTokens)
+}
+
+func TestServiceLogout_NonJWTTokenSkipsBlacklist(t *testing.T) {
+	stub := &logoutSessionStub{blacklistErr: errors.New("should not be called")}
+	svc := &Service{session: stub, jwtSecret: "unit-test-secret"}
+
+	err := svc.Logout(context.Background(), "not-a-jwt-token")
+	require.NoError(t, err)
+	require.Len(t, stub.blacklistCalls, 0)
+	require.Len(t, stub.deletedTokens, 1)
+	require.Equal(t, "not-a-jwt-token", stub.deletedTokens[0])
+}
+
+type blacklistCall struct {
+	token     string
+	expiresAt time.Time
+}
+
+type logoutSessionStub struct {
+	blacklistErr   error
+	deleteErr      error
+	blacklistCalls []blacklistCall
+	deletedTokens  []string
+}
+
+func (s *logoutSessionStub) CreateSession(ctx context.Context, userID uuid.UUID, ipAddress, userAgent string, mfaVerified bool) (*Session, string, error) {
+	return nil, "", nil
+}
+
+func (s *logoutSessionStub) CreateMFASession(ctx context.Context, userID uuid.UUID, email, ipAddress, userAgent string, mfaEnabled bool) (string, error) {
+	return "", nil
+}
+
+func (s *logoutSessionStub) GetMFASession(ctx context.Context, token string) (*MFASession, error) {
+	return nil, nil
+}
+
+func (s *logoutSessionStub) DeleteMFASession(ctx context.Context, token string) error {
+	return nil
+}
+
+func (s *logoutSessionStub) DeleteSession(ctx context.Context, token string) error {
+	s.deletedTokens = append(s.deletedTokens, token)
+	if s.deleteErr != nil {
+		return s.deleteErr
+	}
+	return nil
+}
+
+func (s *logoutSessionStub) BlacklistJWT(ctx context.Context, token string, expiresAt time.Time) error {
+	s.blacklistCalls = append(s.blacklistCalls, blacklistCall{token: token, expiresAt: expiresAt})
+	if s.blacklistErr != nil {
+		return s.blacklistErr
+	}
+	return nil
+}
+
+func (s *logoutSessionStub) IsJWTBlacklisted(ctx context.Context, token string) (bool, error) {
+	return false, nil
 }
 
 // Note: These are basic unit tests. For comprehensive testing, you would need:

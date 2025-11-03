@@ -1,14 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useTemplatesStore } from '../templatesStore'
-import { apiClient } from '@/services/api/secureApi'
+import { contentService } from '@/services/api'
 
-vi.mock('@/services/api/secureApi', () => ({
-  apiClient: {
+vi.mock('@/services/api', () => ({
+  contentService: {
     getTemplates: vi.fn(),
     getTemplate: vi.fn(),
     createTemplate: vi.fn(),
     updateTemplate: vi.fn(),
     deleteTemplate: vi.fn(),
+    useTemplate: vi.fn(),
   },
 }))
 
@@ -30,14 +31,18 @@ describe('templatesStore - Advanced Scenarios', () => {
   beforeEach(() => {
     useTemplatesStore.setState({
       templates: [],
+      starterTemplates: [],
+      communityTemplates: [],
       isLoading: false,
     })
+    localStorage.setItem('user', JSON.stringify({ id: '123' }))
     vi.clearAllMocks()
+    vi.mocked(contentService.getTemplates).mockResolvedValue([])
   })
 
   describe('Template loading', () => {
     it('should load all templates', async () => {
-      vi.mocked(apiClient.getTemplates).mockResolvedValue([mockTemplate])
+      vi.mocked(contentService.getTemplates).mockResolvedValue([mockTemplate])
 
       await useTemplatesStore.getState().loadTemplates()
 
@@ -47,7 +52,7 @@ describe('templatesStore - Advanced Scenarios', () => {
 
     it('should set loading state while fetching', async () => {
       let resolveTemplates: any
-      vi.mocked(apiClient.getTemplates).mockReturnValue(
+      vi.mocked(contentService.getTemplates).mockReturnValue(
         new Promise((resolve) => {
           resolveTemplates = resolve
         })
@@ -64,20 +69,23 @@ describe('templatesStore - Advanced Scenarios', () => {
     })
 
     it('should handle loading errors', async () => {
-      vi.mocked(apiClient.getTemplates).mockRejectedValue(new Error('Failed to load'))
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      vi.mocked(contentService.getTemplates).mockRejectedValue(new Error('Failed to load'))
 
-      await expect(useTemplatesStore.getState().loadTemplates()).rejects.toThrow('Failed to load')
+      await useTemplatesStore.getState().loadTemplates()
 
       expect(useTemplatesStore.getState().isLoading).toBe(false)
+      expect(consoleErrorSpy).toHaveBeenCalled()
+      consoleErrorSpy.mockRestore()
     })
 
     it('should load single template by ID', async () => {
-      vi.mocked(apiClient.getTemplate).mockResolvedValue(mockTemplate)
+      vi.mocked(contentService.getTemplate).mockResolvedValue(mockTemplate)
 
-      const result = await apiClient.getTemplate('tpl-1')
+      const result = await contentService.getTemplate('tpl-1')
 
       expect(result).toEqual(mockTemplate)
-      expect(apiClient.getTemplate).toHaveBeenCalledWith('tpl-1')
+      expect(contentService.getTemplate).toHaveBeenCalledWith('tpl-1')
     })
   })
 
@@ -90,7 +98,8 @@ describe('templatesStore - Advanced Scenarios', () => {
       }
 
       const createdTemplate = { ...mockTemplate, ...newTemplate, id: 'tpl-2' }
-      vi.mocked(apiClient.createTemplate).mockResolvedValue(createdTemplate)
+      vi.mocked(contentService.createTemplate).mockResolvedValue(createdTemplate)
+      vi.mocked(contentService.getTemplates).mockResolvedValue([createdTemplate])
 
       const result = await useTemplatesStore.getState().createTemplate(newTemplate)
 
@@ -105,20 +114,23 @@ describe('templatesStore - Advanced Scenarios', () => {
     })
 
     it('should handle creation errors', async () => {
-      vi.mocked(apiClient.createTemplate).mockRejectedValue(new Error('Creation failed'))
+      vi.mocked(contentService.createTemplate).mockRejectedValue(new Error('Creation failed'))
 
       await expect(
-        useTemplatesStore.getState().createTemplate({ name: 'Test', content: '' })
+        useTemplatesStore.getState().createTemplate({ name: 'Test', content: '# Heading' })
       ).rejects.toThrow('Creation failed')
     })
 
     it('should increment usage count when template is used', async () => {
       useTemplatesStore.setState({ templates: [mockTemplate] })
 
-      vi.mocked(apiClient.updateTemplate).mockResolvedValue({
+      vi.mocked(contentService.updateTemplate).mockResolvedValue({
         ...mockTemplate,
         usageCount: 6,
       })
+      vi.mocked(contentService.getTemplates).mockResolvedValue([{ ...mockTemplate, usageCount: 6 }])
+
+      await useTemplatesStore.getState().updateTemplate('tpl-1', { usageCount: 6 })
 
       const template = useTemplatesStore.getState().templates.find((t) => t.id === 'tpl-1')
       expect(template?.usageCount).toBe(6)
@@ -137,7 +149,8 @@ describe('templatesStore - Advanced Scenarios', () => {
       }
 
       const updatedTemplate = { ...mockTemplate, ...updates }
-      vi.mocked(apiClient.updateTemplate).mockResolvedValue(updatedTemplate)
+      vi.mocked(contentService.updateTemplate).mockResolvedValue(updatedTemplate)
+      vi.mocked(contentService.getTemplates).mockResolvedValue([updatedTemplate])
 
       await useTemplatesStore.getState().updateTemplate('tpl-1', updates)
 
@@ -149,7 +162,8 @@ describe('templatesStore - Advanced Scenarios', () => {
       const updates = { tags: ['meeting', 'work', 'urgent'] }
 
       const updatedTemplate = { ...mockTemplate, ...updates }
-      vi.mocked(apiClient.updateTemplate).mockResolvedValue(updatedTemplate)
+      vi.mocked(contentService.updateTemplate).mockResolvedValue(updatedTemplate)
+      vi.mocked(contentService.getTemplates).mockResolvedValue([updatedTemplate])
 
       await useTemplatesStore.getState().updateTemplate('tpl-1', updates)
 
@@ -161,7 +175,8 @@ describe('templatesStore - Advanced Scenarios', () => {
       const updates = { icon: '🎯' }
 
       const updatedTemplate = { ...mockTemplate, ...updates }
-      vi.mocked(apiClient.updateTemplate).mockResolvedValue(updatedTemplate)
+      vi.mocked(contentService.updateTemplate).mockResolvedValue(updatedTemplate)
+      vi.mocked(contentService.getTemplates).mockResolvedValue([updatedTemplate])
 
       await useTemplatesStore.getState().updateTemplate('tpl-1', updates)
 
@@ -170,7 +185,7 @@ describe('templatesStore - Advanced Scenarios', () => {
     })
 
     it('should handle update errors', async () => {
-      vi.mocked(apiClient.updateTemplate).mockRejectedValue(new Error('Update failed'))
+      vi.mocked(contentService.updateTemplate).mockRejectedValue(new Error('Update failed'))
 
       await expect(
         useTemplatesStore.getState().updateTemplate('tpl-1', { name: 'Test' })
@@ -184,16 +199,16 @@ describe('templatesStore - Advanced Scenarios', () => {
     })
 
     it('should delete template', async () => {
-      vi.mocked(apiClient.deleteTemplate).mockResolvedValue(undefined)
+      vi.mocked(contentService.deleteTemplate).mockResolvedValue(undefined)
 
       await useTemplatesStore.getState().deleteTemplate('tpl-1')
 
       expect(useTemplatesStore.getState().templates).toHaveLength(0)
-      expect(apiClient.deleteTemplate).toHaveBeenCalledWith('tpl-1')
+      expect(contentService.deleteTemplate).toHaveBeenCalledWith('tpl-1')
     })
 
     it('should handle delete errors', async () => {
-      vi.mocked(apiClient.deleteTemplate).mockRejectedValue(new Error('Delete failed'))
+      vi.mocked(contentService.deleteTemplate).mockRejectedValue(new Error('Delete failed'))
 
       await expect(useTemplatesStore.getState().deleteTemplate('tpl-1')).rejects.toThrow(
         'Delete failed'
@@ -276,7 +291,7 @@ describe('templatesStore - Advanced Scenarios', () => {
       }
 
       const createdTemplate = { ...mockTemplate, ...newTemplate, isPublic: false, id: 'tpl-2' }
-      vi.mocked(apiClient.createTemplate).mockResolvedValue(createdTemplate)
+      vi.mocked(contentService.createTemplate).mockResolvedValue(createdTemplate)
 
       const result = await useTemplatesStore.getState().createTemplate(newTemplate)
 
@@ -291,7 +306,7 @@ describe('templatesStore - Advanced Scenarios', () => {
       }
 
       const createdTemplate = { ...mockTemplate, ...newTemplate, id: 'tpl-2' }
-      vi.mocked(apiClient.createTemplate).mockResolvedValue(createdTemplate)
+      vi.mocked(contentService.createTemplate).mockResolvedValue(createdTemplate)
 
       const result = await useTemplatesStore.getState().createTemplate(newTemplate)
 
@@ -315,19 +330,20 @@ describe('templatesStore - Advanced Scenarios', () => {
 
   describe('Template caching', () => {
     it('should cache loaded templates', async () => {
-      vi.mocked(apiClient.getTemplates).mockResolvedValue([mockTemplate])
+      vi.mocked(contentService.getTemplates).mockResolvedValue([mockTemplate])
 
       await useTemplatesStore.getState().loadTemplates()
       await useTemplatesStore.getState().loadTemplates()
 
-      expect(apiClient.getTemplates).toHaveBeenCalledTimes(2)
+      expect(contentService.getTemplates).toHaveBeenCalledTimes(2)
     })
 
     it('should preserve templates after updates', async () => {
       useTemplatesStore.setState({ templates: [mockTemplate] })
 
       const updatedTemplate = { ...mockTemplate, name: 'Updated' }
-      vi.mocked(apiClient.updateTemplate).mockResolvedValue(updatedTemplate)
+      vi.mocked(contentService.updateTemplate).mockResolvedValue(updatedTemplate)
+      vi.mocked(contentService.getTemplates).mockResolvedValue([updatedTemplate])
 
       await useTemplatesStore.getState().updateTemplate('tpl-1', { name: 'Updated' })
 
