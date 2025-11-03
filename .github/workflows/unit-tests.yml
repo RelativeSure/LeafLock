@@ -17,10 +17,17 @@ jobs:
     container: ghcr.io/railwayapp/cli:latest
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_ACCOUNT }}
+      RAILWAY_SERVICE: backend
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+      - name: Link to Railway project
+        run: |
+          echo "🔗 Linking to Railway project..."
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+          railway status
 
       - name: Wait for Railway backend deployment
         run: |
@@ -30,10 +37,6 @@ jobs:
           START_TIME=$(date +%s)
           
           echo "⏳ Waiting for Railway to deploy backend commit $COMMIT_SHA..."
-          
-          # Link to project and backend service
-          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
-          railway service --service backend
           
           while true; do
             # Get deployment status
@@ -119,10 +122,17 @@ jobs:
     container: ghcr.io/railwayapp/cli:latest
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_ACCOUNT }}
+      RAILWAY_SERVICE: frontend
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+      - name: Link to Railway project
+        run: |
+          echo "🔗 Linking to Railway project..."
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+          railway status
 
       - name: Wait for Railway frontend deployment
         run: |
@@ -132,10 +142,6 @@ jobs:
           START_TIME=$(date +%s)
           
           echo "⏳ Waiting for Railway to deploy frontend commit $COMMIT_SHA..."
-          
-          # Link to project and frontend service
-          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
-          railway service --service frontend
           
           while true; do
             STATUS_JSON=$(railway status --json 2>/dev/null || echo '{}')
