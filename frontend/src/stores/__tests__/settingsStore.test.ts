@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { useSettingsStore } from '../settingsStore'
-import { apiClient } from '@/services/api/secureApi'
+import { organizationService } from '@/services/api'
 import type { UserSettings } from '../../types'
 
 // Mock dependencies
-vi.mock('@/services/api/secureApi', () => ({
-  apiClient: {
+vi.mock('@/services/api', () => ({
+  organizationService: {
     getSettings: vi.fn(),
     updateSettings: vi.fn(),
   },
@@ -98,20 +98,20 @@ describe('settingsStore', () => {
   describe('loadSettings', () => {
     it('should load settings successfully', async () => {
       localStorage.setItem('user', JSON.stringify(mockUser))
-      vi.mocked(apiClient.getSettings).mockResolvedValue(customSettings)
+      vi.mocked(organizationService.getSettings).mockResolvedValue(customSettings)
 
       await useSettingsStore.getState().loadSettings()
 
       const state = useSettingsStore.getState()
       expect(state.settings).toEqual(customSettings)
       expect(state.isLoading).toBe(false)
-      expect(apiClient.getSettings).toHaveBeenCalled()
+      expect(organizationService.getSettings).toHaveBeenCalled()
     })
 
     it('should not load settings if no user is logged in', async () => {
       await useSettingsStore.getState().loadSettings()
 
-      expect(apiClient.getSettings).not.toHaveBeenCalled()
+      expect(organizationService.getSettings).not.toHaveBeenCalled()
       expect(useSettingsStore.getState().settings).toEqual(defaultSettings)
     })
 
@@ -120,7 +120,7 @@ describe('settingsStore', () => {
 
       let loadingDuringCall = false
 
-      vi.mocked(apiClient.getSettings).mockImplementation(async () => {
+      vi.mocked(organizationService.getSettings).mockImplementation(async () => {
         loadingDuringCall = useSettingsStore.getState().isLoading
         return customSettings
       })
@@ -133,7 +133,7 @@ describe('settingsStore', () => {
 
     it('should handle API errors gracefully and use default settings', async () => {
       localStorage.setItem('user', JSON.stringify(mockUser))
-      vi.mocked(apiClient.getSettings).mockRejectedValue(new Error('API error'))
+      vi.mocked(organizationService.getSettings).mockRejectedValue(new Error('API error'))
 
       await useSettingsStore.getState().loadSettings()
 
@@ -145,7 +145,7 @@ describe('settingsStore', () => {
 
     it('should ensure isLoading is false after error', async () => {
       localStorage.setItem('user', JSON.stringify(mockUser))
-      vi.mocked(apiClient.getSettings).mockRejectedValue(new Error('API error'))
+      vi.mocked(organizationService.getSettings).mockRejectedValue(new Error('API error'))
 
       await useSettingsStore.getState().loadSettings()
 
@@ -165,21 +165,21 @@ describe('settingsStore', () => {
       }
 
       const updatedSettings = { ...defaultSettings, ...updates }
-      vi.mocked(apiClient.updateSettings).mockResolvedValue(updatedSettings)
+      vi.mocked(organizationService.updateSettings).mockResolvedValue(updatedSettings)
 
       await useSettingsStore.getState().updateSettings(updates)
 
       const state = useSettingsStore.getState()
       expect(state.settings.theme).toBe('dark')
       expect(state.settings.autoSave).toBe(false)
-      expect(apiClient.updateSettings).toHaveBeenCalledWith(updates)
+      expect(organizationService.updateSettings).toHaveBeenCalledWith(updates)
     })
 
     it('should update theme setting', async () => {
       const updates: Partial<UserSettings> = { theme: 'light' }
       const updatedSettings: UserSettings = { ...defaultSettings, theme: 'light' }
 
-      vi.mocked(apiClient.updateSettings).mockResolvedValue(updatedSettings)
+      vi.mocked(organizationService.updateSettings).mockResolvedValue(updatedSettings)
 
       await useSettingsStore.getState().updateSettings(updates)
 
@@ -193,7 +193,7 @@ describe('settingsStore', () => {
       }
 
       const updatedSettings = { ...defaultSettings, ...updates }
-      vi.mocked(apiClient.updateSettings).mockResolvedValue(updatedSettings)
+      vi.mocked(organizationService.updateSettings).mockResolvedValue(updatedSettings)
 
       await useSettingsStore.getState().updateSettings(updates)
 
@@ -209,7 +209,7 @@ describe('settingsStore', () => {
       }
 
       const updatedSettings = { ...defaultSettings, ...updates }
-      vi.mocked(apiClient.updateSettings).mockResolvedValue(updatedSettings)
+      vi.mocked(organizationService.updateSettings).mockResolvedValue(updatedSettings)
 
       await useSettingsStore.getState().updateSettings(updates)
 
@@ -222,7 +222,7 @@ describe('settingsStore', () => {
       const updates: Partial<UserSettings> = { language: 'fr' }
       const updatedSettings = { ...defaultSettings, language: 'fr' }
 
-      vi.mocked(apiClient.updateSettings).mockResolvedValue(updatedSettings)
+      vi.mocked(organizationService.updateSettings).mockResolvedValue(updatedSettings)
 
       await useSettingsStore.getState().updateSettings(updates)
 
@@ -233,7 +233,7 @@ describe('settingsStore', () => {
       const updates: Partial<UserSettings> = { defaultView: 'grid' }
       const updatedSettings: UserSettings = { ...defaultSettings, defaultView: 'grid' }
 
-      vi.mocked(apiClient.updateSettings).mockResolvedValue(updatedSettings)
+      vi.mocked(organizationService.updateSettings).mockResolvedValue(updatedSettings)
 
       await useSettingsStore.getState().updateSettings(updates)
 
@@ -244,7 +244,7 @@ describe('settingsStore', () => {
       const updates: Partial<UserSettings> = { defaultNoteBehavior: 'new-note' }
       const updatedSettings: UserSettings = { ...defaultSettings, defaultNoteBehavior: 'new-note' }
 
-      vi.mocked(apiClient.updateSettings).mockResolvedValue(updatedSettings)
+      vi.mocked(organizationService.updateSettings).mockResolvedValue(updatedSettings)
 
       await useSettingsStore.getState().updateSettings(updates)
 
@@ -257,7 +257,7 @@ describe('settingsStore', () => {
       }
 
       const updatedSettings = { ...defaultSettings, ...updates }
-      vi.mocked(apiClient.updateSettings).mockResolvedValue(updatedSettings)
+      vi.mocked(organizationService.updateSettings).mockResolvedValue(updatedSettings)
 
       await useSettingsStore.getState().updateSettings(updates)
 
@@ -273,7 +273,7 @@ describe('settingsStore', () => {
       }
 
       const updatedSettings = { ...defaultSettings, ...updates }
-      vi.mocked(apiClient.updateSettings).mockResolvedValue(updatedSettings)
+      vi.mocked(organizationService.updateSettings).mockResolvedValue(updatedSettings)
 
       await useSettingsStore.getState().updateSettings(updates)
 
@@ -289,12 +289,12 @@ describe('settingsStore', () => {
 
       await useSettingsStore.getState().updateSettings({ theme: 'dark' })
 
-      expect(apiClient.updateSettings).not.toHaveBeenCalled()
+      expect(organizationService.updateSettings).not.toHaveBeenCalled()
       expect(useSettingsStore.getState().settings.theme).toBe('system')
     })
 
     it('should throw error on API failure', async () => {
-      vi.mocked(apiClient.updateSettings).mockRejectedValue(new Error('Update failed'))
+      vi.mocked(organizationService.updateSettings).mockRejectedValue(new Error('Update failed'))
 
       await expect(useSettingsStore.getState().updateSettings({ theme: 'dark' })).rejects.toThrow(
         'Update failed'
@@ -306,7 +306,7 @@ describe('settingsStore', () => {
     it('should not update state if API call fails', async () => {
       const originalSettings = useSettingsStore.getState().settings
 
-      vi.mocked(apiClient.updateSettings).mockRejectedValue(new Error('Update failed'))
+      vi.mocked(organizationService.updateSettings).mockRejectedValue(new Error('Update failed'))
 
       try {
         await useSettingsStore.getState().updateSettings({ theme: 'dark' })
@@ -318,11 +318,11 @@ describe('settingsStore', () => {
     })
 
     it('should handle empty updates', async () => {
-      vi.mocked(apiClient.updateSettings).mockResolvedValue(defaultSettings)
+      vi.mocked(organizationService.updateSettings).mockResolvedValue(defaultSettings)
 
       await useSettingsStore.getState().updateSettings({})
 
-      expect(apiClient.updateSettings).toHaveBeenCalledWith({})
+      expect(organizationService.updateSettings).toHaveBeenCalledWith({})
       expect(useSettingsStore.getState().settings).toEqual(defaultSettings)
     })
   })
@@ -332,7 +332,7 @@ describe('settingsStore', () => {
       localStorage.setItem('user', JSON.stringify(mockUser))
 
       const settingsWithEncryption = { ...customSettings, encryptionEnabled: true }
-      vi.mocked(apiClient.getSettings).mockResolvedValue(settingsWithEncryption)
+      vi.mocked(organizationService.getSettings).mockResolvedValue(settingsWithEncryption)
 
       await useSettingsStore.getState().loadSettings()
 
@@ -346,7 +346,7 @@ describe('settingsStore', () => {
 
       for (const theme of themes) {
         const settingsWithTheme = { ...defaultSettings, theme }
-        vi.mocked(apiClient.updateSettings).mockResolvedValue(settingsWithTheme)
+        vi.mocked(organizationService.updateSettings).mockResolvedValue(settingsWithTheme)
 
         await useSettingsStore.getState().updateSettings({ theme })
 
@@ -361,7 +361,7 @@ describe('settingsStore', () => {
 
       for (const view of views) {
         const settingsWithView = { ...defaultSettings, defaultView: view }
-        vi.mocked(apiClient.updateSettings).mockResolvedValue(settingsWithView)
+        vi.mocked(organizationService.updateSettings).mockResolvedValue(settingsWithView)
 
         await useSettingsStore.getState().updateSettings({ defaultView: view })
 
@@ -376,7 +376,7 @@ describe('settingsStore', () => {
 
       for (const behavior of behaviors) {
         const settingsWithBehavior = { ...defaultSettings, defaultNoteBehavior: behavior }
-        vi.mocked(apiClient.updateSettings).mockResolvedValue(settingsWithBehavior)
+        vi.mocked(organizationService.updateSettings).mockResolvedValue(settingsWithBehavior)
 
         await useSettingsStore.getState().updateSettings({ defaultNoteBehavior: behavior })
 

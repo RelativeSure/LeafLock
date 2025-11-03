@@ -34,7 +34,7 @@ LeafLock uses a modular Go authentication package with JWT tokens, Argon2id pass
 <Code code={`# Register new user
 POST /api/v1/auth/register
 Body: { "email": "user@example.com", "password": "SecureP@ss123" }
-Response: { "token": "jwt_token", "user_id": "uuid", "workspace_id": "uuid" }
+Response: { "message": "Registration request accepted. Check your email for next steps." }
 
 # Login
 POST /api/v1/auth/login
@@ -63,7 +63,9 @@ Response: { "valid": true }
 POST /api/v1/auth/password/reset-confirm
 Body: { "token": "<reset_token>", "new_password": "NewP@ss123" }
 
-# Token expires in: 1 hour`} language="bash" />
+# Token expires in: 15 minutes
+# Verification limit: 10 attempts per token (15-minute window)
+`} language="bash" />
   </TabItem>
 </Tabs>
 

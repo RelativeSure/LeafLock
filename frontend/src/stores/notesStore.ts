@@ -1,6 +1,13 @@
 import { create } from 'zustand'
-import type { Note, Folder, Tag, NoteVersion } from '../types'
-import { apiClient } from '../services/api/secureApi'
+import {
+  contentService,
+  organizationService,
+  socialService,
+  type Note,
+  type Folder,
+  type Tag,
+  type NoteVersion,
+} from '@/services/api'
 import { ENCRYPTION_VERSION, encryptTextWithStoredKey } from '@/lib/encryption-utils'
 
 interface NotesState {
@@ -50,6 +57,10 @@ interface NotesState {
   removeTagsFromNotes: (noteIds: string[], tagNames: string[]) => Promise<void>
   loadData: () => Promise<void>
   initializeDefaultNote: () => Promise<void>
+  createNoteLink: (sourceNoteId: string, targetNoteId: string, linkText?: string) => Promise<any>
+  getNoteLinks: (noteId: string) => Promise<any[]>
+  getNoteBacklinks: (noteId: string) => Promise<any[]>
+  deleteNoteLink: (noteId: string, linkId: string) => Promise<void>
 }
 
 export const useNotesStore = create<NotesState>((set, get) => ({
@@ -68,9 +79,9 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     set({ isLoading: true })
     try {
       const [notesData, foldersData, tagsData] = await Promise.all([
-        apiClient.getNotes(),
-        apiClient.getFolders(),
-        apiClient.getTags(),
+        contentService.getNotes(),
+        contentService.getFolders(),
+        organizationService.getTags(),
       ])
 
       set({ notes: notesData, folders: foldersData, tags: tagsData })
@@ -92,7 +103,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     const titlePayload = await encryptTextWithStoredKey(note.title ?? '')
     const contentPayload = await encryptTextWithStoredKey(note.content ?? '')
 
-    const createdNote = await apiClient.createNote({
+    const createdNote = await contentService.createNote({
       title: titlePayload,
       content: contentPayload,
       folderId,
@@ -147,7 +158,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       encryptionVersion,
     }
 
-    const updatedNote = await apiClient.updateNote(id, payload)
+    const updatedNote = await contentService.updateNote(id, payload)
 
     // Avoid redundant state updates when nothing meaningfully changed
     const shallowEqual = (a?: string[] | null, b?: string[] | null) => {
@@ -187,7 +198,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   deleteNote: async (id: string) => {
     try {
-      await apiClient.deleteNote(id)
+      await contentService.deleteNote(id)
       set((state) => ({
         notes: state.notes.filter((note) => note.id !== id),
         selectedNote: state.selectedNote?.id === id ? null : state.selectedNote,
@@ -226,7 +237,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     const user = JSON.parse(storedUser)
 
     try {
-      const newFolder = await apiClient.createFolder({
+      const newFolder = await contentService.createFolder({
         ...folder,
         userId: user.id,
       })
@@ -241,7 +252,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   updateFolder: async (id: string, updates: Partial<Folder>) => {
     try {
-      const updatedFolder = await apiClient.updateFolder(id, updates)
+      const updatedFolder = await contentService.updateFolder(id, updates)
       set((state) => ({
         folders: state.folders.map((folder) => (folder.id === id ? updatedFolder : folder)),
       }))
@@ -253,7 +264,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   deleteFolder: async (id: string) => {
     try {
-      await apiClient.deleteFolder(id)
+      await contentService.deleteFolder(id)
 
       // Move notes in this folder to root
       set((state) => ({
@@ -285,7 +296,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     const user = JSON.parse(storedUser)
 
     try {
-      const newTag = await apiClient.createTag({
+      const newTag = await organizationService.createTag({
         ...tag,
         userId: user.id,
       })
@@ -300,7 +311,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   deleteTag: async (id: string) => {
     try {
-      await apiClient.deleteTag(id)
+      await organizationService.deleteTag(id)
 
       const { tags } = get()
       const tag = tags.find((t) => t.id === id)
@@ -327,7 +338,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   moveToTrash: async (id: string) => {
     try {
-      await apiClient.deleteNote(id) // Backend handles soft delete
+      await contentService.deleteNote(id) // Backend handles soft delete
 
       set((state) => ({
         notes: state.notes.map((note) =>
@@ -349,7 +360,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   restoreFromTrash: async (id: string) => {
     try {
-      await apiClient.restoreNote(id)
+      await contentService.restoreNote(id)
 
       set((state) => ({
         notes: state.notes.map((note) =>
@@ -372,7 +383,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     try {
       const { notes } = get()
       const trashedNotes = notes.filter((note) => note.isTrashed)
-      await Promise.all(trashedNotes.map((note) => apiClient.permanentlyDeleteNote(note.id)))
+      await Promise.all(trashedNotes.map((note) => contentService.permanentlyDeleteNote(note.id)))
 
       set((state) => ({ notes: state.notes.filter((note) => !note.isTrashed) }))
     } catch (error) {
@@ -383,7 +394,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   getTrashedNotes: async () => {
     try {
-      return await apiClient.getTrash()
+      return await contentService.getTrash()
     } catch (error) {
       console.error('Failed to get trashed notes:', error)
       return []
@@ -396,7 +407,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       const note = notes.find((n) => n.id === noteId)
       if (!note) throw new Error('Note not found')
 
-      const version = await apiClient.createNoteVersion({
+      const version = await contentService.createNoteVersion({
         noteId,
         title: note.title,
         content: note.content,
@@ -412,7 +423,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   getNoteVersions: async (noteId: string) => {
     try {
-      return await apiClient.getNoteVersions(noteId)
+      return await contentService.getNoteVersions(noteId)
     } catch (error) {
       console.error('Failed to get note versions:', error)
       return []
@@ -421,7 +432,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   restoreNoteVersion: async (versionId: string) => {
     try {
-      const restoredNote = await apiClient.restoreNoteVersion(versionId)
+      const restoredNote = await contentService.restoreNoteVersion(versionId)
 
       set((state) => ({
         notes: state.notes.map((note) => (note.id === restoredNote.id ? restoredNote : note)),
@@ -436,7 +447,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   deleteNoteVersion: async (versionId: string) => {
     try {
-      await apiClient.deleteNoteVersion(versionId)
+      await contentService.deleteNoteVersion(versionId)
     } catch (error) {
       console.error('Failed to delete note version:', error)
       throw error
@@ -445,7 +456,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   compareNoteVersions: async (noteId: string, v1: number, v2: number) => {
     try {
-      return await apiClient.compareNoteVersions(noteId, v1, v2)
+      return await contentService.compareNoteVersions(noteId, v1, v2)
     } catch (error) {
       console.error('Failed to compare note versions:', error)
       throw error
@@ -454,7 +465,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   updateRetentionPolicy: async (noteId: string, policy: number) => {
     try {
-      await apiClient.updateRetentionPolicy(noteId, policy)
+      await contentService.updateRetentionPolicy(noteId, policy)
       // Update local note with new retention policy if needed
       set((state) => ({
         notes: state.notes.map((note) =>
@@ -469,7 +480,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   bulkDeleteNotes: async (noteIds: string[]) => {
     try {
-      const result = await apiClient.bulkDeleteNotes(noteIds)
+      const result = await contentService.bulkDeleteNotes(noteIds)
       // Refresh notes after bulk operation
       await get().loadData()
       return result
@@ -481,7 +492,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   bulkRestoreNotes: async (noteIds: string[]) => {
     try {
-      const result = await apiClient.bulkRestoreNotes(noteIds)
+      const result = await contentService.bulkRestoreNotes(noteIds)
       // Refresh notes after bulk operation
       await get().loadData()
       return result
@@ -493,7 +504,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   bulkPermanentlyDeleteNotes: async (noteIds: string[]) => {
     try {
-      const result = await apiClient.bulkPermanentlyDeleteNotes(noteIds)
+      const result = await contentService.bulkPermanentlyDeleteNotes(noteIds)
       // Refresh notes after bulk operation
       await get().loadData()
       return result
@@ -505,7 +516,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   moveNotesToFolder: async (noteIds: string[], folderId: string) => {
     try {
-      await apiClient.moveNotesToFolder(noteIds, folderId)
+      await contentService.moveNotesToFolder(noteIds, folderId)
 
       set((state) => ({
         notes: state.notes.map((note) =>
@@ -520,7 +531,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   addTagsToNotes: async (noteIds: string[], tagNames: string[]) => {
     try {
-      await apiClient.addTagsToNotes(noteIds, tagNames)
+      await contentService.addTagsToNotes(noteIds, tagNames)
 
       set((state) => ({
         notes: state.notes.map((note) =>
@@ -537,7 +548,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   removeTagsFromNotes: async (noteIds: string[], tagNames: string[]) => {
     try {
-      await apiClient.removeTagsFromNotes(noteIds, tagNames)
+      await contentService.removeTagsFromNotes(noteIds, tagNames)
 
       set((state) => ({
         notes: state.notes.map((note) =>
@@ -611,7 +622,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   // Note links methods
   createNoteLink: async (sourceNoteId: string, targetNoteId: string, linkText?: string) => {
     try {
-      return await apiClient.createNoteLink(sourceNoteId, targetNoteId, linkText)
+      return await socialService.createNoteLink(sourceNoteId, targetNoteId, linkText)
     } catch (error) {
       console.error('Failed to create note link:', error)
       throw error
@@ -620,7 +631,8 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   getNoteLinks: async (noteId: string) => {
     try {
-      return await apiClient.getNoteLinks(noteId)
+      const response = await apiClient.getNoteLinks(noteId)
+      return response.links ?? []
     } catch (error) {
       console.error('Failed to get note links:', error)
       throw error
@@ -629,7 +641,8 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   getNoteBacklinks: async (noteId: string) => {
     try {
-      return await apiClient.getNoteBacklinks(noteId)
+      const response = await apiClient.getNoteBacklinks(noteId)
+      return response.backlinks ?? []
     } catch (error) {
       console.error('Failed to get note backlinks:', error)
       throw error

@@ -1,20 +1,22 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User } from '../types'
-import { apiClient } from '../services/api/secureApi'
+import { authService } from '@/services/api'
 import { deriveKey, setStoredKey, setStoredSalt } from '@/lib/encryption-utils'
 
 interface AuthState {
   user: User | null
   isLoading: boolean
   pendingEncryption: { password: string; salt?: string | null } | null
+  registrationEnabled: boolean | null
   login: (email: string, password: string) => Promise<{ requiresMFA: boolean }>
   verifyMFA: (code: string) => Promise<boolean>
   logout: () => void
-  register: (email: string, password: string, name: string) => Promise<void>
+  register: (email: string, password: string, name: string) => Promise<string>
   enableMFA: () => Promise<string>
   disableMFA: () => Promise<void>
   initialize: () => Promise<void>
+  checkRegistrationEnabled: () => Promise<boolean>
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -23,6 +25,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isLoading: true,
       pendingEncryption: null,
+      registrationEnabled: null,
 
       initialize: async () => {
         console.log('Auth store initializing...')
@@ -58,7 +61,7 @@ export const useAuthStore = create<AuthState>()(
 
       login: async (email: string, password: string) => {
         try {
-          const response = await apiClient.login(email, password)
+          const response = await authService.login(email, password)
 
           if (response.requiresMFA) {
             if (response.encryptionSalt) {
@@ -95,7 +98,7 @@ export const useAuthStore = create<AuthState>()(
 
       verifyMFA: async (code: string) => {
         try {
-          const response = await apiClient.verifyMFA(code)
+          const response = await authService.verifyMFA(code)
           set({ user: { ...response.user, isAdmin: response.user.role === 'admin' } })
 
           const { pendingEncryption } = get()
@@ -128,27 +131,39 @@ export const useAuthStore = create<AuthState>()(
 
       register: async (email: string, password: string, name: string) => {
         try {
-          const response = await apiClient.register(email, password, name)
-          set({ user: { ...response.user, isAdmin: response.user.role === 'admin' } })
-
-          if (response.encryptionSalt) {
-            console.log('[Auth] Received salt on register', {
-              len: response.encryptionSalt.length,
-              prefix: response.encryptionSalt.slice(0, 12),
-            })
-            await setStoredSalt(response.encryptionSalt)
-            try {
-              const derivedKey = await deriveKey(password, response.encryptionSalt)
-              setStoredKey(derivedKey)
-            } catch (deriveError) {
-              console.error('Failed to derive encryption key after registration:', deriveError)
-              setStoredKey(null)
-            }
-          }
-
+          const response = await authService.register(email, password, name)
           set({ pendingEncryption: null })
+          return response.message
         } catch (error) {
+          if (
+            error instanceof Error &&
+            error.message.includes('registration is currently disabled')
+          ) {
+            throw new Error(
+              'Registration is currently disabled by the administrator. Please contact support.'
+            )
+          }
           throw new Error(error instanceof Error ? error.message : 'Registration failed')
+        }
+      },
+
+      checkRegistrationEnabled: async () => {
+        const { registrationEnabled } = get()
+
+        // Return cached value if already checked
+        if (registrationEnabled !== null) {
+          return registrationEnabled
+        }
+
+        try {
+          const enabled = await authService.isRegistrationEnabled()
+          set({ registrationEnabled: enabled })
+          return enabled
+        } catch (error) {
+          console.error('Failed to check registration status:', error)
+          // Default to false on error for security
+          set({ registrationEnabled: false })
+          return false
         }
       },
 
@@ -157,7 +172,7 @@ export const useAuthStore = create<AuthState>()(
         if (!user) throw new Error('No user logged in')
 
         try {
-          const response = await apiClient.beginMFASetup()
+          const response = await authService.beginMFASetup()
           return response.secret
         } catch (error) {
           throw new Error(error instanceof Error ? error.message : 'Failed to enable MFA')
@@ -169,14 +184,14 @@ export const useAuthStore = create<AuthState>()(
         if (!user) throw new Error('No user logged in')
 
         try {
-          await apiClient.disableMFA()
+          await authService.disableMFA()
         } catch (error) {
           throw new Error(error instanceof Error ? error.message : 'Failed to disable MFA')
         }
       },
 
       logout: () => {
-        apiClient.logout()
+        authService.logout()
         set({ user: null, pendingEncryption: null })
         setStoredKey(null)
       },

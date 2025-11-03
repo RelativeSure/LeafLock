@@ -29,6 +29,15 @@ func (h *Handler) JWTMiddleware(c *fiber.Ctx) error {
 
 	token := parts[1]
 
+	// Check if token is blacklisted
+	blacklisted, err := h.service.session.IsJWTBlacklisted(c.Context(), token)
+	if err == nil && blacklisted {
+		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
+			Error: "Token has been revoked",
+			Code:  ErrCodeInvalidToken,
+		})
+	}
+
 	// Validate JWT
 	userID, isAdmin, err := h.service.ValidateJWT(token)
 	if err != nil {
@@ -59,6 +68,12 @@ func (h *Handler) OptionalJWTMiddleware(c *fiber.Ctx) error {
 	}
 
 	token := parts[1]
+
+	// Check if token is blacklisted
+	blacklisted, err := h.service.session.IsJWTBlacklisted(c.Context(), token)
+	if err == nil && blacklisted {
+		return c.Next() // Blacklisted token, continue without auth
+	}
 
 	// Try to validate JWT
 	userID, isAdmin, err := h.service.ValidateJWT(token)

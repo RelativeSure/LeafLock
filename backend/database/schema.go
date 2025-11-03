@@ -75,6 +75,9 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 -- Add theme preference column for user customization
 ALTER TABLE users ADD COLUMN IF NOT EXISTS theme_preference VARCHAR(20) DEFAULT 'system';
 
+-- Security fix: Add per-user salt for MFA backup codes to prevent rainbow table attacks
+ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_backup_code_salt BYTEA;
+
 -- Add comprehensive user settings columns
 ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_save BOOLEAN DEFAULT true;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_save_interval INTEGER DEFAULT 30;
@@ -98,6 +101,10 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     ip_address_encrypted BYTEA, -- IP address where reset was requested
     user_agent_encrypted BYTEA -- User agent of the requester
 );
+
+ALTER TABLE password_reset_tokens
+    ADD COLUMN IF NOT EXISTS verify_attempts INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS verify_window_start TIMESTAMPTZ;
 
 -- Index for fast token lookups and cleanup
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_hash ON password_reset_tokens(token_hash) WHERE used = false;

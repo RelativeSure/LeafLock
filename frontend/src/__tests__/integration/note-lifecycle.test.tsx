@@ -1,26 +1,33 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useNotesStore } from '@/stores/notesStore'
-import { apiClient } from '@/services/api/secureApi'
+import { contentService, organizationService, socialService } from '@/services/api'
 import * as encryptionUtils from '@/lib/encryption-utils'
 import type { Note } from '@/types'
 
-vi.mock('@/services/api/secureApi', () => ({
-  apiClient: {
+vi.mock('@/services/api', () => ({
+  contentService: {
     getNotes: vi.fn(),
     createNote: vi.fn(),
     updateNote: vi.fn(),
     deleteNote: vi.fn(),
     restoreNote: vi.fn(),
     permanentlyDeleteNote: vi.fn(),
-    shareNote: vi.fn(),
-    getCollaborators: vi.fn(),
     createNoteVersion: vi.fn(),
     getNoteVersions: vi.fn(),
     restoreNoteVersion: vi.fn(),
+    compareNoteVersions: vi.fn(),
     getFolders: vi.fn(),
+    moveNotesToFolder: vi.fn(),
+    bulkDeleteNotes: vi.fn(),
+    addTagsToNotes: vi.fn(),
+  },
+  organizationService: {
     getTags: vi.fn(),
     createTag: vi.fn(),
-    addTagsToNotes: vi.fn(),
+  },
+  socialService: {
+    shareNote: vi.fn(),
+    getCollaborators: vi.fn(),
   },
 }))
 
@@ -75,7 +82,7 @@ describe('Integration: Complete Note Lifecycle', () => {
         updatedAt: '2024-01-01',
       }
 
-      vi.mocked(apiClient.createNote).mockResolvedValue(createdNote)
+      vi.mocked(contentService.createNote).mockResolvedValue(createdNote)
 
       const note = await useNotesStore.getState().createNote({
         title: 'My Note',
@@ -94,7 +101,7 @@ describe('Integration: Complete Note Lifecycle', () => {
         updatedAt: '2024-01-02',
       }
 
-      vi.mocked(apiClient.updateNote).mockResolvedValue(updatedNote)
+      vi.mocked(contentService.updateNote).mockResolvedValue(updatedNote)
 
       await useNotesStore.getState().updateNote('note-1', {
         title: 'Updated Title',
@@ -104,7 +111,7 @@ describe('Integration: Complete Note Lifecycle', () => {
       expect(useNotesStore.getState().notes[0].title).toBe('encrypted-updated')
 
       // Step 3: Add tags
-      vi.mocked(apiClient.createTag).mockResolvedValue({
+      vi.mocked(organizationService.createTag).mockResolvedValue({
         id: 'tag-1',
         name: 'important',
         color: '#ff0000',
@@ -113,7 +120,7 @@ describe('Integration: Complete Note Lifecycle', () => {
 
       await useNotesStore.getState().createTag({ name: 'important' })
 
-      vi.mocked(apiClient.addTagsToNotes).mockResolvedValue(undefined)
+      vi.mocked(contentService.addTagsToNotes).mockResolvedValue(undefined)
 
       await useNotesStore.getState().addTagsToNotes(['note-1'], ['important'])
 
@@ -131,7 +138,7 @@ describe('Integration: Complete Note Lifecycle', () => {
         changeDescription: 'First save',
       }
 
-      vi.mocked(apiClient.createNoteVersion).mockResolvedValue(version)
+      vi.mocked(contentService.createNoteVersion).mockResolvedValue(version)
 
       const createdVersion = await useNotesStore
         .getState()
@@ -140,20 +147,20 @@ describe('Integration: Complete Note Lifecycle', () => {
       expect(createdVersion.versionNumber).toBe(1)
 
       // Step 5: Share note
-      vi.mocked(apiClient.shareNote).mockResolvedValue(undefined)
-      vi.mocked(apiClient.getCollaborators).mockResolvedValue([
+      vi.mocked(socialService.shareNote).mockResolvedValue(undefined)
+      vi.mocked(socialService.getCollaborators).mockResolvedValue([
         { id: '1', email: 'collaborator@example.com', permission: 'read' },
       ])
 
-      await apiClient.shareNote('note-1', ['collaborator@example.com'])
+      await socialService.shareNote('note-1', 'collaborator@example.com', 'read')
 
-      const collaborators = await apiClient.getCollaborators('note-1')
+      const collaborators = await socialService.getCollaborators('note-1')
 
       expect(collaborators).toHaveLength(1)
       expect(collaborators[0].email).toBe('collaborator@example.com')
 
       // Step 6: Move to trash
-      vi.mocked(apiClient.deleteNote).mockResolvedValue(undefined)
+      vi.mocked(contentService.deleteNote).mockResolvedValue(undefined)
 
       await useNotesStore.getState().moveToTrash('note-1')
 
@@ -161,16 +168,16 @@ describe('Integration: Complete Note Lifecycle', () => {
       expect(useNotesStore.getState().selectedNote).toBeNull()
 
       // Step 7: Restore from trash
-      vi.mocked(apiClient.restoreNote).mockResolvedValue(undefined)
+      vi.mocked(contentService.restoreNote).mockResolvedValue(undefined)
 
       await useNotesStore.getState().restoreFromTrash('note-1')
 
       expect(useNotesStore.getState().notes[0].isTrashed).toBe(false)
 
       // Step 8: Permanent delete
-      vi.mocked(apiClient.permanentlyDeleteNote).mockResolvedValue(undefined)
+      vi.mocked(contentService.permanentlyDeleteNote).mockResolvedValue(undefined)
 
-      await apiClient.permanentlyDeleteNote('note-1')
+      await contentService.permanentlyDeleteNote('note-1')
 
       useNotesStore.setState({
         notes: useNotesStore.getState().notes.filter((n) => n.id !== 'note-1'),
@@ -224,7 +231,7 @@ describe('Integration: Complete Note Lifecycle', () => {
         createdBy: '123',
       }
 
-      vi.mocked(apiClient.createNoteVersion)
+      vi.mocked(contentService.createNoteVersion)
         .mockResolvedValueOnce(version1)
         .mockResolvedValueOnce(version2)
 
@@ -232,7 +239,7 @@ describe('Integration: Complete Note Lifecycle', () => {
       await useNotesStore.getState().createNoteVersion('note-1', 'Version 2')
 
       // Step 2: List versions
-      vi.mocked(apiClient.getNoteVersions).mockResolvedValue([version1, version2])
+      vi.mocked(contentService.getNoteVersions).mockResolvedValue([version1, version2])
 
       const versions = await useNotesStore.getState().getNoteVersions('note-1')
 
@@ -240,7 +247,7 @@ describe('Integration: Complete Note Lifecycle', () => {
 
       // Step 3: Restore older version
       const restoredNote = { ...mockNote, title: 'encrypted-v1', content: 'encrypted-v1' }
-      vi.mocked(apiClient.restoreNoteVersion).mockResolvedValue(restoredNote)
+      vi.mocked(contentService.restoreNoteVersion).mockResolvedValue(restoredNote)
 
       await useNotesStore.getState().restoreNoteVersion('v1')
 
@@ -269,7 +276,7 @@ describe('Integration: Complete Note Lifecycle', () => {
         },
       ]
 
-      vi.mocked(apiClient.compareNoteVersions).mockResolvedValue({
+      vi.mocked(contentService.compareNoteVersions).mockResolvedValue({
         v1: versions[0],
         v2: versions[1],
       } as any)
@@ -339,7 +346,7 @@ describe('Integration: Complete Note Lifecycle', () => {
 
     it('should perform bulk operations on multiple notes', async () => {
       // Step 1: Bulk add tags
-      vi.mocked(apiClient.addTagsToNotes).mockResolvedValue(undefined)
+      vi.mocked(contentService.addTagsToNotes).mockResolvedValue(undefined)
 
       await useNotesStore.getState().addTagsToNotes(['note-1', 'note-2'], ['work', 'urgent'])
 
@@ -347,7 +354,7 @@ describe('Integration: Complete Note Lifecycle', () => {
       expect(useNotesStore.getState().notes[1].tags).toContain('urgent')
 
       // Step 2: Bulk move to folder
-      vi.mocked(apiClient.moveNotesToFolder).mockResolvedValue(undefined)
+      vi.mocked(contentService.moveNotesToFolder).mockResolvedValue(undefined)
 
       await useNotesStore.getState().moveNotesToFolder(['note-1', 'note-2'], 'folder-1')
 
@@ -355,14 +362,14 @@ describe('Integration: Complete Note Lifecycle', () => {
       expect(useNotesStore.getState().notes[1].folderId).toBe('folder-1')
 
       // Step 3: Bulk delete
-      vi.mocked(apiClient.bulkDeleteNotes).mockResolvedValue({
+      vi.mocked(contentService.bulkDeleteNotes).mockResolvedValue({
         successful: 2,
         failed: 0,
         errors: [],
       })
-      vi.mocked(apiClient.getNotes).mockResolvedValue([notes[2]]) // Only note-3 remains
-      vi.mocked(apiClient.getFolders).mockResolvedValue([])
-      vi.mocked(apiClient.getTags).mockResolvedValue([])
+      vi.mocked(contentService.getNotes).mockResolvedValue([notes[2]]) // Only note-3 remains
+      vi.mocked(contentService.getFolders).mockResolvedValue([])
+      vi.mocked(organizationService.getTags).mockResolvedValue([])
 
       const result = await useNotesStore.getState().bulkDeleteNotes(['note-1', 'note-2'])
 
@@ -373,7 +380,7 @@ describe('Integration: Complete Note Lifecycle', () => {
 
   describe('Error Handling in Note Operations', () => {
     it('should handle note creation failure', async () => {
-      vi.mocked(apiClient.createNote).mockRejectedValue(new Error('Server error'))
+      vi.mocked(contentService.createNote).mockRejectedValue(new Error('Server error'))
 
       await expect(
         useNotesStore.getState().createNote({ title: 'Test', content: 'Content' })
@@ -412,7 +419,7 @@ describe('Integration: Complete Note Lifecycle', () => {
 
       useNotesStore.setState({ notes: [originalNote] })
 
-      vi.mocked(apiClient.updateNote).mockRejectedValue(new Error('Update failed'))
+      vi.mocked(contentService.updateNote).mockRejectedValue(new Error('Update failed'))
 
       await expect(
         useNotesStore.getState().updateNote('note-1', { title: 'Updated' })

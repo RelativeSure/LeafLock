@@ -66,7 +66,7 @@ description: Complete reference for all LeafLock environment variables
 **Type**: String (`development` or `production`)
 **Default**: `development`
 **Example**: `production`
-**Description**: Environment mode. When set to `development`, automatically allows `*.railway.app` origins for PR testing. Production mode requires explicit `CORS_ORIGINS` configuration.
+**Description**: Environment mode. When set to `development`, automatically allows `*.railway.app` origins for PR testing and relaxes CSRF cookies to `SameSite=Lax`/`Secure=false` for http://localhost testing. `production` enforces strict CSRF cookies (`Secure`, `SameSite=Strict`) and requires explicit `CORS_ORIGINS`.
 
 ---
 
@@ -116,8 +116,8 @@ description: Complete reference for all LeafLock environment variables
 **Type**: Boolean (`true` or `false`)
 **Default**: `false`
 **Example**: `true`
-**Description**: Enable public user registration. Set to `false` for invite-only deployments.
-**Security Note**: Can be toggled at runtime via database `app_settings` table.
+**Description**: Seeds `app_settings.registration_enabled` during startup. When `false` (default), registration requests return a generic acknowledgement without creating an account—preventing attackers from probing which emails exist. Administrators can explicitly enable registration later in the UI or database when onboarding users.
+**Security Note**: Leave `false` for production. Toggle to `true` only during a controlled signup window, then revert.
 
 ---
 

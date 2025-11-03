@@ -1,6 +1,5 @@
 import { create } from 'zustand'
-import type { UserSettings } from '../types'
-import { apiClient } from '../services/api/secureApi'
+import { organizationService, type UserSettings } from '@/services/api'
 
 interface SettingsState {
   settings: UserSettings
@@ -34,7 +33,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
 
     set({ isLoading: true })
     try {
-      const userSettings = await apiClient.getSettings()
+      const userSettings = await organizationService.getSettings()
       set({ settings: userSettings })
     } catch (error) {
       console.error('Failed to load settings:', error)
@@ -50,7 +49,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     if (!storedUser) return
 
     try {
-      const updatedSettings = await apiClient.updateSettings(newSettings)
+      const updatedSettings = await organizationService.updateSettings(newSettings)
       set({ settings: updatedSettings })
     } catch (error) {
       console.error('Failed to update settings:', error)

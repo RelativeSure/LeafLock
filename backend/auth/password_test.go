@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -198,9 +199,9 @@ func (suite *PasswordManagerTestSuite) TestDeriveKeyBytes_DifferentPasswords() {
 
 func (suite *PasswordManagerTestSuite) TestValidatePasswordStrength_ValidPassword() {
 	validPasswords := []string{
-		"MyP@ssw0rd123!",           // 14 chars, all requirements
-		"Testing123!@#$%^",         // Special chars
-		"LongP@ssw0rd123!Secure",   // Long password
+		"MyP@ssw0rd123!",         // 14 chars, all requirements
+		"Testing123!@#$%^",       // Special chars
+		"LongP@ssw0rd123!Secure", // Long password
 	}
 
 	for _, password := range validPasswords {
@@ -211,9 +212,9 @@ func (suite *PasswordManagerTestSuite) TestValidatePasswordStrength_ValidPasswor
 
 func (suite *PasswordManagerTestSuite) TestValidatePasswordStrength_TooShort() {
 	shortPasswords := []string{
-		"Short1!",      // 7 chars
-		"Pass1!",       // 6 chars
-		"P@ssw0rd1",    // 9 chars (< 12)
+		"Short1!",   // 7 chars
+		"Pass1!",    // 6 chars
+		"P@ssw0rd1", // 9 chars (< 12)
 	}
 
 	for _, password := range shortPasswords {
@@ -278,11 +279,19 @@ func (suite *PasswordManagerTestSuite) TestCreateResetToken_Success() {
 	userID := uuid.New()
 	ipAddress := "192.168.1.1"
 	userAgent := "Mozilla/5.0 Test Browser"
+	start := time.Now()
 
 	// Mock database Exec
 	suite.mockDB.On("Exec", mock.Anything, mock.MatchedBy(func(sql string) bool {
 		return contains(sql, "INSERT INTO password_reset_tokens")
-	}), userID, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(int64(1), nil)
+	}), userID, mock.Anything, mock.MatchedBy(func(arg interface{}) bool {
+		expiresAt, ok := arg.(time.Time)
+		if !ok {
+			return false
+		}
+		ttl := time.Until(expiresAt)
+		return ttl <= ResetTokenExpiry && ttl >= ResetTokenExpiry-time.Minute && expiresAt.After(start)
+	}), mock.Anything, mock.Anything).Return(int64(1), nil)
 
 	token, err := suite.pm.CreateResetToken(ctx, userID, ipAddress, userAgent)
 
@@ -330,10 +339,19 @@ func (suite *PasswordManagerTestSuite) TestVerifyResetToken_ValidToken() {
 
 	mockRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
-		return contains(sql, "SELECT user_id, expires_at, used")
+		return contains(sql, "verify_attempts")
 	}), mock.Anything).Return(mockRow)
+	suite.mockDB.On("Exec",
+		mock.Anything,
+		mock.MatchedBy(func(sql string) bool {
+			return contains(sql, "UPDATE password_reset_tokens")
+		}),
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(int64(1), nil)
 
-	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if uid, ok := args[0].(*uuid.UUID); ok {
 			*uid = userID
 		}
@@ -342,6 +360,12 @@ func (suite *PasswordManagerTestSuite) TestVerifyResetToken_ValidToken() {
 		}
 		if u, ok := args[2].(*bool); ok {
 			*u = used
+		}
+		if attemptsPtr, ok := args[3].(*int); ok {
+			*attemptsPtr = 0
+		}
+		if windowPtr, ok := args[4].(*sql.NullTime); ok {
+			*windowPtr = sql.NullTime{Valid: false}
 		}
 	}).Return(nil)
 
@@ -357,7 +381,7 @@ func (suite *PasswordManagerTestSuite) TestVerifyResetToken_TokenNotFound() {
 
 	mockRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.Anything, mock.Anything).Return(mockRow)
-	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything).Return(sql.ErrNoRows)
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(sql.ErrNoRows)
 
 	resultUserID, err := suite.pm.VerifyResetToken(ctx, token)
 
@@ -380,8 +404,17 @@ func (suite *PasswordManagerTestSuite) TestVerifyResetToken_AlreadyUsed() {
 
 	mockRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.Anything, mock.Anything).Return(mockRow)
+	suite.mockDB.On("Exec",
+		mock.Anything,
+		mock.MatchedBy(func(sql string) bool {
+			return contains(sql, "UPDATE password_reset_tokens")
+		}),
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(int64(1), nil)
 
-	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if uid, ok := args[0].(*uuid.UUID); ok {
 			*uid = userID
 		}
@@ -390,6 +423,12 @@ func (suite *PasswordManagerTestSuite) TestVerifyResetToken_AlreadyUsed() {
 		}
 		if u, ok := args[2].(*bool); ok {
 			*u = used
+		}
+		if attemptsPtr, ok := args[3].(*int); ok {
+			*attemptsPtr = 0
+		}
+		if windowPtr, ok := args[4].(*sql.NullTime); ok {
+			*windowPtr = sql.NullTime{Valid: true, Time: time.Now().Add(-time.Minute)}
 		}
 	}).Return(nil)
 
@@ -414,8 +453,17 @@ func (suite *PasswordManagerTestSuite) TestVerifyResetToken_Expired() {
 
 	mockRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.Anything, mock.Anything).Return(mockRow)
+	suite.mockDB.On("Exec",
+		mock.Anything,
+		mock.MatchedBy(func(sql string) bool {
+			return contains(sql, "UPDATE password_reset_tokens")
+		}),
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(int64(1), nil)
 
-	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if uid, ok := args[0].(*uuid.UUID); ok {
 			*uid = userID
 		}
@@ -425,6 +473,12 @@ func (suite *PasswordManagerTestSuite) TestVerifyResetToken_Expired() {
 		if u, ok := args[2].(*bool); ok {
 			*u = used
 		}
+		if attemptsPtr, ok := args[3].(*int); ok {
+			*attemptsPtr = 0
+		}
+		if windowPtr, ok := args[4].(*sql.NullTime); ok {
+			*windowPtr = sql.NullTime{Valid: true, Time: time.Now().Add(-time.Minute)}
+		}
 	}).Return(nil)
 
 	resultUserID, err := suite.pm.VerifyResetToken(ctx, token)
@@ -432,6 +486,79 @@ func (suite *PasswordManagerTestSuite) TestVerifyResetToken_Expired() {
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), uuid.Nil, resultUserID)
 	assert.Contains(suite.T(), err.Error(), "expired")
+}
+
+func (suite *PasswordManagerTestSuite) TestVerifyResetToken_TooManyAttempts() {
+	ctx := context.Background()
+	tokenBytes := make([]byte, 32)
+	_, err := rand.Read(tokenBytes)
+	require.NoError(suite.T(), err)
+	token := base64.URLEncoding.EncodeToString(tokenBytes)
+
+	mockRow := &MockRow{}
+	suite.mockDB.On("QueryRow", mock.Anything, mock.Anything, mock.Anything).Return(mockRow)
+
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			if attemptsPtr, ok := args[3].(*int); ok {
+				*attemptsPtr = resetTokenVerifyMaxAttempts
+			}
+			if windowPtr, ok := args[4].(*sql.NullTime); ok {
+				*windowPtr = sql.NullTime{Valid: true, Time: time.Now()}
+			}
+		}).Return(nil)
+
+	resultUserID, err := suite.pm.VerifyResetToken(ctx, token)
+
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), uuid.Nil, resultUserID)
+	assert.Contains(suite.T(), err.Error(), "too many verification attempts")
+	suite.mockDB.AssertNotCalled(suite.T(), "Exec", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func (suite *PasswordManagerTestSuite) TestVerifyResetToken_AttemptWindowResets() {
+	ctx := context.Background()
+	userID := uuid.New()
+
+	tokenBytes := make([]byte, 32)
+	_, err := rand.Read(tokenBytes)
+	require.NoError(suite.T(), err)
+	token := base64.URLEncoding.EncodeToString(tokenBytes)
+
+	mockRow := &MockRow{}
+	suite.mockDB.On("QueryRow", mock.Anything, mock.Anything, mock.Anything).Return(mockRow)
+	suite.mockDB.On("Exec",
+		mock.Anything,
+		mock.MatchedBy(func(sql string) bool {
+			return contains(sql, "UPDATE password_reset_tokens")
+		}),
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(int64(1), nil)
+
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			if uid, ok := args[0].(*uuid.UUID); ok {
+				*uid = userID
+			}
+			if exp, ok := args[1].(*time.Time); ok {
+				*exp = time.Now().Add(30 * time.Minute)
+			}
+			if u, ok := args[2].(*bool); ok {
+				*u = false
+			}
+			if attemptsPtr, ok := args[3].(*int); ok {
+				*attemptsPtr = resetTokenVerifyMaxAttempts
+			}
+			if windowPtr, ok := args[4].(*sql.NullTime); ok {
+				*windowPtr = sql.NullTime{Valid: true, Time: time.Now().Add(-resetTokenVerifyWindow - time.Minute)}
+			}
+		}).Return(nil)
+
+	resultUserID, err := suite.pm.VerifyResetToken(ctx, token)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), userID, resultUserID)
 }
 
 // =====================================
@@ -454,10 +581,19 @@ func (suite *PasswordManagerTestSuite) TestCompletePasswordReset_Success() {
 	// Mock VerifyResetToken
 	mockRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
-		return contains(sql, "SELECT user_id, expires_at, used")
+		return contains(sql, "verify_attempts")
 	}), mock.Anything).Return(mockRow)
+	suite.mockDB.On("Exec",
+		mock.Anything,
+		mock.MatchedBy(func(sql string) bool {
+			return contains(sql, "UPDATE password_reset_tokens")
+		}),
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(int64(1), nil)
 
-	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if uid, ok := args[0].(*uuid.UUID); ok {
 			*uid = userID
 		}
@@ -466,6 +602,12 @@ func (suite *PasswordManagerTestSuite) TestCompletePasswordReset_Success() {
 		}
 		if u, ok := args[2].(*bool); ok {
 			*u = false
+		}
+		if attemptsPtr, ok := args[3].(*int); ok {
+			*attemptsPtr = 0
+		}
+		if windowPtr, ok := args[4].(*sql.NullTime); ok {
+			*windowPtr = sql.NullTime{Valid: false}
 		}
 	}).Return(nil)
 
@@ -498,7 +640,7 @@ func (suite *PasswordManagerTestSuite) TestCompletePasswordReset_InvalidToken() 
 
 	mockRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.Anything, mock.Anything).Return(mockRow)
-	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything).Return(sql.ErrNoRows)
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(sql.ErrNoRows)
 
 	err := suite.pm.CompletePasswordReset(ctx, token, newPassword)
 
@@ -520,8 +662,17 @@ func (suite *PasswordManagerTestSuite) TestCompletePasswordReset_WeakPassword() 
 
 	mockRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.Anything, mock.Anything).Return(mockRow)
+	suite.mockDB.On("Exec",
+		mock.Anything,
+		mock.MatchedBy(func(sql string) bool {
+			return contains(sql, "UPDATE password_reset_tokens")
+		}),
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(int64(1), nil)
 
-	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if uid, ok := args[0].(*uuid.UUID); ok {
 			*uid = userID
 		}
@@ -530,6 +681,12 @@ func (suite *PasswordManagerTestSuite) TestCompletePasswordReset_WeakPassword() 
 		}
 		if u, ok := args[2].(*bool); ok {
 			*u = false
+		}
+		if attemptsPtr, ok := args[3].(*int); ok {
+			*attemptsPtr = 0
+		}
+		if windowPtr, ok := args[4].(*sql.NullTime); ok {
+			*windowPtr = sql.NullTime{Valid: false}
 		}
 	}).Return(nil)
 
@@ -553,8 +710,17 @@ func (suite *PasswordManagerTestSuite) TestCompletePasswordReset_TransactionFail
 
 	mockRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.Anything, mock.Anything).Return(mockRow)
+	suite.mockDB.On("Exec",
+		mock.Anything,
+		mock.MatchedBy(func(sql string) bool {
+			return contains(sql, "UPDATE password_reset_tokens")
+		}),
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(int64(1), nil)
 
-	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if uid, ok := args[0].(*uuid.UUID); ok {
 			*uid = userID
 		}
@@ -563,6 +729,12 @@ func (suite *PasswordManagerTestSuite) TestCompletePasswordReset_TransactionFail
 		}
 		if u, ok := args[2].(*bool); ok {
 			*u = false
+		}
+		if attemptsPtr, ok := args[3].(*int); ok {
+			*attemptsPtr = 0
+		}
+		if windowPtr, ok := args[4].(*sql.NullTime); ok {
+			*windowPtr = sql.NullTime{Valid: false}
 		}
 	}).Return(nil)
 
@@ -641,8 +813,7 @@ func (suite *PasswordManagerTestSuite) TestCleanupExpiredTokens_DatabaseError() 
 
 // contains checks if a string contains a substring (case-insensitive helper)
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		(len(s) > 0 && len(substr) > 0 && (s[:len(substr)] == substr || contains(s[1:], substr))))
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }
 
 // Mock implementations (reuse from handlers_test.go)

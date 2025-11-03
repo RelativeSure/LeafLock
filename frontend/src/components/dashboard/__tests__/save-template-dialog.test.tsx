@@ -5,7 +5,7 @@ import { SaveTemplateDialog } from '../save-template-dialog'
 
 const createTemplateMock = vi.fn()
 
-vi.mock('../../stores/templatesStore', () => ({
+vi.mock('@/stores/templatesStore', () => ({
   useTemplatesStore: vi.fn(() => ({
     createTemplate: createTemplateMock,
   })),

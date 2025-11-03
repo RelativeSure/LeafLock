@@ -100,7 +100,7 @@ func TestDebugLoginReturnsUserInfo(t *testing.T) {
 			},
 		}
 
-		handler := NewHandler(service)
+		handler := NewHandler(service, &MockEmailService{})
 		app := fiber.New()
 		app.Post("/debug-login", handler.DebugLogin)
 
@@ -177,7 +177,7 @@ func TestDebugAdminInfoDecryptsEmail(t *testing.T) {
 			},
 		}
 
-		handler := NewHandler(service)
+		handler := NewHandler(service, &MockEmailService{})
 		app := fiber.New()
 		app.Get("/debug-admin", handler.DebugAdminInfo)
 
@@ -213,7 +213,7 @@ func TestDebugEncryptionKeyRoundTrip(t *testing.T) {
 			mfa:       NewMFAManager(&mockServiceDB{}, crypto),
 			jwtSecret: "secret",
 		}
-		handler := NewHandler(service)
+		handler := NewHandler(service, &MockEmailService{})
 		app := fiber.New()
 		app.Get("/debug-encryption", handler.DebugEncryptionKey)
 

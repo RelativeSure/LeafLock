@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -29,7 +30,11 @@ const (
 	MinPasswordLength = 12
 
 	// Reset token expiration
-	ResetTokenExpiry = 1 * time.Hour
+	ResetTokenExpiry = 15 * time.Minute
+
+	// Reset token verification controls
+	resetTokenVerifyMaxAttempts = 10
+	resetTokenVerifyWindow      = 15 * time.Minute
 )
 
 // PasswordManager handles password operations
@@ -171,7 +176,7 @@ func (pm *PasswordManager) VerifyResetToken(ctx context.Context, token string) (
 
 	// Look up token in database
 	query := `
-		SELECT user_id, expires_at, used
+		SELECT user_id, expires_at, used, verify_attempts, verify_window_start
 		FROM password_reset_tokens
 		WHERE token_hash = $1
 	`
@@ -179,10 +184,31 @@ func (pm *PasswordManager) VerifyResetToken(ctx context.Context, token string) (
 	var userID uuid.UUID
 	var expiresAt time.Time
 	var used bool
+	var attempts int
+	var windowStart sql.NullTime
 
-	err := pm.db.QueryRow(ctx, query, hash[:]).Scan(&userID, &expiresAt, &used)
+	err := pm.db.QueryRow(ctx, query, hash[:]).Scan(&userID, &expiresAt, &used, &attempts, &windowStart)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("invalid or expired reset token")
+	}
+
+	now := time.Now().UTC()
+	if !windowStart.Valid || now.Sub(windowStart.Time) > resetTokenVerifyWindow {
+		attempts = 0
+		windowStart = sql.NullTime{Time: now, Valid: true}
+	}
+
+	if attempts >= resetTokenVerifyMaxAttempts {
+		return uuid.Nil, fmt.Errorf("too many verification attempts. Please request a new reset link")
+	}
+
+	attempts++
+	if _, err := pm.db.Exec(ctx, `
+		UPDATE password_reset_tokens
+		SET verify_attempts = $1, verify_window_start = $2
+		WHERE token_hash = $3
+	`, attempts, windowStart.Time, hash[:]); err != nil {
+		return uuid.Nil, fmt.Errorf("failed to track verification attempt: %w", err)
 	}
 
 	// Check if already used
@@ -191,7 +217,7 @@ func (pm *PasswordManager) VerifyResetToken(ctx context.Context, token string) (
 	}
 
 	// Check if expired
-	if time.Now().UTC().After(expiresAt) {
+	if now.After(expiresAt) {
 		return uuid.Nil, fmt.Errorf("reset token expired")
 	}
 

@@ -1,26 +1,30 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useNotesStore } from '@/stores/notesStore'
 import { useAuthStore } from '@/stores/authStore'
-import { apiClient } from '@/services/api/secureApi'
+import { contentService, organizationService, socialService } from '@/services/api'
 import type { Note } from '@/types'
 
-vi.mock('@/services/api/secureApi', () => ({
-  apiClient: {
+vi.mock('@/services/api', () => ({
+  contentService: {
     createNote: vi.fn(),
-    shareNote: vi.fn(),
     updateNote: vi.fn(),
+    getNote: vi.fn(),
+    getNotes: vi.fn(),
+    getFolders: vi.fn(),
+  },
+  organizationService: {
+    getTags: vi.fn(),
+  },
+  socialService: {
+    shareNote: vi.fn(),
     getCollaborators: vi.fn(),
     removeCollaborator: vi.fn(),
     updateCollaboratorPermission: vi.fn(),
     getSharedNotes: vi.fn(),
-    getNote: vi.fn(),
     createNoteLink: vi.fn(),
     getNoteLinks: vi.fn(),
     getNoteBacklinks: vi.fn(),
     deleteNoteLink: vi.fn(),
-    getNotes: vi.fn(),
-    getFolders: vi.fn(),
-    getTags: vi.fn(),
   },
 }))
 
@@ -86,7 +90,7 @@ describe('Integration: Collaboration Flow', () => {
         updatedAt: '2024-01-01',
       }
 
-      vi.mocked(apiClient.createNote).mockResolvedValue(note)
+      vi.mocked(contentService.createNote).mockResolvedValue(note)
 
       await useNotesStore.getState().createNote({
         title: 'Shared Note',
@@ -96,12 +100,12 @@ describe('Integration: Collaboration Flow', () => {
       expect(useNotesStore.getState().notes).toHaveLength(1)
 
       // Step 2: Share with collaborator (read permission)
-      vi.mocked(apiClient.shareNote).mockResolvedValue(undefined)
+      vi.mocked(socialService.shareNote).mockResolvedValue(undefined)
 
-      await apiClient.shareNote('note-1', ['collaborator@example.com'])
+      await socialService.shareNote('note-1', 'collaborator@example.com', 'read')
 
       // Step 3: Get collaborators list
-      vi.mocked(apiClient.getCollaborators).mockResolvedValue([
+      vi.mocked(socialService.getCollaborators).mockResolvedValue([
         {
           id: 'user-2',
           email: 'collaborator@example.com',
@@ -110,18 +114,18 @@ describe('Integration: Collaboration Flow', () => {
         },
       ])
 
-      const collaborators = await apiClient.getCollaborators('note-1')
+      const collaborators = await socialService.getCollaborators('note-1')
 
       expect(collaborators).toHaveLength(1)
       expect(collaborators[0].email).toBe('collaborator@example.com')
       expect(collaborators[0].permission).toBe('read')
 
       // Step 4: Upgrade permission to write
-      vi.mocked(apiClient.updateCollaboratorPermission).mockResolvedValue(undefined)
+      vi.mocked(socialService.updateCollaboratorPermission).mockResolvedValue(undefined)
 
-      await apiClient.updateCollaboratorPermission('note-1', 'user-2', 'write')
+      await socialService.updateCollaboratorPermission('note-1', 'user-2', 'write')
 
-      vi.mocked(apiClient.getCollaborators).mockResolvedValue([
+      vi.mocked(socialService.getCollaborators).mockResolvedValue([
         {
           id: 'user-2',
           email: 'collaborator@example.com',
@@ -130,18 +134,18 @@ describe('Integration: Collaboration Flow', () => {
         },
       ])
 
-      const updatedCollaborators = await apiClient.getCollaborators('note-1')
+      const updatedCollaborators = await socialService.getCollaborators('note-1')
 
       expect(updatedCollaborators[0].permission).toBe('write')
 
       // Step 5: Remove collaborator
-      vi.mocked(apiClient.removeCollaborator).mockResolvedValue(undefined)
+      vi.mocked(socialService.removeCollaborator).mockResolvedValue(undefined)
 
-      await apiClient.removeCollaborator('note-1', 'user-2')
+      await socialService.removeCollaborator('note-1', 'user-2')
 
-      vi.mocked(apiClient.getCollaborators).mockResolvedValue([])
+      vi.mocked(socialService.getCollaborators).mockResolvedValue([])
 
-      const finalCollaborators = await apiClient.getCollaborators('note-1')
+      const finalCollaborators = await socialService.getCollaborators('note-1')
 
       expect(finalCollaborators).toHaveLength(0)
     })
@@ -164,7 +168,7 @@ describe('Integration: Collaboration Flow', () => {
         updatedAt: '2024-01-01',
       }
 
-      vi.mocked(apiClient.createNote).mockResolvedValue(note)
+      vi.mocked(contentService.createNote).mockResolvedValue(note)
 
       await useNotesStore.getState().createNote({
         title: 'Team Note',
@@ -172,21 +176,19 @@ describe('Integration: Collaboration Flow', () => {
       })
 
       // Share with multiple users
-      vi.mocked(apiClient.shareNote).mockResolvedValue(undefined)
+      vi.mocked(socialService.shareNote).mockResolvedValue(undefined)
 
-      await apiClient.shareNote('note-1', [
-        'user2@example.com',
-        'user3@example.com',
-        'user4@example.com',
-      ])
+      await socialService.shareNote('note-1', 'user2@example.com', 'write')
+      await socialService.shareNote('note-1', 'user3@example.com', 'write')
+      await socialService.shareNote('note-1', 'user4@example.com', 'write')
 
-      vi.mocked(apiClient.getCollaborators).mockResolvedValue([
+      vi.mocked(socialService.getCollaborators).mockResolvedValue([
         { id: 'user-2', email: 'user2@example.com', permission: 'write' },
         { id: 'user-3', email: 'user3@example.com', permission: 'write' },
         { id: 'user-4', email: 'user4@example.com', permission: 'write' },
       ])
 
-      const collaborators = await apiClient.getCollaborators('note-1')
+      const collaborators = await socialService.getCollaborators('note-1')
 
       expect(collaborators).toHaveLength(3)
       expect(collaborators.every((c) => c.permission === 'write')).toBe(true)
@@ -219,9 +221,9 @@ describe('Integration: Collaboration Flow', () => {
         },
       ]
 
-      vi.mocked(apiClient.getSharedNotes).mockResolvedValue(sharedNotes)
+      vi.mocked(socialService.getSharedNotes).mockResolvedValue(sharedNotes)
 
-      const notes = await apiClient.getSharedNotes()
+      const notes = await socialService.getSharedNotes()
 
       expect(notes).toHaveLength(1)
       expect(notes[0].sharedWith).toContain('user-2')
@@ -249,7 +251,7 @@ describe('Integration: Collaboration Flow', () => {
 
       // Collaborator with write permission can update
       const updatedNote = { ...sharedNote, content: 'encrypted-updated' }
-      vi.mocked(apiClient.updateNote).mockResolvedValue(updatedNote)
+      vi.mocked(contentService.updateNote).mockResolvedValue(updatedNote)
 
       await useNotesStore.getState().updateNote('note-1', {
         content: 'Updated by collaborator',
@@ -299,35 +301,33 @@ describe('Integration: Collaboration Flow', () => {
       useNotesStore.setState({ notes })
 
       // Create link from note-1 to note-2
-      vi.mocked(apiClient.createNoteLink).mockResolvedValue({
+      vi.mocked(socialService.createNoteLink).mockResolvedValue({
         id: 'link-1',
         sourceNoteId: 'note-1',
         targetNoteId: 'note-2',
         linkText: 'details',
       } as any)
 
-      // TODO: Note linking not yet implemented in NotesState
-      // const link = await useNotesStore.getState().createNoteLink('note-1', 'note-2', 'details')
-      const link = await apiClient.createNoteLink('note-1', 'note-2', 'details')
+      const link = await useNotesStore.getState().createNoteLink('note-1', 'note-2', 'details')
 
       expect(link.sourceNoteId).toBe('note-1')
       expect(link.targetNoteId).toBe('note-2')
 
       // Get all links from note-1
-      vi.mocked(apiClient.getNoteLinks).mockResolvedValue({
+      vi.mocked(socialService.getNoteLinks).mockResolvedValue({
         links: [{ id: 'link-1', targetNoteId: 'note-2' }],
       } as any)
 
-      const links = await apiClient.getNoteLinks('note-1')
+      const links = await socialService.getNoteLinks('note-1')
 
       expect(links.links).toHaveLength(1)
 
       // Get backlinks to note-2
-      vi.mocked(apiClient.getNoteBacklinks).mockResolvedValue({
+      vi.mocked(socialService.getNoteBacklinks).mockResolvedValue({
         backlinks: [{ id: 'link-1', sourceNoteId: 'note-1' }],
       } as any)
 
-      const backlinks = await apiClient.getNoteBacklinks('note-2')
+      const backlinks = await socialService.getNoteBacklinks('note-2')
 
       expect(backlinks.backlinks).toHaveLength(1)
       expect(backlinks.backlinks[0].sourceNoteId).toBe('note-1')
@@ -357,13 +357,13 @@ describe('Integration: Collaboration Flow', () => {
 
       // User 1 edits
       const user1Update = { ...note, content: 'encrypted-user1', updatedAt: '2024-01-01T10:01:00Z' }
-      vi.mocked(apiClient.updateNote).mockResolvedValueOnce(user1Update)
+      vi.mocked(contentService.updateNote).mockResolvedValueOnce(user1Update)
 
       await useNotesStore.getState().updateNote('note-1', { content: 'User 1 changes' })
 
       // User 2 edits (concurrent)
       const user2Update = { ...note, content: 'encrypted-user2', updatedAt: '2024-01-01T10:01:30Z' }
-      vi.mocked(apiClient.updateNote).mockResolvedValueOnce(user2Update)
+      vi.mocked(contentService.updateNote).mockResolvedValueOnce(user2Update)
 
       await useNotesStore.getState().updateNote('note-1', { content: 'User 2 changes' })
 
@@ -395,12 +395,12 @@ describe('Integration: Collaboration Flow', () => {
       useAuthStore.setState({ user: collaborator })
 
       // Owner removes write permission (downgrades to read)
-      vi.mocked(apiClient.updateCollaboratorPermission).mockResolvedValue(undefined)
+      vi.mocked(socialService.updateCollaboratorPermission).mockResolvedValue(undefined)
 
-      await apiClient.updateCollaboratorPermission('note-1', 'user-2', 'read')
+      await socialService.updateCollaboratorPermission('note-1', 'user-2', 'read')
 
       // Collaborator tries to save changes
-      vi.mocked(apiClient.updateNote).mockRejectedValue(new Error('Forbidden: Read-only access'))
+      vi.mocked(contentService.updateNote).mockRejectedValue(new Error('Forbidden: Read-only access'))
 
       await expect(
         useNotesStore.getState().updateNote('note-1', { content: 'Updated' })
@@ -430,22 +430,22 @@ describe('Integration: Collaboration Flow', () => {
         updatedAt: '2024-01-01',
       }
 
-      vi.mocked(apiClient.getSharedNotes).mockResolvedValue([sharedNote])
+      vi.mocked(socialService.getSharedNotes).mockResolvedValue([sharedNote])
 
-      const notes = await apiClient.getSharedNotes()
+      const notes = await socialService.getSharedNotes()
       expect(notes).toHaveLength(1)
 
       // Owner removes collaborator
       useAuthStore.setState({ user: owner })
-      vi.mocked(apiClient.removeCollaborator).mockResolvedValue(undefined)
+      vi.mocked(socialService.removeCollaborator).mockResolvedValue(undefined)
 
-      await apiClient.removeCollaborator('note-1', 'user-2')
+      await socialService.removeCollaborator('note-1', 'user-2')
 
       // Collaborator should no longer see the note
       useAuthStore.setState({ user: collaborator })
-      vi.mocked(apiClient.getSharedNotes).mockResolvedValue([])
+      vi.mocked(socialService.getSharedNotes).mockResolvedValue([])
 
-      const notesAfterRemoval = await apiClient.getSharedNotes()
+      const notesAfterRemoval = await socialService.getSharedNotes()
       expect(notesAfterRemoval).toHaveLength(0)
     })
 
@@ -453,9 +453,9 @@ describe('Integration: Collaboration Flow', () => {
       // Collaborator tries to access note not shared with them
       useAuthStore.setState({ user: collaborator })
 
-      vi.mocked(apiClient.getNote).mockRejectedValue(new Error('Not found'))
+      vi.mocked(contentService.getNote).mockRejectedValue(new Error('Not found'))
 
-      await expect(apiClient.getNote('note-1')).rejects.toThrow('Not found')
+      await expect(contentService.getNote('note-1')).rejects.toThrow('Not found')
     })
   })
 })

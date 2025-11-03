@@ -149,17 +149,29 @@ func ShareLinkMiddleware(db database.Database, crypto *appcrypto.CryptoService, 
 			}
 		}
 
-		// Increment use count in database
-		_, err = db.Exec(ctx, `
+		// Increment use count in database with atomic limit check
+		// This prevents race conditions where multiple concurrent requests bypass the usage limit
+		result, err := db.Exec(ctx, `
 			UPDATE share_links
 			SET use_count = use_count + 1,
 			    last_accessed_at = NOW(),
 			    last_accessed_ip = $2
-			WHERE token = $1`,
+			WHERE token = $1
+			  AND (max_uses IS NULL OR use_count < max_uses)`,
 			token, encryptIP(c, crypto))
 
 		if err != nil {
 			utils.LogRequestError(c, "ShareLinkMiddleware: failed to update use count", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to access share link",
+			})
+		}
+
+		// Check if the update actually happened (prevents race condition bypass)
+		if result.RowsAffected() == 0 {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "This share link has reached its usage limit",
+			})
 		}
 
 		// Refresh cache TTL for never-expiring links

@@ -30,7 +30,7 @@
    - ✅ Enhanced `settingsStore.test.ts` (100% coverage)
    - ✅ Enhanced `templatesStore.test.ts` (98.49% coverage)
    - ✅ Partial `notesStore.test.ts` (36.52% coverage - needs expansion)
-   - ✅ Enhanced `secureApi.test.ts` (46.24% coverage - needs expansion)
+   - ✅ Initial `apiClient` and service tests added (needs expansion)
 
 3. **Utility Tests**
    - ✅ `utils.test.ts` (100% coverage)
@@ -67,9 +67,9 @@ These files would give the biggest coverage boost:
    - Many untested actions and selectors
    - **Impact**: ~5-6% total coverage increase if fully tested
 
-3. **`secureApi.ts`** (46.24% coverage)
-   - 865 lines, API client layer
-   - Many untested endpoints
+3. **`apiClient.ts` & service layer** (newly split)
+   - Shared HTTP client plus domain services (`authService`, `contentService`, `socialService`, `organizationService`)
+   - Many endpoints still lack targeted tests
    - **Impact**: ~6-7% total coverage increase if fully tested
 
 4. **`encryption-context.tsx`** (52% coverage)
@@ -135,7 +135,7 @@ These components have 0% coverage:
   - Test filtering and sorting
   - Test trash operations
   - Test sharing operations
-- [ ] Expand `secureApi.ts` testing
+- [ ] Expand `apiClient` and service testing
   - Test all API endpoints
   - Test error handling
   - Test authentication flows
@@ -187,7 +187,7 @@ These components have 0% coverage:
 To quickly boost coverage from 17.5% to 30%+:
 
 1. **Complete `notesStore.ts` tests** - Would add ~5-6%
-2. **Complete `secureApi.ts` tests** - Would add ~6-7%
+2. **Complete `apiClient` + service tests** - Would add ~6-7%
 3. **Add basic tests for `note-editor.tsx`** - Would add ~3-4%
 4. **Add basic tests for `sidebar.tsx`** - Would add ~2-3%
 

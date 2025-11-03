@@ -40,7 +40,7 @@ import { Aside, Card, CardGrid, Code, Tabs, TabItem } from '@astrojs/starlight/c
 <Tabs>
   <TabItem label="Key Management">
 <Code
-  code={`// Login success -> SecureAPI.setToken(token)
+  code={`// Login success -> authService.login(...) stores token via ApiClient.setToken
 // 1. Fetch salt -> /api/v1/auth/login
 // 2. cryptoService.deriveKeyFromPassword(password, salt)
 // 3. Master key decrypted and cached in cryptoService.masterKey
@@ -50,10 +50,15 @@ import { Aside, Card, CardGrid, Code, Tabs, TabItem } from '@astrojs/starlight/c
   </TabItem>
   <TabItem label="Services">
 <Code
-  code={`SecureAPI (services/secureApi.ts)
-  ├── Adds JWT + CSRF headers
+  code={`ApiClient (services/api/apiClient.ts)
+  ├── Adds JWT headers
   ├── Handles 401 -> logout
   └── Wraps fetch with logging
+
+authService (services/api/authService.ts)
+  ├── Manages login/register flows
+  ├── Persists tokens and MFA state
+  └── Exposes password reset + MFA helpers
 
 CryptoService (services/cryptoService.ts)
   ├── Lazy-loads libsodium
@@ -81,7 +86,7 @@ CryptoService (services/cryptoService.ts)
     `features/common/collaboration` hooks maintain WebSocket connections via `websocketService`. Incoming payloads trigger optimistic UI updates in `collaborationStore.ts`.
   </Card>
   <Card title="Authentication UI" icon="lock">
-    `features/auth` screens coordinate MFA prompts, backup code entry, and password resets through `SecureAPI`.
+    `features/auth` screens coordinate MFA prompts, backup code entry, and password resets through `authService`.
   </Card>
 </CardGrid>
 
@@ -96,13 +101,13 @@ All stores enforce **decrypted data stays in memory**; only identifiers or encry
 
 ## API Access Patterns
 
-- Each feature module calls `SecureAPI` service methods (e.g., `services/templatesService.ts`) that return typed responses validated by Zod schemas under `lib/schemas`.
-- On 401 responses, `SecureAPI.handleUnauthorized()` clears keys, tokens, and salts, then redirects to `/login`.
+- Each feature module depends on the domain services exported from `services/api` (e.g., `authService`, `contentService`, `socialService`). They all return typed responses validated by shared Zod schemas under `lib/schemas`.
+- On 401 responses, the shared `ApiClient` clears keys, tokens, and salts, then redirects to `/login`.
 - File uploads stream through `attachmentService.ts`, which includes the decrypted note ID and uses `FormData` to avoid JSON encoding large payloads.
 
 <Code
-  code={`const api = new SecureAPI(cryptoService, '/api/v1')
-const templates = await templatesService.listTemplates(api)
+  code={`import { contentService } from '@/services/api'
+const templates = await contentService.getTemplates()
 // templates arrive encrypted -> decrypt client-side before rendering`}
   language="ts"
 />

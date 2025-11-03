@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ForgotPasswordForm } from '../forgot-password-form'
 
-vi.mock('@/services/api/secureApi', () => ({
-  apiClient: {
+vi.mock('@/services/api', () => ({
+  authService: {
     requestPasswordReset: vi.fn(),
   },
 }))
@@ -66,8 +66,8 @@ describe('ForgotPasswordForm', () => {
   })
 
   it('should submit form with valid email', async () => {
-    const { apiClient } = await import('@/services/api/secureApi')
-    vi.mocked(apiClient.requestPasswordReset).mockResolvedValue(undefined)
+    const { authService } = await import('@/services/api')
+    vi.mocked(authService.requestPasswordReset).mockResolvedValue(undefined)
 
     renderForm()
 
@@ -78,13 +78,13 @@ describe('ForgotPasswordForm', () => {
     fireEvent.click(submitButton)
 
     await waitFor(() => {
-      expect(apiClient.requestPasswordReset).toHaveBeenCalledWith('user@example.com')
+      expect(authService.requestPasswordReset).toHaveBeenCalledWith('user@example.com')
     })
   })
 
   it('should show success message after submission', async () => {
-    const { apiClient } = await import('@/services/api/secureApi')
-    vi.mocked(apiClient.requestPasswordReset).mockResolvedValue(undefined)
+    const { authService } = await import('@/services/api')
+    vi.mocked(authService.requestPasswordReset).mockResolvedValue(undefined)
 
     renderForm()
 
@@ -100,8 +100,8 @@ describe('ForgotPasswordForm', () => {
   })
 
   it('should show error message on failure', async () => {
-    const { apiClient } = await import('@/services/api/secureApi')
-    vi.mocked(apiClient.requestPasswordReset).mockRejectedValue(new Error('Email not found'))
+    const { authService } = await import('@/services/api')
+    vi.mocked(authService.requestPasswordReset).mockRejectedValue(new Error('Email not found'))
 
     renderForm()
 
@@ -129,8 +129,8 @@ describe('ForgotPasswordForm', () => {
   })
 
   it('should disable submit button while loading', async () => {
-    const { apiClient } = await import('@/services/api/secureApi')
-    vi.mocked(apiClient.requestPasswordReset).mockImplementation(
+    const { authService } = await import('@/services/api')
+    vi.mocked(authService.requestPasswordReset).mockImplementation(
       () => new Promise((resolve) => setTimeout(resolve, 1000))
     )
 

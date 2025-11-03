@@ -19,6 +19,7 @@ describe('Dialog', () => {
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
           <DialogTitle>Dialog Title</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -31,6 +32,7 @@ describe('Dialog', () => {
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
           <DialogTitle>Dialog Title</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -44,6 +46,7 @@ describe('Dialog', () => {
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
           <DialogTitle>Dialog Title</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -58,11 +61,12 @@ describe('Dialog', () => {
 
   it('closes when close button is clicked', async () => {
     const user = userEvent.setup()
-    render(
+    const { container } = render(
       <Dialog>
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
           <DialogTitle>Dialog Title</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
           <DialogClose>Close</DialogClose>
         </DialogContent>
       </Dialog>
@@ -75,7 +79,11 @@ describe('Dialog', () => {
       expect(screen.getByText('Dialog Title')).toBeInTheDocument()
     })
 
-    const closeButton = screen.getByText('Close')
+    // Query for the visible close button (not the sr-only one)
+    const closeButton = container.querySelector(
+      '[data-slot="dialog-close"]:not(.sr-only)'
+    ) as HTMLElement
+    expect(closeButton).toBeTruthy()
     await user.click(closeButton)
 
     await waitFor(() => {
@@ -90,6 +98,7 @@ describe('Dialog', () => {
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
           <DialogTitle>Dialog Title</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -118,6 +127,7 @@ describe('Dialog', () => {
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
           <DialogTitle>Controlled Dialog</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -129,6 +139,7 @@ describe('Dialog', () => {
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
           <DialogTitle>Controlled Dialog</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -144,6 +155,7 @@ describe('Dialog', () => {
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
           <DialogTitle>Default Open Dialog</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -155,12 +167,13 @@ describe('Dialog', () => {
 
   it('renders complete dialog structure', async () => {
     const user = userEvent.setup()
-    render(
+    const { container } = render(
       <Dialog>
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Complete Dialog</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
             <DialogDescription>This is a complete dialog example</DialogDescription>
           </DialogHeader>
           <div>Main Content</div>
@@ -176,9 +189,15 @@ describe('Dialog', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Complete Dialog')).toBeInTheDocument()
-      expect(screen.getByText('This is a complete dialog example')).toBeInTheDocument()
+      expect(
+        screen.getByText('This is a complete dialog example')
+      ).toBeInTheDocument()
       expect(screen.getByText('Main Content')).toBeInTheDocument()
-      expect(screen.getByText('Close')).toBeInTheDocument()
+      // Check for visible close button
+      const closeButton = container.querySelector(
+        '[data-slot="dialog-footer"] [data-slot="dialog-close"]'
+      )
+      expect(closeButton).toBeInTheDocument()
     })
   })
 
@@ -190,6 +209,7 @@ describe('Dialog', () => {
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent className={customClass}>
           <DialogTitle>Dialog</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -210,6 +230,7 @@ describe('Dialog', () => {
         <DialogTrigger ref={ref}>Trigger</DialogTrigger>
         <DialogContent>
           <DialogTitle>Title</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -224,6 +245,7 @@ describe('Dialog', () => {
         <DialogTrigger>Trigger</DialogTrigger>
         <DialogContent ref={ref}>
           <DialogTitle>Title</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -244,6 +266,7 @@ describe('Dialog', () => {
         <DialogTrigger>Trigger</DialogTrigger>
         <DialogContent>
           <DialogTitle>Title</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
           <DialogClose ref={ref}>Close</DialogClose>
         </DialogContent>
       </Dialog>
@@ -259,11 +282,12 @@ describe('Dialog', () => {
 
   it('renders overlay when dialog is open', async () => {
     const user = userEvent.setup()
-    const { container } = render(
+    render(
       <Dialog>
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
           <DialogTitle>Dialog</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -272,7 +296,7 @@ describe('Dialog', () => {
     await user.click(trigger)
 
     await waitFor(() => {
-      const overlay = container.querySelector('[data-slot="dialog-overlay"]')
+      const overlay = document.querySelector('[data-slot="dialog-overlay"]')
       expect(overlay).toBeInTheDocument()
     })
   })
@@ -285,6 +309,7 @@ describe('Dialog', () => {
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
           <DialogTitle>Dialog</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -300,11 +325,12 @@ describe('Dialog', () => {
   it('calls onOpenChange when dialog closes', async () => {
     const user = userEvent.setup()
     const handleOpenChange = vi.fn()
-    render(
+    const { container } = render(
       <Dialog onOpenChange={handleOpenChange}>
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
           <DialogTitle>Dialog</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
           <DialogClose>Close</DialogClose>
         </DialogContent>
       </Dialog>
@@ -319,7 +345,10 @@ describe('Dialog', () => {
 
     vi.clearAllMocks()
 
-    const closeButton = screen.getByText('Close')
+    const closeButton = container.querySelector(
+      '[data-slot="dialog-close"]:not(.sr-only)'
+    ) as HTMLElement
+    expect(closeButton).toBeTruthy()
     await user.click(closeButton)
 
     await waitFor(() => {
@@ -334,6 +363,7 @@ describe('Dialog', () => {
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
           <DialogTitle>Escapable Dialog</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -361,6 +391,7 @@ describe('Dialog', () => {
           <DialogTrigger>Open Dialog</DialogTrigger>
           <DialogContent>
             <DialogTitle>Clickaway Dialog</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
           </DialogContent>
         </Dialog>
       </div>
@@ -391,6 +422,7 @@ describe('Dialog', () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Header Title</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
             <DialogDescription>Header Description</DialogDescription>
           </DialogHeader>
         </DialogContent>
@@ -413,6 +445,7 @@ describe('Dialog', () => {
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
           <DialogTitle>Dialog with Footer</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
           <DialogFooter>
             <button>Action Button</button>
           </DialogFooter>
@@ -435,20 +468,26 @@ describe('Dialog', () => {
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
           <DialogTitle>Dialog</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
           <DialogClose>Close</DialogClose>
         </DialogContent>
       </Dialog>
     )
 
-    expect(container.querySelector('[data-slot="dialog"]')).toBeInTheDocument()
-    expect(container.querySelector('[data-slot="dialog-trigger"]')).toBeInTheDocument()
+    expect(
+      container.querySelector('[data-slot="dialog-trigger"]')
+    ).toBeInTheDocument()
 
     const trigger = screen.getByText('Open Dialog')
     await user.click(trigger)
 
     await waitFor(() => {
-      expect(document.querySelector('[data-slot="dialog-overlay"]')).toBeInTheDocument()
-      expect(document.querySelector('[data-slot="dialog-content"]')).toBeInTheDocument()
+      expect(
+        document.querySelector('[data-slot="dialog-overlay"]')
+      ).toBeInTheDocument()
+      expect(
+        document.querySelector('[data-slot="dialog-content"]')
+      ).toBeInTheDocument()
     })
   })
 
@@ -460,6 +499,7 @@ describe('Dialog', () => {
           <DialogTrigger>Open Dialog</DialogTrigger>
           <DialogContent>
             <DialogTitle>Portal Content</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
           </DialogContent>
         </Dialog>
       </div>
@@ -476,11 +516,12 @@ describe('Dialog', () => {
 
   it('has proper z-index on overlay', async () => {
     const user = userEvent.setup()
-    const { container } = render(
+    render(
       <Dialog>
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
           <DialogTitle>Dialog</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -489,8 +530,9 @@ describe('Dialog', () => {
     await user.click(trigger)
 
     await waitFor(() => {
-      const overlay = container.querySelector('.z-50')
+      const overlay = document.querySelector('[data-slot="dialog-overlay"]')
       expect(overlay).toBeInTheDocument()
+      expect(overlay).toHaveClass('z-50')
     })
   })
 
@@ -501,6 +543,7 @@ describe('Dialog', () => {
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
           <DialogTitle>Animated Dialog</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -520,6 +563,7 @@ describe('Dialog', () => {
         <DialogTrigger data-testid="custom-trigger">Trigger</DialogTrigger>
         <DialogContent>
           <DialogTitle>Title</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -533,6 +577,7 @@ describe('Dialog', () => {
         <DialogTrigger>Trigger</DialogTrigger>
         <DialogContent data-testid="custom-content">
           <DialogTitle>Title</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -552,6 +597,7 @@ describe('Dialog', () => {
         <DialogTrigger>Open Modal Dialog</DialogTrigger>
         <DialogContent>
           <DialogTitle>Modal Content</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -571,6 +617,7 @@ describe('Dialog', () => {
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
           <DialogTitle>Dialog</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
         </DialogContent>
       </Dialog>
     )
@@ -592,12 +639,14 @@ describe('Dialog', () => {
           <DialogTrigger>Open Dialog 1</DialogTrigger>
           <DialogContent>
             <DialogTitle>Dialog 1 Title</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
           </DialogContent>
         </Dialog>
         <Dialog>
           <DialogTrigger>Open Dialog 2</DialogTrigger>
           <DialogContent>
             <DialogTitle>Dialog 2 Title</DialogTitle>
+          <DialogDescription>Test Description</DialogDescription>
           </DialogContent>
         </Dialog>
       </div>

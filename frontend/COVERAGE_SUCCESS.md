@@ -172,7 +172,7 @@ it('should export component', async () => {
 | -------------------------- | ------- | ----- | ------ |
 | encryption-utils.ts        | 3.23%   | 295   | High   |
 | notesStore.ts              | 36.52%  | 646   | High   |
-| secureApi.ts               | 37.25%  | 865   | High   |
+| apiClient.ts (new)        | N/A     | 120   | High   |
 | note-editor.tsx            | 0%      | 445   | High   |
 | version-history-dialog.tsx | 0%      | 477   | High   |
 | advanced-search-bar.tsx    | 0%      | 457   | High   |
@@ -234,9 +234,9 @@ These are minor issues that don't prevent coverage measurement. They can be fixe
    - Test bulk operations
    - **Estimated gain**: 5-6%
 
-3. **Expand secureApi.ts testing**
-   - Test all API endpoints
-   - Test error handling paths
+3. **Expand apiClient + service testing**
+   - Test auth/content/social/organization service endpoints
+   - Test ApiClient error handling paths
    - **Estimated gain**: 3-4%
 
 ### Priority 2: Major Components (7% gain potential)

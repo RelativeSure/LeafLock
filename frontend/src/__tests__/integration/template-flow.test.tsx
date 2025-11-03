@@ -1,18 +1,21 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useTemplatesStore } from '@/stores/templatesStore'
 import { useNotesStore } from '@/stores/notesStore'
-import { apiClient } from '@/services/api/secureApi'
+import { contentService, organizationService } from '@/services/api'
 
-vi.mock('@/services/api/secureApi', () => ({
-  apiClient: {
+vi.mock('@/services/api', () => ({
+  contentService: {
     getTemplates: vi.fn(),
     getTemplate: vi.fn(),
     createTemplate: vi.fn(),
     updateTemplate: vi.fn(),
     deleteTemplate: vi.fn(),
+    useTemplate: vi.fn(),
     createNote: vi.fn(),
     getNotes: vi.fn(),
     getFolders: vi.fn(),
+  },
+  organizationService: {
     getTags: vi.fn(),
   },
 }))
@@ -32,6 +35,8 @@ describe('Integration: Template Usage Flow', () => {
   beforeEach(() => {
     useTemplatesStore.setState({
       templates: [],
+      starterTemplates: [],
+      communityTemplates: [],
       isLoading: false,
     })
 
@@ -44,6 +49,7 @@ describe('Integration: Template Usage Flow', () => {
 
     localStorage.setItem('user', JSON.stringify(mockUser))
     vi.clearAllMocks()
+    vi.mocked(contentService.getTemplates).mockResolvedValue([])
   })
 
   describe('Create Template from Note', () => {
@@ -58,7 +64,7 @@ describe('Integration: Template Usage Flow', () => {
         tags: ['meeting'],
       }
 
-      vi.mocked(apiClient.createNote).mockResolvedValue(note as any)
+      vi.mocked(contentService.createNote).mockResolvedValue(note as any)
 
       await useNotesStore.getState().createNote({
         title: 'Meeting Notes Template',
@@ -80,7 +86,8 @@ describe('Integration: Template Usage Flow', () => {
         usageCount: 0,
       }
 
-      vi.mocked(apiClient.createTemplate).mockResolvedValue(template)
+      vi.mocked(contentService.createTemplate).mockResolvedValue(template)
+      vi.mocked(contentService.getTemplates).mockResolvedValue([template])
 
       const created = await useTemplatesStore.getState().createTemplate({
         name: 'Meeting Notes',
@@ -107,10 +114,11 @@ describe('Integration: Template Usage Flow', () => {
           isPublic: false,
           usageCount: 5,
           createdAt: '2024-01-01',
+          userId: 'user-1',
         },
       ]
 
-      vi.mocked(apiClient.getTemplates).mockResolvedValue(templates)
+      vi.mocked(contentService.getTemplates).mockResolvedValue(templates)
 
       await useTemplatesStore.getState().loadTemplates()
 
@@ -131,7 +139,7 @@ describe('Integration: Template Usage Flow', () => {
         updatedAt: '2024-01-01',
       }
 
-      vi.mocked(apiClient.createNote).mockResolvedValue(newNote as any)
+      vi.mocked(contentService.createNote).mockResolvedValue(newNote as any)
 
       await useNotesStore.getState().createNote({
         title: 'Daily Log - 2024-01-01',
@@ -141,12 +149,11 @@ describe('Integration: Template Usage Flow', () => {
 
       expect(useNotesStore.getState().notes).toHaveLength(1)
 
-      // Step 3: Increment template usage count
-      // TODO: incrementUsageCount not implemented in TemplatesState
+      // Step 3: Increment template usage count via updateTemplate
       const updatedTemplate = { ...template, usageCount: 6 }
-      vi.mocked(apiClient.updateTemplate).mockResolvedValue(updatedTemplate)
+      vi.mocked(contentService.updateTemplate).mockResolvedValue(updatedTemplate)
 
-      await apiClient.updateTemplate('tpl-1', { usageCount: 6 })
+      await useTemplatesStore.getState().updateTemplate('tpl-1', { usageCount: 6 })
 
       // Manually update state since incrementUsageCount doesn't exist
       useTemplatesStore.setState({
@@ -167,6 +174,7 @@ describe('Integration: Template Usage Flow', () => {
         isPublic: false,
         usageCount: 10,
         createdAt: '2024-01-01',
+        userId: 'user-1',
       },
       {
         id: 'tpl-2',
@@ -176,6 +184,7 @@ describe('Integration: Template Usage Flow', () => {
         isPublic: false,
         usageCount: 20,
         createdAt: '2024-01-02',
+        userId: 'user-1',
       },
       {
         id: 'tpl-3',
@@ -185,6 +194,7 @@ describe('Integration: Template Usage Flow', () => {
         isPublic: true,
         usageCount: 5,
         createdAt: '2024-01-03',
+        userId: 'user-1',
       },
     ]
 
@@ -225,7 +235,8 @@ describe('Integration: Template Usage Flow', () => {
       }
 
       const updated = { ...templates[0], ...updates }
-      vi.mocked(apiClient.updateTemplate).mockResolvedValue(updated)
+      vi.mocked(contentService.updateTemplate).mockResolvedValue(updated)
+      vi.mocked(contentService.getTemplates).mockResolvedValue([updated])
 
       await useTemplatesStore.getState().updateTemplate('tpl-1', updates)
 
@@ -234,7 +245,7 @@ describe('Integration: Template Usage Flow', () => {
     })
 
     it('should delete template', async () => {
-      vi.mocked(apiClient.deleteTemplate).mockResolvedValue(undefined)
+      vi.mocked(contentService.deleteTemplate).mockResolvedValue(undefined)
 
       await useTemplatesStore.getState().deleteTemplate('tpl-1')
 
@@ -254,6 +265,7 @@ describe('Integration: Template Usage Flow', () => {
         isPublic: false,
         usageCount: 10,
         createdAt: '2024-01-01',
+        userId: 'user-1',
       },
       {
         id: 'tpl-2',
@@ -264,6 +276,7 @@ describe('Integration: Template Usage Flow', () => {
         isPublic: true,
         usageCount: 5,
         createdAt: '2024-01-02',
+        userId: 'user-1',
       },
       {
         id: 'tpl-3',
@@ -274,6 +287,7 @@ describe('Integration: Template Usage Flow', () => {
         isPublic: false,
         usageCount: 15,
         createdAt: '2024-01-03',
+        userId: 'user-1',
       },
     ]
 
@@ -323,13 +337,15 @@ describe('Integration: Template Usage Flow', () => {
         isPublic: false,
         usageCount: 0,
         createdAt: '2024-01-01',
+        userId: 'user-1',
       }
 
       useTemplatesStore.setState({ templates: [privateTemplate] })
 
       // Make public
       const publicTemplate = { ...privateTemplate, isPublic: true }
-      vi.mocked(apiClient.updateTemplate).mockResolvedValue(publicTemplate)
+      vi.mocked(contentService.updateTemplate).mockResolvedValue(publicTemplate)
+      vi.mocked(contentService.getTemplates).mockResolvedValue([publicTemplate])
 
       await useTemplatesStore.getState().updateTemplate('tpl-1', { isPublic: true })
 
@@ -360,18 +376,18 @@ describe('Integration: Template Usage Flow', () => {
         },
       ]
 
-      vi.mocked(apiClient.getTemplates).mockResolvedValue(publicTemplates)
+      vi.mocked(contentService.getTemplates).mockResolvedValue(publicTemplates)
 
       await useTemplatesStore.getState().loadTemplates()
 
-      expect(useTemplatesStore.getState().templates).toHaveLength(2)
-      expect(useTemplatesStore.getState().templates.every((t) => t.isPublic)).toBe(true)
+      expect(useTemplatesStore.getState().communityTemplates).toHaveLength(2)
+      expect(useTemplatesStore.getState().communityTemplates.every((t) => t.isPublic)).toBe(true)
     })
   })
 
   describe('Template Error Handling', () => {
     it('should handle template creation failure', async () => {
-      vi.mocked(apiClient.createTemplate).mockRejectedValue(new Error('Server error'))
+      vi.mocked(contentService.createTemplate).mockRejectedValue(new Error('Server error'))
 
       await expect(
         useTemplatesStore.getState().createTemplate({
@@ -396,7 +412,7 @@ describe('Integration: Template Usage Flow', () => {
 
       useTemplatesStore.setState({ templates: [template] })
 
-      vi.mocked(apiClient.deleteTemplate).mockRejectedValue(new Error('Delete failed'))
+      vi.mocked(contentService.deleteTemplate).mockRejectedValue(new Error('Delete failed'))
 
       await expect(useTemplatesStore.getState().deleteTemplate('tpl-1')).rejects.toThrow(
         'Delete failed'

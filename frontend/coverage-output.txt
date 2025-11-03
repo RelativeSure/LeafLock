@@ -862,7 +862,7 @@ Ignored nodes: comments, script, style
    ✓ RegisterForm > registration submission > should clear error message on new submission  624ms
    ✓ RegisterForm > edge cases > should handle non-Error exceptions during registration  338ms
  ✓ src/stores/__tests__/templatesStore.test.ts (34 tests) 135ms
- ✓ src/services/api/__tests__/secureApi.test.ts (22 tests) 145ms
+ ✓ src/services/api/__tests__/authService.test.ts (split from legacy API monolith)
  ✓ src/stores/__tests__/notesStore.test.ts (30 tests) 149ms
  ✓ src/__tests__/utils.test.ts (4 tests) 35ms
  ✓ src/stores/__tests__/authStore.test.ts (29 tests) 109ms
@@ -984,7 +984,7 @@ All files          |   17.56 |    87.87 |   52.29 |   17.56 |
   ...sion-utils.ts |     100 |      100 |     100 |     100 |                   
   utils.ts         |     100 |      100 |     100 |     100 |                   
  ...c/services/api |   37.25 |    78.37 |   13.88 |   37.25 |                   
-  secureApi.ts     |   37.25 |    78.37 |   13.88 |   37.25 | ...56-858,861-865 
+  apiClient.ts      |   N/A   |     -   |     -   |     -  | (restructured into domain services)
  ...end/src/stores |   61.15 |    90.04 |    50.9 |   61.15 |                   
   authStore.ts     |     100 |     91.3 |     100 |     100 | 92,151,163,174    
   index.ts         |       0 |      100 |     100 |       0 | 3-10              

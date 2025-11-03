@@ -79,7 +79,6 @@ export default defineConfig({
       'react',
       'react-dom',
       '@tanstack/react-router',
-      '@tanstack/store',
       'zustand',
     ],
     exclude: ['libsodium-wrappers'],

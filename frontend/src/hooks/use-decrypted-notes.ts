@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { Note } from '@/types'
 import { useEncryption } from '@/lib/encryption-context'
@@ -16,20 +16,41 @@ export function useDecryptedNotes(notes: Note[]) {
   const [cache, setCache] = useState<DecryptedNoteCache>({})
   const [isDecrypting, setIsDecrypting] = useState(false)
   const cacheRef = useRef(cache)
+  const signatureRef = useRef<string>('uninitialized')
+  const unlockedRef = useRef<boolean | null>(null)
+  const runIdRef = useRef(0)
 
   useEffect(() => {
     cacheRef.current = cache
   }, [cache])
 
+  const notesSignature = useMemo(() => {
+    if (!notes.length) return 'empty'
+    return notes
+      .map((note) => `${note.id}:${note.updatedAt ?? ''}:${note.title ?? ''}:${note.content ?? ''}`)
+      .join('|')
+  }, [notes])
+
   useEffect(() => {
-    let cancelled = false
+    if (signatureRef.current === notesSignature && unlockedRef.current === isUnlocked) {
+      return
+    }
+
+    signatureRef.current = notesSignature
+    unlockedRef.current = isUnlocked
+
+    const runId = (runIdRef.current += 1)
 
     const run = async () => {
       if (!isUnlocked) {
-        if (!cancelled) {
+        if (runIdRef.current === runId) {
           setCache({})
           setIsDecrypting(false)
         }
+        return
+      }
+
+      if (runIdRef.current !== runId) {
         return
       }
 
@@ -71,18 +92,14 @@ export function useDecryptedNotes(notes: Note[]) {
         }
       }
 
-      if (!cancelled) {
+      if (runIdRef.current === runId) {
         setCache(nextCache)
         setIsDecrypting(false)
       }
     }
 
     run()
-
-    return () => {
-      cancelled = true
-    }
-  }, [notes, isUnlocked, decryptText])
+  }, [notesSignature, isUnlocked, decryptText, notes])
 
   return {
     decryptedNotes: cache,
