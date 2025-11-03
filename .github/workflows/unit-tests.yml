@@ -14,17 +14,13 @@ jobs:
   backend-tests:
     name: Backend Unit Tests
     runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-
-      - name: Install Railway CLI
-        run: |
-          npm install -g @railway/cli
-          railway --version
 
       - name: Wait for Railway backend deployment
         run: |
@@ -120,17 +116,13 @@ jobs:
   frontend-tests:
     name: Frontend Unit Tests
     runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-
-      - name: Install Railway CLI
-        run: |
-          npm install -g @railway/cli
-          railway --version
 
       - name: Wait for Railway frontend deployment
         run: |
