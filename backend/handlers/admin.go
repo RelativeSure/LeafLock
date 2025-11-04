@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -384,6 +385,9 @@ func (h *AdminHandler) UpdateRegistrationSetting(c *fiber.Ctx) error {
 
 	ctx := c.Context()
 
+	// Convert boolean to string for TEXT column
+	valueStr := fmt.Sprintf("%t", req.Enabled)
+
 	// Upsert the registration_enabled setting in app_settings
 	query := `
 		INSERT INTO app_settings (key, value, updated_at)
@@ -391,7 +395,7 @@ func (h *AdminHandler) UpdateRegistrationSetting(c *fiber.Ctx) error {
 		ON CONFLICT (key)
 		DO UPDATE SET value = $1, updated_at = NOW()
 	`
-	_, err := h.db.Exec(ctx, query, req.Enabled)
+	_, err := h.db.Exec(ctx, query, valueStr)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to update registration setting",
