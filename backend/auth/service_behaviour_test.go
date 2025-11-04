@@ -366,12 +366,13 @@ func TestEnsureDefaultAdminCreatesRecords(t *testing.T) {
 	}
 }
 
-func TestEnsureDefaultAdminSkipsWhenUsersExist(t *testing.T) {
+func TestEnsureDefaultAdminSkipsWhenAdminExists(t *testing.T) {
 	db := &mockServiceDB{
 		queryRowFuncs: []func(dest ...interface{}) error{
 			func(dest ...interface{}) error {
-				if countPtr, ok := dest[0].(*int); ok {
-					*countPtr = 2
+				// Return true for EXISTS query (admin already exists)
+				if existsPtr, ok := dest[0].(*bool); ok {
+					*existsPtr = true
 				}
 				return nil
 			},
@@ -381,9 +382,9 @@ func TestEnsureDefaultAdminSkipsWhenUsersExist(t *testing.T) {
 	service := &Service{db: db, password: NewPasswordManager(db, appcrypto.NewCryptoService(make([]byte, 32)))}
 
 	if err := service.EnsureDefaultAdmin(context.Background(), true, "admin@example.com", "ComplexPass123!"); err != nil {
-		t.Fatalf("expected no error when users exist, got %v", err)
+		t.Fatalf("expected no error when admin exists, got %v", err)
 	}
 	if db.beginCalls != 0 {
-		t.Fatalf("expected no transaction to begin, got %d", db.beginCalls)
+		t.Fatalf("expected no transaction to begin when admin exists, got %d", db.beginCalls)
 	}
 }

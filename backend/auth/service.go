@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -606,16 +607,24 @@ func (s *Service) EnsureDefaultAdmin(ctx context.Context, enabled bool, email, p
 		return nil // Admin creation disabled
 	}
 
-	// Check if any users exist
-	var userCount int
-	err := s.db.QueryRow(ctx, `SELECT COUNT(*) FROM users WHERE deleted_at IS NULL`).Scan(&userCount)
+	// Check if default admin already exists (by email search hash)
+	// IMPORTANT: Check for THIS specific admin email, not just if any users exist
+	emailBytes := []byte(strings.ToLower(strings.TrimSpace(email)))
+	searchHash := sha256.Sum256(append(emailBytes, []byte("search-salt")...))
+
+	var adminExists bool
+	query := `SELECT EXISTS(SELECT 1 FROM users WHERE email_search_hash = $1 AND deleted_at IS NULL)`
+	err := s.db.QueryRow(ctx, query, searchHash[:]).Scan(&adminExists)
 	if err != nil {
-		return fmt.Errorf("failed to check existing users: %w", err)
+		return fmt.Errorf("failed to check admin existence: %w", err)
 	}
 
-	if userCount > 0 {
-		return nil // Users already exist, skip admin creation
+	if adminExists {
+		log.Printf("✓ Default admin user already exists: %s", email)
+		return nil
 	}
+
+	log.Printf("Creating default admin user: %s", email)
 
 	// Validate password strength
 	if err := s.password.ValidatePasswordStrength(password); err != nil {
@@ -645,8 +654,7 @@ func (s *Service) EnsureDefaultAdmin(ctx context.Context, enabled bool, email, p
 		return fmt.Errorf("failed to encrypt master key: %w", err)
 	}
 
-	// Create email hashes
-	emailBytes := []byte(strings.ToLower(strings.TrimSpace(email)))
+	// Create email hash (emailBytes and searchHash already declared above for admin existence check)
 	emailHash := sha256.Sum256(emailBytes)
 
 	// Encrypt email for privacy
@@ -655,8 +663,7 @@ func (s *Service) EnsureDefaultAdmin(ctx context.Context, enabled bool, email, p
 		return fmt.Errorf("failed to encrypt email: %w", err)
 	}
 
-	// Create deterministic search hash for login
-	searchHash := sha256.Sum256(append(emailBytes, []byte("search-salt")...))
+	// searchHash already computed above for admin existence check
 
 	// Begin transaction
 	tx, err := s.db.Begin(ctx)
