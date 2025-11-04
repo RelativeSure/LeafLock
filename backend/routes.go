@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"os"
 	"regexp"
 	"strings"
@@ -27,7 +28,8 @@ import (
 )
 
 // setupRoutes configures all API routes and middleware for the application
-func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *appcrypto.CryptoService, config *appconfig.Config, startTime time.Time, readyState *appserver.ReadyState) {
+// Zero-knowledge: crypto removed, handlers derive encryption from JWT_SECRET internally
+func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *appconfig.Config, startTime time.Time, readyState *appserver.ReadyState) {
 	// Security middleware
 	app.Use(helmet.New(helmet.Config{
 		XSSProtection:      "1; mode=block",
@@ -126,22 +128,28 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	// Initialize email service
 	emailService := services.NewEmailService(config)
 
+	// Zero-knowledge: Derive handler encryption key from JWT secret
+	// Used for share links, attachments, and other server-managed encrypted data
+	// Note: User notes remain E2E encrypted with password-derived keys
+	handlerKey := sha256.Sum256(append([]byte(config.JWTSecret), []byte("-handler-encryption")...))
+	handlerCrypto := appcrypto.NewCryptoService(handlerKey[:])
+
 	// Initialize modern auth package
-	authService := auth.NewService(db, rdb, crypto, string(config.JWTSecret))
+	authService := auth.NewService(db, rdb, string(config.JWTSecret))
 	authHandler := auth.NewHandler(authService, emailService)
 
 	// Initialize other handlers
-	accountHandler := handlers.NewAccountHandler(db, rdb, crypto, config)
-	notesHandler := handlers.NewNotesHandler(db, crypto)
-	tagsHandler := handlers.NewTagsHandler(db, crypto)
-	foldersHandler := handlers.NewFoldersHandler(db, crypto)
-	templatesHandler := handlers.NewTemplatesHandler(db, crypto)
+	accountHandler := handlers.NewAccountHandler(db, rdb, handlerCrypto, config)
+	notesHandler := handlers.NewNotesHandler(db, handlerCrypto)
+	tagsHandler := handlers.NewTagsHandler(db, handlerCrypto)
+	foldersHandler := handlers.NewFoldersHandler(db, handlerCrypto)
+	templatesHandler := handlers.NewTemplatesHandler(db, handlerCrypto)
 	settingsHandler := handlers.NewSettingsHandler(db)
-	collabHandler := handlers.NewCollaborationHandler(db, crypto)
-	attachmentsHandler := handlers.NewAttachmentsHandler(db, crypto)
+	collabHandler := handlers.NewCollaborationHandler(db, handlerCrypto)
+	attachmentsHandler := handlers.NewAttachmentsHandler(db, handlerCrypto)
 	searchHandler := handlers.NewSearchHandler()
-	importExportHandler := handlers.NewImportExportHandler(db, crypto)
-	shareLinksHandler := handlers.NewShareLinksHandler(db, crypto, rdb)
+	importExportHandler := handlers.NewImportExportHandler(db, handlerCrypto)
+	shareLinksHandler := handlers.NewShareLinksHandler(db, handlerCrypto, rdb)
 	announcementsHandler := handlers.NewAnnouncementsHandler(db)
 	noteLinksHandler := handlers.NewNoteLinksHandler(db)
 	adminHandler := handlers.NewAdminHandler(db)
@@ -251,7 +259,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	protected.Put("/share-links/:token", rateLimits.StandardCRUDLimiter, shareLinksHandler.UpdateShareLink)
 
 	// Public share link route (no authentication required) - Tier 2: Aggressive limiting
-	api.Get("/share/:token", rateLimits.ShareLinkPublicLimiter, middleware.ShareLinkMiddleware(db, crypto, rdb), shareLinksHandler.GetSharedNote)
+	api.Get("/share/:token", rateLimits.ShareLinkPublicLimiter, middleware.ShareLinkMiddleware(db, handlerCrypto, rdb), shareLinksHandler.GetSharedNote)
 
 	// Attachments routes - Tier 3: Heavy operations
 	protected.Post("/notes/:noteId/attachments", rateLimits.AttachmentUploadLimiter, attachmentsHandler.UploadAttachment)

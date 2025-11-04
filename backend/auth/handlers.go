@@ -293,27 +293,16 @@ func (h *Handler) GetMFAStatus(c *fiber.Ctx) error {
 func (h *Handler) BeginMFASetup(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 
-	// Get user email
+	// Get user email (zero-knowledge: plaintext)
 	var email string
-	query := `SELECT email_encrypted FROM users WHERE id = $1`
-	var emailEncrypted []byte
-	err := h.service.db.QueryRow(c.Context(), query, userID).Scan(&emailEncrypted)
+	query := `SELECT email_plaintext FROM users WHERE id = $1`
+	err := h.service.db.QueryRow(c.Context(), query, userID).Scan(&email)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse{
 			Error: "Failed to get user info",
 			Code:  ErrCodeInternalError,
 		})
 	}
-
-	// Decrypt email
-	emailBytes, err := h.service.crypto.DecryptBytes(emailEncrypted)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse{
-			Error: "Failed to decrypt email",
-			Code:  ErrCodeInternalError,
-		})
-	}
-	email = string(emailBytes)
 
 	// Generate TOTP secret
 	key, err := h.service.mfa.GenerateTOTPSecret(email)
@@ -753,9 +742,9 @@ func (h *Handler) DebugAdminInfo(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get admin user info
+	// Get admin user info (zero-knowledge: email in plaintext)
 	query := `
-		SELECT id, email_encrypted, is_admin, created_at, last_login
+		SELECT id, email_plaintext, is_admin, created_at, last_login
 		FROM users
 		WHERE is_admin = true AND deleted_at IS NULL
 		ORDER BY created_at ASC
@@ -763,13 +752,13 @@ func (h *Handler) DebugAdminInfo(c *fiber.Ctx) error {
 	`
 
 	var userID uuid.UUID
-	var emailEncrypted []byte
+	var email string
 	var isAdmin bool
 	var createdAt time.Time
 	var lastLogin *time.Time
 
 	err := h.service.db.QueryRow(c.Context(), query).Scan(
-		&userID, &emailEncrypted, &isAdmin, &createdAt, &lastLogin,
+		&userID, &email, &isAdmin, &createdAt, &lastLogin,
 	)
 
 	if err != nil {
@@ -779,23 +768,10 @@ func (h *Handler) DebugAdminInfo(c *fiber.Ctx) error {
 		})
 	}
 
-	// Decrypt email
-	emailBytes, err := h.service.crypto.DecryptBytes(emailEncrypted)
-	if err != nil {
-		return c.JSON(map[string]interface{}{
-			"admin_found": true,
-			"user_id":     userID.String(),
-			"is_admin":    isAdmin,
-			"created_at":  createdAt,
-			"last_login":  lastLogin,
-			"email_error": "Failed to decrypt email",
-		})
-	}
-
 	return c.JSON(map[string]interface{}{
 		"admin_found": true,
 		"user_id":     userID.String(),
-		"email":       string(emailBytes),
+		"email":       email,
 		"is_admin":    isAdmin,
 		"created_at":  createdAt,
 		"last_login":  lastLogin,
