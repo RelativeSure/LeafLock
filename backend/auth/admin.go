@@ -123,78 +123,110 @@ func (s *Service) createDefaultAdmin(ctx context.Context, config AdminConfig) er
 	tempCrypto := appcrypto.NewCryptoService(derivedKey)
 
 	// Encrypt master key
-	masterKeyEncrypted, err := tempCrypto.Encrypt(masterKey)
+	masterKeyEncrypted, err := tempCrypto.EncryptBytes(masterKey)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt master key: %w", err)
 	}
 
-	// Hash email for storage
-	emailHash := sha256.Sum256([]byte(strings.ToLower(config.Email)))
-
-	// Create deterministic search hash (for login lookups)
-	emailSearchHash := sha256.Sum256(append([]byte("email_search:"), []byte(strings.ToLower(config.Email))...))
+	// Create email hashes
+	emailBytes := []byte(strings.ToLower(strings.TrimSpace(config.Email)))
+	emailHash := sha256.Sum256(emailBytes)
 
 	// Encrypt email for privacy
-	emailEncrypted, err := s.crypto.Encrypt([]byte(config.Email))
+	emailEncrypted, err := s.crypto.EncryptBytes(emailBytes)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt email: %w", err)
 	}
 
-	// Generate keypair for sharing encrypted notes
-	publicKey, privateKey, err := s.crypto.GenerateKeyPair()
-	if err != nil {
-		return fmt.Errorf("failed to generate keypair: %w", err)
-	}
+	// Create deterministic search hash for login
+	searchHash := sha256.Sum256(append(emailBytes, []byte("search-salt")...))
 
-	// Encrypt private key with user's derived key
-	privateKeyEncrypted, err := tempCrypto.Encrypt(privateKey)
+	// Begin transaction
+	tx, err := s.db.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to encrypt private key: %w", err)
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
-	// Create user with admin flag
-	var userID uuid.UUID
-	err = s.db.QueryRow(ctx, `
+	// Insert admin user
+	userID := uuid.New()
+	insertUserQuery := `
 		INSERT INTO users (
-			email_hash,
-			email_encrypted,
-			email_search_hash,
-			password_hash,
-			salt,
-			master_key_encrypted,
-			public_key,
-			private_key_encrypted,
-			is_admin,
-			created_at,
-			updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-		RETURNING id`,
-		emailHash[:],
-		emailEncrypted,
-		emailSearchHash[:],
-		passwordHash,
-		salt,
-		masterKeyEncrypted,
-		publicKey,
-		privateKeyEncrypted,
-		true, // is_admin = true
-	).Scan(&userID)
+			id, email_hash, email_encrypted, email_search_hash,
+			password_hash, salt, master_key_encrypted,
+			is_admin, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+		RETURNING id
+	`
 
+	err = tx.QueryRow(ctx, insertUserQuery,
+		userID, emailHash[:], emailEncrypted, searchHash[:],
+		passwordHash, salt, masterKeyEncrypted, true,
+	).Scan(&userID)
 	if err != nil {
 		return fmt.Errorf("failed to create admin user: %w", err)
 	}
 
-	// Create default workspace for admin
-	_, err = s.db.Exec(ctx, `
-		INSERT INTO workspaces (owner_id, name_encrypted, encryption_key_encrypted)
-		VALUES ($1, $2, $3)`,
-		userID,
-		emailEncrypted, // Use encrypted email as workspace name
-		masterKeyEncrypted,
-	)
+	// Create GDPR deletion key
+	deletionKey := make([]byte, 32)
+	if _, err := rand.Read(deletionKey); err != nil {
+		return fmt.Errorf("failed to generate deletion key: %w", err)
+	}
 
+	insertGDPRQuery := `
+		INSERT INTO gdpr_keys (email_hash, deletion_key)
+		VALUES ($1, $2)
+	`
+	_, err = tx.Exec(ctx, insertGDPRQuery, emailHash[:], deletionKey)
 	if err != nil {
-		return fmt.Errorf("failed to create admin workspace: %w", err)
+		return fmt.Errorf("failed to create GDPR key: %w", err)
+	}
+
+	// Create default workspace
+	workspaceID := uuid.New()
+	workspaceKey := make([]byte, 32)
+	if _, err := rand.Read(workspaceKey); err != nil {
+		return fmt.Errorf("failed to generate workspace key: %w", err)
+	}
+
+	// Encrypt workspace key with master key
+	workspaceCrypto := appcrypto.NewCryptoService(masterKey)
+	workspaceKeyEncrypted, err := workspaceCrypto.EncryptBytes(workspaceKey)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt workspace key: %w", err)
+	}
+
+	// Encrypt workspace name
+	workspaceName := []byte("Admin Workspace")
+	workspaceNameEncrypted, err := workspaceCrypto.EncryptBytes(workspaceName)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt workspace name: %w", err)
+	}
+
+	insertWorkspaceQuery := `
+		INSERT INTO workspaces (id, name_encrypted, owner_id, encryption_key_encrypted)
+		VALUES ($1, $2, $3, $4)
+	`
+	_, err = tx.Exec(ctx, insertWorkspaceQuery, workspaceID, workspaceNameEncrypted, userID, workspaceKeyEncrypted)
+	if err != nil {
+		return fmt.Errorf("failed to create workspace: %w", err)
+	}
+
+	// Assign both user and admin roles
+	assignRolesQuery := `
+		INSERT INTO user_roles (user_id, role_id)
+		SELECT $1, id FROM roles WHERE name IN ('user', 'admin')
+	`
+	_, err = tx.Exec(ctx, assignRolesQuery, userID)
+	if err != nil {
+		return fmt.Errorf("failed to assign roles: %w", err)
+	}
+
+	// Commit transaction
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	log.Printf("[Admin] ✅ Default admin user created successfully: %s", config.Email)
@@ -218,6 +250,7 @@ func (s *Service) updateDefaultAdmin(ctx context.Context, userID uuid.UUID, conf
 	newPasswordHash := s.password.HashPassword(config.Password, currentSalt)
 	if newPasswordHash != currentPasswordHash {
 		log.Printf("[Admin] Admin password has changed in environment - updating password")
+		log.Printf("[Admin] ⚠️  WARNING: Changing password will generate new master key - old notes will be inaccessible!")
 
 		// Generate new salt
 		salt, err := s.password.GenerateSalt()
@@ -239,38 +272,22 @@ func (s *Service) updateDefaultAdmin(ctx context.Context, userID uuid.UUID, conf
 		tempCrypto := appcrypto.NewCryptoService(derivedKey)
 
 		// Encrypt master key
-		masterKeyEncrypted, err := tempCrypto.Encrypt(masterKey)
+		masterKeyEncrypted, err := tempCrypto.EncryptBytes(masterKey)
 		if err != nil {
 			return fmt.Errorf("failed to encrypt master key: %w", err)
 		}
 
-		// Generate new keypair
-		publicKey, privateKey, err := s.crypto.GenerateKeyPair()
-		if err != nil {
-			return fmt.Errorf("failed to generate keypair: %w", err)
-		}
-
-		// Encrypt private key
-		privateKeyEncrypted, err := tempCrypto.Encrypt(privateKey)
-		if err != nil {
-			return fmt.Errorf("failed to encrypt private key: %w", err)
-		}
-
-		// Update password and keys
+		// Update password and master key
 		_, err = s.db.Exec(ctx, `
 			UPDATE users
 			SET password_hash = $1,
 				salt = $2,
 				master_key_encrypted = $3,
-				public_key = $4,
-				private_key_encrypted = $5,
 				updated_at = NOW()
-			WHERE id = $6`,
+			WHERE id = $4`,
 			passwordHash,
 			salt,
 			masterKeyEncrypted,
-			publicKey,
-			privateKeyEncrypted,
 			userID,
 		)
 
@@ -278,17 +295,28 @@ func (s *Service) updateDefaultAdmin(ctx context.Context, userID uuid.UUID, conf
 			return fmt.Errorf("failed to update admin password: %w", err)
 		}
 
-		log.Printf("[Admin] ⚠️  Admin password updated - old notes may be inaccessible!")
+		log.Printf("[Admin] ✅ Admin password updated successfully")
 		needsUpdate = false // Already updated in above query
 	}
 
-	// Apply admin flag update if needed
-	if needsUpdate && len(updates) > 0 {
-		query := fmt.Sprintf("UPDATE users %s, updated_at = NOW() WHERE id = $1", strings.Join(updates, ", "))
-		_, err := s.db.Exec(ctx, query, userID)
+	// Apply admin flag update if needed (promote to admin)
+	if needsUpdate && !isAdmin {
+		_, err := s.db.Exec(ctx, `UPDATE users SET is_admin = true, updated_at = NOW() WHERE id = $1`, userID)
 		if err != nil {
-			return fmt.Errorf("failed to update admin user: %w", err)
+			return fmt.Errorf("failed to promote user to admin: %w", err)
 		}
+
+		// Ensure admin role is assigned
+		_, err = s.db.Exec(ctx, `
+			INSERT INTO user_roles (user_id, role_id)
+			SELECT $1, id FROM roles WHERE name = 'admin'
+			ON CONFLICT DO NOTHING
+		`, userID)
+		if err != nil {
+			return fmt.Errorf("failed to assign admin role: %w", err)
+		}
+
+		log.Printf("[Admin] ✅ User promoted to admin: %s", config.Email)
 	}
 
 	if !needsUpdate && newPasswordHash == currentPasswordHash {
