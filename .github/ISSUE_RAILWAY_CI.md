@@ -118,6 +118,26 @@ query {
 3. Token type wrong (needs Project Token not Account Token?)
 4. Token lacks necessary permissions/scopes
 
+## Testing Token Locally
+
+A validation script is available to test your Railway token:
+
+```bash
+./scripts/test-railway-token.sh <your-railway-token>
+```
+
+This script will:
+- ✅ Test authentication with Railway GraphQL API
+- ✅ Fetch user information
+- ✅ List all accessible projects with their IDs
+- ✅ Show detailed error messages if token is invalid
+
+**Usage**:
+1. Get your Railway account token from https://railway.app/account/tokens
+2. Run: `./scripts/test-railway-token.sh <token>`
+3. If successful, copy the Project ID shown
+4. Add both token and project ID to GitHub Secrets
+
 ## Testing Notes
 
 The workflow should:
