@@ -47,10 +47,18 @@ The `unit-tests.yml` GitHub Actions workflow is failing because it cannot fetch 
 - **Result**: Improved debugging but still using wrong secret name
 
 ### ✅ Attempt 5: Correct secret name
-**Commit**: `250020d` (current)
+**Commit**: `250020d`
 - Changed `RAILWAY_TOKEN` → `RAILWAY_TOKEN_ACCOUNT`
 - Updated all references in both backend and frontend jobs
-- **Status**: Pending test
+- **Result**: Still failing with "Project not found" - authentication appears to be failing
+
+### ✅ Attempt 6: Enhanced authentication debugging
+**Commit**: `TBD` (current)
+- Added raw API response output to see actual errors
+- Check for authentication errors before parsing
+- Show full error details from Railway API
+- **Finding**: "List accessible projects" returns null data, suggesting token auth is failing
+- **Status**: Pending test to see actual API error message
 
 ## Current Implementation
 
@@ -90,11 +98,25 @@ query {
 
 ## Next Steps
 
-- [ ] Verify `RAILWAY_TOKEN_ACCOUNT` and `RAILWAY_PROJECT_ID` secrets are configured in GitHub
+**Current Priority - Authentication Issue**:
+- [ ] Run workflow with enhanced debugging to see actual Railway API error
+- [ ] Check if `RAILWAY_TOKEN_ACCOUNT` secret value is correct format
+- [ ] Verify token hasn't expired (Railway tokens can expire)
+- [ ] Confirm token has correct permissions (project access)
+- [ ] Check if token needs to be a Project Token instead of Account Token
+
+**After Authentication Fixed**:
+- [ ] Verify `RAILWAY_PROJECT_ID` secret matches one of the accessible projects
 - [ ] Test workflow runs successfully on this PR
 - [ ] Verify it works for both PR previews and main branch deployments
 - [ ] Consider reducing wait time if deployments are consistently faster
 - [ ] Merge PR if all tests pass
+
+**Possible Root Causes**:
+1. Token format incorrect (missing Bearer prefix, extra whitespace, etc.)
+2. Token expired or revoked
+3. Token type wrong (needs Project Token not Account Token?)
+4. Token lacks necessary permissions/scopes
 
 ## Testing Notes
 

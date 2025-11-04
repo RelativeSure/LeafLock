@@ -64,7 +64,20 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$QUERY")
 
-          echo "Projects: $(echo "$RESPONSE" | jq -r '.data.me.projects.edges[].node | "\(.name) (\(.id))"' || echo "Failed to parse")"
+          echo "Raw API Response:"
+          echo "$RESPONSE" | jq '.'
+
+          # Check for authentication errors
+          if echo "$RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
+            echo ""
+            echo "❌ Authentication failed - token may be invalid or expired"
+            echo "Errors: $(echo "$RESPONSE" | jq '.errors')"
+            exit 1
+          fi
+
+          echo ""
+          echo "Projects accessible to this token:"
+          echo "$RESPONSE" | jq -r '.data.me.projects.edges[].node | "  - \(.name) (\(.id))"' || echo "  (none found or failed to parse)"
 
       - name: Get Railway backend URL
         id: backend-url
@@ -174,7 +187,20 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$QUERY")
 
-          echo "Projects: $(echo "$RESPONSE" | jq -r '.data.me.projects.edges[].node | "\(.name) (\(.id))"' || echo "Failed to parse")"
+          echo "Raw API Response:"
+          echo "$RESPONSE" | jq '.'
+
+          # Check for authentication errors
+          if echo "$RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
+            echo ""
+            echo "❌ Authentication failed - token may be invalid or expired"
+            echo "Errors: $(echo "$RESPONSE" | jq '.errors')"
+            exit 1
+          fi
+
+          echo ""
+          echo "Projects accessible to this token:"
+          echo "$RESPONSE" | jq -r '.data.me.projects.edges[].node | "  - \(.name) (\(.id))"' || echo "  (none found or failed to parse)"
 
       - name: Get Railway frontend URL
         id: frontend-url
