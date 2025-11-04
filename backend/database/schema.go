@@ -470,6 +470,23 @@ ALTER TABLE note_versions ADD COLUMN IF NOT EXISTS change_description TEXT;
 -- Add index on note_versions for performance (latest versions first)
 CREATE INDEX IF NOT EXISTS idx_note_versions_created_at ON note_versions(note_id, created_at DESC);
 
+-- Add is_pinned column for pinned/favorite notes
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT false;
+
+-- Add is_locked column for read-only note protection
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT false;
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS locked_by UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS locked_at TIMESTAMPTZ;
+
+-- Add pinned_order column for custom ordering of pinned notes
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS pinned_order INT DEFAULT 0;
+
+-- Create index for efficient pinned notes queries
+CREATE INDEX IF NOT EXISTS idx_notes_pinned ON notes(is_pinned, pinned_order DESC, updated_at DESC) WHERE deleted_at IS NULL;
+
+-- Create index for locked notes queries
+CREATE INDEX IF NOT EXISTS idx_notes_locked ON notes(is_locked, locked_by) WHERE is_locked = true;
+
 -- Note links table for internal note connections ([[note]] syntax)
 CREATE TABLE IF NOT EXISTS note_links (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

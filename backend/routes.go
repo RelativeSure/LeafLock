@@ -208,6 +208,8 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	protected.Post("/notes/:id/versions/:version", rateLimits.StandardCRUDLimiter, notesHandler.RestoreNoteVersion)
 	protected.Put("/notes/:id/retention", rateLimits.StandardCRUDLimiter, notesHandler.UpdateRetentionPolicy)
 	protected.Delete("/notes/:id/permanent", rateLimits.StandardCRUDLimiter, notesHandler.PermanentlyDeleteNote)
+	protected.Post("/notes/:id/pin", rateLimits.StandardCRUDLimiter, notesHandler.TogglePin)
+	protected.Post("/notes/:id/lock", rateLimits.StandardCRUDLimiter, notesHandler.ToggleLock)
 	protected.Post("/notes/:id/links", rateLimits.StandardCRUDLimiter, noteLinksHandler.CreateNoteLink)
 	protected.Get("/notes/:id/links", rateLimits.StandardCRUDLimiter, noteLinksHandler.GetNoteLinks)
 	protected.Get("/notes/:id/backlinks", rateLimits.StandardCRUDLimiter, noteLinksHandler.GetNoteBacklinks)

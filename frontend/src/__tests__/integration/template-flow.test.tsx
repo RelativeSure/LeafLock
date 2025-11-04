@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useTemplatesStore } from '@/stores/templatesStore'
 import { useNotesStore } from '@/stores/notesStore'
-import { contentService, organizationService } from '@/services/api'
+
 
 vi.mock('@/services/api', () => ({
   contentService: {
