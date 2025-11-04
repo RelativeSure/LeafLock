@@ -285,6 +285,9 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	admin.Patch("/users/:id/role", rateLimits.StandardCRUDLimiter, adminHandler.UpdateUserRole)
 	admin.Delete("/users/:id", rateLimits.StandardCRUDLimiter, adminHandler.DeleteUser)
 	admin.Post("/users/:id/unlock", rateLimits.StandardCRUDLimiter, adminHandler.UnlockUser)
+	// Registration settings
+	admin.Get("/settings/registration", rateLimits.StandardCRUDLimiter, adminHandler.GetRegistrationSetting)
+	admin.Put("/settings/registration", rateLimits.StandardCRUDLimiter, adminHandler.UpdateRegistrationSetting)
 
 	// WebSocket setup
 	hub := websocketpkg.NewHub()

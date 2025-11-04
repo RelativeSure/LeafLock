@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"leaflock/config"
 	"leaflock/utils"
 
 	"github.com/gofiber/fiber/v2"
@@ -56,16 +57,25 @@ func (h *Handler) Register(c *fiber.Ctx) error {
 		})
 	}
 
-	// Check if registration is enabled
-	var registrationEnabled bool
+	// Check if registration is enabled - requires BOTH env var AND database setting
+	// Environment variable is the master switch (security override)
+	if config.RegEnabled.Load() == 0 {
+		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{
+			Error: "User registration is currently disabled",
+			Code:  ErrCodeRegistrationDisabled,
+		})
+	}
+
+	// Check database setting (runtime toggle from admin panel)
+	var dbEnabled bool
 	query := `
 		SELECT COALESCE(
 			(SELECT value::boolean FROM app_settings WHERE key = 'registration_enabled'),
 			true
 		) as enabled
 	`
-	err := h.service.db.QueryRow(c.Context(), query).Scan(&registrationEnabled)
-	if err != nil || !registrationEnabled {
+	err := h.service.db.QueryRow(c.Context(), query).Scan(&dbEnabled)
+	if err != nil || !dbEnabled {
 		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{
 			Error: "User registration is currently disabled",
 			Code:  ErrCodeRegistrationDisabled,
@@ -574,25 +584,31 @@ func (h *Handler) ConfirmPasswordReset(c *fiber.Ctx) error {
 
 // GetRegistrationStatus checks if registration is enabled
 // @Summary Get registration status
-// @Description Check if new user registration is allowed
+// @Description Check if new user registration is allowed (requires both env var and database setting)
 // @Tags Authentication
 // @Produce json
 // @Success 200 {object} map[string]bool
 // @Router /auth/registration [get]
 func (h *Handler) GetRegistrationStatus(c *fiber.Ctx) error {
-	// Check registration setting from app_settings table
-	var enabled bool
+	// Registration requires BOTH env var AND database setting to be enabled
+	envEnabled := config.RegEnabled.Load() == 1
+
+	// Check database setting
+	var dbEnabled bool
 	query := `
 		SELECT COALESCE(
 			(SELECT value::boolean FROM app_settings WHERE key = 'registration_enabled'),
 			true
 		) as enabled
 	`
-	err := h.service.db.QueryRow(c.Context(), query).Scan(&enabled)
+	err := h.service.db.QueryRow(c.Context(), query).Scan(&dbEnabled)
 	if err != nil {
-		// If there's an error, default to enabled for backward compatibility
-		enabled = true
+		// Default to true if error reading database
+		dbEnabled = true
 	}
+
+	// Both must be enabled
+	enabled := envEnabled && dbEnabled
 
 	return c.JSON(fiber.Map{
 		"enabled": enabled,
