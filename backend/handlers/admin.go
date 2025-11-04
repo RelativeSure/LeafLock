@@ -328,3 +328,78 @@ func (h *AdminHandler) UnlockUser(c *fiber.Ctx) error {
 		"message": "User unlocked successfully",
 	})
 }
+
+// GetRegistrationSetting returns the current registration setting
+// @Summary Get registration setting
+// @Description Get the current registration enabled/disabled setting (admin only)
+// @Tags Admin
+// @Produce json
+// @Success 200 {object} map[string]bool
+// @Failure 403 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/v1/admin/settings/registration [get]
+func (h *AdminHandler) GetRegistrationSetting(c *fiber.Ctx) error {
+	ctx := c.Context()
+
+	// Check database setting
+	var enabled bool
+	query := `
+		SELECT COALESCE(
+			(SELECT value::boolean FROM app_settings WHERE key = 'registration_enabled'),
+			true
+		) as enabled
+	`
+	err := h.db.QueryRow(ctx, query).Scan(&enabled)
+	if err != nil {
+		// Default to true if error
+		enabled = true
+	}
+
+	return c.JSON(fiber.Map{
+		"enabled": enabled,
+	})
+}
+
+// UpdateRegistrationSetting updates the registration setting
+// @Summary Update registration setting
+// @Description Enable or disable user registration (admin only)
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Param request body object true "Registration setting"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/v1/admin/settings/registration [put]
+func (h *AdminHandler) UpdateRegistrationSetting(c *fiber.Ctx) error {
+	var req struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	ctx := c.Context()
+
+	// Upsert the registration_enabled setting in app_settings
+	query := `
+		INSERT INTO app_settings (key, value, updated_at)
+		VALUES ('registration_enabled', $1, NOW())
+		ON CONFLICT (key)
+		DO UPDATE SET value = $1, updated_at = NOW()
+	`
+	_, err := h.db.Exec(ctx, query, req.Enabled)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to update registration setting",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Registration setting updated successfully",
+		"enabled": req.Enabled,
+	})
+}

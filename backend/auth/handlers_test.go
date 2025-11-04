@@ -72,8 +72,19 @@ func (suite *AuthHandlersTestSuite) TestRegister_Success() {
 	}
 	body, _ := json.Marshal(reqBody)
 
-	// Enable registration
+	// Enable registration (env var)
 	config.RegEnabled.Store(1)
+
+	// Mock database registration enabled check
+	mockRow := &MockHandlerRow{}
+	suite.mockSvc.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
+		return containsHandlers(sql, "registration_enabled")
+	})).Return(mockRow)
+	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
+		if enabled, ok := args[0].(*bool); ok {
+			*enabled = true
+		}
+	}).Return(nil)
 
 	// Mock successful registration
 	suite.mockSvc.On("Register", mock.Anything, "test@example.com", "SecureP@ssw0rd123!").
@@ -145,8 +156,17 @@ func (suite *AuthHandlersTestSuite) TestRegister_InvalidEmail() {
 	}
 	body, _ := json.Marshal(reqBody)
 
-	// Enable registration
+	// Enable registration (env var)
 	config.RegEnabled.Store(1)
+
+	// Mock database registration enabled check
+	mockRow := &MockHandlerRow{}
+	suite.mockSvc.On("QueryRow", mock.Anything, mock.Anything).Return(mockRow)
+	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
+		if enabled, ok := args[0].(*bool); ok {
+			*enabled = true
+		}
+	}).Return(nil)
 
 	req := httptest.NewRequest("POST", "/auth/register", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -172,8 +192,17 @@ func (suite *AuthHandlersTestSuite) TestRegister_EmailAlreadyExists() {
 	}
 	body, _ := json.Marshal(reqBody)
 
-	// Enable registration
+	// Enable registration (env var)
 	config.RegEnabled.Store(1)
+
+	// Mock database registration enabled check
+	mockRow := &MockHandlerRow{}
+	suite.mockSvc.On("QueryRow", mock.Anything, mock.Anything).Return(mockRow)
+	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
+		if enabled, ok := args[0].(*bool); ok {
+			*enabled = true
+		}
+	}).Return(nil)
 
 	// Mock service returns duplicate email error
 	suite.mockSvc.On("Register", mock.Anything, "existing@example.com", "SecureP@ssw0rd123!").
@@ -202,8 +231,17 @@ func (suite *AuthHandlersTestSuite) TestRegister_WeakPassword() {
 	}
 	body, _ := json.Marshal(reqBody)
 
-	// Enable registration
+	// Enable registration (env var)
 	config.RegEnabled.Store(1)
+
+	// Mock database registration enabled check
+	mockRow := &MockHandlerRow{}
+	suite.mockSvc.On("QueryRow", mock.Anything, mock.Anything).Return(mockRow)
+	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
+		if enabled, ok := args[0].(*bool); ok {
+			*enabled = true
+		}
+	}).Return(nil)
 
 	// Mock service returns password validation error
 	suite.mockSvc.On("Register", mock.Anything, "test@example.com", "weak").
