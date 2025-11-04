@@ -110,7 +110,7 @@ func (h *AdminHandler) GetAllUsers(c *fiber.Ctx) error {
 	ctx := c.Context()
 
 	query := `
-		SELECT u.id, u.email_encrypted, u.is_admin, u.created_at, u.last_login,
+		SELECT u.id, u.email_plaintext, u.is_admin, u.created_at, u.last_login,
 		       u.failed_attempts, u.locked_until,
 		       COALESCE((SELECT COUNT(*) FROM notes WHERE user_id = u.id AND deleted_at IS NULL), 0) as notes_count
 		FROM users u
@@ -129,14 +129,14 @@ func (h *AdminHandler) GetAllUsers(c *fiber.Ctx) error {
 	users := make([]UserDetails, 0)
 	for rows.Next() {
 		var user UserDetails
-		var emailEncrypted []byte
+		var email string // Zero-knowledge: email is plaintext
 		var failedAttempts int
 		var lockedUntil *time.Time
 		var lastLogin *time.Time
 
 		err := rows.Scan(
 			&user.ID,
-			&emailEncrypted,
+			&email,
 			&user.IsAdmin,
 			&user.CreatedAt,
 			&lastLogin,
@@ -148,8 +148,8 @@ func (h *AdminHandler) GetAllUsers(c *fiber.Ctx) error {
 			continue
 		}
 
-		// Decrypt email (just show hash for privacy in admin panel)
-		user.Email = "user-" + user.ID[:8] + "@hidden" // Privacy: don't expose real emails
+		// Zero-knowledge: email available in plaintext for admin operations
+		user.Email = email
 		if lastLogin != nil {
 			user.LastLogin = *lastLogin
 		}

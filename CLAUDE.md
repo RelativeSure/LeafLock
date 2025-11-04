@@ -245,6 +245,11 @@ git commit --no-verify -m "message"
 - Client-side encryption: XChaCha20-Poly1305 via libsodium-wrappers
 - Server never sees plaintext (zero-knowledge architecture)
 - Password hashing: Argon2id (64MB memory, 3 iterations)
+- **Zero-Knowledge Architecture**: No global `SERVER_ENCRYPTION_KEY`
+  - User notes: E2E encrypted with password-derived keys
+  - MFA/Sessions/Share links: JWT-derived encryption (`auth/service.go:NewService`)
+  - Emails: Plaintext (operational necessity for password reset)
+  - Audit logs: SHA-256 hashed IP/UserAgent (privacy-preserving)
 
 ### Collaboration Features
 
