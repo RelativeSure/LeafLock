@@ -259,7 +259,7 @@ describe('authService', () => {
       await authService.requestPasswordReset('reset@example.com')
 
       expect(requestSpy).toHaveBeenCalledWith(
-        '/auth/password-reset/request',
+        '/auth/password/reset-request',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({ email: 'reset@example.com' }),

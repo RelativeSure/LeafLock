@@ -631,7 +631,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   getNoteLinks: async (noteId: string) => {
     try {
-      const response = await apiClient.getNoteLinks(noteId)
+      const response = await socialService.getNoteLinks(noteId)
       return response.links ?? []
     } catch (error) {
       console.error('Failed to get note links:', error)
@@ -641,7 +641,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   getNoteBacklinks: async (noteId: string) => {
     try {
-      const response = await apiClient.getNoteBacklinks(noteId)
+      const response = await socialService.getNoteBacklinks(noteId)
       return response.backlinks ?? []
     } catch (error) {
       console.error('Failed to get note backlinks:', error)
@@ -651,7 +651,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   deleteNoteLink: async (noteId: string, linkId: string) => {
     try {
-      await apiClient.deleteNoteLink(noteId, linkId)
+      await socialService.deleteNoteLink(noteId, linkId)
     } catch (error) {
       console.error('Failed to delete note link:', error)
       throw error
