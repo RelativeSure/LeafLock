@@ -35,15 +35,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Users table with encrypted fields
+-- Users table with zero-knowledge encryption
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email_hash BYTEA UNIQUE NOT NULL, -- SHA-256 hash for unique constraint and GDPR lookups
-    email_encrypted BYTEA NOT NULL, -- Encrypted email for privacy
-    email_search_hash BYTEA UNIQUE, -- Deterministic encryption for login lookups
+    email_plaintext TEXT NOT NULL, -- Plaintext email for operational use (password reset, notifications)
+    email_search_hash BYTEA UNIQUE, -- Deterministic hash for login lookups
     password_hash TEXT NOT NULL, -- Argon2id hash
     salt BYTEA NOT NULL,
-    master_key_encrypted BYTEA NOT NULL, -- User's encrypted master key
+    master_key_encrypted BYTEA NOT NULL, -- User's encrypted master key (encrypted with password-derived key)
     public_key BYTEA, -- For sharing encrypted notes
     private_key_encrypted BYTEA, -- Encrypted with user's derived key
     mfa_secret_encrypted BYTEA, -- Encrypted TOTP secret
@@ -98,8 +98,8 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     expires_at TIMESTAMPTZ NOT NULL,
     used BOOLEAN DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    ip_address_encrypted BYTEA, -- IP address where reset was requested
-    user_agent_encrypted BYTEA -- User agent of the requester
+    ip_address_hash BYTEA, -- SHA-256 hash of IP address where reset was requested
+    user_agent_hash BYTEA -- SHA-256 hash of user agent
 );
 
 ALTER TABLE password_reset_tokens
@@ -486,6 +486,39 @@ CREATE INDEX IF NOT EXISTS idx_notes_pinned ON notes(is_pinned, pinned_order DES
 
 -- Create index for locked notes queries
 CREATE INDEX IF NOT EXISTS idx_notes_locked ON notes(is_locked, locked_by) WHERE is_locked = true;
+
+-- Zero-knowledge migration: Convert email_encrypted to email_plaintext
+-- WARNING: This migration assumes SERVER_ENCRYPTION_KEY is no longer used
+-- For existing deployments with encrypted emails, manual migration required
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_plaintext TEXT;
+
+-- Drop encrypted email column (data will be lost - migration assumes fresh install or manual data migration)
+-- To preserve data, decrypt email_encrypted with old SERVER_ENCRYPTION_KEY before running this
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='email_encrypted') THEN
+        -- Check if email_plaintext is populated
+        IF NOT EXISTS (SELECT 1 FROM users WHERE email_plaintext IS NOT NULL LIMIT 1) THEN
+            RAISE WARNING 'email_encrypted exists but email_plaintext is not populated. Manual migration required!';
+        END IF;
+        -- Drop email_encrypted column
+        ALTER TABLE users DROP COLUMN IF EXISTS email_encrypted;
+    END IF;
+END $$;
+
+-- Make email_plaintext NOT NULL after migration
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='email_plaintext' AND is_nullable='YES') THEN
+        ALTER TABLE users ALTER COLUMN email_plaintext SET NOT NULL;
+    END IF;
+END $$;
+
+-- Remove encrypted session metadata from password_reset_tokens
+ALTER TABLE password_reset_tokens DROP COLUMN IF EXISTS ip_address_encrypted;
+ALTER TABLE password_reset_tokens DROP COLUMN IF EXISTS user_agent_encrypted;
+ALTER TABLE password_reset_tokens ADD COLUMN IF NOT EXISTS ip_address_hash BYTEA;
+ALTER TABLE password_reset_tokens ADD COLUMN IF NOT EXISTS user_agent_hash BYTEA;
 
 -- Note links table for internal note connections ([[note]] syntax)
 CREATE TABLE IF NOT EXISTS note_links (

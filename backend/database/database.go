@@ -18,7 +18,7 @@ import (
 )
 
 // MigrationSchemaVersion tracks the current schema version
-const MigrationSchemaVersion = "2025.11.04.002" // Add: is_pinned, is_locked columns for notes; pinned_order for custom sorting
+const MigrationSchemaVersion = "2025.11.04.003" // Zero-knowledge architecture: Remove SERVER_ENCRYPTION_KEY, use plaintext emails
 
 // Database interface for dependency injection and testing
 type Database interface {

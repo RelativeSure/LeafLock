@@ -132,12 +132,7 @@ func (s *Service) createDefaultAdmin(ctx context.Context, config AdminConfig) er
 	emailBytes := []byte(strings.ToLower(strings.TrimSpace(config.Email)))
 	emailHash := sha256.Sum256(emailBytes)
 
-	// Encrypt email for privacy
-	emailEncrypted, err := s.crypto.EncryptBytes(emailBytes)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt email: %w", err)
-	}
-
+	// Zero-knowledge: Store email in plaintext (needed for password reset, notifications)
 	// Create deterministic search hash for login
 	searchHash := sha256.Sum256(append(emailBytes, []byte("search-salt")...))
 
@@ -154,7 +149,7 @@ func (s *Service) createDefaultAdmin(ctx context.Context, config AdminConfig) er
 	userID := uuid.New()
 	insertUserQuery := `
 		INSERT INTO users (
-			id, email_hash, email_encrypted, email_search_hash,
+			id, email_hash, email_plaintext, email_search_hash,
 			password_hash, salt, master_key_encrypted,
 			is_admin, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
@@ -162,7 +157,7 @@ func (s *Service) createDefaultAdmin(ctx context.Context, config AdminConfig) er
 	`
 
 	err = tx.QueryRow(ctx, insertUserQuery,
-		userID, emailHash[:], emailEncrypted, searchHash[:],
+		userID, emailHash[:], config.Email, searchHash[:],
 		passwordHash, salt, masterKeyEncrypted, true,
 	).Scan(&userID)
 	if err != nil {

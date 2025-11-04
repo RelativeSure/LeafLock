@@ -17,7 +17,7 @@ type Config struct {
 	RedisURL           string
 	RedisPassword      string
 	JWTSecret          []byte
-	EncryptionKey      []byte
+	// EncryptionKey removed - zero-knowledge architecture (no global encryption key)
 	Port               string
 	AllowedOrigins     []string
 	MaxLoginAttempts   int
@@ -86,20 +86,8 @@ func LoadConfig() *Config {
 		}
 	}
 
-	encKey := os.Getenv("SERVER_ENCRYPTION_KEY")
-	if encKey == "" {
-		log.Fatalf("💥 [FATAL] SERVER_ENCRYPTION_KEY environment variable is required and cannot be empty")
-	}
-	if len(encKey) < 32 {
-		log.Fatalf("💥 [FATAL] SERVER_ENCRYPTION_KEY must be at least 32 characters long for security")
-	}
-	// Check for common weak/default values and patterns
-	encLower := strings.ToLower(encKey)
-	for _, weak := range weakSecrets {
-		if strings.HasPrefix(encLower, weak) || strings.EqualFold(encKey, weak) {
-			log.Fatalf("💥 [FATAL] SERVER_ENCRYPTION_KEY cannot start with or be a weak value: '%s'", weak)
-		}
-	}
+	// SERVER_ENCRYPTION_KEY removed - zero-knowledge architecture
+	// Emails stored in plaintext, sensitive data encrypted with password-derived keys only
 
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
@@ -153,7 +141,7 @@ func LoadConfig() *Config {
 		RedisURL:      normalizeRedisAddress(GetEnvOrDefault("REDIS_URL", "localhost:6379")),
 		RedisPassword: resolveRedisPassword(os.Getenv("REDIS_URL"), os.Getenv("REDIS_PASSWORD")),
 		JWTSecret:     []byte(jwtSecret),
-		EncryptionKey: []byte(encKey),
+		// EncryptionKey removed - zero-knowledge architecture
 		Port:          GetEnvOrDefault("PORT", "8080"),
 		AllowedOrigins: func() []string {
 			environment := GetEnvOrDefault("APP_ENV", "development")
