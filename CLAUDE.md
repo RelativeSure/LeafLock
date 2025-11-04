@@ -277,6 +277,7 @@ git commit --no-verify -m "message"
 - `session.go` - Redis-backed session management (encrypted)
 - `password.go` - Argon2id hashing, password reset flow
 - `mfa.go` - TOTP + backup codes implementation
+- `admin.go` - Default admin user provisioning (idempotent)
 - `service.go` - Coordinating service layer
 - `handlers.go` - HTTP API (13 endpoints)
 - `middleware.go` - JWT validation, auth guards
@@ -291,10 +292,16 @@ git commit --no-verify -m "message"
 - Session management (24-hour duration)
 - Encrypted sessions (XChaCha20-Poly1305)
 
-**Admin Users**:
-- Created via standard registration flow
-- Admin flag set manually in database or via special registration
-- No auto-admin creation (removed in migration)
+**Default Admin User**:
+- Automatically provisioned from environment variables on startup
+- Configuration: `ENABLE_DEFAULT_ADMIN`, `DEFAULT_ADMIN_EMAIL`, `DEFAULT_ADMIN_PASSWORD`
+- Implementation: `backend/auth/admin.go` - `EnsureDefaultAdminFromEnv()`
+- **Idempotent**: Safe to run on every startup
+- **Updates**: Can promote existing users to admin or change password if env vars change
+- **Security**: Password strength validation enforced (12+ chars, complexity requirements)
+- **Warning**: Changing password invalidates old encrypted notes (new master key generated)
+- Default email: `admin@leaflock.local` (configurable)
+- To disable: Set `ENABLE_DEFAULT_ADMIN=false`
 
 ### IPv4/IPv6 Support
 - Backend auto-binds to `[::]:{PORT}` (dual-stack) with IPv4 fallback
