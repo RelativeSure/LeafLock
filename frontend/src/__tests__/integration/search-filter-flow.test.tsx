@@ -14,6 +14,9 @@ vi.mock('@/services/api', () => ({
   },
 }))
 
+// Import mocked services after mocks are declared
+import { contentService } from '@/services/api'
+
 describe('Integration: Search and Filter Flow', () => {
   const mockNotes: Note[] = [
     {

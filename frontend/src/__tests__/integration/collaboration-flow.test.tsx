@@ -33,6 +33,9 @@ vi.mock('@/lib/encryption-utils', () => ({
   encryptTextWithStoredKey: vi.fn().mockResolvedValue('encrypted'),
 }))
 
+// Import mocked services after mocks are declared
+import { contentService, socialService } from '@/services/api'
+
 describe('Integration: Collaboration Flow', () => {
   const owner = {
     id: 'user-1',
@@ -400,7 +403,9 @@ describe('Integration: Collaboration Flow', () => {
       await socialService.updateCollaboratorPermission('note-1', 'user-2', 'read')
 
       // Collaborator tries to save changes
-      vi.mocked(contentService.updateNote).mockRejectedValue(new Error('Forbidden: Read-only access'))
+      vi.mocked(contentService.updateNote).mockRejectedValue(
+        new Error('Forbidden: Read-only access')
+      )
 
       await expect(
         useNotesStore.getState().updateNote('note-1', { content: 'Updated' })
