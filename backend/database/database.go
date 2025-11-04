@@ -18,7 +18,7 @@ import (
 )
 
 // MigrationSchemaVersion tracks the current schema version
-const MigrationSchemaVersion = "2025.11.03.002" // Security fixes: MFA salt + reset token rate limiting
+const MigrationSchemaVersion = "2025.11.04.001" // Fix: Admin user creation logic - check specific email, not all users
 
 // Database interface for dependency injection and testing
 type Database interface {
