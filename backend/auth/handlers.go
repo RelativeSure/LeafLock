@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"leaflock/config"
 	"leaflock/utils"
 
 	"github.com/gofiber/fiber/v2"
@@ -56,16 +57,8 @@ func (h *Handler) Register(c *fiber.Ctx) error {
 		})
 	}
 
-	// Check if registration is enabled
-	var registrationEnabled bool
-	query := `
-		SELECT COALESCE(
-			(SELECT value::boolean FROM app_settings WHERE key = 'registration_enabled'),
-			true
-		) as enabled
-	`
-	err := h.service.db.QueryRow(c.Context(), query).Scan(&registrationEnabled)
-	if err != nil || !registrationEnabled {
+	// Check if registration is enabled (from runtime config)
+	if config.RegEnabled.Load() == 0 {
 		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{
 			Error: "User registration is currently disabled",
 			Code:  ErrCodeRegistrationDisabled,
@@ -580,19 +573,8 @@ func (h *Handler) ConfirmPasswordReset(c *fiber.Ctx) error {
 // @Success 200 {object} map[string]bool
 // @Router /auth/registration [get]
 func (h *Handler) GetRegistrationStatus(c *fiber.Ctx) error {
-	// Check registration setting from app_settings table
-	var enabled bool
-	query := `
-		SELECT COALESCE(
-			(SELECT value::boolean FROM app_settings WHERE key = 'registration_enabled'),
-			true
-		) as enabled
-	`
-	err := h.service.db.QueryRow(c.Context(), query).Scan(&enabled)
-	if err != nil {
-		// If there's an error, default to enabled for backward compatibility
-		enabled = true
-	}
+	// Check registration setting from runtime config (set via ENABLE_REGISTRATION env var)
+	enabled := config.RegEnabled.Load() == 1
 
 	return c.JSON(fiber.Map{
 		"enabled": enabled,

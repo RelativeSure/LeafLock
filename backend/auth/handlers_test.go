@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
+	"leaflock/config"
 	appcrypto "leaflock/crypto"
 )
 
@@ -71,20 +72,12 @@ func (suite *AuthHandlersTestSuite) TestRegister_Success() {
 	}
 	body, _ := json.Marshal(reqBody)
 
+	// Enable registration
+	config.RegEnabled.Store(1)
+
 	// Mock successful registration
 	suite.mockSvc.On("Register", mock.Anything, "test@example.com", "SecureP@ssw0rd123!").
 		Return(&AuthResponse{UserID: uuid.New().String()}, nil)
-
-	// Mock registration enabled check
-	mockRow := &MockHandlerRow{}
-	suite.mockSvc.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
-		return containsHandlers(sql, "registration_enabled")
-	})).Return(mockRow)
-	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
-		if enabled, ok := args[0].(*bool); ok {
-			*enabled = true
-		}
-	}).Return(nil)
 
 	req := httptest.NewRequest("POST", "/auth/register", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -126,16 +119,8 @@ func (suite *AuthHandlersTestSuite) TestRegister_RegistrationDisabled() {
 	}
 	body, _ := json.Marshal(reqBody)
 
-	// Mock registration disabled
-	mockRow := &MockHandlerRow{}
-	suite.mockSvc.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
-		return containsHandlers(sql, "registration_enabled")
-	})).Return(mockRow)
-	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
-		if enabled, ok := args[0].(*bool); ok {
-			*enabled = false // Registration disabled
-		}
-	}).Return(nil)
+	// Disable registration
+	config.RegEnabled.Store(0)
 
 	req := httptest.NewRequest("POST", "/auth/register", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -160,14 +145,8 @@ func (suite *AuthHandlersTestSuite) TestRegister_InvalidEmail() {
 	}
 	body, _ := json.Marshal(reqBody)
 
-	// Mock registration enabled
-	mockRow := &MockHandlerRow{}
-	suite.mockSvc.On("QueryRow", mock.Anything, mock.Anything).Return(mockRow)
-	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
-		if enabled, ok := args[0].(*bool); ok {
-			*enabled = true
-		}
-	}).Return(nil)
+	// Enable registration
+	config.RegEnabled.Store(1)
 
 	req := httptest.NewRequest("POST", "/auth/register", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -193,14 +172,8 @@ func (suite *AuthHandlersTestSuite) TestRegister_EmailAlreadyExists() {
 	}
 	body, _ := json.Marshal(reqBody)
 
-	// Mock registration enabled
-	mockRow := &MockHandlerRow{}
-	suite.mockSvc.On("QueryRow", mock.Anything, mock.Anything).Return(mockRow)
-	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
-		if enabled, ok := args[0].(*bool); ok {
-			*enabled = true
-		}
-	}).Return(nil)
+	// Enable registration
+	config.RegEnabled.Store(1)
 
 	// Mock service returns duplicate email error
 	suite.mockSvc.On("Register", mock.Anything, "existing@example.com", "SecureP@ssw0rd123!").
@@ -229,14 +202,8 @@ func (suite *AuthHandlersTestSuite) TestRegister_WeakPassword() {
 	}
 	body, _ := json.Marshal(reqBody)
 
-	// Mock registration enabled
-	mockRow := &MockHandlerRow{}
-	suite.mockSvc.On("QueryRow", mock.Anything, mock.Anything).Return(mockRow)
-	mockRow.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
-		if enabled, ok := args[0].(*bool); ok {
-			*enabled = true
-		}
-	}).Return(nil)
+	// Enable registration
+	config.RegEnabled.Store(1)
 
 	// Mock service returns password validation error
 	suite.mockSvc.On("Register", mock.Anything, "test@example.com", "weak").
