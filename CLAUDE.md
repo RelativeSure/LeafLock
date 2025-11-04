@@ -386,26 +386,7 @@ pnpm test --coverage                      # With coverage
 - Backend binds to `[::]:{PORT}` (IPv6-first with IPv4 fallback)
 - Frontend auto-detects Railway internal hostnames
 - Backend should be private-only (no public domain)
-
-**GitHub Actions CI/CD Setup**:
-
-To enable automated deployment testing in GitHub Actions, configure these secrets:
-
-1. **RAILWAY_TOKEN** - Account API token
-   - Go to Railway dashboard → Account Settings → Tokens
-   - Create new token with appropriate permissions
-   - Add to GitHub: Settings → Secrets and variables → Actions → New repository secret
-
-2. **RAILWAY_PROJECT_ID** - Your project UUID
-   - Find in Railway project URL: `railway.app/project/<PROJECT_ID>`
-   - Or in project settings → Project ID
-   - Add to GitHub secrets as above
-
-The CI workflow (`.github/workflows/unit-tests.yml`) uses Railway's GraphQL API to:
-- Query all projects accessible to the token
-- Fetch deployment URLs dynamically (environment-agnostic)
-- Test both PR previews and production deployments
-- Poll health endpoints until services are ready
+- Railway auto-deploys on every commit via GitHub integration
 
 ### Startup Performance
 - Container startup: 15-30 seconds
