@@ -12,12 +12,17 @@ permissions:
 
 jobs:
   backend-tests:
-    name: Backend Unit Tests  
+    name: Backend Unit Tests
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+      - name: Install Railway CLI
+        run: |
+          curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
 
       - name: Wait for Railway to deploy
         run: |
@@ -26,12 +31,26 @@ jobs:
           echo "Sleeping 3 minutes to allow deployment to complete..."
           sleep 180
 
+      - name: Get Railway backend URL
+        id: backend-url
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          echo "🔍 Fetching backend deployment URL from Railway..."
+          BACKEND_URL=$(railway status --json | jq -r '.deployments[] | select(.serviceName == "backend") | .url')
+          if [ -z "$BACKEND_URL" ]; then
+            echo "❌ Failed to get backend URL from Railway"
+            exit 1
+          fi
+          echo "BACKEND_URL=$BACKEND_URL" >> $GITHUB_OUTPUT
+          echo "✅ Backend URL: $BACKEND_URL"
+
       - name: Test Railway backend deployment
         env:
-          BACKEND_URL: ${{ secrets.RAILWAY_BACKEND_URL }}
+          BACKEND_URL: ${{ steps.backend-url.outputs.BACKEND_URL }}
         run: |
           echo "🧪 Testing Railway backend at: $BACKEND_URL"
-          
+
           # Poll backend health endpoint (up to 5 minutes)
           for i in {1..60}; do
             if curl -f -s "$BACKEND_URL/api/v1/health/live" > /dev/null 2>&1; then
@@ -49,10 +68,15 @@ jobs:
   frontend-tests:
     name: Frontend Unit Tests
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+      - name: Install Railway CLI
+        run: |
+          curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
 
       - name: Wait for Railway to deploy
         run: |
@@ -61,12 +85,26 @@ jobs:
           echo "Sleeping 3 minutes to allow deployment to complete..."
           sleep 180
 
+      - name: Get Railway frontend URL
+        id: frontend-url
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          echo "🔍 Fetching frontend deployment URL from Railway..."
+          FRONTEND_URL=$(railway status --json | jq -r '.deployments[] | select(.serviceName == "frontend") | .url')
+          if [ -z "$FRONTEND_URL" ]; then
+            echo "❌ Failed to get frontend URL from Railway"
+            exit 1
+          fi
+          echo "FRONTEND_URL=$FRONTEND_URL" >> $GITHUB_OUTPUT
+          echo "✅ Frontend URL: $FRONTEND_URL"
+
       - name: Test Railway frontend deployment
         env:
-          FRONTEND_URL: ${{ secrets.RAILWAY_FRONTEND_URL }}
+          FRONTEND_URL: ${{ steps.frontend-url.outputs.FRONTEND_URL }}
         run: |
           echo "🧪 Testing Railway frontend at: $FRONTEND_URL"
-          
+
           # Poll frontend health endpoint (up to 5 minutes)
           for i in {1..60}; do
             if curl -f -s "$FRONTEND_URL" > /dev/null 2>&1; then
