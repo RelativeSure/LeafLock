@@ -19,11 +19,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
-      - name: Install Railway CLI
-        run: |
-          curl -fsSL https://railway.app/install.sh | sh
-          echo "$HOME/.railway/bin" >> $GITHUB_PATH
-
       - name: Wait for Railway to deploy
         run: |
           echo "⏳ Waiting for Railway to auto-deploy commit ${{ github.sha }}..."
@@ -35,15 +30,30 @@ jobs:
         id: backend-url
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
         run: |
-          echo "🔍 Fetching backend deployment URL from Railway..."
-          BACKEND_URL=$(railway status --json | jq -r '.deployments[] | select(.serviceName == "backend") | .url')
-          if [ -z "$BACKEND_URL" ]; then
+          echo "🔍 Fetching backend deployment URL from Railway GraphQL API..."
+
+          QUERY='{"query":"query { deployments(input: { projectId: \"'$RAILWAY_PROJECT_ID'\", environmentId: \"'$RAILWAY_ENVIRONMENT_ID'\" }) { edges { node { id staticUrl status createdAt service { name } } } } }"}'
+
+          RESPONSE=$(curl -s -X POST https://backboard.railway.app/graphql/v2 \
+            -H "Authorization: Bearer $RAILWAY_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$QUERY")
+
+          echo "Response: $RESPONSE"
+
+          BACKEND_URL=$(echo "$RESPONSE" | jq -r '.data.deployments.edges[] | select(.node.service.name == "backend") | select(.node.status == "SUCCESS") | .node.staticUrl' | head -n 1)
+
+          if [ -z "$BACKEND_URL" ] || [ "$BACKEND_URL" = "null" ]; then
             echo "❌ Failed to get backend URL from Railway"
+            echo "Full response: $RESPONSE"
             exit 1
           fi
-          echo "BACKEND_URL=$BACKEND_URL" >> $GITHUB_OUTPUT
-          echo "✅ Backend URL: $BACKEND_URL"
+
+          echo "BACKEND_URL=https://$BACKEND_URL" >> $GITHUB_OUTPUT
+          echo "✅ Backend URL: https://$BACKEND_URL"
 
       - name: Test Railway backend deployment
         env:
@@ -73,11 +83,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
-      - name: Install Railway CLI
-        run: |
-          curl -fsSL https://railway.app/install.sh | sh
-          echo "$HOME/.railway/bin" >> $GITHUB_PATH
-
       - name: Wait for Railway to deploy
         run: |
           echo "⏳ Waiting for Railway to auto-deploy commit ${{ github.sha }}..."
@@ -89,15 +94,30 @@ jobs:
         id: frontend-url
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
         run: |
-          echo "🔍 Fetching frontend deployment URL from Railway..."
-          FRONTEND_URL=$(railway status --json | jq -r '.deployments[] | select(.serviceName == "frontend") | .url')
-          if [ -z "$FRONTEND_URL" ]; then
+          echo "🔍 Fetching frontend deployment URL from Railway GraphQL API..."
+
+          QUERY='{"query":"query { deployments(input: { projectId: \"'$RAILWAY_PROJECT_ID'\", environmentId: \"'$RAILWAY_ENVIRONMENT_ID'\" }) { edges { node { id staticUrl status createdAt service { name } } } } }"}'
+
+          RESPONSE=$(curl -s -X POST https://backboard.railway.app/graphql/v2 \
+            -H "Authorization: Bearer $RAILWAY_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$QUERY")
+
+          echo "Response: $RESPONSE"
+
+          FRONTEND_URL=$(echo "$RESPONSE" | jq -r '.data.deployments.edges[] | select(.node.service.name == "frontend") | select(.node.status == "SUCCESS") | .node.staticUrl' | head -n 1)
+
+          if [ -z "$FRONTEND_URL" ] || [ "$FRONTEND_URL" = "null" ]; then
             echo "❌ Failed to get frontend URL from Railway"
+            echo "Full response: $RESPONSE"
             exit 1
           fi
-          echo "FRONTEND_URL=$FRONTEND_URL" >> $GITHUB_OUTPUT
-          echo "✅ Frontend URL: $FRONTEND_URL"
+
+          echo "FRONTEND_URL=https://$FRONTEND_URL" >> $GITHUB_OUTPUT
+          echo "✅ Frontend URL: https://$FRONTEND_URL"
 
       - name: Test Railway frontend deployment
         env:
