@@ -28,15 +28,15 @@ jobs:
 
       - name: Verify Railway secrets
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_ACCOUNT }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           echo "🔍 Verifying Railway configuration..."
 
           if [ -z "$RAILWAY_TOKEN" ]; then
-            echo "❌ RAILWAY_TOKEN secret is not set!"
+            echo "❌ RAILWAY_TOKEN_ACCOUNT secret is not set!"
             echo "Go to Settings → Secrets and variables → Actions → New repository secret"
-            echo "Name: RAILWAY_TOKEN"
+            echo "Name: RAILWAY_TOKEN_ACCOUNT"
             echo "Value: Your Railway account token from railway.app/account/tokens"
             exit 1
           fi
@@ -54,7 +54,7 @@ jobs:
 
       - name: List accessible projects
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_ACCOUNT }}
         run: |
           echo "🔍 Listing projects accessible to this token..."
           QUERY='{"query":"query { me { projects { edges { node { id name } } } } }"}'
@@ -69,7 +69,7 @@ jobs:
       - name: Get Railway backend URL
         id: backend-url
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_ACCOUNT }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           echo "🔍 Fetching backend deployment URL from Railway GraphQL API..."
@@ -145,13 +145,13 @@ jobs:
 
       - name: Verify Railway secrets
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_ACCOUNT }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           echo "🔍 Verifying Railway configuration..."
 
           if [ -z "$RAILWAY_TOKEN" ]; then
-            echo "❌ RAILWAY_TOKEN secret is not set!"
+            echo "❌ RAILWAY_TOKEN_ACCOUNT secret is not set!"
             exit 1
           fi
 
@@ -164,7 +164,7 @@ jobs:
 
       - name: List accessible projects
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_ACCOUNT }}
         run: |
           echo "🔍 Listing projects accessible to this token..."
           QUERY='{"query":"query { me { projects { edges { node { id name } } } } }"}'
@@ -179,7 +179,7 @@ jobs:
       - name: Get Railway frontend URL
         id: frontend-url
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_ACCOUNT }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           echo "🔍 Fetching frontend deployment URL from Railway GraphQL API..."
