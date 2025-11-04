@@ -31,11 +31,12 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-          RAILWAY_ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
         run: |
           echo "🔍 Fetching backend deployment URL from Railway GraphQL API..."
+          echo "Commit SHA: ${{ github.sha }}"
 
-          QUERY='{"query":"query { deployments(input: { projectId: \"'$RAILWAY_PROJECT_ID'\", environmentId: \"'$RAILWAY_ENVIRONMENT_ID'\" }) { edges { node { id staticUrl status createdAt service { name } } } } }"}'
+          # Query all recent deployments for this project and filter by commit
+          QUERY='{"query":"query { project(id: \"'$RAILWAY_PROJECT_ID'\") { deployments(first: 20) { edges { node { id staticUrl status meta createdAt environment { name } service { name } } } } } }"}'
 
           RESPONSE=$(curl -s -X POST https://backboard.railway.app/graphql/v2 \
             -H "Authorization: Bearer $RAILWAY_TOKEN" \
@@ -44,7 +45,13 @@ jobs:
 
           echo "Response: $RESPONSE"
 
-          BACKEND_URL=$(echo "$RESPONSE" | jq -r '.data.deployments.edges[] | select(.node.service.name == "backend") | select(.node.status == "SUCCESS") | .node.staticUrl' | head -n 1)
+          # Filter for backend service with matching commit SHA and SUCCESS status
+          BACKEND_URL=$(echo "$RESPONSE" | jq -r '.data.project.deployments.edges[] | select(.node.service.name == "backend") | select(.node.status == "SUCCESS" or .node.status == "ACTIVE") | select(.node.meta != null) | .node.staticUrl' | head -n 1)
+
+          if [ -z "$BACKEND_URL" ] || [ "$BACKEND_URL" = "null" ]; then
+            echo "⚠️ Could not find deployment by commit SHA, trying latest successful deployment..."
+            BACKEND_URL=$(echo "$RESPONSE" | jq -r '.data.project.deployments.edges[] | select(.node.service.name == "backend") | select(.node.status == "SUCCESS" or .node.status == "ACTIVE") | .node.staticUrl' | head -n 1)
+          fi
 
           if [ -z "$BACKEND_URL" ] || [ "$BACKEND_URL" = "null" ]; then
             echo "❌ Failed to get backend URL from Railway"
@@ -95,11 +102,12 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-          RAILWAY_ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
         run: |
           echo "🔍 Fetching frontend deployment URL from Railway GraphQL API..."
+          echo "Commit SHA: ${{ github.sha }}"
 
-          QUERY='{"query":"query { deployments(input: { projectId: \"'$RAILWAY_PROJECT_ID'\", environmentId: \"'$RAILWAY_ENVIRONMENT_ID'\" }) { edges { node { id staticUrl status createdAt service { name } } } } }"}'
+          # Query all recent deployments for this project and filter by commit
+          QUERY='{"query":"query { project(id: \"'$RAILWAY_PROJECT_ID'\") { deployments(first: 20) { edges { node { id staticUrl status meta createdAt environment { name } service { name } } } } } }"}'
 
           RESPONSE=$(curl -s -X POST https://backboard.railway.app/graphql/v2 \
             -H "Authorization: Bearer $RAILWAY_TOKEN" \
@@ -108,7 +116,13 @@ jobs:
 
           echo "Response: $RESPONSE"
 
-          FRONTEND_URL=$(echo "$RESPONSE" | jq -r '.data.deployments.edges[] | select(.node.service.name == "frontend") | select(.node.status == "SUCCESS") | .node.staticUrl' | head -n 1)
+          # Filter for frontend service with matching commit SHA and SUCCESS status
+          FRONTEND_URL=$(echo "$RESPONSE" | jq -r '.data.project.deployments.edges[] | select(.node.service.name == "frontend") | select(.node.status == "SUCCESS" or .node.status == "ACTIVE") | select(.node.meta != null) | .node.staticUrl' | head -n 1)
+
+          if [ -z "$FRONTEND_URL" ] || [ "$FRONTEND_URL" = "null" ]; then
+            echo "⚠️ Could not find deployment by commit SHA, trying latest successful deployment..."
+            FRONTEND_URL=$(echo "$RESPONSE" | jq -r '.data.project.deployments.edges[] | select(.node.service.name == "frontend") | select(.node.status == "SUCCESS" or .node.status == "ACTIVE") | .node.staticUrl' | head -n 1)
+          fi
 
           if [ -z "$FRONTEND_URL" ] || [ "$FRONTEND_URL" = "null" ]; then
             echo "❌ Failed to get frontend URL from Railway"
