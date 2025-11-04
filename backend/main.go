@@ -112,13 +112,11 @@ func main() {
 	}()
 	log.Printf("⏱️  Redis client initialized in %v", time.Since(redisStart))
 
-	// Initialize crypto service
-	cryptoStart := time.Now()
-	crypto := appcrypto.NewCryptoService(config.EncryptionKey)
-	log.Printf("⏱️  Crypto service initialized in %v", time.Since(cryptoStart))
+	// Crypto service removed - zero-knowledge architecture
+	// MFA and session encryption derived from JWT_SECRET internally in auth.NewService
 
 	// Initialize readiness state
-	readyState := appserver.NewReadyState(db, crypto, config, rdb)
+	readyState := appserver.NewReadyState(db, config, rdb)
 
 	// Create Fiber app first to enable health endpoints
 	appStart := time.Now()
@@ -127,7 +125,7 @@ func main() {
 
 	// Setup routes
 	routeStart := time.Now()
-	setupRoutes(app, db, rdb, crypto, config, startTime, readyState)
+	setupRoutes(app, db, rdb, config, startTime, readyState)
 	log.Printf("⏱️  Routes setup completed in %v", time.Since(routeStart))
 
 	// Start server in background to handle health checks immediately
@@ -147,7 +145,7 @@ func main() {
 
 	// Ensure default admin user from environment variables (idempotent)
 	adminStart := time.Now()
-	authService := auth.NewService(db, rdb, crypto, string(config.JWTSecret))
+	authService := auth.NewService(db, rdb, string(config.JWTSecret))
 	if err := authService.EnsureDefaultAdminFromEnv(context.Background()); err != nil {
 		log.Printf("⚠️  Failed to ensure default admin user: %v", err)
 	} else {
@@ -157,7 +155,7 @@ func main() {
 
 	// Initialize templates
 	templateStart := time.Now()
-	if err := services.SeedDefaultTemplates(db, crypto); err != nil {
+	if err := services.SeedDefaultTemplates(db); err != nil {
 		log.Printf("Warning: Failed to seed default templates: %v", err)
 	}
 	log.Printf("⏱️  Template seeding completed in %v", time.Since(templateStart))

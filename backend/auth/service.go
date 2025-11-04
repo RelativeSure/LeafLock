@@ -62,15 +62,19 @@ type sessionManager interface {
 const defaultEncryptionVersion = 1
 
 // NewService creates a new auth service
-// Zero-knowledge: MFA secrets encrypted with JWT-derived key (system-level, acceptable for 2FA)
+// Zero-knowledge: MFA & session encryption derived from JWT secret (system-level)
 func NewService(db database.Database, rdb *redis.Client, jwtSecret string) *Service {
 	// Derive MFA encryption key from JWT secret (deterministic, per-deployment)
 	mfaKey := sha256.Sum256(append([]byte(jwtSecret), []byte("-mfa-encryption")...))
 	mfaCrypto := appcrypto.NewCryptoService(mfaKey[:])
 
+	// Derive session encryption key from JWT secret (deterministic, per-deployment)
+	sessionKey := sha256.Sum256(append([]byte(jwtSecret), []byte("-session-encryption")...))
+	sessionCrypto := appcrypto.NewCryptoService(sessionKey[:])
+
 	return &Service{
 		db:        db,
-		session:   NewSessionManager(rdb),
+		session:   NewSessionManager(rdb, sessionCrypto),
 		password:  NewPasswordManager(db),
 		mfa:       NewMFAManager(db, mfaCrypto),
 		jwtSecret: jwtSecret,
@@ -758,30 +762,21 @@ func (s *Service) auditLog(ctx context.Context, userID uuid.UUID, action string,
 	ipAddress := utils.GetClientIPFromContext(ctx)
 	userAgent := utils.GetUserAgentFromContext(ctx)
 
-	// Encrypt IP and User-Agent
-	ipEncrypted, err := s.crypto.EncryptBytes([]byte(ipAddress))
-	if err != nil {
-		return // Fail silently for audit logging
+	// Zero-knowledge: Hash IP and User-Agent for privacy
+	var ipHash, uaHash []byte
+	if ipAddress != "" {
+		hash := sha256.Sum256([]byte(ipAddress))
+		ipHash = hash[:]
+	}
+	if userAgent != "" {
+		hash := sha256.Sum256([]byte(userAgent))
+		uaHash = hash[:]
 	}
 
-	uaEncrypted, err := s.crypto.EncryptBytes([]byte(userAgent))
-	if err != nil {
-		return // Fail silently for audit logging
-	}
-
-	// Encrypt metadata if provided
-	var metadataEncrypted []byte
-	if metadata != nil {
-		metadataBytes, err := json.Marshal(metadata)
-		if err == nil {
-			metadataEncrypted, _ = s.crypto.EncryptBytes(metadataBytes)
-		}
-	}
-
-	// Insert audit log
+	// Insert audit log (metadata as plaintext JSONB)
 	query := `
-		INSERT INTO audit_log (user_id, action, resource_type, ip_address_encrypted, user_agent_encrypted, metadata_encrypted)
+		INSERT INTO audit_log (user_id, action, resource_type, ip_address_hash, user_agent_hash, metadata)
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
-	_, _ = s.db.Exec(ctx, query, userID, action, "auth", ipEncrypted, uaEncrypted, metadataEncrypted)
+	_, _ = s.db.Exec(ctx, query, userID, action, "auth", ipHash, uaHash, metadata)
 }

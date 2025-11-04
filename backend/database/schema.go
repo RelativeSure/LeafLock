@@ -218,21 +218,25 @@ CREATE TABLE IF NOT EXISTS collaborations (
     UNIQUE(note_id, user_id)
 );
 
--- Audit log for security
+-- Audit log for security (zero-knowledge: hashed IP/UA, plaintext metadata)
 CREATE TABLE IF NOT EXISTS audit_log (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id),
     action TEXT NOT NULL,
     resource_type TEXT,
     resource_id UUID,
-    ip_address_encrypted BYTEA,
-    user_agent_encrypted BYTEA,
-    metadata JSONB,
+    ip_address_hash BYTEA, -- SHA-256 hash for privacy
+    user_agent_hash BYTEA, -- SHA-256 hash for privacy
+    metadata JSONB, -- Non-sensitive metadata in plain JSON
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Encrypt audit log metadata field
-ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS metadata_encrypted BYTEA;
+-- Zero-knowledge migration: Drop encrypted columns from audit_log
+ALTER TABLE audit_log DROP COLUMN IF EXISTS ip_address_encrypted;
+ALTER TABLE audit_log DROP COLUMN IF EXISTS user_agent_encrypted;
+ALTER TABLE audit_log DROP COLUMN IF EXISTS metadata_encrypted;
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS ip_address_hash BYTEA;
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS user_agent_hash BYTEA;
 
 -- File attachments with encryption
 CREATE TABLE IF NOT EXISTS attachments (

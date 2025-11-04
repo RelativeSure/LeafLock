@@ -8,16 +8,10 @@ import (
 	"leaflock/config"
 )
 
-// CryptoService interface defines cryptographic operations needed by the server
-type CryptoService interface {
-	Encrypt(plaintext []byte) ([]byte, error)
-	Decrypt(ciphertext []byte) ([]byte, error)
-}
-
 // ReadyState tracks initialization state for health checks
+// Zero-knowledge: crypto removed (no longer needed)
 type ReadyState struct {
 	db             *pgxpool.Pool
-	crypto         CryptoService
 	config         *config.Config
 	rdb            *redis.Client
 	adminReady     atomic.Bool
@@ -27,10 +21,9 @@ type ReadyState struct {
 }
 
 // NewReadyState creates a new ReadyState instance
-func NewReadyState(db *pgxpool.Pool, crypto CryptoService, cfg *config.Config, rdb *redis.Client) *ReadyState {
+func NewReadyState(db *pgxpool.Pool, cfg *config.Config, rdb *redis.Client) *ReadyState {
 	return &ReadyState{
 		db:     db,
-		crypto: crypto,
 		config: cfg,
 		rdb:    rdb,
 	}
@@ -77,11 +70,6 @@ func (r *ReadyState) GetRedis() *redis.Client {
 // GetConfig returns the application configuration
 func (r *ReadyState) GetConfig() *config.Config {
 	return r.config
-}
-
-// GetCrypto returns the crypto service
-func (r *ReadyState) GetCrypto() CryptoService {
-	return r.crypto
 }
 
 // IsAdminReady returns true if admin initialization is complete
