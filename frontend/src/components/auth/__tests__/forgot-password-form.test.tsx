@@ -2,12 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ForgotPasswordForm } from '../forgot-password-form'
 
-vi.mock('@/services/api', () => ({
-  authService: {
-    requestPasswordReset: vi.fn(),
-  },
-}))
-
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, type }: any) => (
     <button onClick={onClick} disabled={disabled} type={type}>
@@ -24,6 +18,24 @@ vi.mock('@/components/ui/label', () => ({
   Label: ({ children, htmlFor }: any) => <label htmlFor={htmlFor}>{children}</label>,
 }))
 
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}))
+
+vi.mock('@/components/ui/card', () => ({
+  Card: ({ children }: any) => <div>{children}</div>,
+  CardHeader: ({ children }: any) => <div>{children}</div>,
+  CardContent: ({ children }: any) => <div>{children}</div>,
+}))
+
+vi.mock('lucide-react', () => ({
+  Mail: () => <div>Mail Icon</div>,
+  ArrowLeft: () => <div>Arrow Icon</div>,
+}))
+
 describe('ForgotPasswordForm', () => {
   const toggleMode = vi.fn()
 
@@ -32,12 +44,13 @@ describe('ForgotPasswordForm', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     toggleMode.mockClear()
+    global.fetch = vi.fn()
   })
 
   it('should render forgot password form', () => {
     renderForm()
 
-    expect(screen.getByText(/forgot password/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /reset your password/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
   })
 
@@ -66,8 +79,10 @@ describe('ForgotPasswordForm', () => {
   })
 
   it('should submit form with valid email', async () => {
-    const { authService } = await import('@/services/api')
-    vi.mocked(authService.requestPasswordReset).mockResolvedValue(undefined)
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: 'Reset link sent' }),
+    } as Response)
 
     renderForm()
 
@@ -78,13 +93,22 @@ describe('ForgotPasswordForm', () => {
     fireEvent.click(submitButton)
 
     await waitFor(() => {
-      expect(authService.requestPasswordReset).toHaveBeenCalledWith('user@example.com')
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/auth/forgot-password'),
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'user@example.com' }),
+        })
+      )
     })
   })
 
   it('should show success message after submission', async () => {
-    const { authService } = await import('@/services/api')
-    vi.mocked(authService.requestPasswordReset).mockResolvedValue(undefined)
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: 'Reset link sent' }),
+    } as Response)
 
     renderForm()
 
@@ -95,14 +119,17 @@ describe('ForgotPasswordForm', () => {
     fireEvent.click(submitButton)
 
     await waitFor(() => {
-      expect(screen.getByText(/check your email|sent/i) || document.body).toBeTruthy()
+      expect(screen.getByText(/check your email/i)).toBeInTheDocument()
     })
   })
 
   it('should show error message on failure', async () => {
-    const { authService } = await import('@/services/api')
-    vi.mocked(authService.requestPasswordReset).mockRejectedValue(new Error('Email not found'))
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: 'Email not found' }),
+    } as Response)
 
+    const { toast } = await import('sonner')
     renderForm()
 
     const emailInput = screen.getByLabelText(/email/i)
@@ -112,7 +139,7 @@ describe('ForgotPasswordForm', () => {
     fireEvent.click(submitButton)
 
     await waitFor(() => {
-      expect(screen.getByText(/error|failed/i) || document.body).toBeTruthy()
+      expect(toast.error).toHaveBeenCalled()
     })
   })
 
@@ -129,9 +156,11 @@ describe('ForgotPasswordForm', () => {
   })
 
   it('should disable submit button while loading', async () => {
-    const { authService } = await import('@/services/api')
-    vi.mocked(authService.requestPasswordReset).mockImplementation(
-      () => new Promise((resolve) => setTimeout(resolve, 1000))
+    global.fetch = vi.fn().mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve({
+        ok: true,
+        json: async () => ({ message: 'Reset link sent' }),
+      } as Response), 1000))
     )
 
     renderForm()
