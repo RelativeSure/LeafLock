@@ -170,6 +170,9 @@ export default defineConfig({
         '**/tests/**',
         '**/vite-env.d.ts',
         '**/main.tsx',
+        '**/*.d.ts', // Type definition files
+        '**/types/**', // Type-only modules
+        '**/mocks/**', // Test mock files
       ],
       thresholds: {
         // Target: 80% frontend test coverage
