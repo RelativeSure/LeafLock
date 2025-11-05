@@ -213,8 +213,8 @@ describe('ApiClient', () => {
         expect.any(String),
         expect.objectContaining({
           headers: expect.objectContaining({
-            'X-Custom-Header': 'value1',
-            'X-Another-Header': 'value2',
+            'x-custom-header': 'value1',
+            'x-another-header': 'value2',
           }),
         })
       )
