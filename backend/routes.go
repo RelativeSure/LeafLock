@@ -127,6 +127,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 
 	// Initialize email service
 	emailService := services.NewEmailService(config)
+	notificationService := services.NewNotificationService(db, emailService)
 
 	// Zero-knowledge: Derive handler encryption key from JWT secret
 	// Used for share links, attachments, and other server-managed encrypted data
@@ -146,7 +147,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	foldersHandler := handlers.NewFoldersHandler(db, handlerCrypto)
 	templatesHandler := handlers.NewTemplatesHandler(db, handlerCrypto)
 	settingsHandler := handlers.NewSettingsHandler(db)
-	collabHandler := handlers.NewCollaborationHandler(db, handlerCrypto)
+	collabHandler := handlers.NewCollaborationHandler(db, handlerCrypto, notificationService)
 	attachmentsHandler := handlers.NewAttachmentsHandler(db, handlerCrypto)
 	searchHandler := handlers.NewSearchHandler(db)
 	importExportHandler := handlers.NewImportExportHandler(db, handlerCrypto)

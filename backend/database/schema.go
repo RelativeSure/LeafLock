@@ -579,5 +579,39 @@ ALTER TABLE collaborations ADD COLUMN IF NOT EXISTS can_share BOOLEAN DEFAULT fa
 ALTER TABLE collaborations ADD COLUMN IF NOT EXISTS can_comment BOOLEAN DEFAULT true;
 ALTER TABLE collaborations ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
 
+-- Email notification templates (Phase 3.3)
+CREATE TABLE IF NOT EXISTS email_templates (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT UNIQUE NOT NULL,
+    subject TEXT NOT NULL,
+    body_html TEXT NOT NULL,
+    body_text TEXT NOT NULL,
+    variables JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Insert default email templates
+INSERT INTO email_templates (name, subject, body_html, body_text, variables) VALUES
+('note_shared', 'Note shared with you - LeafLock',
+ '<p>Hi {{recipient_name}},</p><p>{{sender_name}} has shared a note with you: <strong>{{note_title}}</strong></p><p>Permission: {{permission}}</p><p><a href="{{note_url}}">View Note</a></p>',
+ 'Hi {{recipient_name}},\n\n{{sender_name}} has shared a note with you: {{note_title}}\n\nPermission: {{permission}}\n\nView Note: {{note_url}}',
+ '["recipient_name", "sender_name", "note_title", "permission", "note_url"]'::jsonb),
+('collaboration_invite', 'Collaboration invite - LeafLock',
+ '<p>Hi {{recipient_name}},</p><p>{{sender_name}} invited you to collaborate on: <strong>{{note_title}}</strong></p><p><a href="{{note_url}}">Accept Invitation</a></p>',
+ 'Hi {{recipient_name}},\n\n{{sender_name}} invited you to collaborate on: {{note_title}}\n\nAccept Invitation: {{note_url}}',
+ '["recipient_name", "sender_name", "note_title", "note_url"]'::jsonb),
+('password_reset', 'Password Reset Request - LeafLock',
+ '<p>Hi {{user_name}},</p><p>You requested a password reset. Click the link below to reset your password:</p><p><a href="{{reset_url}}">Reset Password</a></p><p>This link expires in 1 hour.</p>',
+ 'Hi {{user_name}},\n\nYou requested a password reset. Click the link below:\n\n{{reset_url}}\n\nThis link expires in 1 hour.',
+ '["user_name", "reset_url"]'::jsonb)
+ON CONFLICT (name) DO NOTHING;
+
+-- Email notification preferences
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_on_note_shared BOOLEAN DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_on_collaboration BOOLEAN DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_on_mention BOOLEAN DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_digest_frequency VARCHAR(20) DEFAULT 'never'; -- 'never', 'daily', 'weekly'
+
 -- Note: Cleanup jobs run automatically via background service every 24 hours
 `

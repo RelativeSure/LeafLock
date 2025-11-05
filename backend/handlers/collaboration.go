@@ -14,18 +14,24 @@ import (
 	"leaflock/crypto"
 	"leaflock/database"
 	"leaflock/metrics"
+	"leaflock/services"
 	"leaflock/utils"
 )
 
 // Collaboration Handler
 type CollaborationHandler struct {
-	db     database.Database
-	crypto *crypto.CryptoService
+	db                  database.Database
+	crypto              *crypto.CryptoService
+	notificationService *services.NotificationService
 }
 
 // NewCollaborationHandler creates a new collaboration handler.
-func NewCollaborationHandler(db database.Database, cryptoService *crypto.CryptoService) *CollaborationHandler {
-	return &CollaborationHandler{db: db, crypto: cryptoService}
+func NewCollaborationHandler(db database.Database, cryptoService *crypto.CryptoService, notificationService *services.NotificationService) *CollaborationHandler {
+	return &CollaborationHandler{
+		db:                  db,
+		crypto:              cryptoService,
+		notificationService: notificationService,
+	}
 }
 
 type ShareNoteRequest struct {
@@ -193,6 +199,44 @@ func (h *CollaborationHandler) ShareNote(c *fiber.Ctx) error {
 		"target_user": targetUserID,
 		"permission":  req.Permission,
 	})
+
+	// Send email notification if user has it enabled
+	if h.notificationService != nil {
+		go func() {
+			// Check if recipient wants email notifications
+			enabled, err := h.notificationService.CheckUserEmailPreference(context.Background(), targetUserID.String(), "note_shared")
+			if err == nil && enabled {
+				// Get sender name
+				var senderName string
+				h.db.QueryRow(context.Background(), `SELECT COALESCE(display_name, email_plaintext) FROM users WHERE id = $1`, userID).Scan(&senderName)
+
+				// Get note title (decrypt it)
+				var titleEncrypted []byte
+				h.db.QueryRow(context.Background(), `SELECT title_encrypted FROM notes WHERE id = $1`, noteID).Scan(&titleEncrypted)
+				noteTitle := "Untitled Note"
+				if titleEncrypted != nil {
+					if titleBytes, err := h.crypto.Decrypt(titleEncrypted); err == nil {
+						noteTitle = string(titleBytes)
+					}
+				}
+
+				// Get recipient name
+				var recipientName string
+				h.db.QueryRow(context.Background(), `SELECT COALESCE(display_name, email_plaintext) FROM users WHERE id = $1`, targetUserID).Scan(&recipientName)
+
+				// Send email
+				h.notificationService.SendNoteSharedNotification(
+					context.Background(),
+					req.UserEmail,
+					recipientName,
+					senderName,
+					noteTitle,
+					req.Permission,
+					"", // noteURL - can be constructed from app config
+				)
+			}
+		}()
+	}
 
 	return c.Status(201).JSON(fiber.Map{
 		"message":          "Note shared successfully",

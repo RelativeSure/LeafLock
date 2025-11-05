@@ -18,7 +18,7 @@ import (
 )
 
 // MigrationSchemaVersion tracks the current schema version
-const MigrationSchemaVersion = "2025.11.05.005" // Granular permissions: Add can_edit, can_delete, can_share, can_comment, expires_at
+const MigrationSchemaVersion = "2025.11.05.006" // Email notifications: Add email_templates table and user preferences
 
 // Database interface for dependency injection and testing
 type Database interface {
