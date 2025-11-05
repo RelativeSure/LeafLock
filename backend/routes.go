@@ -321,7 +321,9 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	admin.Patch("/users/:id/role", rateLimits.StandardCRUDLimiter, adminHandler.UpdateUserRole)
 	admin.Delete("/users/:id", rateLimits.StandardCRUDLimiter, adminHandler.DeleteUser)
 	admin.Post("/users/:id/unlock", rateLimits.StandardCRUDLimiter, adminHandler.UnlockUser)
-	// Registration settings
+	// Admin settings
+	admin.Get("/settings", rateLimits.StandardCRUDLimiter, adminHandler.GetAllSettings)
+	admin.Put("/settings", rateLimits.StandardCRUDLimiter, adminHandler.UpdateSetting)
 	admin.Get("/settings/registration", rateLimits.StandardCRUDLimiter, adminHandler.GetRegistrationSetting)
 	admin.Put("/settings/registration", rateLimits.StandardCRUDLimiter, adminHandler.UpdateRegistrationSetting)
 	// Audit logs (admin view - all users)
