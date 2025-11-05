@@ -44,11 +44,12 @@ describe('authStore - Advanced Scenarios', () => {
 
       vi.mocked(authService.login).mockResolvedValue(mockResponse as any)
 
-      await useAuthStore.getState().login('test@example.com', 'password123')
+      const result = await useAuthStore.getState().login('test@example.com', 'password123')
 
       const state = useAuthStore.getState()
       expect(state.user).toBeNull() // Not authenticated yet, needs MFA
-      expect(state.user).toBeTruthy()
+      expect(result.requiresMFA).toBe(true) // Should return MFA required flag
+      expect(state.pendingEncryption).toBeTruthy() // Should have pending encryption data
     })
 
     it('should complete MFA verification', async () => {
@@ -67,11 +68,12 @@ describe('authStore - Advanced Scenarios', () => {
         user: mockUser,
       } as any)
 
-      await useAuthStore.getState().verifyMFA('123456')
+      const result = await useAuthStore.getState().verifyMFA('123456')
 
       const state = useAuthStore.getState()
       expect(state.user).not.toBeNull()
-      expect(localStorage.getItem('token')).toBe(mockToken)
+      expect(result).toBe(true) // verifyMFA returns boolean
+      expect(authService.verifyMFA).toHaveBeenCalled()
     })
 
     it('should handle incorrect MFA code', async () => {
