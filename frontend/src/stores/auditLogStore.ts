@@ -1,9 +1,5 @@
 import { create } from 'zustand'
-import {
-  auditLogService,
-  AuditLogEntry,
-  GetAuditLogsParams,
-} from '@/services/api/auditLogService'
+import { auditLogService, AuditLogEntry, GetAuditLogsParams } from '@/services/api/auditLogService'
 
 interface AuditLogState {
   // User's own logs
@@ -82,9 +78,7 @@ export const useAuditLogStore = create<AuditLogState>((set, get) => ({
 
       set({
         adminLogs:
-          mergedParams.offset === 0
-            ? response.logs
-            : [...get().adminLogs, ...response.logs],
+          mergedParams.offset === 0 ? response.logs : [...get().adminLogs, ...response.logs],
         adminTotal: response.total,
         adminHasMore: response.has_more,
         adminLoading: false,

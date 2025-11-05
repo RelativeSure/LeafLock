@@ -88,18 +88,12 @@ export function AuditLogViewer() {
 
       <div className="space-y-2">
         {userLogs.length === 0 ? (
-          <Card className="p-8 text-center text-muted-foreground">
-            No activity recorded yet
-          </Card>
+          <Card className="p-8 text-center text-muted-foreground">No activity recorded yet</Card>
         ) : (
           userLogs.map((log) => (
             <Card key={log.id} className="p-4">
               <div className="flex items-start gap-4">
-                <Badge
-                  className={`${
-                    ACTION_COLORS[log.action] || 'bg-gray-500'
-                  } text-white`}
-                >
+                <Badge className={`${ACTION_COLORS[log.action] || 'bg-gray-500'} text-white`}>
                   {ACTION_LABELS[log.action] || log.action}
                 </Badge>
 
@@ -123,9 +117,7 @@ export function AuditLogViewer() {
                       {Object.entries(log.metadata).map(([key, value]) => (
                         <div key={key} className="flex gap-2">
                           <span className="font-medium">{key}:</span>
-                          <span className="text-muted-foreground">
-                            {JSON.stringify(value)}
-                          </span>
+                          <span className="text-muted-foreground">{JSON.stringify(value)}</span>
                         </div>
                       ))}
                     </div>

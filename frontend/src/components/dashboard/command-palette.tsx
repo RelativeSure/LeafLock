@@ -11,16 +11,7 @@ import {
 } from '@/components/ui/command'
 import { useNotesStore } from '@/stores/notesStore'
 import { decryptTextWithStoredKey } from '@/lib/encryption-utils'
-import {
-  FileText,
-  Plus,
-  Trash2,
-  Pin,
-  Search,
-  FolderOpen,
-  Tag,
-  Settings,
-} from 'lucide-react'
+import { FileText, Plus, Trash2, Pin, Search, FolderOpen, Tag, Settings } from 'lucide-react'
 import { toast } from 'sonner'
 
 export function CommandPalette() {

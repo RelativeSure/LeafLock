@@ -3,7 +3,13 @@ import { apiClient } from './apiClient'
 export interface Notification {
   id: string
   user_id: string
-  type: 'note_shared' | 'note_commented' | 'folder_shared' | 'mention' | 'system' | 'collaboration_invite'
+  type:
+    | 'note_shared'
+    | 'note_commented'
+    | 'folder_shared'
+    | 'mention'
+    | 'system'
+    | 'collaboration_invite'
   title: string
   message: string
   action_url?: string | null

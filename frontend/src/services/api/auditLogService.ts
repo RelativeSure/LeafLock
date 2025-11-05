@@ -33,10 +33,7 @@ export const auditLogService = {
   /**
    * Get current user's audit logs
    */
-  getUserAuditLogs: async (
-    limit: number = 50,
-    offset: number = 0
-  ): Promise<AuditLogsResponse> => {
+  getUserAuditLogs: async (limit: number = 50, offset: number = 0): Promise<AuditLogsResponse> => {
     const response = await apiClient.get('/audit-logs', {
       params: { limit, offset },
     })
@@ -46,9 +43,7 @@ export const auditLogService = {
   /**
    * Get all audit logs (admin only)
    */
-  getAllAuditLogs: async (
-    params: GetAuditLogsParams = {}
-  ): Promise<AuditLogsResponse> => {
+  getAllAuditLogs: async (params: GetAuditLogsParams = {}): Promise<AuditLogsResponse> => {
     const response = await apiClient.get('/admin/audit-logs', { params })
     return response.data
   },

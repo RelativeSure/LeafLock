@@ -34,7 +34,9 @@ describe('Integration: Complete Auth Flow', () => {
 
       vi.mocked(authService.register).mockResolvedValue(registerResponse as any)
 
-      const message = await useAuthStore.getState().register('newuser@example.com', 'password123', 'New User')
+      const message = await useAuthStore
+        .getState()
+        .register('newuser@example.com', 'password123', 'New User')
 
       expect(message).toBe('Registration successful')
       expect(useAuthStore.getState().user).toBeNull() // Not logged in yet
@@ -89,7 +91,9 @@ describe('Integration: Complete Auth Flow', () => {
 
       vi.mocked(authService.register).mockResolvedValue(registerResponse as any)
 
-      const message = await useAuthStore.getState().register('newemail@example.com', 'password', 'User')
+      const message = await useAuthStore
+        .getState()
+        .register('newemail@example.com', 'password', 'User')
 
       expect(message).toBe('Registration successful')
       expect(useAuthStore.getState().user).toBeNull() // Still not logged in, just registered

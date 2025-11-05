@@ -55,9 +55,10 @@ export class ApiClient {
 
       // Handle 401 Unauthorized - token expired
       // BUT: Don't clear session for login/register endpoints (those 401s are expected for wrong credentials)
-      const isAuthEndpoint = endpoint.includes('/auth/login') ||
-                            endpoint.includes('/auth/register') ||
-                            endpoint.includes('/auth/mfa/verify')
+      const isAuthEndpoint =
+        endpoint.includes('/auth/login') ||
+        endpoint.includes('/auth/register') ||
+        endpoint.includes('/auth/mfa/verify')
 
       if (response.status === 401 && !isAuthEndpoint) {
         console.warn('401 Unauthorized - clearing expired session')

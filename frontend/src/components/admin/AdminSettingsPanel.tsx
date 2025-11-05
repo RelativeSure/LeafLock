@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Save, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -102,9 +102,7 @@ export function AdminSettingsPanel() {
             <Switch
               id="registration"
               checked={getBooleanSetting('registration_enabled', true)}
-              onCheckedChange={(checked) =>
-                updateSetting('registration_enabled', String(checked))
-              }
+              onCheckedChange={(checked) => updateSetting('registration_enabled', String(checked))}
               disabled={isSaving}
             />
           </div>
@@ -153,9 +151,7 @@ export function AdminSettingsPanel() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="storage_limit_per_user">
-              Storage Limit Per User (GB)
-            </Label>
+            <Label htmlFor="storage_limit_per_user">Storage Limit Per User (GB)</Label>
             <Input
               id="storage_limit_per_user"
               type="number"

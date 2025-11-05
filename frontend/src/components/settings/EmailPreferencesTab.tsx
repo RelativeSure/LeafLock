@@ -92,9 +92,7 @@ export function EmailPreferencesTab() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Email Preferences</h2>
-        <p className="text-muted-foreground">
-          Configure when you receive email notifications
-        </p>
+        <p className="text-muted-foreground">Configure when you receive email notifications</p>
       </div>
 
       {/* Master Toggle */}
@@ -104,9 +102,7 @@ export function EmailPreferencesTab() {
             <Mail className="h-5 w-5" />
             Email Notifications
           </CardTitle>
-          <CardDescription>
-            Master toggle for all email notifications
-          </CardDescription>
+          <CardDescription>Master toggle for all email notifications</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
@@ -119,9 +115,7 @@ export function EmailPreferencesTab() {
             <Switch
               id="email-notifications"
               checked={preferences.email_notifications}
-              onCheckedChange={(checked) =>
-                updatePreference('email_notifications', checked)
-              }
+              onCheckedChange={(checked) => updatePreference('email_notifications', checked)}
             />
           </div>
         </CardContent>
@@ -134,9 +128,7 @@ export function EmailPreferencesTab() {
             <Bell className="h-5 w-5" />
             Event Notifications
           </CardTitle>
-          <CardDescription>
-            Choose which events trigger email notifications
-          </CardDescription>
+          <CardDescription>Choose which events trigger email notifications</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
@@ -152,9 +144,7 @@ export function EmailPreferencesTab() {
             <Switch
               id="email-note-shared"
               checked={preferences.email_on_note_shared}
-              onCheckedChange={(checked) =>
-                updatePreference('email_on_note_shared', checked)
-              }
+              onCheckedChange={(checked) => updatePreference('email_on_note_shared', checked)}
               disabled={!preferences.email_notifications}
             />
           </div>
@@ -172,9 +162,7 @@ export function EmailPreferencesTab() {
             <Switch
               id="email-collaboration"
               checked={preferences.email_on_collaboration}
-              onCheckedChange={(checked) =>
-                updatePreference('email_on_collaboration', checked)
-              }
+              onCheckedChange={(checked) => updatePreference('email_on_collaboration', checked)}
               disabled={!preferences.email_notifications}
             />
           </div>
@@ -192,9 +180,7 @@ export function EmailPreferencesTab() {
             <Switch
               id="email-mention"
               checked={preferences.email_on_mention}
-              onCheckedChange={(checked) =>
-                updatePreference('email_on_mention', checked)
-              }
+              onCheckedChange={(checked) => updatePreference('email_on_mention', checked)}
               disabled={!preferences.email_notifications}
             />
           </div>
@@ -205,18 +191,14 @@ export function EmailPreferencesTab() {
       <Card>
         <CardHeader>
           <CardTitle>Email Digest</CardTitle>
-          <CardDescription>
-            Receive periodic summaries of activity
-          </CardDescription>
+          <CardDescription>Receive periodic summaries of activity</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             <Label htmlFor="digest-frequency">Digest Frequency</Label>
             <Select
               value={preferences.email_digest_frequency}
-              onValueChange={(value) =>
-                updatePreference('email_digest_frequency', value)
-              }
+              onValueChange={(value) => updatePreference('email_digest_frequency', value)}
               disabled={!preferences.email_notifications}
             >
               <SelectTrigger id="digest-frequency">

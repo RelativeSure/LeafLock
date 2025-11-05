@@ -69,9 +69,9 @@ export const useAuthStore = create<AuthState>()(
             if (response.encryptionSalt) {
               await setStoredSalt(response.encryptionSalt)
             }
-            set({ 
+            set({
               pendingEncryption: { password, salt: response.encryptionSalt },
-              mfaSession: response.mfaSession || null
+              mfaSession: response.mfaSession || null,
             })
             return { requiresMFA: true }
           }

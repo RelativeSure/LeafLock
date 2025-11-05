@@ -3,7 +3,14 @@ import { FileText, Folder, Tag, Users, TrendingUp, Activity } from 'lucide-react
 import { analyticsService, type UserStats } from '@/services/api/analyticsService'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -66,9 +73,7 @@ export function AnalyticsDashboard() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Analytics Dashboard</h2>
-        <p className="text-muted-foreground">
-          View your notes statistics and activity insights
-        </p>
+        <p className="text-muted-foreground">View your notes statistics and activity insights</p>
       </div>
 
       {/* Summary Cards */}
@@ -165,23 +170,26 @@ export function AnalyticsDashboard() {
         <CardContent>
           <ScrollArea className="h-[300px]">
             <div className="space-y-2">
-              {stats.activity_by_day.slice().reverse().map((activity, index) => {
-                const maxCount = Math.max(...stats.activity_by_day.map((a) => a.count), 1)
-                const percentage = (activity.count / maxCount) * 100
-                const date = new Date(activity.date)
+              {stats.activity_by_day
+                .slice()
+                .reverse()
+                .map((activity, index) => {
+                  const maxCount = Math.max(...stats.activity_by_day.map((a) => a.count), 1)
+                  const percentage = (activity.count / maxCount) * 100
+                  const date = new Date(activity.date)
 
-                return (
-                  <div key={index} className="space-y-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                      </span>
-                      <Badge variant="secondary">{activity.count}</Badge>
+                  return (
+                    <div key={index} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        </span>
+                        <Badge variant="secondary">{activity.count}</Badge>
+                      </div>
+                      <Progress value={percentage} className="h-2" />
                     </div>
-                    <Progress value={percentage} className="h-2" />
-                  </div>
-                )
-              })}
+                  )
+                })}
             </div>
           </ScrollArea>
         </CardContent>

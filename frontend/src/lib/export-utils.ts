@@ -60,10 +60,12 @@ function htmlToMarkdown(html: string): string {
 
   // Blockquote
   markdown = markdown.replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gi, (_match, content) => {
-    return content
-      .split('\n')
-      .map((line: string) => '> ' + line)
-      .join('\n') + '\n\n'
+    return (
+      content
+        .split('\n')
+        .map((line: string) => '> ' + line)
+        .join('\n') + '\n\n'
+    )
   })
 
   // Paragraphs
@@ -112,7 +114,10 @@ Modified: ${new Date(note.updatedAt).toLocaleDateString('en-US')}
 /**
  * Export note to Markdown format
  */
-export async function exportToMarkdown(note: Note, options: ExportOptions = { format: 'markdown' }): Promise<string> {
+export async function exportToMarkdown(
+  note: Note,
+  options: ExportOptions = { format: 'markdown' }
+): Promise<string> {
   const title = await decryptTextWithStoredKey(note.title)
   const content = await decryptTextWithStoredKey(note.content)
 
@@ -131,7 +136,10 @@ export async function exportToMarkdown(note: Note, options: ExportOptions = { fo
 /**
  * Export note to HTML format
  */
-export async function exportToHTML(note: Note, options: ExportOptions = { format: 'html' }): Promise<string> {
+export async function exportToHTML(
+  note: Note,
+  options: ExportOptions = { format: 'html' }
+): Promise<string> {
   const title = await decryptTextWithStoredKey(note.title)
   const content = await decryptTextWithStoredKey(note.content)
 
@@ -233,7 +241,10 @@ export async function exportToHTML(note: Note, options: ExportOptions = { format
 /**
  * Export note to plain text format
  */
-export async function exportToText(note: Note, options: ExportOptions = { format: 'txt' }): Promise<string> {
+export async function exportToText(
+  note: Note,
+  options: ExportOptions = { format: 'txt' }
+): Promise<string> {
   const title = await decryptTextWithStoredKey(note.title)
   const content = await decryptTextWithStoredKey(note.content)
 
@@ -250,7 +261,8 @@ export async function exportToText(note: Note, options: ExportOptions = { format
   text += `${title}\n\n`
 
   // Strip all HTML tags for plain text
-  const plainContent = content.replace(/<[^>]*>/g, '')
+  const plainContent = content
+    .replace(/<[^>]*>/g, '')
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
@@ -352,9 +364,14 @@ export async function exportNotes(notes: Note[], options: ExportOptions): Promis
     .join('')
 
   const filename = options.filename || `notes_export_${Date.now()}`
-  const extension = options.format === 'markdown' ? 'md' : options.format === 'html' ? 'html' : 'txt'
+  const extension =
+    options.format === 'markdown' ? 'md' : options.format === 'html' ? 'html' : 'txt'
   const mimeType =
-    options.format === 'markdown' ? 'text/markdown' : options.format === 'html' ? 'text/html' : 'text/plain'
+    options.format === 'markdown'
+      ? 'text/markdown'
+      : options.format === 'html'
+        ? 'text/html'
+        : 'text/plain'
 
   downloadExport(combined, `${filename}.${extension}`, mimeType)
 }

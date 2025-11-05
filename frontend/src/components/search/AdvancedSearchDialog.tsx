@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, Filter, X, Calendar, Tag, Folder, Lock, Pin } from 'lucide-react'
+import { Search, Filter, X, Calendar, Tag, Lock, Pin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -26,10 +26,7 @@ interface AdvancedSearchDialogProps {
   currentFilters: SearchFilters
 }
 
-export function AdvancedSearchDialog({
-  onSearch,
-  currentFilters,
-}: AdvancedSearchDialogProps) {
+export function AdvancedSearchDialog({ onSearch, currentFilters }: AdvancedSearchDialogProps) {
   const [open, setOpen] = useState(false)
   const [filters, setFilters] = useState<SearchFilters>(currentFilters)
 
@@ -64,8 +61,7 @@ export function AdvancedSearchDialog({
         <DialogHeader>
           <DialogTitle>Advanced Search Filters</DialogTitle>
           <DialogDescription>
-            Filter notes by metadata. Content search is performed locally after fetching
-            results.
+            Filter notes by metadata. Content search is performed locally after fetching results.
           </DialogDescription>
         </DialogHeader>
 
@@ -101,9 +97,7 @@ export function AdvancedSearchDialog({
                 id="start-date"
                 type="date"
                 value={
-                  filters.start_date
-                    ? new Date(filters.start_date).toISOString().split('T')[0]
-                    : ''
+                  filters.start_date ? new Date(filters.start_date).toISOString().split('T')[0] : ''
                 }
                 onChange={(e) => {
                   const value = e.target.value
@@ -124,9 +118,7 @@ export function AdvancedSearchDialog({
                 id="end-date"
                 type="date"
                 value={
-                  filters.end_date
-                    ? new Date(filters.end_date).toISOString().split('T')[0]
-                    : ''
+                  filters.end_date ? new Date(filters.end_date).toISOString().split('T')[0] : ''
                 }
                 onChange={(e) => {
                   const value = e.target.value
@@ -148,11 +140,7 @@ export function AdvancedSearchDialog({
               </Label>
               <Select
                 value={
-                  filters.is_pinned === undefined
-                    ? 'all'
-                    : filters.is_pinned
-                      ? 'true'
-                      : 'false'
+                  filters.is_pinned === undefined ? 'all' : filters.is_pinned ? 'true' : 'false'
                 }
                 onValueChange={(value) =>
                   setFilters({
@@ -179,11 +167,7 @@ export function AdvancedSearchDialog({
               </Label>
               <Select
                 value={
-                  filters.is_locked === undefined
-                    ? 'all'
-                    : filters.is_locked
-                      ? 'true'
-                      : 'false'
+                  filters.is_locked === undefined ? 'all' : filters.is_locked ? 'true' : 'false'
                 }
                 onValueChange={(value) =>
                   setFilters({
@@ -209,11 +193,7 @@ export function AdvancedSearchDialog({
             <Label htmlFor="trashed-filter">Include Trashed Notes</Label>
             <Select
               value={
-                filters.is_trashed === undefined
-                  ? 'false'
-                  : filters.is_trashed
-                    ? 'true'
-                    : 'false'
+                filters.is_trashed === undefined ? 'false' : filters.is_trashed ? 'true' : 'false'
               }
               onValueChange={(value) =>
                 setFilters({

@@ -128,15 +128,11 @@ export function ProfileTab() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Profile</h2>
-        <p className="text-sm text-muted-foreground">
-          Manage your personal information and avatar
-        </p>
+        <p className="text-sm text-muted-foreground">Manage your personal information and avatar</p>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
-          {error}
-        </div>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">{error}</div>
       )}
 
       {success && (
@@ -159,17 +155,13 @@ export function ProfileTab() {
                 <Label htmlFor="avatar-type">Avatar Type</Label>
                 <Select
                   value={avatarType}
-                  onValueChange={(value) =>
-                    handleAvatarTypeChange(value as 'gravatar' | 'custom')
-                  }
+                  onValueChange={(value) => handleAvatarTypeChange(value as 'gravatar' | 'custom')}
                 >
                   <SelectTrigger id="avatar-type">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="gravatar">
-                      Gravatar (from {profile.email})
-                    </SelectItem>
+                    <SelectItem value="gravatar">Gravatar (from {profile.email})</SelectItem>
                     <SelectItem value="custom">Custom URL</SelectItem>
                   </SelectContent>
                 </Select>
@@ -223,9 +215,7 @@ export function ProfileTab() {
               onChange={(e) => setDisplayName(e.target.value)}
               maxLength={100}
             />
-            <p className="text-xs text-muted-foreground">
-              {displayName.length}/100 characters
-            </p>
+            <p className="text-xs text-muted-foreground">{displayName.length}/100 characters</p>
           </div>
 
           {/* Bio */}
@@ -239,9 +229,7 @@ export function ProfileTab() {
               maxLength={500}
               rows={4}
             />
-            <p className="text-xs text-muted-foreground">
-              {bio.length}/500 characters
-            </p>
+            <p className="text-xs text-muted-foreground">{bio.length}/500 characters</p>
           </div>
 
           {/* Email (read-only) */}
@@ -251,9 +239,7 @@ export function ProfileTab() {
               Email
             </Label>
             <Input value={profile.email} disabled />
-            <p className="text-xs text-muted-foreground">
-              Your email address cannot be changed
-            </p>
+            <p className="text-xs text-muted-foreground">Your email address cannot be changed</p>
           </div>
 
           {/* Account Info */}

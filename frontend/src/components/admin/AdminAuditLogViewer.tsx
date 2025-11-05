@@ -113,11 +113,7 @@ export function AdminAuditLogViewer() {
             All user activity across the system ({adminTotal} total events)
           </p>
         </div>
-        <Button
-          onClick={() => setShowFilters(!showFilters)}
-          variant="outline"
-          size="sm"
-        >
+        <Button onClick={() => setShowFilters(!showFilters)} variant="outline" size="sm">
           <Filter className="mr-2 h-4 w-4" />
           {showFilters ? 'Hide' : 'Show'} Filters
         </Button>
@@ -132,9 +128,7 @@ export function AdminAuditLogViewer() {
                 id="user-filter"
                 placeholder="Filter by email..."
                 value={localFilters.user_id || ''}
-                onChange={(e) =>
-                  setLocalFilters({ ...localFilters, user_id: e.target.value })
-                }
+                onChange={(e) => setLocalFilters({ ...localFilters, user_id: e.target.value })}
               />
             </div>
 
@@ -196,9 +190,7 @@ export function AdminAuditLogViewer() {
                 id="start-date"
                 type="datetime-local"
                 value={localFilters.start_date || ''}
-                onChange={(e) =>
-                  setLocalFilters({ ...localFilters, start_date: e.target.value })
-                }
+                onChange={(e) => setLocalFilters({ ...localFilters, start_date: e.target.value })}
               />
             </div>
 
@@ -208,9 +200,7 @@ export function AdminAuditLogViewer() {
                 id="end-date"
                 type="datetime-local"
                 value={localFilters.end_date || ''}
-                onChange={(e) =>
-                  setLocalFilters({ ...localFilters, end_date: e.target.value })
-                }
+                onChange={(e) => setLocalFilters({ ...localFilters, end_date: e.target.value })}
               />
             </div>
 
@@ -228,18 +218,12 @@ export function AdminAuditLogViewer() {
 
       <div className="space-y-2">
         {adminLogs.length === 0 ? (
-          <Card className="p-8 text-center text-muted-foreground">
-            No audit logs found
-          </Card>
+          <Card className="p-8 text-center text-muted-foreground">No audit logs found</Card>
         ) : (
           adminLogs.map((log) => (
             <Card key={log.id} className="p-4">
               <div className="flex items-start gap-4">
-                <Badge
-                  className={`${
-                    ACTION_COLORS[log.action] || 'bg-gray-500'
-                  } text-white`}
-                >
+                <Badge className={`${ACTION_COLORS[log.action] || 'bg-gray-500'} text-white`}>
                   {ACTION_LABELS[log.action] || log.action}
                 </Badge>
 
@@ -266,9 +250,7 @@ export function AdminAuditLogViewer() {
                       {Object.entries(log.metadata).map(([key, value]) => (
                         <div key={key} className="flex gap-2">
                           <span className="font-medium">{key}:</span>
-                          <span className="text-muted-foreground">
-                            {JSON.stringify(value)}
-                          </span>
+                          <span className="text-muted-foreground">{JSON.stringify(value)}</span>
                         </div>
                       ))}
                     </div>

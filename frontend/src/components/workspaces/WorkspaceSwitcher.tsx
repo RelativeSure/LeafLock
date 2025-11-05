@@ -17,8 +17,7 @@ interface WorkspaceSwitcherProps {
 }
 
 export function WorkspaceSwitcher({ onCreateWorkspace }: WorkspaceSwitcherProps) {
-  const { workspaces, currentWorkspace, fetchWorkspaces, setCurrentWorkspace } =
-    useWorkspaceStore()
+  const { workspaces, currentWorkspace, fetchWorkspaces, setCurrentWorkspace } = useWorkspaceStore()
 
   useEffect(() => {
     fetchWorkspaces()
@@ -34,14 +33,8 @@ export function WorkspaceSwitcher({ onCreateWorkspace }: WorkspaceSwitcherProps)
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          className="w-[200px] justify-between"
-        >
-          <span className="truncate">
-            {currentWorkspace?.name || 'Select workspace'}
-          </span>
+        <Button variant="outline" role="combobox" className="w-[200px] justify-between">
+          <span className="truncate">{currentWorkspace?.name || 'Select workspace'}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </DropdownMenuTrigger>

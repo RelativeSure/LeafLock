@@ -32,9 +32,12 @@ export function registerServiceWorker(): void {
         })
 
         // Check for updates every hour
-        setInterval(() => {
-          registration.update()
-        }, 60 * 60 * 1000)
+        setInterval(
+          () => {
+            registration.update()
+          },
+          60 * 60 * 1000
+        )
       } catch (error) {
         console.error('[PWA] Service Worker registration failed:', error)
       }
@@ -183,10 +186,7 @@ export function isOnline(): boolean {
 /**
  * Listen for online/offline events
  */
-export function setupNetworkListeners(
-  onOnline?: () => void,
-  onOffline?: () => void
-): () => void {
+export function setupNetworkListeners(onOnline?: () => void, onOffline?: () => void): () => void {
   const handleOnline = () => {
     console.log('[PWA] Network: ONLINE')
     onOnline?.()

@@ -30,14 +30,10 @@ vi.mock('./components/common/AppErrorBoundary', () => ({
 }))
 
 describe('router', () => {
-  it(
-    'should define router module',
-    async () => {
-      const routerModule = await import('./router')
-      expect(routerModule).toBeDefined()
-    },
-    10000
-  )
+  it('should define router module', async () => {
+    const routerModule = await import('./router')
+    expect(routerModule).toBeDefined()
+  }, 10000)
 
   it('should export router instance', async () => {
     const { router } = await import('./router')

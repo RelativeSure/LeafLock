@@ -21,9 +21,7 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
       // Ignore if user is typing in an input/textarea
       const target = e.target as HTMLElement
       const isEditing =
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
+        target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
 
       // Ctrl/Cmd + K - Search notes
       if (modKey && e.key === 'k' && !e.shiftKey) {

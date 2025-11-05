@@ -157,10 +157,17 @@ describe('ForgotPasswordForm', () => {
 
   it('should disable submit button while loading', async () => {
     global.fetch = vi.fn().mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve({
-        ok: true,
-        json: async () => ({ message: 'Reset link sent' }),
-      } as Response), 1000))
+      () =>
+        new Promise((resolve) =>
+          setTimeout(
+            () =>
+              resolve({
+                ok: true,
+                json: async () => ({ message: 'Reset link sent' }),
+              } as Response),
+            1000
+          )
+        )
     )
 
     renderForm()

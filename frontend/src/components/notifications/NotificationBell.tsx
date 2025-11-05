@@ -3,11 +3,7 @@ import { Bell, Check, CheckCheck, Trash2, X } from 'lucide-react'
 import { useNotificationStore } from '@/stores/notificationStore'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 
@@ -55,17 +51,17 @@ export function NotificationBell() {
     await deleteNotification(notificationId)
   }
 
-  const handleNotificationClick = (notification: typeof notifications[0]) => {
+  const handleNotificationClick = (notification: (typeof notifications)[0]) => {
     if (!notification.is_read) {
       markAsRead(notification.id)
     }
     if (notification.action_url) {
-      window.location.href = notification.action_url
+      window.location.assign(notification.action_url)
       setIsOpen(false)
     }
   }
 
-  const getNotificationIcon = (type: string) => {
+  const getNotificationIcon = (_type: string) => {
     // You can customize icons based on notification type
     return '📬'
   }
@@ -102,21 +98,11 @@ export function NotificationBell() {
           <h3 className="font-semibold">Notifications</h3>
           <div className="flex gap-2">
             {unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleMarkAllAsRead}
-                className="h-8 px-2"
-              >
+              <Button variant="ghost" size="sm" onClick={handleMarkAllAsRead} className="h-8 px-2">
                 <CheckCheck className="h-4 w-4" />
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsOpen(false)}
-              className="h-8 px-2"
-            >
+            <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)} className="h-8 px-2">
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -149,9 +135,7 @@ export function NotificationBell() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="font-medium text-sm line-clamp-1">
-                          {notification.title}
-                        </p>
+                        <p className="font-medium text-sm line-clamp-1">{notification.title}</p>
                         {!notification.is_read && (
                           <div className="flex-shrink-0 h-2 w-2 rounded-full bg-primary" />
                         )}

@@ -138,9 +138,7 @@ describe('EncryptionContext', () => {
     it('should encrypt text when key is set', async () => {
       vi.mocked(encryptionUtils.ensureEncryptionReady).mockResolvedValue()
       vi.mocked(encryptionUtils.getStoredKey).mockReturnValue('test-key-base64')
-      vi.mocked(encryptionUtils.encryptTextWithKey).mockResolvedValue(
-        'encrypted-text'
-      )
+      vi.mocked(encryptionUtils.encryptTextWithKey).mockResolvedValue('encrypted-text')
 
       function TestComponent() {
         const { encryptText, isUnlocked } = useEncryption()
@@ -149,9 +147,11 @@ describe('EncryptionContext', () => {
         React.useEffect(() => {
           // Only try to encrypt when unlocked
           if (isUnlocked) {
-            encryptText('plain text').then(setResult).catch(() => {
-              /* ignore */
-            })
+            encryptText('plain text')
+              .then(setResult)
+              .catch(() => {
+                /* ignore */
+              })
           }
         }, [encryptText, isUnlocked])
 
@@ -205,9 +205,7 @@ describe('EncryptionContext', () => {
     it('should decrypt text when key is set', async () => {
       vi.mocked(encryptionUtils.ensureEncryptionReady).mockResolvedValue()
       vi.mocked(encryptionUtils.getStoredKey).mockReturnValue('test-key-base64')
-      vi.mocked(encryptionUtils.decryptTextWithKey).mockResolvedValue(
-        'decrypted-text'
-      )
+      vi.mocked(encryptionUtils.decryptTextWithKey).mockResolvedValue('decrypted-text')
 
       function TestComponent() {
         const { decryptText, isUnlocked } = useEncryption()
@@ -216,9 +214,11 @@ describe('EncryptionContext', () => {
         React.useEffect(() => {
           // Only try to decrypt when unlocked
           if (isUnlocked) {
-            decryptText('encrypted-payload').then(setResult).catch(() => {
-              /* ignore */
-            })
+            decryptText('encrypted-payload')
+              .then(setResult)
+              .catch(() => {
+                /* ignore */
+              })
           }
         }, [decryptText, isUnlocked])
 

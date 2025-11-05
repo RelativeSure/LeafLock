@@ -26,7 +26,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       const workspaces = await workspaceService.getWorkspaces()
 
       // If no current workspace is set, set the first one
-      const currentWorkspace = get().currentWorkspace || (workspaces.length > 0 ? workspaces[0] : null)
+      const currentWorkspace =
+        get().currentWorkspace || (workspaces.length > 0 ? workspaces[0] : null)
 
       set({ workspaces, currentWorkspace, isLoading: false })
     } catch (error) {
@@ -61,8 +62,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       const updated = await workspaceService.updateWorkspace(id, { name })
       set((state) => ({
         workspaces: state.workspaces.map((w) => (w.id === id ? updated : w)),
-        currentWorkspace:
-          state.currentWorkspace?.id === id ? updated : state.currentWorkspace,
+        currentWorkspace: state.currentWorkspace?.id === id ? updated : state.currentWorkspace,
       }))
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to update workspace' })

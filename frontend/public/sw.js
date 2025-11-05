@@ -5,17 +5,14 @@ const CACHE_NAME = 'leaflock-v1.0.0'
 const RUNTIME_CACHE = 'leaflock-runtime'
 
 // Assets to cache on install
-const PRECACHE_URLS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-]
+const PRECACHE_URLS = ['/', '/index.html', '/manifest.json']
 
 // Install event - precache essential assets
 self.addEventListener('install', (event) => {
   console.log('[ServiceWorker] Install')
   event.waitUntil(
-    caches.open(CACHE_NAME)
+    caches
+      .open(CACHE_NAME)
       .then((cache) => {
         console.log('[ServiceWorker] Precaching assets')
         return cache.addAll(PRECACHE_URLS)
@@ -28,16 +25,19 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   console.log('[ServiceWorker] Activate')
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE) {
-            console.log('[ServiceWorker] Deleting old cache:', cacheName)
-            return caches.delete(cacheName)
-          }
-        })
-      )
-    }).then(() => self.clients.claim())
+    caches
+      .keys()
+      .then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE) {
+              console.log('[ServiceWorker] Deleting old cache:', cacheName)
+              return caches.delete(cacheName)
+            }
+          })
+        )
+      })
+      .then(() => self.clients.claim())
   )
 })
 
@@ -151,9 +151,7 @@ self.addEventListener('push', (event) => {
     },
   }
 
-  event.waitUntil(
-    self.registration.showNotification(title, options)
-  )
+  event.waitUntil(self.registration.showNotification(title, options))
 })
 
 // Handle notification clicks
@@ -164,20 +162,19 @@ self.addEventListener('notificationclick', (event) => {
   const urlToOpen = event.notification.data.url || '/'
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((windowClients) => {
-        // Check if there's already a window open
-        for (let i = 0; i < windowClients.length; i++) {
-          const client = windowClients[i]
-          if (client.url === urlToOpen && 'focus' in client) {
-            return client.focus()
-          }
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // Check if there's already a window open
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i]
+        if (client.url === urlToOpen && 'focus' in client) {
+          return client.focus()
         }
-        // If no window is open, open a new one
-        if (clients.openWindow) {
-          return clients.openWindow(urlToOpen)
-        }
-      })
+      }
+      // If no window is open, open a new one
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen)
+      }
+    })
   )
 })
 

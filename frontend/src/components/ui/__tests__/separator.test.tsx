@@ -67,7 +67,9 @@ describe('Separator', () => {
 
     it('should apply inline styles', () => {
       // Verify component accepts style prop without error
-      const { getByTestId } = render(<Separator style={{ backgroundColor: 'blue' }} data-testid="separator" />)
+      const { getByTestId } = render(
+        <Separator style={{ backgroundColor: 'blue' }} data-testid="separator" />
+      )
       expect(getByTestId('separator')).toBeInTheDocument()
     })
   })

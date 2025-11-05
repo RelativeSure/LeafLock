@@ -693,9 +693,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       // Update local state
       set((state) => ({
         notes: state.notes.map((note) =>
-          note.id === noteId
-            ? { ...note, pinned: isPinned, pinnedOrder: pinnedOrder ?? 0 }
-            : note
+          note.id === noteId ? { ...note, pinned: isPinned, pinnedOrder: pinnedOrder ?? 0 } : note
         ),
       }))
     } catch (error) {

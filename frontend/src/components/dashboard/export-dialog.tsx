@@ -9,7 +9,13 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { exportNote, exportNotes, type ExportOptions } from '@/lib/export-utils'
@@ -139,10 +145,7 @@ export function ExportDialog({ open, onOpenChange, notes, selectedNote, mode }: 
               checked={includeMetadata}
               onCheckedChange={(checked) => setIncludeMetadata(checked as boolean)}
             />
-            <Label
-              htmlFor="metadata"
-              className="text-sm font-normal cursor-pointer"
-            >
+            <Label htmlFor="metadata" className="text-sm font-normal cursor-pointer">
               Include metadata (created/modified dates)
             </Label>
           </div>

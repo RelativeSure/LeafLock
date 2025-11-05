@@ -130,7 +130,9 @@ describe('FoldersTagsPage', () => {
 
   it('should render new folder button', () => {
     render(<FoldersTagsPage />)
-    const button = screen.getAllByRole('button').find((btn) => btn.textContent?.includes('New Folder'))
+    const button = screen
+      .getAllByRole('button')
+      .find((btn) => btn.textContent?.includes('New Folder'))
     expect(button).toBeInTheDocument()
   })
 
@@ -677,7 +679,9 @@ describe('FoldersTagsPage', () => {
 
     expect(screen.getByText('Work')).toBeInTheDocument()
     expect(screen.getByText('Personal')).toBeInTheDocument()
-    expect(screen.getAllByText('1 note').length + screen.getAllByText('0 notes').length).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText('1 note').length + screen.getAllByText('0 notes').length
+    ).toBeGreaterThan(0)
   })
 
   it('should handle folders with no notes', () => {

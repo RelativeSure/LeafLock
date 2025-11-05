@@ -52,9 +52,7 @@ export function AdminAnalyticsDashboard() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Admin Analytics</h2>
-        <p className="text-muted-foreground">
-          System-wide statistics and insights
-        </p>
+        <p className="text-muted-foreground">System-wide statistics and insights</p>
       </div>
 
       {/* Summary Cards */}
@@ -66,9 +64,7 @@ export function AdminAnalyticsDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total_users}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.active_users} active (30d)
-            </p>
+            <p className="text-xs text-muted-foreground">{stats.active_users} active (30d)</p>
           </CardContent>
         </Card>
 
@@ -120,25 +116,31 @@ export function AdminAnalyticsDashboard() {
             {stats.user_growth && stats.user_growth.length > 0 ? (
               <ScrollArea className="h-[300px]">
                 <div className="space-y-2">
-                  {stats.user_growth.slice().reverse().map((growth, index) => {
-                    const maxCount = Math.max(...stats.user_growth.map((g) => g.count), 1)
-                    const percentage = (growth.count / maxCount) * 100
-                    const date = new Date(growth.date)
+                  {stats.user_growth
+                    .slice()
+                    .reverse()
+                    .map((growth, index) => {
+                      const maxCount = Math.max(...stats.user_growth.map((g) => g.count), 1)
+                      const percentage = (growth.count / maxCount) * 100
+                      const date = new Date(growth.date)
 
-                    return (
-                      <div key={index} className="space-y-1">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                          </span>
-                          <Badge variant="secondary" className="bg-green-100 text-green-800">
-                            {growth.count}
-                          </Badge>
+                      return (
+                        <div key={index} className="space-y-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              {date.toLocaleDateString(undefined, {
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </span>
+                            <Badge variant="secondary" className="bg-green-100 text-green-800">
+                              {growth.count}
+                            </Badge>
+                          </div>
+                          <Progress value={percentage} className="h-2" />
                         </div>
-                        <Progress value={percentage} className="h-2" />
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
                 </div>
               </ScrollArea>
             ) : (
@@ -159,25 +161,31 @@ export function AdminAnalyticsDashboard() {
             {stats.note_growth && stats.note_growth.length > 0 ? (
               <ScrollArea className="h-[300px]">
                 <div className="space-y-2">
-                  {stats.note_growth.slice().reverse().map((growth, index) => {
-                    const maxCount = Math.max(...stats.note_growth.map((g) => g.count), 1)
-                    const percentage = (growth.count / maxCount) * 100
-                    const date = new Date(growth.date)
+                  {stats.note_growth
+                    .slice()
+                    .reverse()
+                    .map((growth, index) => {
+                      const maxCount = Math.max(...stats.note_growth.map((g) => g.count), 1)
+                      const percentage = (growth.count / maxCount) * 100
+                      const date = new Date(growth.date)
 
-                    return (
-                      <div key={index} className="space-y-1">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                          </span>
-                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                            {growth.count}
-                          </Badge>
+                      return (
+                        <div key={index} className="space-y-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              {date.toLocaleDateString(undefined, {
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </span>
+                            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                              {growth.count}
+                            </Badge>
+                          </div>
+                          <Progress value={percentage} className="h-2" />
                         </div>
-                        <Progress value={percentage} className="h-2" />
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
                 </div>
               </ScrollArea>
             ) : (
@@ -202,9 +210,7 @@ export function AdminAnalyticsDashboard() {
               <p className="text-2xl font-bold">
                 {Math.round((stats.active_users / stats.total_users) * 100)}%
               </p>
-              <p className="text-xs text-muted-foreground">
-                Active users / Total users
-              </p>
+              <p className="text-xs text-muted-foreground">Active users / Total users</p>
             </div>
 
             <div className="space-y-2">
@@ -212,9 +218,7 @@ export function AdminAnalyticsDashboard() {
               <p className="text-2xl font-bold">
                 {Math.round(stats.total_notes / stats.total_users)}
               </p>
-              <p className="text-xs text-muted-foreground">
-                Total notes / Total users
-              </p>
+              <p className="text-xs text-muted-foreground">Total notes / Total users</p>
             </div>
 
             <div className="space-y-2">
@@ -222,9 +226,7 @@ export function AdminAnalyticsDashboard() {
               <p className="text-2xl font-bold">
                 {(stats.total_workspaces / stats.total_users).toFixed(1)}
               </p>
-              <p className="text-xs text-muted-foreground">
-                Total workspaces / Total users
-              </p>
+              <p className="text-xs text-muted-foreground">Total workspaces / Total users</p>
             </div>
           </div>
         </CardContent>

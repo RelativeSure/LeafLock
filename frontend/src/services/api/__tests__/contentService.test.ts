@@ -191,9 +191,7 @@ describe('contentService', () => {
     it('searches notes with query', async () => {
       const { contentService, requestSpy } = await setupContentService()
       requestSpy.mockResolvedValue({
-        notes: [
-          { id: 'note-1', title_encrypted: 'result', content_encrypted: 'test' },
-        ],
+        notes: [{ id: 'note-1', title_encrypted: 'result', content_encrypted: 'test' }],
       })
 
       const result = await contentService.searchNotes('test query')
@@ -207,17 +205,13 @@ describe('contentService', () => {
     it('gets all folders', async () => {
       const { contentService, requestSpy } = await setupContentService()
       requestSpy.mockResolvedValue({
-        folders: [
-          { id: 'folder-1', name: 'Work', parent_id: null },
-        ],
+        folders: [{ id: 'folder-1', name: 'Work', parent_id: null }],
       })
 
       const result = await contentService.getFolders()
 
       expect(requestSpy).toHaveBeenCalledWith('/folders')
-      expect(result).toEqual([
-        { id: 'folder-1', name: 'Work', parent_id: null },
-      ])
+      expect(result).toEqual([{ id: 'folder-1', name: 'Work', parent_id: null }])
     })
 
     it('creates a folder', async () => {

@@ -72,7 +72,7 @@ function FolderNode({
     const isDescendant = (parent: FolderType, targetId: string): boolean => {
       if (parent.id === targetId) return true
       if (!parent.children) return false
-      return parent.children.some(child => isDescendant(child, targetId))
+      return parent.children.some((child) => isDescendant(child, targetId))
     }
 
     if (isDescendant(folder, draggedFolderId)) {
@@ -97,15 +97,12 @@ function FolderNode({
           'flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer',
           'hover:bg-accent transition-colors',
           isSelected && 'bg-accent font-medium',
-          isDragOver && 'bg-primary/10 border-2 border-primary border-dashed',
+          isDragOver && 'bg-primary/10 border-2 border-primary border-dashed'
         )}
         style={{ paddingLeft: `${level * 1.5}rem` }}
       >
         {hasChildren && (
-          <button
-            onClick={handleToggle}
-            className="p-0.5 hover:bg-accent-foreground/10 rounded"
-          >
+          <button onClick={handleToggle} className="p-0.5 hover:bg-accent-foreground/10 rounded">
             {isExpanded ? (
               <ChevronDown className="h-4 w-4" />
             ) : (
@@ -124,9 +121,7 @@ function FolderNode({
         <span className="flex-1 truncate text-sm">{folder.name}</span>
 
         {hasChildren && (
-          <span className="text-xs text-muted-foreground">
-            {folder.children?.length}
-          </span>
+          <span className="text-xs text-muted-foreground">{folder.children?.length}</span>
         )}
       </div>
 
@@ -178,9 +173,7 @@ export function FolderTree({
       onDrop={handleDropOnRoot}
     >
       {folders.length === 0 ? (
-        <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-          No folders yet
-        </div>
+        <div className="px-2 py-4 text-center text-sm text-muted-foreground">No folders yet</div>
       ) : (
         folders.map((folder) => (
           <FolderNode
