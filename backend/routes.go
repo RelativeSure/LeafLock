@@ -157,6 +157,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	adminHandler := handlers.NewAdminHandler(db)
 	auditLogHandler := handlers.NewAuditLogHandler(db)
 	profileHandler := handlers.NewProfileHandler(db)
+	analyticsHandler := handlers.NewAnalyticsHandler(db)
 
 	// Create WebSocket hub early so it can be passed to handlers
 	hub := websocketpkg.NewHub()
@@ -317,6 +318,9 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	// Audit log routes - Tier 5: Lightweight (user's own logs)
 	protected.Get("/audit-logs", rateLimits.LightweightLimiter, auditLogHandler.GetUserAuditLogs)
 
+	// Analytics routes - Tier 5: Lightweight
+	protected.Get("/analytics", rateLimits.LightweightLimiter, analyticsHandler.GetUserAnalytics)
+
 	// Admin routes - Tier 4: Standard CRUD (admin only)
 	admin := protected.Group("/admin", authHandler.RequireAdminMiddleware)
 	// Announcements
@@ -337,6 +341,8 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	admin.Put("/settings/registration", rateLimits.StandardCRUDLimiter, adminHandler.UpdateRegistrationSetting)
 	// Audit logs (admin view - all users)
 	admin.Get("/audit-logs", rateLimits.StandardCRUDLimiter, auditLogHandler.GetAuditLogs)
+	// Analytics (admin view - system-wide stats)
+	admin.Get("/analytics", rateLimits.StandardCRUDLimiter, analyticsHandler.GetAdminAnalytics)
 
 	// WebSocket endpoint
 	app.Use("/ws", func(c *fiber.Ctx) error {
