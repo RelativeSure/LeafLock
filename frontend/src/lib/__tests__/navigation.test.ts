@@ -70,18 +70,33 @@ describe('navigation utils', () => {
 
     it('should not redirect if already on auth route', () => {
       ;(window as any).location.pathname = '/login'
+      ;(window as any).location.href = ''
 
       safeRedirectToLogin()
 
-      expect(window.location.replace).not.toHaveBeenCalled()
+      // Should not change href when already on auth route
+      expect(window.location.href).toBe('')
     })
 
     it('should not redirect if on register page', () => {
       ;(window as any).location.pathname = '/register'
+      ;(window as any).location.href = ''
 
       safeRedirectToLogin()
 
-      expect(window.location.replace).not.toHaveBeenCalled()
+      expect(window.location.href).toBe('')
+    })
+
+    it('should handle localStorage errors gracefully in clearAuthStorage', () => {
+      const originalRemoveItem = Storage.prototype.removeItem
+      Storage.prototype.removeItem = vi.fn(() => {
+        throw new Error('localStorage is disabled')
+      })
+
+      // Should not throw
+      expect(() => clearAuthStorage()).not.toThrow()
+
+      Storage.prototype.removeItem = originalRemoveItem
     })
   })
 })
