@@ -568,5 +568,9 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read) WHERE is_read = false;
 
+-- Note enhancements (Phase 2.4)
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS color VARCHAR(7) DEFAULT '#3b82f6';
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS icon VARCHAR(50) DEFAULT 'file-text';
+
 -- Note: Cleanup jobs run automatically via background service every 24 hours
 `

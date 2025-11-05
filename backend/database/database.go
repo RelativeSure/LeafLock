@@ -18,7 +18,7 @@ import (
 )
 
 // MigrationSchemaVersion tracks the current schema version
-const MigrationSchemaVersion = "2025.11.05.003" // In-app notifications: Add notifications table
+const MigrationSchemaVersion = "2025.11.05.004" // Note enhancements: Add color and icon columns
 
 // Database interface for dependency injection and testing
 type Database interface {
