@@ -90,6 +90,11 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS default_note_behavior VARCHAR(20) DEF
 ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_type VARCHAR(20) DEFAULT 'gravatar';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_custom_url TEXT;
 
+-- User profile enhancements (Phase 1.2)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+
 -- Password reset tokens table for secure password recovery
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

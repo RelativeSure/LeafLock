@@ -18,7 +18,7 @@ import (
 )
 
 // MigrationSchemaVersion tracks the current schema version
-const MigrationSchemaVersion = "2025.11.04.003" // Zero-knowledge architecture: Remove SERVER_ENCRYPTION_KEY, use plaintext emails
+const MigrationSchemaVersion = "2025.11.05.001" // User profiles: Add display_name, bio, avatar_url
 
 // Database interface for dependency injection and testing
 type Database interface {

@@ -154,6 +154,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	noteLinksHandler := handlers.NewNoteLinksHandler(db)
 	adminHandler := handlers.NewAdminHandler(db)
 	auditLogHandler := handlers.NewAuditLogHandler(db)
+	profileHandler := handlers.NewProfileHandler(db)
 
 	// API group
 	api := app.Group("/api/v1")
@@ -278,6 +279,11 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	// Settings routes - Tier 5: Lightweight
 	protected.Get("/settings", rateLimits.LightweightLimiter, settingsHandler.GetSettings)
 	protected.Put("/settings", rateLimits.StandardCRUDLimiter, settingsHandler.UpdateSettings)
+
+	// Profile routes - Tier 5: Lightweight
+	protected.Get("/profile", rateLimits.LightweightLimiter, profileHandler.GetProfile)
+	protected.Put("/profile", rateLimits.StandardCRUDLimiter, profileHandler.UpdateProfile)
+	protected.Post("/profile/avatar-type", rateLimits.StandardCRUDLimiter, profileHandler.SetAvatarType)
 
 	// Account management routes - Tier 3: Heavy operations
 	protected.Delete("/account", rateLimits.ImportExportLimiter, accountHandler.DeleteAccount)
