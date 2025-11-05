@@ -45,4 +45,35 @@ describe('router', () => {
     expect(router.navigate).toBeDefined()
     expect(router.invalidate).toBeDefined()
   })
+
+  it('should have update method on router', async () => {
+    const { router } = await import('./router')
+    expect(router.update).toBeDefined()
+    expect(typeof router.update).toBe('function')
+  })
+
+  it('should have router as object type', async () => {
+    const { router } = await import('./router')
+    expect(typeof router).toBe('object')
+    expect(router).not.toBeNull()
+  })
+
+  it('should have all required methods', async () => {
+    const { router } = await import('./router')
+    const methods = ['navigate', 'invalidate', 'update']
+    methods.forEach((method) => {
+      expect(router).toHaveProperty(method)
+      expect(typeof router[method]).toBe('function')
+    })
+  })
+
+  it('should maintain router singleton across imports', async () => {
+    const { router: router1 } = await import('./router')
+    const { router: router2 } = await import('./router')
+    expect(router1).toBe(router2)
+  })
+
+  it('should not throw error when importing router', async () => {
+    await expect(import('./router')).resolves.toBeDefined()
+  })
 })
