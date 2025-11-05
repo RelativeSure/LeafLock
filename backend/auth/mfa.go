@@ -266,7 +266,7 @@ func (mm *MFAManager) RegenerateBackupCodes(ctx context.Context, userID uuid.UUI
 	}
 
 	// Verify password
-	pm := NewPasswordManager(mm.db, mm.crypto)
+	pm := NewPasswordManager(mm.db)
 	if !pm.VerifyPassword(password, passwordHash, salt) {
 		return nil, fmt.Errorf("invalid password")
 	}

@@ -1,142 +1,69 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { NoteStats } from '../note-stats'
-import { useNotesStore } from '@/stores/notesStore'
-
-vi.mock('@/stores/notesStore', () => ({
-  useNotesStore: vi.fn(),
-}))
 
 describe('NoteStats', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('should render note statistics', () => {
-    vi.mocked(useNotesStore).mockReturnValue({
-      notes: [
-        { id: '1', title: 'Note 1', isTrashed: false },
-        { id: '2', title: 'Note 2', isTrashed: false },
-        { id: '3', title: 'Note 3', isTrashed: true },
-      ],
-    } as any)
-
+  it('should render note statistics with empty content', () => {
     render(<NoteStats content="" />)
 
-    expect(screen.getByText(/total|notes/i) || document.body).toBeTruthy()
+    expect(screen.getByText(/0 words/i)).toBeInTheDocument()
+    expect(screen.getByText(/0 characters/i)).toBeInTheDocument()
+    expect(screen.getByText(/0 min read/i)).toBeInTheDocument()
   })
 
-  it('should display total notes count', () => {
-    vi.mocked(useNotesStore).mockReturnValue({
-      notes: [
-        { id: '1', isTrashed: false },
-        { id: '2', isTrashed: false },
-        { id: '3', isTrashed: false },
-      ],
-    } as any)
+  it('should display word count', () => {
+    render(<NoteStats content="Hello world this is a test" />)
 
-    render(<NoteStats content="" />)
-
-    expect(screen.getByText('3') || screen.getByText(/3\s+notes/i) || document.body).toBeTruthy()
+    expect(screen.getByText(/6 words/i)).toBeInTheDocument()
   })
 
-  it('should display active notes count (excluding trashed)', () => {
-    vi.mocked(useNotesStore).mockReturnValue({
-      notes: [
-        { id: '1', isTrashed: false },
-        { id: '2', isTrashed: false },
-        { id: '3', isTrashed: true },
-        { id: '4', isTrashed: true },
-      ],
-    } as any)
+  it('should display character count', () => {
+    render(<NoteStats content="Hello world" />)
 
-    render(<NoteStats content="" />)
-
-    expect(document.body).toBeTruthy()
+    expect(screen.getByText(/11 characters/i)).toBeInTheDocument()
   })
 
-  it('should display trashed notes count', () => {
-    vi.mocked(useNotesStore).mockReturnValue({
-      notes: [
-        { id: '1', isTrashed: false },
-        { id: '2', isTrashed: true },
-        { id: '3', isTrashed: true },
-      ],
-    } as any)
+  it('should calculate reading time', () => {
+    // 400 words = 2 min read at 200 words/min
+    const content = Array(400).fill('word').join(' ')
+    render(<NoteStats content={content} />)
 
-    render(<NoteStats content="" />)
-
-    expect(document.body).toBeTruthy()
+    expect(screen.getByText(/400 words/i)).toBeInTheDocument()
+    expect(screen.getByText(/2 min read/i)).toBeInTheDocument()
   })
 
-  it('should handle empty notes array', () => {
-    vi.mocked(useNotesStore).mockReturnValue({
-      notes: [],
-    } as any)
+  it('should strip HTML tags for accurate count', () => {
+    render(<NoteStats content="<p>Hello <strong>world</strong></p>" />)
 
-    render(<NoteStats content="" />)
-
-    expect(screen.getByText('0') || screen.getByText(/0\s+notes/i) || document.body).toBeTruthy()
+    expect(screen.getByText(/2 words/i)).toBeInTheDocument()
+    expect(screen.getByText(/11 characters/i)).toBeInTheDocument()
   })
 
-  it('should display pinned notes count', () => {
-    vi.mocked(useNotesStore).mockReturnValue({
-      notes: [
-        { id: '1', pinned: true, isTrashed: false },
-        { id: '2', pinned: true, isTrashed: false },
-        { id: '3', pinned: false, isTrashed: false },
-      ],
-    } as any)
+  it('should handle content with multiple spaces', () => {
+    render(<NoteStats content="Hello    world    test" />)
 
-    render(<NoteStats content="" />)
-
-    expect(document.body).toBeTruthy()
+    expect(screen.getByText(/3 words/i)).toBeInTheDocument()
   })
 
-  it('should display shared notes count', () => {
-    vi.mocked(useNotesStore).mockReturnValue({
-      notes: [
-        { id: '1', sharedWith: ['user-2'], isTrashed: false },
-        { id: '2', sharedWith: [], isTrashed: false },
-        { id: '3', sharedWith: ['user-3', 'user-4'], isTrashed: false },
-      ],
-    } as any)
+  it('should update stats when content changes', () => {
+    const { rerender } = render(<NoteStats content="Hello" />)
+    expect(screen.getByText(/1 words/i)).toBeInTheDocument()
 
-    render(<NoteStats content="" />)
-
-    expect(document.body).toBeTruthy()
-  })
-
-  it('should update stats when notes change', () => {
-    const { rerender } = render(<NoteStats content="" />)
-
-    vi.mocked(useNotesStore).mockReturnValue({
-      notes: [{ id: '1', isTrashed: false }],
-    } as any)
-
-    rerender(<NoteStats content="" />)
-
-    expect(document.body).toBeTruthy()
-
-    vi.mocked(useNotesStore).mockReturnValue({
-      notes: [
-        { id: '1', isTrashed: false },
-        { id: '2', isTrashed: false },
-      ],
-    } as any)
-
-    rerender(<NoteStats content="" />)
-
-    expect(document.body).toBeTruthy()
+    rerender(<NoteStats content="Hello world" />)
+    expect(screen.getByText(/2 words/i)).toBeInTheDocument()
   })
 
   it('should render with proper styling', () => {
-    vi.mocked(useNotesStore).mockReturnValue({
-      notes: [{ id: '1', isTrashed: false }],
-    } as any)
-
-    const { container } = render(<NoteStats content="" />)
-
+    const { container } = render(<NoteStats content="Test" />)
     expect(container.firstChild).toBeTruthy()
+    expect(container.firstChild).toHaveClass('flex')
+  })
+
+  it('should round up reading time', () => {
+    // 201 words = 2 min read (rounds up from 1.005)
+    const content = Array(201).fill('word').join(' ')
+    render(<NoteStats content={content} />)
+
+    expect(screen.getByText(/2 min read/i)).toBeInTheDocument()
   })
 })

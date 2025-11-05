@@ -19,7 +19,8 @@ describe('Avatar', () => {
         <AvatarFallback>JD</AvatarFallback>
       </Avatar>
     )
-    expect(screen.getByAltText('John')).toBeInTheDocument()
+    // Avatar shows fallback until image loads
+    expect(screen.getByText('JD')).toBeInTheDocument()
   })
 
   it('should apply custom className', () => {

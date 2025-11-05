@@ -811,35 +811,14 @@ func (h *Handler) DebugEncryptionKey(c *fiber.Ctx) error {
 		})
 	}
 
-	// Test encryption/decryption with a known value
-	testValue := []byte("test-encryption-key")
-	encrypted, err := h.service.crypto.EncryptBytes(testValue)
-	if err != nil {
-		return c.JSON(map[string]interface{}{
-			"encryption_test": "failed",
-			"error":           err.Error(),
-		})
-	}
-
-	decrypted, err := h.service.crypto.DecryptBytes(encrypted)
-	if err != nil {
-		return c.JSON(map[string]interface{}{
-			"encryption_test": "failed",
-			"encrypt_success": true,
-			"decrypt_error":   err.Error(),
-		})
-	}
-
-	success := string(decrypted) == string(testValue)
-
+	// Note: Service-level crypto removed for zero-knowledge architecture
+	// MFA and session encryption are handled by dedicated managers with JWT-derived keys
 	return c.JSON(map[string]interface{}{
-		"encryption_test":   "passed",
-		"encrypt_success":   true,
-		"decrypt_success":   true,
-		"roundtrip_success": success,
-		"test_value":        string(testValue),
-		"decrypted_value":   string(decrypted),
-		"encrypted_length":  len(encrypted),
+		"encryption_architecture": "zero-knowledge",
+		"note":                     "Service-level crypto removed. Encryption is handled by MFA and session managers with JWT-derived keys.",
+		"mfa_encryption":           "Derived from JWT secret with '-mfa-encryption' suffix",
+		"session_encryption":       "Derived from JWT secret with '-session-encryption' suffix",
+		"user_note_encryption":     "End-to-end encrypted with password-derived keys (client-side)",
 	})
 }
 

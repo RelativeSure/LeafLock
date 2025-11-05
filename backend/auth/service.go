@@ -315,8 +315,8 @@ func (s *Service) Login(ctx context.Context, email, password, mfaCode string) (*
 	if mfaEnabled {
 		// If MFA code provided, verify it
 		if mfaCode != "" {
-			// Decrypt MFA secret
-			secretBytes, err := s.crypto.DecryptBytes(mfaSecretEncrypted)
+			// Decrypt MFA secret using MFA manager's crypto
+			secretBytes, err := s.mfa.crypto.DecryptBytes(mfaSecretEncrypted)
 			if err != nil {
 				return nil, fmt.Errorf("failed to decrypt MFA secret: %w", err)
 			}
@@ -391,8 +391,8 @@ func (s *Service) VerifyMFA(ctx context.Context, sessionToken, code string) (*Au
 		return nil, fmt.Errorf("MFA not enabled")
 	}
 
-	// Decrypt secret
-	secretBytes, err := s.crypto.DecryptBytes(mfaSecretEncrypted)
+	// Decrypt secret using MFA manager's crypto
+	secretBytes, err := s.mfa.crypto.DecryptBytes(mfaSecretEncrypted)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt MFA secret: %w", err)
 	}

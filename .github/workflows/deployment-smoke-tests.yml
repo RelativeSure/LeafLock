@@ -1,0 +1,81 @@
+name: Deployment - Railway Smoke Tests
+
+on:
+  workflow_dispatch:  # Manual trigger only
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  backend-smoke-test:
+    name: Backend Deployment Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+      - name: Wait for Railway to deploy
+        run: |
+          echo "⏳ Waiting for Railway to auto-deploy commit ${{ github.sha }}..."
+          echo "Railway deploys on every push automatically."
+          echo "Sleeping 3 minutes to allow deployment to complete..."
+          sleep 180
+
+      - name: Test Railway backend deployment
+        env:
+          BACKEND_URL: ${{ secrets.RAILWAY_BACKEND_URL }}
+        run: |
+          echo "🧪 Testing Railway backend at: $BACKEND_URL"
+
+          # Poll backend health endpoint (up to 5 minutes)
+          for i in {1..60}; do
+            if curl -f -s "$BACKEND_URL/api/v1/health/live" > /dev/null 2>&1; then
+              echo "✅ Backend is responding!"
+              curl -f -v "$BACKEND_URL/api/v1/health/ready" || exit 1
+              echo "✅ All backend health checks passed!"
+              exit 0
+            fi
+            echo "⏳ Backend not ready yet... ($i/60)"
+            sleep 5
+          done
+          echo "❌ Backend failed to respond after 5 minutes"
+          exit 1
+
+  frontend-smoke-test:
+    name: Frontend Deployment Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+      - name: Wait for Railway to deploy
+        run: |
+          echo "⏳ Waiting for Railway to auto-deploy commit ${{ github.sha }}..."
+          echo "Railway deploys on every push automatically."
+          echo "Sleeping 3 minutes to allow deployment to complete..."
+          sleep 180
+
+      - name: Test Railway frontend deployment
+        env:
+          FRONTEND_URL: ${{ secrets.RAILWAY_FRONTEND_URL }}
+        run: |
+          echo "🧪 Testing Railway frontend at: $FRONTEND_URL"
+
+          # Poll frontend health endpoint (up to 5 minutes)
+          for i in {1..60}; do
+            if curl -f -s "$FRONTEND_URL" > /dev/null 2>&1; then
+              echo "✅ Frontend is responding!"
+              echo "✅ All frontend health checks passed!"
+              exit 0
+            fi
+            echo "⏳ Frontend not ready yet... ($i/60)"
+            sleep 5
+          done
+          echo "❌ Frontend failed to respond after 5 minutes"
+          exit 1

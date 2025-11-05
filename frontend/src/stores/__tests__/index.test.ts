@@ -64,8 +64,8 @@ describe('stores/index', () => {
   it('useAuthStore has expected initial state properties', () => {
     const state = useAuthStore.getState()
     expect(state).toHaveProperty('user')
-    expect(state).toHaveProperty('isAuthenticated')
     expect(state).toHaveProperty('isLoading')
+    expect(state).toHaveProperty('pendingEncryption')
   })
 
   it('useNotesStore has expected initial state properties', () => {

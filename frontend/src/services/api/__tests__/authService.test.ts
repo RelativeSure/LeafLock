@@ -72,7 +72,7 @@ describe('authService', () => {
 
       const result = await authService.login('test@example.com', 'password123')
 
-      expect(result).toMatchObject({ requires_mfa: true, encryption_salt: 'test-salt' })
+      expect(result).toMatchObject({ requiresMFA: true, encryptionSalt: 'test-salt' })
     })
 
     it('propagates login errors', async () => {
@@ -259,7 +259,7 @@ describe('authService', () => {
       await authService.requestPasswordReset('reset@example.com')
 
       expect(requestSpy).toHaveBeenCalledWith(
-        '/auth/password-reset/request',
+        '/auth/password/reset-request',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({ email: 'reset@example.com' }),

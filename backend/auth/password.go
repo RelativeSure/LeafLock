@@ -160,9 +160,9 @@ func (pm *PasswordManager) CreateResetToken(ctx context.Context, userID uuid.UUI
 	`
 
 	expiresAt := time.Now().UTC().Add(ResetTokenExpiry)
-	_, err = pm.db.Exec(ctx, query, userID, tokenHash[:], expiresAt, ipHash, uaHash)
-	if err != nil {
-		return "", fmt.Errorf("failed to store reset token: %w", err)
+	_, execErr := pm.db.Exec(ctx, query, userID, tokenHash[:], expiresAt, ipHash, uaHash)
+	if execErr != nil {
+		return "", fmt.Errorf("failed to store reset token: %w", execErr)
 	}
 
 	return token, nil
