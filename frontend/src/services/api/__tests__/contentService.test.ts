@@ -216,7 +216,7 @@ describe('contentService', () => {
 
       expect(requestSpy).toHaveBeenCalledWith('/folders')
       expect(result).toEqual([
-        { id: 'folder-1', name: 'Work', parentId: null },
+        { id: 'folder-1', name: 'Work', parent_id: null },
       ])
     })
 
@@ -273,7 +273,7 @@ describe('contentService', () => {
       await contentService.moveNoteToFolder('note-1', 'folder-1')
 
       expect(requestSpy).toHaveBeenCalledWith(
-        '/notes/note-1/move',
+        '/notes/note-1/folder',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({ folder_id: 'folder-1' }),
@@ -394,21 +394,19 @@ describe('contentService', () => {
 
       await contentService.createNoteVersion({
         noteId: 'note-1',
-        titleEncrypted: 'title',
-        contentEncrypted: 'content',
+        title: 'title',
+        content: 'content',
       })
 
       expect(requestSpy).toHaveBeenCalledWith(
-        '/notes/note-1/versions',
+        '/notes/versions',
         expect.objectContaining({ method: 'POST' })
       )
     })
 
     it('gets note versions', async () => {
       const { contentService, requestSpy } = await setupContentService()
-      requestSpy.mockResolvedValue({
-        versions: [{ id: 'v-1', note_id: 'note-1' }],
-      })
+      requestSpy.mockResolvedValue([{ id: 'v-1', note_id: 'note-1' }])
 
       const result = await contentService.getNoteVersions('note-1')
 
@@ -425,7 +423,7 @@ describe('contentService', () => {
       await contentService.restoreNoteVersion('v-1')
 
       expect(requestSpy).toHaveBeenCalledWith(
-        '/versions/v-1/restore',
+        '/notes/versions/v-1/restore',
         expect.objectContaining({ method: 'POST' })
       )
     })
@@ -437,7 +435,7 @@ describe('contentService', () => {
       await contentService.deleteNoteVersion('v-1')
 
       expect(requestSpy).toHaveBeenCalledWith(
-        '/versions/v-1',
+        '/notes/versions/v-1',
         expect.objectContaining({ method: 'DELETE' })
       )
     })
@@ -446,13 +444,13 @@ describe('contentService', () => {
       const { contentService, requestSpy } = await setupContentService()
       requestSpy.mockResolvedValue({
         diff: 'differences',
-        version1: { id: 'v-1' },
-        version2: { id: 'v-2' },
+        v1: { id: 'v-1' },
+        v2: { id: 'v-2' },
       })
 
-      await contentService.compareNoteVersions('v-1', 'v-2')
+      await contentService.compareNoteVersions('note-1', 1, 2)
 
-      expect(requestSpy).toHaveBeenCalledWith('/versions/compare?v1=v-1&v2=v-2')
+      expect(requestSpy).toHaveBeenCalledWith('/notes/note-1/versions/compare?v1=1&v2=2')
     })
   })
 
@@ -467,7 +465,7 @@ describe('contentService', () => {
         '/notes/note-1/retention',
         expect.objectContaining({
           method: 'PUT',
-          body: JSON.stringify({ retention_days: 30 }),
+          body: JSON.stringify({ retention_policy: 30 }),
         })
       )
     })
