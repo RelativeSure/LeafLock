@@ -5,7 +5,9 @@ describe('test-setup', () => {
   it('should have testing-library matchers', () => {
     const element = document.createElement('div')
     element.textContent = 'test'
+    document.body.appendChild(element)
     expect(element).toBeInTheDocument()
+    document.body.removeChild(element)
   })
 
   it('should have document available', () => {

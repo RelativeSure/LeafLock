@@ -35,3 +35,43 @@ if (!prototype.scrollIntoView) {
     /* jsdom does not implement scrollIntoView */
   }
 }
+
+// Polyfill for ResizeObserver (used by slider, tooltip components)
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+// Polyfill for IntersectionObserver (used by rolling-text component)
+global.IntersectionObserver = class IntersectionObserver {
+  constructor() {
+    this.root = null
+    this.rootMargin = ''
+    this.thresholds = []
+  }
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() {
+    return []
+  }
+  root: Element | null
+  rootMargin: string
+  thresholds: ReadonlyArray<number>
+}
+
+// Polyfill for window.matchMedia (used by sonner/toaster component)
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  }),
+})

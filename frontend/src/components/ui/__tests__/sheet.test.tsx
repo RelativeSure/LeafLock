@@ -47,7 +47,8 @@ describe('Sheet', () => {
     expect(screen.getByText('Title')).toBeInTheDocument()
     expect(screen.getByText('Description')).toBeInTheDocument()
     expect(screen.getByText('Body content')).toBeInTheDocument()
-    expect(screen.getByText('Close')).toBeInTheDocument()
+    // Sheet has multiple "Close" buttons (default close + SheetClose component)
+    expect(screen.getAllByText('Close').length).toBeGreaterThan(0)
   })
 
   it('should support different sides', () => {

@@ -86,10 +86,106 @@ describe('SaveTemplateDialog', () => {
     expect(screen.queryByTestId('dialog')).not.toBeInTheDocument()
   })
 
+  it('renders dialog title', () => {
+    renderDialog()
+    expect(screen.getByText('Save as Template')).toBeInTheDocument()
+  })
+
+  it('renders template name label', () => {
+    renderDialog()
+    expect(screen.getByText('Template Name')).toBeInTheDocument()
+  })
+
+  it('renders input with placeholder', () => {
+    renderDialog()
+    expect(screen.getByPlaceholderText('My Template')).toBeInTheDocument()
+  })
+
+  it('renders tags label when tags present', () => {
+    renderDialog()
+    expect(screen.getByText('Tags')).toBeInTheDocument()
+  })
+
+  it('renders provided tags', () => {
+    renderDialog()
+    expect(screen.getByText('tag-a')).toBeInTheDocument()
+    expect(screen.getByText('tag-b')).toBeInTheDocument()
+  })
+
+  it('does not render tags section when no tags', () => {
+    renderDialog({ tags: [] })
+    expect(screen.queryByText('Tags')).not.toBeInTheDocument()
+  })
+
+  it('removes tag when X button clicked', () => {
+    renderDialog()
+
+    const nameInput = screen.getByRole('textbox')
+    fireEvent.change(nameInput, { target: { value: 'Template Name' } })
+
+    const removeButtons = screen.getAllByRole('button')
+    const firstTagRemoveBtn = removeButtons[0]
+    fireEvent.click(firstTagRemoveBtn)
+
+    fireEvent.click(screen.getByRole('button', { name: /save template/i }))
+
+    expect(createTemplateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tags: ['tag-b'],
+      })
+    )
+  })
+
+  it('renders share publicly label', () => {
+    renderDialog()
+    expect(screen.getByText('Share Publicly')).toBeInTheDocument()
+  })
+
+  it('renders share publicly description', () => {
+    renderDialog()
+    expect(screen.getByText('Make this template available to everyone')).toBeInTheDocument()
+  })
+
+  it('renders public switch in unchecked state by default', () => {
+    renderDialog()
+    const shareToggle = screen.getByRole('switch')
+    expect(shareToggle).not.toBeChecked()
+  })
+
+  it('renders save template button', () => {
+    renderDialog()
+    expect(screen.getByRole('button', { name: /save template/i })).toBeInTheDocument()
+  })
+
+  it('renders cancel button', () => {
+    renderDialog()
+    expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument()
+  })
+
   it('disables save button when name is empty', () => {
     renderDialog()
     const saveButton = screen.getByRole('button', { name: /save template/i })
     expect(saveButton).toBeDisabled()
+  })
+
+  it('disables save button when name is only whitespace', () => {
+    renderDialog()
+
+    const nameInput = screen.getByRole('textbox')
+    fireEvent.change(nameInput, { target: { value: '   ' } })
+
+    const saveButton = screen.getByRole('button', { name: /save template/i })
+    expect(saveButton).toBeDisabled()
+  })
+
+  it('enables save button when name is provided', () => {
+    renderDialog()
+
+    const nameInput = screen.getByRole('textbox')
+    fireEvent.change(nameInput, { target: { value: 'Template Name' } })
+
+    const saveButton = screen.getByRole('button', { name: /save template/i })
+    expect(saveButton).not.toBeDisabled()
   })
 
   it('calls createTemplate and closes dialog on save', () => {
@@ -110,6 +206,21 @@ describe('SaveTemplateDialog', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 
+  it('trims whitespace from template name', () => {
+    renderDialog()
+
+    const nameInput = screen.getByRole('textbox')
+    fireEvent.change(nameInput, { target: { value: '  Trimmed Name  ' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /save template/i }))
+
+    expect(createTemplateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Trimmed Name',
+      })
+    )
+  })
+
   it('resets fields after saving', () => {
     renderDialog()
 
@@ -119,6 +230,21 @@ describe('SaveTemplateDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: /save template/i }))
 
     expect(nameInput).toHaveValue('')
+  })
+
+  it('resets isPublic flag after saving', () => {
+    renderDialog()
+
+    const nameInput = screen.getByRole('textbox')
+    fireEvent.change(nameInput, { target: { value: 'Template' } })
+
+    const shareToggle = screen.getByRole('switch')
+    fireEvent.click(shareToggle)
+
+    fireEvent.click(screen.getByRole('button', { name: /save template/i }))
+
+    // Open dialog again to check if reset
+    expect(shareToggle).not.toBeChecked()
   })
 
   it('sets template as public when switch is toggled', () => {
@@ -138,5 +264,76 @@ describe('SaveTemplateDialog', () => {
       tags: ['tag-a', 'tag-b'],
       isPublic: true,
     })
+  })
+
+  it('closes dialog when cancel button clicked', () => {
+    renderDialog()
+
+    const cancelButton = screen.getByRole('button', { name: /cancel/i })
+    fireEvent.click(cancelButton)
+
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('does not call createTemplate when cancel button clicked', () => {
+    renderDialog()
+
+    const nameInput = screen.getByRole('textbox')
+    fireEvent.change(nameInput, { target: { value: 'Template Name' } })
+
+    const cancelButton = screen.getByRole('button', { name: /cancel/i })
+    fireEvent.click(cancelButton)
+
+    expect(createTemplateMock).not.toHaveBeenCalled()
+  })
+
+  it('passes content prop to createTemplate', () => {
+    renderDialog({ content: '<h1>Custom Content</h1>' })
+
+    const nameInput = screen.getByRole('textbox')
+    fireEvent.change(nameInput, { target: { value: 'Content Template' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /save template/i }))
+
+    expect(createTemplateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: '<h1>Custom Content</h1>',
+      })
+    )
+  })
+
+  it('initializes with provided tags', () => {
+    renderDialog({ tags: ['custom-tag-1', 'custom-tag-2'] })
+
+    expect(screen.getByText('custom-tag-1')).toBeInTheDocument()
+    expect(screen.getByText('custom-tag-2')).toBeInTheDocument()
+  })
+
+  it('allows removing all tags', () => {
+    renderDialog({ tags: ['only-tag'] })
+
+    const nameInput = screen.getByRole('textbox')
+    fireEvent.change(nameInput, { target: { value: 'No Tags Template' } })
+
+    const removeButtons = screen.getAllByRole('button')
+    const tagRemoveBtn = removeButtons[0]
+    fireEvent.click(tagRemoveBtn)
+
+    fireEvent.click(screen.getByRole('button', { name: /save template/i }))
+
+    expect(createTemplateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tags: [],
+      })
+    )
+  })
+
+  it('updates name input value when typing', () => {
+    renderDialog()
+
+    const nameInput = screen.getByRole('textbox') as HTMLInputElement
+    fireEvent.change(nameInput, { target: { value: 'Updated Name' } })
+
+    expect(nameInput.value).toBe('Updated Name')
   })
 })

@@ -29,7 +29,19 @@ describe('Integration: Complete Auth Flow', () => {
     it('should complete full registration and login flow', async () => {
       // Step 1: Register new user
       const registerResponse = {
-        token: 'register-token',
+        message: 'Registration successful',
+      }
+
+      vi.mocked(authService.register).mockResolvedValue(registerResponse as any)
+
+      const message = await useAuthStore.getState().register('newuser@example.com', 'password123', 'New User')
+
+      expect(message).toBe('Registration successful')
+      expect(useAuthStore.getState().user).toBeNull() // Not logged in yet
+
+      // Step 2: Login with registered credentials
+      const loginResponse = {
+        token: 'login-token',
         user: {
           id: '123',
           email: 'newuser@example.com',
@@ -41,36 +53,23 @@ describe('Integration: Complete Auth Flow', () => {
         encryptionSalt: 'salt-123',
       }
 
-      vi.mocked(authService.register).mockResolvedValue(registerResponse as any)
-
-      await useAuthStore.getState().register('newuser@example.com', 'password123', 'New User')
-
-      expect(useAuthStore.getState().user).not.toBeNull()
-      expect(useAuthStore.getState().user?.email).toBe('newuser@example.com')
-      expect(localStorage.getItem('token')).toBe('register-token')
-
-      // Step 2: Logout
-      vi.mocked(authService.logout).mockResolvedValue(undefined)
-
-      await useAuthStore.getState().logout()
-
-      expect(useAuthStore.getState().user).toBeNull()
-      expect(useAuthStore.getState().user).toBeNull()
-      expect(localStorage.getItem('token')).toBeNull()
-
-      // Step 3: Login again
-      const loginResponse = {
-        token: 'login-token',
-        user: registerResponse.user,
-        encryptionSalt: 'salt-123',
-      }
-
       vi.mocked(authService.login).mockResolvedValue(loginResponse as any)
 
       await useAuthStore.getState().login('newuser@example.com', 'password123')
 
       expect(useAuthStore.getState().user).not.toBeNull()
-      expect(localStorage.getItem('token')).toBe('login-token')
+      expect(useAuthStore.getState().user?.email).toBe('newuser@example.com')
+
+      // Step 3: Logout
+      vi.mocked(authService.logout).mockImplementation(() => {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        return Promise.resolve(undefined)
+      })
+
+      await useAuthStore.getState().logout()
+
+      expect(useAuthStore.getState().user).toBeNull()
     })
 
     it('should handle registration failure and retry', async () => {
@@ -85,23 +84,15 @@ describe('Integration: Complete Auth Flow', () => {
 
       // Step 2: Retry with different email succeeds
       const registerResponse = {
-        token: 'token',
-        user: {
-          id: '123',
-          email: 'newemail@example.com',
-          name: 'User',
-          role: 'user' as const,
-          mfaEnabled: false,
-          createdAt: '2024-01-01',
-        },
-        encryptionSalt: 'salt',
+        message: 'Registration successful',
       }
 
       vi.mocked(authService.register).mockResolvedValue(registerResponse as any)
 
-      await useAuthStore.getState().register('newemail@example.com', 'password', 'User')
+      const message = await useAuthStore.getState().register('newemail@example.com', 'password', 'User')
 
-      expect(useAuthStore.getState().user).not.toBeNull()
+      expect(message).toBe('Registration successful')
+      expect(useAuthStore.getState().user).toBeNull() // Still not logged in, just registered
     })
   })
 
@@ -152,7 +143,11 @@ describe('Integration: Complete Auth Flow', () => {
       expect(useAuthStore.getState().user?.mfaEnabled).toBe(true)
 
       // Step 4: Logout
-      vi.mocked(authService.logout).mockResolvedValue(undefined)
+      vi.mocked(authService.logout).mockImplementation(() => {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        return Promise.resolve(undefined)
+      })
       await useAuthStore.getState().logout()
 
       // Step 5: Login with MFA required
@@ -179,27 +174,21 @@ describe('Integration: Complete Auth Flow', () => {
       await useAuthStore.getState().verifyMFA('123456')
 
       expect(useAuthStore.getState().user).not.toBeNull()
-      expect(localStorage.getItem('token')).toBe('mfa-token')
+      expect(useAuthStore.getState().user?.mfaEnabled).toBe(true)
     })
 
     it('should handle MFA verification failure and retry', async () => {
       // Setup: User requires MFA
       useAuthStore.setState({
-        user: {
-          id: '123',
-          email: 'user@example.com',
-          name: 'User',
-          role: 'user',
-          isAdmin: false,
-          mfaEnabled: true,
-          createdAt: '2024-01-01',
-        },
+        user: null, // User not authenticated yet (MFA pending)
+        mfaSession: 'session-token',
       })
 
       // Step 1: First MFA attempt fails
       vi.mocked(authService.verifyMFA).mockRejectedValueOnce(new Error('Invalid code'))
 
-      await expect(useAuthStore.getState().verifyMFA('000000')).rejects.toThrow('Invalid code')
+      const result1 = await useAuthStore.getState().verifyMFA('000000')
+      expect(result1).toBe(false) // verifyMFA returns false on error
 
       expect(useAuthStore.getState().user).toBeNull()
 
@@ -322,7 +311,7 @@ describe('Integration: Complete Auth Flow', () => {
       await useAuthStore.getState().login('user@example.com', 'password')
 
       expect(useAuthStore.getState().user).not.toBeNull()
-      expect(localStorage.getItem('token')).toBe('new-token')
+      // Note: Token is set by authService.login() internally, not by authStore
     })
   })
 
@@ -374,8 +363,13 @@ describe('Integration: Complete Auth Flow', () => {
 
       localStorage.setItem('token', 'token')
 
-      // Logout fails but local state is cleared anyway
-      vi.mocked(authService.logout).mockRejectedValue(new Error('Server error'))
+      // Logout fails but local store state is still cleared
+      vi.mocked(authService.logout).mockImplementation(() => {
+        // Even on error, we should clear localStorage for security
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        return Promise.reject(new Error('Server error'))
+      })
 
       await useAuthStore.getState().logout()
 

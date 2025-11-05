@@ -151,5 +151,73 @@ describe('ApiClient', () => {
       const result = await client.getNotes()
       expect(result).toBeNull()
     })
+
+    it('returns null when response data is null', async () => {
+      fetchMock.mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: new Headers(jsonHeaders),
+        json: async () => null,
+      })
+
+      const result = await client.getNotes()
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('header handling', () => {
+    it('merges array headers correctly', async () => {
+      const { ApiClient } = await import('../apiClient')
+      class TestClient extends ApiClient {
+        async testRequest() {
+          return this.request('/test', {
+            headers: [
+              ['X-Custom-Header', 'value1'],
+              ['X-Another-Header', 'value2'],
+            ] as any,
+          })
+        }
+      }
+      const testClient = new TestClient()
+      fetchMock.mockResolvedValue(buildResponse(200, { success: true }))
+
+      await testClient.testRequest()
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'X-Custom-Header': 'value1',
+            'X-Another-Header': 'value2',
+          }),
+        })
+      )
+    })
+
+    it('merges Headers object correctly', async () => {
+      const { ApiClient } = await import('../apiClient')
+      class TestClient extends ApiClient {
+        async testRequest() {
+          const headers = new Headers()
+          headers.append('X-Custom-Header', 'value1')
+          headers.append('X-Another-Header', 'value2')
+          return this.request('/test', { headers })
+        }
+      }
+      const testClient = new TestClient()
+      fetchMock.mockResolvedValue(buildResponse(200, { success: true }))
+
+      await testClient.testRequest()
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'x-custom-header': 'value1',
+            'x-another-header': 'value2',
+          }),
+        })
+      )
+    })
   })
 })

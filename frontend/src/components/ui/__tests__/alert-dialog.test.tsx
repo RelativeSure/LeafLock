@@ -63,7 +63,7 @@ describe('AlertDialog', () => {
       </AlertDialog>
     )
 
-    const confirmButton = screen.getByText('Confirm')
+    const confirmButton = screen.getByRole('button', { name: 'Confirm' })
     fireEvent.click(confirmButton)
 
     expect(handleAction).toHaveBeenCalled()

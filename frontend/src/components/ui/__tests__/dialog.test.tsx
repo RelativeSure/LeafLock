@@ -61,7 +61,7 @@ describe('Dialog', () => {
 
   it('closes when close button is clicked', async () => {
     const user = userEvent.setup()
-    const { container } = render(
+    render(
       <Dialog>
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
@@ -79,8 +79,8 @@ describe('Dialog', () => {
       expect(screen.getByText('Dialog Title')).toBeInTheDocument()
     })
 
-    // Query for the visible close button (not the sr-only one)
-    const closeButton = container.querySelector(
+    // Query for the visible close button (not the sr-only one) in the portal
+    const closeButton = document.querySelector(
       '[data-slot="dialog-close"]:not(.sr-only)'
     ) as HTMLElement
     expect(closeButton).toBeTruthy()
@@ -167,7 +167,7 @@ describe('Dialog', () => {
 
   it('renders complete dialog structure', async () => {
     const user = userEvent.setup()
-    const { container } = render(
+    render(
       <Dialog>
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
@@ -193,11 +193,11 @@ describe('Dialog', () => {
         screen.getByText('This is a complete dialog example')
       ).toBeInTheDocument()
       expect(screen.getByText('Main Content')).toBeInTheDocument()
-      // Check for visible close button
-      const closeButton = container.querySelector(
+      // Check for visible close button in the portal
+      const closeButton = document.querySelector(
         '[data-slot="dialog-footer"] [data-slot="dialog-close"]'
       )
-      expect(closeButton).toBeInTheDocument()
+      expect(closeButton).toBeTruthy()
     })
   })
 
@@ -325,7 +325,7 @@ describe('Dialog', () => {
   it('calls onOpenChange when dialog closes', async () => {
     const user = userEvent.setup()
     const handleOpenChange = vi.fn()
-    const { container } = render(
+    render(
       <Dialog onOpenChange={handleOpenChange}>
         <DialogTrigger>Open Dialog</DialogTrigger>
         <DialogContent>
@@ -345,7 +345,7 @@ describe('Dialog', () => {
 
     vi.clearAllMocks()
 
-    const closeButton = container.querySelector(
+    const closeButton = document.querySelector(
       '[data-slot="dialog-close"]:not(.sr-only)'
     ) as HTMLElement
     expect(closeButton).toBeTruthy()
