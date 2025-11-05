@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"database/sql"
+	"os"
 	"strings"
 	"time"
 )
@@ -71,4 +72,27 @@ func GetUserAgentFromContext(ctx context.Context) string {
 		return ua
 	}
 	return ""
+}
+
+// GetEnvironment returns the current application environment (development, production, etc.)
+func GetEnvironment() string {
+	env := os.Getenv("APP_ENV")
+	if env == "" {
+		env = os.Getenv("ENVIRONMENT")
+	}
+	if env == "" {
+		env = "development"
+	}
+	return env
+}
+
+// IsProduction returns true if the application is running in production mode
+func IsProduction() bool {
+	env := GetEnvironment()
+	return env == "production" || env == "prod"
+}
+
+// IsDevelopment returns true if the application is running in development mode
+func IsDevelopment() bool {
+	return !IsProduction()
 }

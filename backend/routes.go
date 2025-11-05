@@ -30,6 +30,9 @@ import (
 // setupRoutes configures all API routes and middleware for the application
 // Zero-knowledge: crypto removed, handlers derive encryption from JWT_SECRET internally
 func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *appconfig.Config, startTime time.Time, readyState *appserver.ReadyState) {
+	// Request ID middleware - adds unique ID to each request for tracing
+	app.Use(middleware.RequestIDMiddleware())
+
 	// Security middleware
 	app.Use(helmet.New(helmet.Config{
 		XSSProtection:      "1; mode=block",
