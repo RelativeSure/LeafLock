@@ -26,7 +26,8 @@ describe('Tooltip', () => {
       </TooltipProvider>
     )
 
-    expect(screen.getByText('Helpful tooltip')).toBeInTheDocument()
+    // Tooltip may render multiple times due to portals
+    expect(screen.getAllByText('Helpful tooltip')[0]).toBeInTheDocument()
   })
 
   it('should support custom sideOffset', () => {
@@ -39,6 +40,7 @@ describe('Tooltip', () => {
       </TooltipProvider>
     )
 
-    expect(screen.getByText('Content')).toBeInTheDocument()
+    // Tooltip may render multiple times due to portals
+    expect(screen.getAllByText('Content')[0]).toBeInTheDocument()
   })
 })
