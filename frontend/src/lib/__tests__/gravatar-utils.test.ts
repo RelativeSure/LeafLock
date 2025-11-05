@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { getGravatarUrl, checkGravatarExists, getUserInitials } from '../gravatar-utils'
 
-global.fetch = vi.fn()
-
 describe('gravatar-utils', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    global.fetch = vi.fn()
   })
 
   describe('getGravatarUrl', () => {
@@ -95,7 +94,7 @@ describe('gravatar-utils', () => {
 
   describe('checkGravatarExists', () => {
     it('should return true if Gravatar exists', async () => {
-      vi.mocked(global.fetch).mockResolvedValue({
+      global.fetch = vi.fn().mockResolvedValue({
         ok: true,
       } as Response)
 
@@ -109,7 +108,7 @@ describe('gravatar-utils', () => {
     })
 
     it('should return false if Gravatar does not exist', async () => {
-      vi.mocked(global.fetch).mockResolvedValue({
+      global.fetch = vi.fn().mockResolvedValue({
         ok: false,
       } as Response)
 
@@ -126,7 +125,7 @@ describe('gravatar-utils', () => {
     })
 
     it('should return false on network error', async () => {
-      vi.mocked(global.fetch).mockRejectedValue(new Error('Network error'))
+      global.fetch = vi.fn().mockRejectedValue(new Error('Network error'))
 
       const exists = await checkGravatarExists('user@example.com')
 
@@ -134,7 +133,7 @@ describe('gravatar-utils', () => {
     })
 
     it('should use minimal size (1) for check', async () => {
-      vi.mocked(global.fetch).mockResolvedValue({ ok: true } as Response)
+      global.fetch = vi.fn().mockResolvedValue({ ok: true } as Response)
 
       await checkGravatarExists('user@example.com')
 
@@ -142,7 +141,7 @@ describe('gravatar-utils', () => {
     })
 
     it('should use blank default for check', async () => {
-      vi.mocked(global.fetch).mockResolvedValue({ ok: true } as Response)
+      global.fetch = vi.fn().mockResolvedValue({ ok: true } as Response)
 
       await checkGravatarExists('user@example.com')
 
