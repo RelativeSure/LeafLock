@@ -549,5 +549,24 @@ CREATE TABLE IF NOT EXISTS note_links (
 CREATE INDEX IF NOT EXISTS idx_note_links_source ON note_links(source_note_id);
 CREATE INDEX IF NOT EXISTS idx_note_links_target ON note_links(target_note_id);
 
+-- In-app notifications (Phase 2.2)
+CREATE TABLE IF NOT EXISTS notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('note_shared', 'note_commented', 'folder_shared', 'mention', 'system', 'collaboration_invite')),
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    action_url TEXT, -- Optional URL for clicking the notification
+    metadata JSONB DEFAULT '{}'::jsonb, -- Additional data (note_id, sender_id, etc.)
+    is_read BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    read_at TIMESTAMPTZ
+);
+
+-- Indexes for fast notification queries
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read) WHERE is_read = false;
+
 -- Note: Cleanup jobs run automatically via background service every 24 hours
 `

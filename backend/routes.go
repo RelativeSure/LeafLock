@@ -156,6 +156,12 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	auditLogHandler := handlers.NewAuditLogHandler(db)
 	profileHandler := handlers.NewProfileHandler(db)
 
+	// Create WebSocket hub early so it can be passed to handlers
+	hub := websocketpkg.NewHub()
+	go hub.Run()
+
+	notificationsHandler := handlers.NewNotificationsHandler(db, hub)
+
 	// API group
 	api := app.Group("/api/v1")
 
@@ -287,6 +293,14 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	protected.Put("/profile", rateLimits.StandardCRUDLimiter, profileHandler.UpdateProfile)
 	protected.Post("/profile/avatar-type", rateLimits.StandardCRUDLimiter, profileHandler.SetAvatarType)
 
+	// Notification routes - Tier 5: Lightweight
+	protected.Get("/notifications", rateLimits.LightweightLimiter, notificationsHandler.GetNotifications)
+	protected.Get("/notifications/unread-count", rateLimits.LightweightLimiter, notificationsHandler.GetUnreadCount)
+	protected.Post("/notifications/:user_id", rateLimits.StandardCRUDLimiter, notificationsHandler.CreateNotification)
+	protected.Post("/notifications/:id/read", rateLimits.StandardCRUDLimiter, notificationsHandler.MarkAsRead)
+	protected.Post("/notifications/read-all", rateLimits.StandardCRUDLimiter, notificationsHandler.MarkAllAsRead)
+	protected.Delete("/notifications/:id", rateLimits.StandardCRUDLimiter, notificationsHandler.DeleteNotification)
+
 	// Account management routes - Tier 3: Heavy operations
 	protected.Delete("/account", rateLimits.ImportExportLimiter, accountHandler.DeleteAccount)
 	protected.Get("/account/export", rateLimits.ImportExportLimiter, accountHandler.ExportData)
@@ -313,10 +327,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	// Audit logs (admin view - all users)
 	admin.Get("/audit-logs", rateLimits.StandardCRUDLimiter, auditLogHandler.GetAuditLogs)
 
-	// WebSocket setup
-	hub := websocketpkg.NewHub()
-	go hub.Run()
-
+	// WebSocket endpoint
 	app.Use("/ws", func(c *fiber.Ctx) error {
 		if fiberws.IsWebSocketUpgrade(c) {
 			return c.Next()
