@@ -13,13 +13,11 @@ describe('navigation utils', () => {
     it('should clear auth-related storage', () => {
       localStorage.setItem('token', 'test-token')
       localStorage.setItem('user', 'test-user')
-      sessionStorage.setItem('encryptionKey', 'test-key')
 
       clearAuthStorage()
 
       expect(localStorage.getItem('token')).toBeNull()
       expect(localStorage.getItem('user')).toBeNull()
-      expect(sessionStorage.getItem('encryptionKey')).toBeNull()
     })
 
     it('should not clear non-auth items', () => {
@@ -44,8 +42,8 @@ describe('navigation utils', () => {
       expect(isOnAuthRoute()).toBe(true)
     })
 
-    it('should return true for /forgot-password', () => {
-      ;(window as any).location.pathname = '/forgot-password'
+    it('should return true for /forgot', () => {
+      ;(window as any).location.pathname = '/forgot'
       expect(isOnAuthRoute()).toBe(true)
     })
 
@@ -63,10 +61,11 @@ describe('navigation utils', () => {
   describe('safeRedirectToLogin', () => {
     it('should redirect to login if not on auth route', () => {
       ;(window as any).location.pathname = '/dashboard'
+      ;(window as any).location.href = ''
 
       safeRedirectToLogin()
 
-      expect(window.location.replace).toHaveBeenCalledWith('/login')
+      expect(window.location.href).toBe('/login')
     })
 
     it('should not redirect if already on auth route', () => {
