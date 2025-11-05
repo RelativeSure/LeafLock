@@ -15,7 +15,8 @@ describe('RollingText', () => {
 
   it('should render single character', () => {
     render(<RollingText text="A" />)
-    expect(screen.getByText('A')).toBeInTheDocument()
+    // RollingText renders character multiple times for animation
+    expect(screen.getAllByText('A')[0]).toBeInTheDocument()
   })
 
   it('should render empty string', () => {

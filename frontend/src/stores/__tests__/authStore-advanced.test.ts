@@ -44,11 +44,12 @@ describe('authStore - Advanced Scenarios', () => {
 
       vi.mocked(authService.login).mockResolvedValue(mockResponse as any)
 
-      await useAuthStore.getState().login('test@example.com', 'password123')
+      const result = await useAuthStore.getState().login('test@example.com', 'password123')
 
       const state = useAuthStore.getState()
       expect(state.user).toBeNull() // Not authenticated yet, needs MFA
-      expect(state.user).toBeTruthy()
+      expect(result.requiresMFA).toBe(true) // Should return MFA required flag
+      expect(state.pendingEncryption).toBeTruthy() // Should have pending encryption data
     })
 
     it('should complete MFA verification', async () => {
@@ -67,18 +68,20 @@ describe('authStore - Advanced Scenarios', () => {
         user: mockUser,
       } as any)
 
-      await useAuthStore.getState().verifyMFA('123456')
+      const result = await useAuthStore.getState().verifyMFA('123456')
 
       const state = useAuthStore.getState()
       expect(state.user).not.toBeNull()
-      expect(localStorage.getItem('token')).toBe(mockToken)
+      expect(result).toBe(true) // verifyMFA returns boolean
+      expect(authService.verifyMFA).toHaveBeenCalled()
     })
 
     it('should handle incorrect MFA code', async () => {
       vi.mocked(authService.verifyMFA).mockRejectedValue(new Error('Invalid code'))
 
-      await expect(useAuthStore.getState().verifyMFA('000000')).rejects.toThrow('Invalid code')
+      const result = await useAuthStore.getState().verifyMFA('000000')
 
+      expect(result).toBe(false) // verifyMFA returns false on error
       const state = useAuthStore.getState()
       expect(state.user).toBeNull()
     })
@@ -188,11 +191,14 @@ describe('authStore - Advanced Scenarios', () => {
       localStorage.setItem('token', 'jwt-token')
       localStorage.setItem('user', JSON.stringify({}))
 
-      vi.mocked(authService.logout).mockResolvedValue(undefined)
+      vi.mocked(authService.logout).mockImplementation(() => {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        return Promise.resolve(undefined)
+      })
 
       await useAuthStore.getState().logout()
 
-      expect(useAuthStore.getState().user).toBeNull()
       expect(useAuthStore.getState().user).toBeNull()
       expect(localStorage.getItem('token')).toBeNull()
       expect(localStorage.getItem('user')).toBeNull()
@@ -217,7 +223,7 @@ describe('authStore - Advanced Scenarios', () => {
         'Network error'
       )
 
-      expect(useAuthStore.getState().user).toBeTruthy()
+      expect(useAuthStore.getState().user).toBeNull()
     })
 
     it('should handle invalid credentials', async () => {

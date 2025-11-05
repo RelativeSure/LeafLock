@@ -78,6 +78,53 @@ describe('ShareNoteDialog', () => {
     expect(screen.getByText(/share note/i)).toBeInTheDocument()
   })
 
+  it('does not render dialog when closed', () => {
+    render(<ShareNoteDialog open={false} onOpenChange={vi.fn()} noteId="note-1" />)
+
+    expect(screen.queryByTestId('dialog')).not.toBeInTheDocument()
+  })
+
+  it('renders share icon', () => {
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-1" />)
+
+    expect(screen.getByText('share icon')).toBeInTheDocument()
+  })
+
+  it('renders email input field', () => {
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-1" />)
+
+    expect(screen.getByPlaceholderText('user@example.com')).toBeInTheDocument()
+  })
+
+  it('renders share with label', () => {
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-1" />)
+
+    expect(screen.getByText('Share with')).toBeInTheDocument()
+  })
+
+  it('renders add user button', () => {
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-1" />)
+
+    expect(screen.getByRole('button', { name: /add/i })).toBeInTheDocument()
+  })
+
+  it('disables share button when email is empty', () => {
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-1" />)
+
+    const shareButton = screen.getByRole('button', { name: /add/i })
+    expect(shareButton).toBeDisabled()
+  })
+
+  it('enables share button when email is provided', () => {
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-1" />)
+
+    const emailInput = screen.getByPlaceholderText('user@example.com')
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+
+    const shareButton = screen.getByRole('button', { name: /add/i })
+    expect(shareButton).not.toBeDisabled()
+  })
+
   it('shares note with provided email', async () => {
     render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-123" />)
 
@@ -89,6 +136,48 @@ describe('ShareNoteDialog', () => {
 
     await waitFor(() => {
       expect(shareNoteMock).toHaveBeenCalledWith('note-123', 'teammate@example.com')
+    })
+  })
+
+  it('clears email input after successful share', async () => {
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-1" />)
+
+    const emailInput = screen.getByPlaceholderText('user@example.com') as HTMLInputElement
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+
+    const shareButton = screen.getByRole('button', { name: /add/i })
+    fireEvent.click(shareButton)
+
+    await waitFor(() => {
+      expect(emailInput.value).toBe('')
+    })
+  })
+
+  it('shares note when Enter key is pressed', async () => {
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-456" />)
+
+    const emailInput = screen.getByPlaceholderText('user@example.com')
+    fireEvent.change(emailInput, { target: { value: 'enter@example.com' } })
+    fireEvent.keyDown(emailInput, { key: 'Enter' })
+
+    await waitFor(() => {
+      expect(shareNoteMock).toHaveBeenCalledWith('note-456', 'enter@example.com')
+    })
+  })
+
+  it('displays error message on share failure', async () => {
+    shareNoteMock.mockRejectedValueOnce(new Error('User not found'))
+
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-1" />)
+
+    const emailInput = screen.getByPlaceholderText('user@example.com')
+    fireEvent.change(emailInput, { target: { value: 'invalid@example.com' } })
+
+    const shareButton = screen.getByRole('button', { name: /add/i })
+    fireEvent.click(shareButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('User not found')).toBeInTheDocument()
     })
   })
 
@@ -104,6 +193,17 @@ describe('ShareNoteDialog', () => {
     expect(screen.getByText('bob@example.com')).toBeInTheDocument()
   })
 
+  it('displays shared user count', () => {
+    sharedUsers = [
+      { id: 'user-1', name: 'Alice', email: 'alice@example.com' },
+      { id: 'user-2', name: 'Bob', email: 'bob@example.com' },
+    ]
+
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-1" />)
+
+    expect(screen.getByText(/shared with \(2\)/i)).toBeInTheDocument()
+  })
+
   it('unshares user when remove button is clicked', () => {
     sharedUsers = [{ id: 'user-7', name: 'Charlie', email: 'charlie@example.com' }]
 
@@ -113,5 +213,103 @@ describe('ShareNoteDialog', () => {
     fireEvent.click(removeButton)
 
     expect(unshareNoteMock).toHaveBeenCalledWith('note-77', 'user-7')
+  })
+
+  it('renders active users when more than one', () => {
+    activeUsers = [
+      { id: 'user-1', name: 'Alice', color: '#ff0000' },
+      { id: 'user-2', name: 'Bob', color: '#00ff00' },
+    ]
+
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-1" />)
+
+    expect(screen.getByText(/active now \(2\)/i)).toBeInTheDocument()
+    expect(screen.getByText('Alice')).toBeInTheDocument()
+    expect(screen.getByText('Bob')).toBeInTheDocument()
+  })
+
+  it('shows editing badge for active users', () => {
+    activeUsers = [
+      { id: 'user-1', name: 'Alice', color: '#ff0000' },
+      { id: 'user-2', name: 'Bob', color: '#00ff00' },
+    ]
+
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-1" />)
+
+    const editingBadges = screen.getAllByText('Editing')
+    expect(editingBadges).toHaveLength(2)
+  })
+
+  it('does not render active users section when only one active', () => {
+    activeUsers = [{ id: 'user-1', name: 'Alice', color: '#ff0000' }]
+
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-1" />)
+
+    expect(screen.queryByText(/active now/i)).not.toBeInTheDocument()
+  })
+
+  it('renders empty state when no users shared and no active users', () => {
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-1" />)
+
+    expect(screen.getByText('Not shared with anyone yet')).toBeInTheDocument()
+    expect(screen.getByText('Enter an email above to start collaborating')).toBeInTheDocument()
+  })
+
+  it('does not render empty state when users are shared', () => {
+    sharedUsers = [{ id: 'user-1', name: 'Alice', email: 'alice@example.com' }]
+
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-1" />)
+
+    expect(screen.queryByText('Not shared with anyone yet')).not.toBeInTheDocument()
+  })
+
+  it('does not render empty state when users are active', () => {
+    activeUsers = [
+      { id: 'user-1', name: 'Alice', color: '#ff0000' },
+      { id: 'user-2', name: 'Bob', color: '#00ff00' },
+    ]
+
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-1" />)
+
+    expect(screen.queryByText('Not shared with anyone yet')).not.toBeInTheDocument()
+  })
+
+  it('displays user initials in avatars', () => {
+    sharedUsers = [{ id: 'user-1', name: 'Alice', email: 'alice@example.com' }]
+
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-1" />)
+
+    expect(screen.getByText('A')).toBeInTheDocument()
+  })
+
+  it('calls onOpenChange when dialog state changes', () => {
+    const onOpenChange = vi.fn()
+    render(<ShareNoteDialog open onOpenChange={onOpenChange} noteId="note-1" />)
+
+    expect(onOpenChange).not.toHaveBeenCalled()
+  })
+
+  it('does not call shareNote with empty email', () => {
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-1" />)
+
+    const emailInput = screen.getByPlaceholderText('user@example.com')
+    fireEvent.change(emailInput, { target: { value: '' } })
+
+    const shareButton = screen.getByRole('button', { name: /add/i })
+    fireEvent.click(shareButton)
+
+    expect(shareNoteMock).not.toHaveBeenCalled()
+  })
+
+  it('does not call shareNote with whitespace-only email', () => {
+    render(<ShareNoteDialog open onOpenChange={vi.fn()} noteId="note-1" />)
+
+    const emailInput = screen.getByPlaceholderText('user@example.com')
+    fireEvent.change(emailInput, { target: { value: '   ' } })
+
+    const shareButton = screen.getByRole('button', { name: /add/i })
+    fireEvent.click(shareButton)
+
+    expect(shareNoteMock).not.toHaveBeenCalled()
   })
 })

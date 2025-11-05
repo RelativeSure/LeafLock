@@ -75,7 +75,7 @@ describe('Item Components', () => {
         </Item>
       </ItemGroup>
     )
-    expect(container.querySelector('[role="separator"]')).toBeInTheDocument()
+    expect(container.querySelector('[data-slot="item-separator"]')).toBeInTheDocument()
   })
 
   it('should apply custom className', () => {

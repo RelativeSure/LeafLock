@@ -2,7 +2,12 @@ import { describe, it, expect, vi } from 'vitest'
 import { useToast } from '../use-toast'
 
 vi.mock('sonner', () => ({
-  toast: vi.fn(),
+  toast: Object.assign(vi.fn(), {
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warning: vi.fn(),
+  }),
 }))
 
 describe('use-toast', () => {

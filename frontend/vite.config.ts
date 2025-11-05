@@ -172,12 +172,11 @@ export default defineConfig({
         '**/main.tsx',
       ],
       thresholds: {
-        // Target: 30% (intermediate goal on path to 50%)
-        // See COVERAGE_ROADMAP.md for detailed plan
-        statements: 30,
-        branches: 30,
-        functions: 30,
-        lines: 30,
+        // Target: 80% frontend test coverage
+        statements: 80,
+        branches: 80,
+        functions: 80,
+        lines: 80,
       },
       reportOnFailure: true,
       all: true,

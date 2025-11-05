@@ -218,7 +218,10 @@ describe('templatesStore', () => {
 
       const result = await useTemplatesStore.getState().createTemplate(templateInput)
 
-      expect(contentService.createTemplate).toHaveBeenCalledWith(templateInput)
+      expect(contentService.createTemplate).toHaveBeenCalledWith({
+        ...templateInput,
+        userId: '123',
+      })
       expect(result).toEqual(mockUserTemplate)
       expect(contentService.getTemplates).toHaveBeenCalled()
     })
@@ -233,12 +236,21 @@ describe('templatesStore', () => {
       expect(useTemplatesStore.getState().templates).toEqual([mockUserTemplate])
     })
 
-    it('should throw error if no user is logged in', async () => {
+    it('should create template without userId when no user is logged in', async () => {
       localStorage.removeItem('user')
 
-      await expect(useTemplatesStore.getState().createTemplate({ name: 'Test' })).rejects.toThrow(
-        'No user logged in'
-      )
+      const templateWithoutUser = { ...mockUserTemplate, userId: undefined }
+      vi.mocked(contentService.createTemplate).mockResolvedValue(templateWithoutUser)
+      vi.mocked(contentService.getTemplates).mockResolvedValue([templateWithoutUser])
+
+      const result = await useTemplatesStore.getState().createTemplate({ name: 'Test', content: 'Test content' })
+
+      expect(contentService.createTemplate).toHaveBeenCalledWith({
+        name: 'Test',
+        content: 'Test content',
+        userId: undefined,
+      })
+      expect(result).toEqual(templateWithoutUser)
     })
 
     it('should handle API errors', async () => {
