@@ -21,8 +21,9 @@ describe('Collapsible', () => {
         <CollapsibleContent>Hidden Content</CollapsibleContent>
       </Collapsible>
     )
+    // Radix Collapsible doesn't render collapsed content in DOM
     const content = screen.queryByText('Hidden Content')
-    expect(content).not.toBeVisible()
+    expect(content).not.toBeInTheDocument()
   })
 
   it('renders with open state when defaultOpen is true', () => {
@@ -45,15 +46,17 @@ describe('Collapsible', () => {
     )
 
     const trigger = screen.getByText('Toggle')
-    const content = screen.getByText('Toggleable Content')
 
-    expect(content).not.toBeVisible()
+    // Content not in DOM when collapsed
+    expect(screen.queryByText('Toggleable Content')).not.toBeInTheDocument()
 
+    // Click to open
     await user.click(trigger)
-    expect(content).toBeVisible()
+    expect(screen.getByText('Toggleable Content')).toBeVisible()
 
+    // Click to close
     await user.click(trigger)
-    expect(content).not.toBeVisible()
+    expect(screen.queryByText('Toggleable Content')).not.toBeInTheDocument()
   })
 
   it('can be controlled with open prop', async () => {
@@ -67,9 +70,8 @@ describe('Collapsible', () => {
     )
 
     const trigger = screen.getByText('Toggle')
-    const content = screen.getByText('Controlled Content')
-
-    expect(content).not.toBeVisible()
+    // Closed - content not in DOM
+    expect(screen.queryByText('Controlled Content')).not.toBeInTheDocument()
 
     await user.click(trigger)
     expect(handleOpenChange).toHaveBeenCalledWith(true)
@@ -81,7 +83,8 @@ describe('Collapsible', () => {
       </Collapsible>
     )
 
-    expect(content).toBeVisible()
+    // Now open - content should be visible
+    expect(screen.getByText('Controlled Content')).toBeVisible()
   })
 
   it('calls onOpenChange when state changes', async () => {
@@ -179,7 +182,8 @@ describe('Collapsible', () => {
     await user.click(parentTrigger)
 
     expect(screen.getByText('Parent Content')).toBeVisible()
-    expect(screen.getByText('Child Content')).not.toBeVisible()
+    // Child is collapsed - not in DOM
+    expect(screen.queryByText('Child Content')).not.toBeInTheDocument()
 
     const childTrigger = screen.getByText('Child Toggle')
     await user.click(childTrigger)
@@ -204,7 +208,8 @@ describe('Collapsible', () => {
     expect(screen.getByText('Content')).toBeVisible()
 
     await user.keyboard('{Enter}')
-    expect(screen.getByText('Content')).not.toBeVisible()
+    // Collapsed - content not in DOM
+    expect(screen.queryByText('Content')).not.toBeInTheDocument()
   })
 
   it('supports custom className on trigger', () => {
