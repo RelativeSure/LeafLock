@@ -147,7 +147,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	settingsHandler := handlers.NewSettingsHandler(db)
 	collabHandler := handlers.NewCollaborationHandler(db, handlerCrypto)
 	attachmentsHandler := handlers.NewAttachmentsHandler(db, handlerCrypto)
-	searchHandler := handlers.NewSearchHandler()
+	searchHandler := handlers.NewSearchHandler(db)
 	importExportHandler := handlers.NewImportExportHandler(db, handlerCrypto)
 	shareLinksHandler := handlers.NewShareLinksHandler(db, handlerCrypto, rdb)
 	announcementsHandler := handlers.NewAnnouncementsHandler(db)
