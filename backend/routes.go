@@ -140,6 +140,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 
 	// Initialize other handlers
 	accountHandler := handlers.NewAccountHandler(db, rdb, handlerCrypto, config)
+	workspacesHandler := handlers.NewWorkspacesHandler(db, handlerCrypto)
 	notesHandler := handlers.NewNotesHandler(db, handlerCrypto)
 	tagsHandler := handlers.NewTagsHandler(db, handlerCrypto)
 	foldersHandler := handlers.NewFoldersHandler(db, handlerCrypto)
@@ -204,6 +205,13 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	protected.Post("/auth/mfa/disable", rateLimits.AuthLimiter, authHandler.DisableMFA)
 	protected.Post("/auth/mfa/backup-codes/regenerate", rateLimits.AuthLimiter, authHandler.RegenerateBackupCodes)
 	api.Post("/auth/mfa/verify", rateLimits.MFAVerifyLimiter, authHandler.VerifyMFA) // Public endpoint
+
+	// Workspaces routes - Tier 4: Standard CRUD
+	protected.Get("/workspaces", rateLimits.StandardCRUDLimiter, workspacesHandler.GetWorkspaces)
+	protected.Post("/workspaces", rateLimits.StandardCRUDLimiter, workspacesHandler.CreateWorkspace)
+	protected.Get("/workspaces/:id", rateLimits.StandardCRUDLimiter, workspacesHandler.GetWorkspace)
+	protected.Put("/workspaces/:id", rateLimits.StandardCRUDLimiter, workspacesHandler.UpdateWorkspace)
+	protected.Delete("/workspaces/:id", rateLimits.StandardCRUDLimiter, workspacesHandler.DeleteWorkspace)
 
 	// Notes routes - Tier 4: Standard CRUD
 	// Note: Specific routes MUST come before generic /:id routes to avoid route shadowing
