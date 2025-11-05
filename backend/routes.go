@@ -153,6 +153,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	announcementsHandler := handlers.NewAnnouncementsHandler(db)
 	noteLinksHandler := handlers.NewNoteLinksHandler(db)
 	adminHandler := handlers.NewAdminHandler(db)
+	auditLogHandler := handlers.NewAuditLogHandler(db)
 
 	// API group
 	api := app.Group("/api/v1")
@@ -282,6 +283,9 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	protected.Delete("/account", rateLimits.ImportExportLimiter, accountHandler.DeleteAccount)
 	protected.Get("/account/export", rateLimits.ImportExportLimiter, accountHandler.ExportData)
 
+	// Audit log routes - Tier 5: Lightweight (user's own logs)
+	protected.Get("/audit-logs", rateLimits.LightweightLimiter, auditLogHandler.GetUserAuditLogs)
+
 	// Admin routes - Tier 4: Standard CRUD (admin only)
 	admin := protected.Group("/admin", authHandler.RequireAdminMiddleware)
 	// Announcements
@@ -298,6 +302,8 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	// Registration settings
 	admin.Get("/settings/registration", rateLimits.StandardCRUDLimiter, adminHandler.GetRegistrationSetting)
 	admin.Put("/settings/registration", rateLimits.StandardCRUDLimiter, adminHandler.UpdateRegistrationSetting)
+	// Audit logs (admin view - all users)
+	admin.Get("/audit-logs", rateLimits.StandardCRUDLimiter, auditLogHandler.GetAuditLogs)
 
 	// WebSocket setup
 	hub := websocketpkg.NewHub()
