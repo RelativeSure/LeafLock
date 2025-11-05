@@ -572,5 +572,12 @@ CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read) W
 ALTER TABLE notes ADD COLUMN IF NOT EXISTS color VARCHAR(7) DEFAULT '#3b82f6';
 ALTER TABLE notes ADD COLUMN IF NOT EXISTS icon VARCHAR(50) DEFAULT 'file-text';
 
+-- Granular collaboration permissions (Phase 3.2)
+ALTER TABLE collaborations ADD COLUMN IF NOT EXISTS can_edit BOOLEAN DEFAULT true;
+ALTER TABLE collaborations ADD COLUMN IF NOT EXISTS can_delete BOOLEAN DEFAULT false;
+ALTER TABLE collaborations ADD COLUMN IF NOT EXISTS can_share BOOLEAN DEFAULT false;
+ALTER TABLE collaborations ADD COLUMN IF NOT EXISTS can_comment BOOLEAN DEFAULT true;
+ALTER TABLE collaborations ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+
 -- Note: Cleanup jobs run automatically via background service every 24 hours
 `

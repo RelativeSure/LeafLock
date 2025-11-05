@@ -18,7 +18,7 @@ import (
 )
 
 // MigrationSchemaVersion tracks the current schema version
-const MigrationSchemaVersion = "2025.11.05.004" // Note enhancements: Add color and icon columns
+const MigrationSchemaVersion = "2025.11.05.005" // Granular permissions: Add can_edit, can_delete, can_share, can_comment, expires_at
 
 // Database interface for dependency injection and testing
 type Database interface {
