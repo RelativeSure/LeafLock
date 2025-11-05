@@ -36,7 +36,8 @@ describe('Slider', () => {
     render(<Slider disabled={true} />)
 
     const slider = screen.getByRole('slider')
-    expect(slider).toHaveAttribute('aria-disabled', 'true')
+    // Radix Slider uses data-disabled attribute
+    expect(slider).toHaveAttribute('data-disabled')
   })
 
   it('should support step prop', () => {
