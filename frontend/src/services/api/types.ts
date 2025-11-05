@@ -58,9 +58,14 @@ export interface Folder {
   id: string
   name: string
   color: string
-  userId: string
+  userId?: string
   parentId: string | null
+  position: number
+  depth: number
+  path: string
+  children?: Folder[]
   createdAt: string
+  updatedAt: string
 }
 
 export interface Template {

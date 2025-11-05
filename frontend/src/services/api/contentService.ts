@@ -102,6 +102,11 @@ class ContentService extends ApiClient {
     return response.folders || []
   }
 
+  async getFolderTree(): Promise<Folder[]> {
+    const response = await this.request<{ folders: Folder[] }>('/folders/tree')
+    return response.folders || []
+  }
+
   async createFolder(folder: Partial<Folder>): Promise<Folder> {
     return this.request<Folder>('/folders', {
       method: 'POST',
@@ -119,6 +124,13 @@ class ContentService extends ApiClient {
   async deleteFolder(id: string): Promise<void> {
     await this.request(`/folders/${id}`, {
       method: 'DELETE',
+    })
+  }
+
+  async moveFolderToParent(folderId: string, parentId: string | null): Promise<void> {
+    await this.request(`/folders/${folderId}/move`, {
+      method: 'POST',
+      body: JSON.stringify({ parent_id: parentId }),
     })
   }
 

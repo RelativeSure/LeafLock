@@ -18,7 +18,7 @@ import (
 )
 
 // MigrationSchemaVersion tracks the current schema version
-const MigrationSchemaVersion = "2025.11.05.001" // User profiles: Add display_name, bio, avatar_url
+const MigrationSchemaVersion = "2025.11.05.002" // Nested folders: Add depth, path columns
 
 // Database interface for dependency injection and testing
 type Database interface {

@@ -235,7 +235,9 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 
 	// Folders routes - Tier 4: Standard CRUD
 	protected.Get("/folders", rateLimits.StandardCRUDLimiter, foldersHandler.GetFolders)
+	protected.Get("/folders/tree", rateLimits.StandardCRUDLimiter, foldersHandler.GetFolderTree)
 	protected.Post("/folders", rateLimits.StandardCRUDLimiter, foldersHandler.CreateFolder)
+	protected.Post("/folders/:id/move", rateLimits.StandardCRUDLimiter, foldersHandler.MoveFolderToParent)
 	protected.Delete("/folders/:id", rateLimits.StandardCRUDLimiter, foldersHandler.DeleteFolder)
 	protected.Post("/notes/:id/folder", rateLimits.StandardCRUDLimiter, foldersHandler.MoveNoteToFolder)
 

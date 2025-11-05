@@ -25,6 +25,8 @@ interface NotesState {
   updateFolder: (id: string, updates: Partial<Folder>) => Promise<void>
   deleteFolder: (id: string) => Promise<void>
   selectFolder: (id: string | null) => void
+  getFolderTree: () => Promise<Folder[]>
+  moveFolderToParent: (folderId: string, parentId: string | null) => Promise<void>
   selectTag: (tagName: string | null) => void
   createTag: (tag: Partial<Tag>) => Promise<Tag>
   deleteTag: (id: string) => Promise<void>
@@ -284,6 +286,30 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   selectFolder: (id: string | null) => {
     set({ selectedFolder: id })
+  },
+
+  getFolderTree: async () => {
+    try {
+      const folderTree = await contentService.getFolderTree()
+      set({ folders: folderTree })
+      return folderTree
+    } catch (error) {
+      console.error('Failed to fetch folder tree:', error)
+      throw error
+    }
+  },
+
+  moveFolderToParent: async (folderId: string, parentId: string | null) => {
+    try {
+      await contentService.moveFolderToParent(folderId, parentId)
+
+      // Refresh folder tree after moving
+      const folderTree = await contentService.getFolderTree()
+      set({ folders: folderTree })
+    } catch (error) {
+      console.error('Failed to move folder:', error)
+      throw error
+    }
   },
 
   selectTag: (tagName: string | null) => {
