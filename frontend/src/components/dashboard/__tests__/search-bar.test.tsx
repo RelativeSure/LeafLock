@@ -1,25 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SearchBar } from '../search-bar'
+import { useNotesStore } from '@/stores/notesStore'
+import { useDecryptedNotes } from '@/hooks/use-decrypted-notes'
 
 const selectNoteMock = vi.fn()
-let notesState: Array<Record<string, any>> = []
-let decryptedReturn = {
-  decryptedNotes: {} as Record<string, { title?: string; content?: string }>,
-  isUnlocked: true,
-  isDecrypting: false,
-}
 
-vi.mock('../../stores/notesStore', () => ({
-  useNotesStore: vi.fn(() => ({
-    notes: notesState,
-    selectNote: selectNoteMock,
-  })),
-}))
-
-vi.mock('@/hooks/use-decrypted-notes', () => ({
-  useDecryptedNotes: vi.fn(() => decryptedReturn),
-}))
+vi.mock('@/stores/notesStore')
+vi.mock('@/hooks/use-decrypted-notes')
 
 vi.mock('@/components/ui/input', () => ({
   Input: ({ value, onChange, ...props }: any) => (
@@ -59,12 +47,18 @@ vi.mock('lucide-react', () => ({
 describe('SearchBar', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    notesState = []
-    decryptedReturn = {
+
+    // Default mocks
+    vi.mocked(useNotesStore).mockReturnValue({
+      notes: [],
+      selectNote: selectNoteMock,
+    } as any)
+
+    vi.mocked(useDecryptedNotes).mockReturnValue({
       decryptedNotes: {},
       isUnlocked: true,
       isDecrypting: false,
-    }
+    })
   })
 
   it('renders the search input', () => {
@@ -73,11 +67,11 @@ describe('SearchBar', () => {
   })
 
   it('shows unlock message when vault is locked', async () => {
-    decryptedReturn = {
+    vi.mocked(useDecryptedNotes).mockReturnValue({
       decryptedNotes: {},
       isUnlocked: false,
       isDecrypting: false,
-    }
+    })
 
     render(<SearchBar />)
 
@@ -90,8 +84,11 @@ describe('SearchBar', () => {
 
   it('displays search results when unlocked', async () => {
     const noteId = 'note-1'
-    notesState = [{ id: noteId, updatedAt: new Date().toISOString(), tags: [] }]
-    decryptedReturn = {
+    vi.mocked(useNotesStore).mockReturnValue({
+      notes: [{ id: noteId, updatedAt: new Date().toISOString(), tags: [] }],
+      selectNote: selectNoteMock,
+    } as any)
+    vi.mocked(useDecryptedNotes).mockReturnValue({
       decryptedNotes: {
         [noteId]: {
           title: 'Project Meeting',
@@ -100,7 +97,7 @@ describe('SearchBar', () => {
       },
       isUnlocked: true,
       isDecrypting: false,
-    }
+    })
 
     render(<SearchBar />)
 
@@ -113,8 +110,11 @@ describe('SearchBar', () => {
 
   it('selects note and clears query when a result is clicked', async () => {
     const noteId = 'note-42'
-    notesState = [{ id: noteId, updatedAt: new Date().toISOString(), tags: ['work'] }]
-    decryptedReturn = {
+    vi.mocked(useNotesStore).mockReturnValue({
+      notes: [{ id: noteId, updatedAt: new Date().toISOString(), tags: ['work'] }],
+      selectNote: selectNoteMock,
+    } as any)
+    vi.mocked(useDecryptedNotes).mockReturnValue({
       decryptedNotes: {
         [noteId]: {
           title: 'Weekly Sync',
@@ -123,7 +123,7 @@ describe('SearchBar', () => {
       },
       isUnlocked: true,
       isDecrypting: false,
-    }
+    })
 
     render(<SearchBar />)
 
@@ -135,5 +135,264 @@ describe('SearchBar', () => {
 
     await waitFor(() => expect(selectNoteMock).toHaveBeenCalledWith(noteId))
     expect(input).toHaveValue('')
+  })
+
+  it('shows clear button when query exists', () => {
+    render(<SearchBar />)
+    const input = screen.getByPlaceholderText('Search notes...')
+
+    // No clear button initially
+    expect(screen.queryByRole('button', { name: '' })).not.toBeInTheDocument()
+
+    // Type something
+    fireEvent.change(input, { target: { value: 'test' } })
+
+    // Clear button should appear (the X button)
+    const buttons = screen.getAllByRole('button')
+    expect(buttons.length).toBeGreaterThan(0)
+  })
+
+  it('clears query when clear button is clicked', () => {
+    render(<SearchBar />)
+    const input = screen.getByPlaceholderText('Search notes...')
+
+    fireEvent.change(input, { target: { value: 'test query' } })
+    expect(input).toHaveValue('test query')
+
+    // Find and click the clear button (last button added)
+    const buttons = screen.getAllByRole('button')
+    const clearButton = buttons[buttons.length - 1]
+    fireEvent.click(clearButton)
+
+    expect(input).toHaveValue('')
+  })
+
+  it('opens dialog on focus', () => {
+    vi.mocked(useNotesStore).mockReturnValue({
+      notes: [{ id: 'note-1', updatedAt: new Date().toISOString(), tags: [] }],
+      selectNote: selectNoteMock,
+    } as any)
+    vi.mocked(useDecryptedNotes).mockReturnValue({
+      decryptedNotes: { 'note-1': { title: 'Test', content: '' } },
+      isUnlocked: true,
+      isDecrypting: false,
+    })
+
+    render(<SearchBar />)
+    const input = screen.getByPlaceholderText('Search notes...')
+
+    // Set query first
+    fireEvent.change(input, { target: { value: 'test' } })
+
+    // Dialog should be open
+    expect(screen.getByTestId('dialog')).toBeInTheDocument()
+  })
+
+  it('shows decrypting message when isDecrypting is true', async () => {
+    vi.mocked(useDecryptedNotes).mockReturnValue({
+      decryptedNotes: {},
+      isUnlocked: true,
+      isDecrypting: true,
+    })
+
+    render(<SearchBar />)
+    const input = screen.getByPlaceholderText('Search notes...')
+    fireEvent.change(input, { target: { value: 'test' } })
+
+    expect(await screen.findByText('Decrypting notes…')).toBeInTheDocument()
+  })
+
+  it('shows no results message when no matches found', async () => {
+    vi.mocked(useNotesStore).mockReturnValue({
+      notes: [{ id: 'note-1', updatedAt: new Date().toISOString(), tags: [] }],
+      selectNote: selectNoteMock,
+    } as any)
+    vi.mocked(useDecryptedNotes).mockReturnValue({
+      decryptedNotes: { 'note-1': { title: 'Different', content: 'Content' } },
+      isUnlocked: true,
+      isDecrypting: false,
+    })
+
+    render(<SearchBar />)
+    const input = screen.getByPlaceholderText('Search notes...')
+    fireEvent.change(input, { target: { value: 'nonexistent' } })
+
+    expect(await screen.findByText(/No notes found for "nonexistent"/i)).toBeInTheDocument()
+  })
+
+  it('searches in content as well as title', async () => {
+    const noteId = 'note-content'
+    vi.mocked(useNotesStore).mockReturnValue({
+      notes: [{ id: noteId, updatedAt: new Date().toISOString(), tags: [] }],
+      selectNote: selectNoteMock,
+    } as any)
+    vi.mocked(useDecryptedNotes).mockReturnValue({
+      decryptedNotes: {
+        [noteId]: {
+          title: 'Meeting Notes',
+          content: 'Discussed the quarterly roadmap',
+        },
+      },
+      isUnlocked: true,
+      isDecrypting: false,
+    })
+
+    render(<SearchBar />)
+    const input = screen.getByPlaceholderText('Search notes...')
+
+    // Search for word only in content
+    fireEvent.change(input, { target: { value: 'roadmap' } })
+
+    const result = await screen.findByRole('button', { name: /meeting notes/i })
+    expect(result).toBeInTheDocument()
+  })
+
+  it('searches in tags', async () => {
+    const noteId = 'note-with-tag'
+    vi.mocked(useNotesStore).mockReturnValue({
+      notes: [{ id: noteId, updatedAt: new Date().toISOString(), tags: ['important', 'work'] }],
+      selectNote: selectNoteMock,
+    } as any)
+    vi.mocked(useDecryptedNotes).mockReturnValue({
+      decryptedNotes: {
+        [noteId]: {
+          title: 'Task List',
+          content: 'Things to do',
+        },
+      },
+      isUnlocked: true,
+      isDecrypting: false,
+    })
+
+    render(<SearchBar />)
+    const input = screen.getByPlaceholderText('Search notes...')
+
+    // Search for tag
+    fireEvent.change(input, { target: { value: 'important' } })
+
+    const result = await screen.findByRole('button', { name: /task list/i })
+    expect(result).toBeInTheDocument()
+  })
+
+  it('displays tags as badges in results', async () => {
+    const noteId = 'note-tags'
+    vi.mocked(useNotesStore).mockReturnValue({
+      notes: [{ id: noteId, updatedAt: new Date().toISOString(), tags: ['tag1', 'tag2'] }],
+      selectNote: selectNoteMock,
+    } as any)
+    vi.mocked(useDecryptedNotes).mockReturnValue({
+      decryptedNotes: {
+        [noteId]: {
+          title: 'Tagged Note',
+          content: 'Content',
+        },
+      },
+      isUnlocked: true,
+      isDecrypting: false,
+    })
+
+    render(<SearchBar />)
+    const input = screen.getByPlaceholderText('Search notes...')
+    fireEvent.change(input, { target: { value: 'tagged' } })
+
+    await screen.findByRole('button', { name: /tagged note/i })
+    expect(screen.getByText('tag1')).toBeInTheDocument()
+    expect(screen.getByText('tag2')).toBeInTheDocument()
+  })
+
+  it('shows +N indicator when more than 2 tags', async () => {
+    const noteId = 'note-many-tags'
+    vi.mocked(useNotesStore).mockReturnValue({
+      notes: [{ id: noteId, updatedAt: new Date().toISOString(), tags: ['a', 'b', 'c', 'd'] }],
+      selectNote: selectNoteMock,
+    } as any)
+    vi.mocked(useDecryptedNotes).mockReturnValue({
+      decryptedNotes: {
+        [noteId]: {
+          title: 'Many Tags',
+          content: 'Content',
+        },
+      },
+      isUnlocked: true,
+      isDecrypting: false,
+    })
+
+    render(<SearchBar />)
+    const input = screen.getByPlaceholderText('Search notes...')
+    fireEvent.change(input, { target: { value: 'many' } })
+
+    await screen.findByRole('button', { name: /many tags/i })
+    expect(screen.getByText('a')).toBeInTheDocument()
+    expect(screen.getByText('b')).toBeInTheDocument()
+    expect(screen.getByText('+2')).toBeInTheDocument()
+  })
+
+  it('sorts results by most recent first', async () => {
+    const oldDate = '2024-01-01T00:00:00Z'
+    const newDate = '2024-12-01T00:00:00Z'
+
+    vi.mocked(useNotesStore).mockReturnValue({
+      notes: [
+        { id: 'old', updatedAt: oldDate, tags: [] },
+        { id: 'new', updatedAt: newDate, tags: [] },
+      ],
+      selectNote: selectNoteMock,
+    } as any)
+    vi.mocked(useDecryptedNotes).mockReturnValue({
+      decryptedNotes: {
+        old: { title: 'Old Note', content: 'test' },
+        new: { title: 'New Note', content: 'test' },
+      },
+      isUnlocked: true,
+      isDecrypting: false,
+    })
+
+    render(<SearchBar />)
+    const input = screen.getByPlaceholderText('Search notes...')
+    fireEvent.change(input, { target: { value: 'test' } })
+
+    const results = await screen.findAllByRole('button')
+    // Filter out UI buttons (like clear button) and get note results
+    const noteResults = results.filter((btn) => btn.textContent?.includes('Note'))
+    expect(noteResults[0]).toHaveTextContent(/new note/i)
+    expect(noteResults[1]).toHaveTextContent(/old note/i)
+  })
+
+  it('limits results to 20 items', async () => {
+    // Create 25 notes
+    const notes = Array.from({ length: 25 }, (_, i) => ({
+      id: `note-${i}`,
+      updatedAt: new Date().toISOString(),
+      tags: [],
+    }))
+
+    const decryptedNotes: Record<string, any> = {}
+    for (let i = 0; i < 25; i++) {
+      decryptedNotes[`note-${i}`] = {
+        title: `Note ${i}`,
+        content: 'searchable content',
+      }
+    }
+
+    vi.mocked(useNotesStore).mockReturnValue({
+      notes,
+      selectNote: selectNoteMock,
+    } as any)
+    vi.mocked(useDecryptedNotes).mockReturnValue({
+      decryptedNotes,
+      isUnlocked: true,
+      isDecrypting: false,
+    })
+
+    render(<SearchBar />)
+    const input = screen.getByPlaceholderText('Search notes...')
+    fireEvent.change(input, { target: { value: 'searchable' } })
+
+    await waitFor(() => {
+      const results = screen.getAllByRole('button')
+      // Should have 20 results max (plus potential UI buttons)
+      const noteResults = results.filter((btn) => btn.textContent?.includes('Note'))
+      expect(noteResults.length).toBeLessThanOrEqual(20)
+    })
   })
 })
