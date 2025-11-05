@@ -1,17 +1,10 @@
 import { useEffect, useState } from 'react'
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts'
 import { Users, FileText, Folder, TrendingUp } from 'lucide-react'
 import { analyticsService, type AdminStats } from '@/services/api/analyticsService'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { useToast } from '@/hooks/use-toast'
 
 export function AdminAnalyticsDashboard() {
@@ -115,7 +108,7 @@ export function AdminAnalyticsDashboard() {
         </Card>
       </div>
 
-      {/* Growth Charts */}
+      {/* Growth Trends */}
       <div className="grid gap-4 md:grid-cols-2">
         {/* User Growth */}
         <Card>
@@ -125,27 +118,29 @@ export function AdminAnalyticsDashboard() {
           </CardHeader>
           <CardContent>
             {stats.user_growth && stats.user_growth.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={stats.user_growth}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                  />
-                  <YAxis />
-                  <Tooltip
-                    labelFormatter={(value) => new Date(value).toLocaleDateString()}
-                  />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="count"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    name="New Users"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <ScrollArea className="h-[300px]">
+                <div className="space-y-2">
+                  {stats.user_growth.slice().reverse().map((growth, index) => {
+                    const maxCount = Math.max(...stats.user_growth.map((g) => g.count), 1)
+                    const percentage = (growth.count / maxCount) * 100
+                    const date = new Date(growth.date)
+
+                    return (
+                      <div key={index} className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </span>
+                          <Badge variant="secondary" className="bg-green-100 text-green-800">
+                            {growth.count}
+                          </Badge>
+                        </div>
+                        <Progress value={percentage} className="h-2" />
+                      </div>
+                    )
+                  })}
+                </div>
+              </ScrollArea>
             ) : (
               <div className="flex items-center justify-center h-[300px]">
                 <p className="text-muted-foreground">No user growth data</p>
@@ -162,27 +157,29 @@ export function AdminAnalyticsDashboard() {
           </CardHeader>
           <CardContent>
             {stats.note_growth && stats.note_growth.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={stats.note_growth}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                  />
-                  <YAxis />
-                  <Tooltip
-                    labelFormatter={(value) => new Date(value).toLocaleDateString()}
-                  />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="count"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    name="Notes Created"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <ScrollArea className="h-[300px]">
+                <div className="space-y-2">
+                  {stats.note_growth.slice().reverse().map((growth, index) => {
+                    const maxCount = Math.max(...stats.note_growth.map((g) => g.count), 1)
+                    const percentage = (growth.count / maxCount) * 100
+                    const date = new Date(growth.date)
+
+                    return (
+                      <div key={index} className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </span>
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                            {growth.count}
+                          </Badge>
+                        </div>
+                        <Progress value={percentage} className="h-2" />
+                      </div>
+                    )
+                  })}
+                </div>
+              </ScrollArea>
             ) : (
               <div className="flex items-center justify-center h-[300px]">
                 <p className="text-muted-foreground">No note growth data</p>

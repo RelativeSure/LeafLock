@@ -1,25 +1,13 @@
 import { useEffect, useState } from 'react'
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts'
 import { FileText, Folder, Tag, Users, TrendingUp, Activity } from 'lucide-react'
 import { analyticsService, type UserStats } from '@/services/api/analyticsService'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { useToast } from '@/hooks/use-toast'
-
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
 
 export function AnalyticsDashboard() {
   const [stats, setStats] = useState<UserStats | null>(null)
@@ -168,98 +156,132 @@ export function AnalyticsDashboard() {
         </Card>
       </div>
 
-      {/* Activity Chart */}
+      {/* Activity Trend (Last 30 Days) */}
       <Card>
         <CardHeader>
-          <CardTitle>Activity Over Time</CardTitle>
+          <CardTitle>Activity Trend</CardTitle>
           <CardDescription>Notes created in the last 30 days</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={stats.activity_by_day}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-              />
-              <YAxis />
-              <Tooltip
-                labelFormatter={(value) => new Date(value).toLocaleDateString()}
-              />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="count"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                name="Notes Created"
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <ScrollArea className="h-[300px]">
+            <div className="space-y-2">
+              {stats.activity_by_day.slice().reverse().map((activity, index) => {
+                const maxCount = Math.max(...stats.activity_by_day.map((a) => a.count), 1)
+                const percentage = (activity.count / maxCount) * 100
+                const date = new Date(activity.date)
+
+                return (
+                  <div key={index} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </span>
+                      <Badge variant="secondary">{activity.count}</Badge>
+                    </div>
+                    <Progress value={percentage} className="h-2" />
+                  </div>
+                )
+              })}
+            </div>
+          </ScrollArea>
         </CardContent>
       </Card>
 
-      {/* Distribution Charts */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Notes by Folder */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Notes by Folder</CardTitle>
-            <CardDescription>Top 10 folders</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {stats.notes_by_folder.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={stats.notes_by_folder}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#3b82f6" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[300px]">
-                <p className="text-muted-foreground">No folders yet</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Distribution Tabs */}
+      <Tabs defaultValue="folders" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="folders">By Folder</TabsTrigger>
+          <TabsTrigger value="tags">By Tag</TabsTrigger>
+        </TabsList>
 
-        {/* Notes by Tag */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Notes by Tag</CardTitle>
-            <CardDescription>Top 10 tags</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {stats.notes_by_tag.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={stats.notes_by_tag}
-                    dataKey="count"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    label={(entry) => entry.name}
-                  >
-                    {stats.notes_by_tag.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[300px]">
-                <p className="text-muted-foreground">No tags yet</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+        <TabsContent value="folders">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notes by Folder</CardTitle>
+              <CardDescription>Top 10 folders with most notes</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {stats.notes_by_folder.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Folder</TableHead>
+                      <TableHead className="text-right">Count</TableHead>
+                      <TableHead className="w-[40%]">Distribution</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {stats.notes_by_folder.map((folder, index) => {
+                      const maxCount = stats.notes_by_folder[0].count
+                      const percentage = (folder.count / maxCount) * 100
+
+                      return (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{folder.name}</TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant="secondary">{folder.count}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Progress value={percentage} className="h-2" />
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="flex items-center justify-center h-32">
+                  <p className="text-muted-foreground">No folders yet</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="tags">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notes by Tag</CardTitle>
+              <CardDescription>Top 10 tags with most notes</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {stats.notes_by_tag.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tag</TableHead>
+                      <TableHead className="text-right">Count</TableHead>
+                      <TableHead className="w-[40%]">Distribution</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {stats.notes_by_tag.map((tag, index) => {
+                      const maxCount = stats.notes_by_tag[0].count
+                      const percentage = (tag.count / maxCount) * 100
+
+                      return (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{tag.name}</TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant="secondary">{tag.count}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Progress value={percentage} className="h-2" />
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="flex items-center justify-center h-32">
+                  <p className="text-muted-foreground">No tags yet</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Recent Activity */}
       <Card>
@@ -269,24 +291,26 @@ export function AnalyticsDashboard() {
         </CardHeader>
         <CardContent>
           {stats.recent_activity.length > 0 ? (
-            <div className="space-y-4">
-              {stats.recent_activity.map((activity, index) => (
-                <div key={index} className="flex items-start gap-3 pb-3 border-b last:border-0">
-                  <div className="mt-1">
-                    <Activity className="h-4 w-4 text-muted-foreground" />
+            <ScrollArea className="h-[300px]">
+              <div className="space-y-4">
+                {stats.recent_activity.map((activity, index) => (
+                  <div key={index} className="flex items-start gap-3 pb-3 border-b last:border-0">
+                    <div className="mt-1">
+                      <Activity className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{activity.message}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatTimeAgo(activity.timestamp)}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {activity.type}
+                    </Badge>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{activity.message}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatTimeAgo(activity.timestamp)}
-                    </p>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {activity.type}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </ScrollArea>
           ) : (
             <div className="flex items-center justify-center h-32">
               <p className="text-muted-foreground">No recent activity</p>
