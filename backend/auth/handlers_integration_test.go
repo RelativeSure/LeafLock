@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	appconfig "leaflock/config"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -106,6 +107,10 @@ func TestAuthHandler_Register_MissingEmail(t *testing.T) {
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
+
+	// Enable registration for this test
+	appconfig.RegEnabled.Store(1)
+	defer appconfig.RegEnabled.Store(0)
 
 	app := fiber.New()
 	app.Post("/auth/register", handler.Register)
@@ -564,6 +569,10 @@ func TestAuthHandler_Register_WeakPassword(t *testing.T) {
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
+
+	// Enable registration for this test
+	appconfig.RegEnabled.Store(1)
+	defer appconfig.RegEnabled.Store(0)
 
 	app := fiber.New()
 	app.Post("/auth/register", handler.Register)
