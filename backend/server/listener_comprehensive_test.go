@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -22,7 +23,7 @@ func TestListenWithIPv6Fallback_IPv4Success(t *testing.T) {
 
 	// Run server in goroutine
 	go func() {
-		_ = ListenWithIPv6Fallback(app, string(rune(port)), time.Now())
+		_ = ListenWithIPv6Fallback(app, fmt.Sprintf("%d", port), time.Now())
 	}()
 
 	// Give server time to start
@@ -56,7 +57,7 @@ func TestListenWithIPv6Fallback_StartupTiming(t *testing.T) {
 	_ = listener.Close()
 
 	go func() {
-		_ = ListenWithIPv6Fallback(app, string(rune(port)), startupStart)
+		_ = ListenWithIPv6Fallback(app, fmt.Sprintf("%d", port), startupStart)
 	}()
 
 	time.Sleep(100 * time.Millisecond)
@@ -79,13 +80,13 @@ func TestListenWithIPv6Fallback_DualStackAttempt(t *testing.T) {
 
 	// Attempt dual-stack binding
 	go func() {
-		_ = ListenWithIPv6Fallback(app, string(rune(port)), time.Now())
+		_ = ListenWithIPv6Fallback(app, fmt.Sprintf("%d", port), time.Now())
 	}()
 
 	time.Sleep(100 * time.Millisecond)
 
 	// Verify server is listening
-	conn, err := net.DialTimeout("tcp", "127.0.0.1:"+string(rune(port)), time.Second)
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), time.Second)
 	if err == nil {
 		_ = conn.Close()
 	}
@@ -106,7 +107,7 @@ func TestListenWithIPv6Fallback_PortInUse(t *testing.T) {
 	})
 
 	// Try to bind to the same port - should fail
-	err = ListenWithIPv6Fallback(app, string(rune(port)), time.Now())
+	err = ListenWithIPv6Fallback(app, fmt.Sprintf("%d", port), time.Now())
 	assert.Error(t, err)
 }
 
