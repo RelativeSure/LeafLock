@@ -36,6 +36,8 @@ type CreateNoteRequest struct {
 	TitleEncrypted    string `json:"title_encrypted" validate:"required"`
 	ContentEncrypted  string `json:"content_encrypted" validate:"required"`
 	EncryptionVersion int    `json:"encryption_version"`
+	IsPinned          bool   `json:"is_pinned"`
+	PinnedOrder       int    `json:"pinned_order"`
 }
 
 // UpdateNoteRequest represents a request to update a note
@@ -43,6 +45,8 @@ type UpdateNoteRequest struct {
 	TitleEncrypted    string `json:"title_encrypted" validate:"required"`
 	ContentEncrypted  string `json:"content_encrypted" validate:"required"`
 	EncryptionVersion int    `json:"encryption_version"`
+	IsPinned          *bool  `json:"is_pinned,omitempty"`
+	PinnedOrder       *int   `json:"pinned_order,omitempty"`
 }
 
 // GetNotes godoc
@@ -66,12 +70,13 @@ func (h *NotesHandler) GetNotes(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to get workspace"})
 	}
 
-	// Get notes from workspace
+	// Get notes from workspace (pinned notes first, then by update time)
 	rows, err := h.db.Query(ctx, `
-		SELECT id, title_encrypted, content_encrypted, created_at, updated_at
+		SELECT id, title_encrypted, content_encrypted, created_at, updated_at,
+		       is_pinned, is_locked, locked_by, pinned_order
 		FROM notes
 		WHERE workspace_id = $1 AND deleted_at IS NULL
-		ORDER BY updated_at DESC`,
+		ORDER BY is_pinned DESC, pinned_order DESC, updated_at DESC`,
 		workspaceID)
 
 	if err != nil {
@@ -84,19 +89,31 @@ func (h *NotesHandler) GetNotes(c *fiber.Ctx) error {
 		var id uuid.UUID
 		var titleEnc, contentEnc []byte
 		var createdAt, updatedAt time.Time
+		var isPinned, isLocked bool
+		var lockedBy *uuid.UUID
+		var pinnedOrder int
 
-		if err := rows.Scan(&id, &titleEnc, &contentEnc, &createdAt, &updatedAt); err != nil {
+		if err := rows.Scan(&id, &titleEnc, &contentEnc, &createdAt, &updatedAt, &isPinned, &isLocked, &lockedBy, &pinnedOrder); err != nil {
 			continue
 		}
 
-		notes = append(notes, fiber.Map{
+		noteMap := fiber.Map{
 			"id":                 id,
 			"title_encrypted":    base64.StdEncoding.EncodeToString(titleEnc),
 			"content_encrypted":  base64.StdEncoding.EncodeToString(contentEnc),
 			"created_at":         createdAt,
 			"updated_at":         updatedAt,
 			"encryption_version": defaultEncryptionVersion,
-		})
+			"is_pinned":          isPinned,
+			"is_locked":          isLocked,
+			"pinned_order":       pinnedOrder,
+		}
+
+		if lockedBy != nil {
+			noteMap["locked_by"] = lockedBy.String()
+		}
+
+		notes = append(notes, noteMap)
 	}
 
 	return c.JSON(fiber.Map{"notes": notes})
@@ -196,10 +213,10 @@ func (h *NotesHandler) CreateNote(c *fiber.Ctx) error {
 	)
 
 	err = h.db.QueryRow(ctx, `
-        INSERT INTO notes (workspace_id, title_encrypted, content_encrypted, content_hash, created_by)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO notes (workspace_id, title_encrypted, content_encrypted, content_hash, created_by, is_pinned, pinned_order)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id, created_at, updated_at`,
-		workspaceID, titleEnc, contentEnc, contentHash, userID).Scan(&noteID, &createdAt, &updatedAt)
+		workspaceID, titleEnc, contentEnc, contentHash, userID, req.IsPinned, req.PinnedOrder).Scan(&noteID, &createdAt, &updatedAt)
 
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create note"})
@@ -221,6 +238,9 @@ func (h *NotesHandler) CreateNote(c *fiber.Ctx) error {
 		"created_at":         createdAt,
 		"updated_at":         updatedAt,
 		"encryption_version": version,
+		"is_pinned":          req.IsPinned,
+		"pinned_order":       req.PinnedOrder,
+		"is_locked":          false,
 	}
 
 	return c.Status(201).JSON(fiber.Map{"note": noteResponse})
@@ -277,23 +297,29 @@ func (h *NotesHandler) UpdateNote(c *fiber.Ctx) error {
 		_ = tx.Rollback(ctx) // Rollback is safe to call even if tx was committed
 	}()
 
-	// Get current version and content to save as history
+	// Get current version and content to save as history, and check if locked
 	var (
 		currentVersion int
 		currentTitle   []byte
 		currentContent []byte
 		currentHash    []byte
 		createdAt      time.Time
+		isLocked       bool
 	)
 	err = tx.QueryRow(ctx, `
-        SELECT n.version, n.title_encrypted, n.content_encrypted, n.content_hash, n.created_at
+        SELECT n.version, n.title_encrypted, n.content_encrypted, n.content_hash, n.created_at, n.is_locked
         FROM notes n
         JOIN workspaces w ON n.workspace_id = w.id
         WHERE n.id = $1 AND w.owner_id = $2 AND n.deleted_at IS NULL`,
-		noteID, userID).Scan(&currentVersion, &currentTitle, &currentContent, &currentHash, &createdAt)
+		noteID, userID).Scan(&currentVersion, &currentTitle, &currentContent, &currentHash, &createdAt, &isLocked)
 
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+	}
+
+	// Prevent editing locked notes
+	if isLocked {
+		return c.Status(403).JSON(fiber.Map{"error": "Note is locked and cannot be edited"})
 	}
 
 	// Save current version to history before updating
@@ -306,15 +332,30 @@ func (h *NotesHandler) UpdateNote(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to save version history"})
 	}
 
-	// Update note with new content and increment version
+	// Build UPDATE query dynamically based on provided fields
+	updateQuery := `UPDATE notes SET title_encrypted = $1, content_encrypted = $2, content_hash = $3, version = version + 1, updated_at = NOW()`
+	queryArgs := []interface{}{titleEnc, contentEnc, contentHash}
+	argIndex := 4
+
+	if req.IsPinned != nil {
+		updateQuery += ", is_pinned = $" + strconv.Itoa(argIndex)
+		queryArgs = append(queryArgs, *req.IsPinned)
+		argIndex++
+	}
+
+	if req.PinnedOrder != nil {
+		updateQuery += ", pinned_order = $" + strconv.Itoa(argIndex)
+		queryArgs = append(queryArgs, *req.PinnedOrder)
+		argIndex++
+	}
+
+	updateQuery += ` FROM workspaces w WHERE notes.id = $` + strconv.Itoa(argIndex) +
+		` AND notes.workspace_id = w.id AND w.owner_id = $` + strconv.Itoa(argIndex+1) +
+		` AND notes.deleted_at IS NULL RETURNING notes.updated_at`
+	queryArgs = append(queryArgs, noteID, userID)
+
 	var updatedAt time.Time
-	err = tx.QueryRow(ctx, `
-        UPDATE notes
-        SET title_encrypted = $1, content_encrypted = $2, content_hash = $3, version = version + 1, updated_at = NOW()
-        FROM workspaces w
-        WHERE notes.id = $4 AND notes.workspace_id = w.id AND w.owner_id = $5 AND notes.deleted_at IS NULL
-        RETURNING notes.updated_at`,
-		titleEnc, contentEnc, contentHash, noteID, userID).Scan(&updatedAt)
+	err = tx.QueryRow(ctx, updateQuery, queryArgs...).Scan(&updatedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -1124,4 +1165,133 @@ func (h *NotesHandler) PermanentlyDeleteNote(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"message": "Note permanently deleted successfully"})
+}
+
+// TogglePinRequest represents a request to toggle pin status
+type TogglePinRequest struct {
+	IsPinned    bool `json:"is_pinned"`
+	PinnedOrder *int `json:"pinned_order,omitempty"`
+}
+
+// TogglePin godoc
+// @Summary Toggle pin status of a note
+// @Description Pin or unpin a note for quick access
+// @Tags Notes
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Note ID"
+// @Param request body TogglePinRequest true "Pin status"
+// @Success 200 {object} map[string]interface{} "Pin status updated"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 404 {object} map[string]interface{} "Note not found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes/{id}/pin [post]
+func (h *NotesHandler) TogglePin(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	var req TogglePinRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	ctx := context.Background()
+
+	// Default pinned order if not provided
+	pinnedOrder := 0
+	if req.PinnedOrder != nil {
+		pinnedOrder = *req.PinnedOrder
+	}
+
+	// Update pin status
+	result, err := h.db.Exec(ctx, `
+		UPDATE notes
+		SET is_pinned = $1, pinned_order = $2, updated_at = NOW()
+		FROM workspaces w
+		WHERE notes.id = $3 AND notes.workspace_id = w.id AND w.owner_id = $4 AND notes.deleted_at IS NULL`,
+		req.IsPinned, pinnedOrder, noteID, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to update pin status"})
+	}
+
+	if result.RowsAffected() == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+	}
+
+	return c.JSON(fiber.Map{
+		"message":      "Pin status updated successfully",
+		"is_pinned":    req.IsPinned,
+		"pinned_order": pinnedOrder,
+	})
+}
+
+// ToggleLockRequest represents a request to toggle lock status
+type ToggleLockRequest struct {
+	IsLocked bool `json:"is_locked"`
+}
+
+// ToggleLock godoc
+// @Summary Toggle lock status of a note
+// @Description Lock or unlock a note to prevent/allow editing
+// @Tags Notes
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Note ID"
+// @Param request body ToggleLockRequest true "Lock status"
+// @Success 200 {object} map[string]interface{} "Lock status updated"
+// @Failure 400 {object} map[string]interface{} "Invalid request"
+// @Failure 404 {object} map[string]interface{} "Note not found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /notes/{id}/lock [post]
+func (h *NotesHandler) ToggleLock(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uuid.UUID)
+	noteID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid note ID"})
+	}
+
+	var req ToggleLockRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	ctx := context.Background()
+
+	// Prepare locked_by and locked_at values
+	var lockedBy interface{}
+	var lockedAt interface{}
+	if req.IsLocked {
+		lockedBy = userID
+		lockedAt = time.Now()
+	} else {
+		lockedBy = nil
+		lockedAt = nil
+	}
+
+	// Update lock status
+	result, err := h.db.Exec(ctx, `
+		UPDATE notes
+		SET is_locked = $1, locked_by = $2, locked_at = $3, updated_at = NOW()
+		FROM workspaces w
+		WHERE notes.id = $4 AND notes.workspace_id = w.id AND w.owner_id = $5 AND notes.deleted_at IS NULL`,
+		req.IsLocked, lockedBy, lockedAt, noteID, userID)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to update lock status"})
+	}
+
+	if result.RowsAffected() == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "Note not found"})
+	}
+
+	return c.JSON(fiber.Map{
+		"message":   "Lock status updated successfully",
+		"is_locked": req.IsLocked,
+	})
 }

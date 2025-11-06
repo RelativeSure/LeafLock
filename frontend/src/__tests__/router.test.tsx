@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { RouterProvider } from '@tanstack/react-router'
 import { router } from '../router'
@@ -135,7 +135,7 @@ describe('router', () => {
       logout: vi.fn(),
       checkRegistrationEnabled: vi.fn().mockResolvedValue(true),
     })
-    ;(useAuthStore as any) = mockAuthStore
+    ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
   })
 
   describe('Router configuration', () => {
@@ -231,7 +231,7 @@ describe('router', () => {
         isLoading: true,
         initialize: vi.fn().mockResolvedValue(undefined),
       })
-      ;(useAuthStore as any) = mockAuthStore
+      ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
 
       window.history.pushState({}, '', '/')
 
@@ -256,7 +256,7 @@ describe('router', () => {
         isLoading: false,
         initialize: vi.fn().mockResolvedValue(undefined),
       })
-      ;(useAuthStore as any) = mockAuthStore
+      ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
 
       window.history.pushState({}, '', '/')
 
@@ -284,7 +284,7 @@ describe('router', () => {
         initialize: vi.fn().mockResolvedValue(undefined),
         logout: vi.fn(),
       })
-      ;(useAuthStore as any) = mockAuthStore
+      ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
 
       window.history.pushState({}, '', '/')
 
@@ -313,7 +313,7 @@ describe('router', () => {
         initialize: vi.fn().mockResolvedValue(undefined),
         logout: vi.fn(),
       })
-      ;(useAuthStore as any) = mockAuthStore
+      ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
 
       window.history.pushState({}, '', '/')
 
@@ -341,7 +341,7 @@ describe('router', () => {
         initialize: vi.fn().mockResolvedValue(undefined),
         logout: vi.fn(),
       })
-      ;(useAuthStore as any) = mockAuthStore
+      ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
 
       window.history.pushState({}, '', '/')
 
@@ -369,7 +369,7 @@ describe('router', () => {
         initialize: vi.fn().mockResolvedValue(undefined),
         logout: vi.fn(),
       })
-      ;(useAuthStore as any) = mockAuthStore
+      ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
 
       window.history.pushState({}, '', '/')
 
@@ -421,7 +421,7 @@ describe('router', () => {
         isLoading: false,
         initialize: vi.fn().mockResolvedValue(undefined),
       })
-      ;(useAuthStore as any) = mockAuthStore
+      ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
 
       window.history.pushState({}, '', '/admin')
 

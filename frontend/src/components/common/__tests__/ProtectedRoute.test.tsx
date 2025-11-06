@@ -222,9 +222,7 @@ describe('ProtectedRoute', () => {
       </ProtectedRoute>
     )
 
-    expect(
-      screen.getByText(/You do not have permission to access this page/i)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/You do not have permission to access this page/i)).toBeInTheDocument()
   })
 
   it('should display go back button for access denied', () => {

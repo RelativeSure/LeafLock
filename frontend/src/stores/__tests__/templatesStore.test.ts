@@ -190,7 +190,10 @@ describe('templatesStore', () => {
         userId: '789',
       }
 
-      vi.mocked(contentService.getTemplates).mockResolvedValue([mockUserTemplate, anotherUserTemplate])
+      vi.mocked(contentService.getTemplates).mockResolvedValue([
+        mockUserTemplate,
+        anotherUserTemplate,
+      ])
 
       await useTemplatesStore.getState().loadTemplates()
 
@@ -243,7 +246,9 @@ describe('templatesStore', () => {
       vi.mocked(contentService.createTemplate).mockResolvedValue(templateWithoutUser)
       vi.mocked(contentService.getTemplates).mockResolvedValue([templateWithoutUser])
 
-      const result = await useTemplatesStore.getState().createTemplate({ name: 'Test', content: 'Test content' })
+      const result = await useTemplatesStore
+        .getState()
+        .createTemplate({ name: 'Test', content: 'Test content' })
 
       expect(contentService.createTemplate).toHaveBeenCalledWith({
         name: 'Test',

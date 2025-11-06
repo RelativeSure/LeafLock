@@ -9,7 +9,11 @@ const deleteTagMock = vi.fn()
 vi.mock('@/stores/notesStore')
 
 vi.mock('@/components/ui/card', () => ({
-  Card: ({ children, ...props }: any) => <div data-testid="card" {...props}>{children}</div>,
+  Card: ({ children, ...props }: any) => (
+    <div data-testid="card" {...props}>
+      {children}
+    </div>
+  ),
   CardHeader: ({ children }: any) => <div>{children}</div>,
   CardTitle: ({ children }: any) => <h3>{children}</h3>,
   CardDescription: ({ children }: any) => <p>{children}</p>,
@@ -489,5 +493,4 @@ describe('TagsPage', () => {
 
     expect(screen.getByText('Work')).toBeInTheDocument()
   })
-
 })

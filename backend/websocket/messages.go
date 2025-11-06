@@ -29,3 +29,14 @@ type CursorMessage struct {
 	Position int    `json:"position"`
 	Length   int    `json:"length"`
 }
+
+// NotificationMessage represents a real-time notification
+type NotificationMessage struct {
+	ID        string                 `json:"id"`
+	Type      string                 `json:"type"`
+	Title     string                 `json:"title"`
+	Message   string                 `json:"message"`
+	ActionURL *string                `json:"action_url,omitempty"`
+	Metadata  map[string]interface{} `json:"metadata"`
+	CreatedAt string                 `json:"created_at"`
+}

@@ -56,14 +56,22 @@ describe('encryption-utils', () => {
     // Reset all sodium mocks to default implementations
     mockSodium.from_base64.mockReset().mockImplementation((_value: string) => new Uint8Array(16))
     mockSodium.to_base64.mockReset().mockImplementation((_bytes: Uint8Array) => 'base64encoded')
-    mockSodium.from_string.mockReset().mockImplementation((str: string) => new TextEncoder().encode(str))
-    mockSodium.to_string.mockReset().mockImplementation((bytes: Uint8Array) => new TextDecoder().decode(bytes))
+    mockSodium.from_string
+      .mockReset()
+      .mockImplementation((str: string) => new TextEncoder().encode(str))
+    mockSodium.to_string
+      .mockReset()
+      .mockImplementation((bytes: Uint8Array) => new TextDecoder().decode(bytes))
     mockSodium.from_hex.mockReset().mockImplementation(() => new Uint8Array(16))
     mockSodium.crypto_pwhash.mockReset().mockImplementation(() => new Uint8Array(32))
     mockSodium.crypto_generichash.mockReset().mockImplementation(() => new Uint8Array(16))
     mockSodium.randombytes_buf.mockReset().mockImplementation(() => new Uint8Array(24))
-    mockSodium.crypto_aead_xchacha20poly1305_ietf_encrypt.mockReset().mockImplementation(() => new Uint8Array(10))
-    mockSodium.crypto_aead_xchacha20poly1305_ietf_decrypt.mockReset().mockImplementation(() => new Uint8Array(5))
+    mockSodium.crypto_aead_xchacha20poly1305_ietf_encrypt
+      .mockReset()
+      .mockImplementation(() => new Uint8Array(10))
+    mockSodium.crypto_aead_xchacha20poly1305_ietf_decrypt
+      .mockReset()
+      .mockImplementation(() => new Uint8Array(5))
 
     // Mock localStorage properly
     const localStorageMock = {
@@ -215,7 +223,6 @@ describe('encryption-utils', () => {
       expect(key).toBe('derived-key-base64')
       expect(mockSodium.crypto_generichash).toHaveBeenCalledWith(16, expect.any(Uint8Array))
     })
-
   })
 
   describe('encryptTextWithKey', () => {
@@ -489,7 +496,10 @@ describe('encryption-utils', () => {
       await (await import('../encryption-utils')).setStoredSalt('test-salt')
 
       expect(mockSodium.crypto_generichash).toHaveBeenCalledWith(16, expect.any(Uint8Array))
-      expect(mockSetItem).toHaveBeenCalledWith(ENCRYPTION_SALT_STORAGE_KEY, 'normalized-salt-base64')
+      expect(mockSetItem).toHaveBeenCalledWith(
+        ENCRYPTION_SALT_STORAGE_KEY,
+        'normalized-salt-base64'
+      )
     })
 
     it('should fallback to storing as-is when decoding fails', async () => {
@@ -606,10 +616,18 @@ describe('encryption-utils', () => {
 
       // First 4 base64 variants fail
       mockSodium.from_base64
-        .mockImplementationOnce(() => { throw new Error('variant 1 failed') })
-        .mockImplementationOnce(() => { throw new Error('variant 2 failed') })
-        .mockImplementationOnce(() => { throw new Error('variant 3 failed') })
-        .mockImplementationOnce(() => { throw new Error('variant 4 failed') })
+        .mockImplementationOnce(() => {
+          throw new Error('variant 1 failed')
+        })
+        .mockImplementationOnce(() => {
+          throw new Error('variant 2 failed')
+        })
+        .mockImplementationOnce(() => {
+          throw new Error('variant 3 failed')
+        })
+        .mockImplementationOnce(() => {
+          throw new Error('variant 4 failed')
+        })
         // Fifth call (padding fallback) succeeds with correct length
         .mockReturnValueOnce(new Uint8Array(16))
 
@@ -627,15 +645,27 @@ describe('encryption-utils', () => {
 
       // All base64 variants fail (4 calls)
       mockSodium.from_base64
-        .mockImplementationOnce(() => { throw new Error('variant 1 failed') })
-        .mockImplementationOnce(() => { throw new Error('variant 2 failed') })
-        .mockImplementationOnce(() => { throw new Error('variant 3 failed') })
-        .mockImplementationOnce(() => { throw new Error('variant 4 failed') })
+        .mockImplementationOnce(() => {
+          throw new Error('variant 1 failed')
+        })
+        .mockImplementationOnce(() => {
+          throw new Error('variant 2 failed')
+        })
+        .mockImplementationOnce(() => {
+          throw new Error('variant 3 failed')
+        })
+        .mockImplementationOnce(() => {
+          throw new Error('variant 4 failed')
+        })
         // Padding fallback fails
-        .mockImplementationOnce(() => { throw new Error('padding failed') })
+        .mockImplementationOnce(() => {
+          throw new Error('padding failed')
+        })
 
       // Hex fails
-      mockSodium.from_hex.mockImplementationOnce(() => { throw new Error('not hex') })
+      mockSodium.from_hex.mockImplementationOnce(() => {
+        throw new Error('not hex')
+      })
       // UTF-8 succeeds with exact 16 bytes
       mockSodium.from_string.mockReturnValueOnce(new Uint8Array(16))
       mockSodium.crypto_pwhash.mockReturnValueOnce(new Uint8Array(32))

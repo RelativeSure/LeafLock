@@ -35,15 +35,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Users table with encrypted fields
+-- Users table with zero-knowledge encryption
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email_hash BYTEA UNIQUE NOT NULL, -- SHA-256 hash for unique constraint and GDPR lookups
-    email_encrypted BYTEA NOT NULL, -- Encrypted email for privacy
-    email_search_hash BYTEA UNIQUE, -- Deterministic encryption for login lookups
+    email_plaintext TEXT NOT NULL, -- Plaintext email for operational use (password reset, notifications)
+    email_search_hash BYTEA UNIQUE, -- Deterministic hash for login lookups
     password_hash TEXT NOT NULL, -- Argon2id hash
     salt BYTEA NOT NULL,
-    master_key_encrypted BYTEA NOT NULL, -- User's encrypted master key
+    master_key_encrypted BYTEA NOT NULL, -- User's encrypted master key (encrypted with password-derived key)
     public_key BYTEA, -- For sharing encrypted notes
     private_key_encrypted BYTEA, -- Encrypted with user's derived key
     mfa_secret_encrypted BYTEA, -- Encrypted TOTP secret
@@ -90,6 +90,17 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS default_note_behavior VARCHAR(20) DEF
 ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_type VARCHAR(20) DEFAULT 'gravatar';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_custom_url TEXT;
 
+-- User profile enhancements (Phase 1.2)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+
+-- Nested folders enhancements (Phase 2.1)
+ALTER TABLE folders ADD COLUMN IF NOT EXISTS depth INTEGER DEFAULT 0;
+ALTER TABLE folders ADD COLUMN IF NOT EXISTS path TEXT DEFAULT '/';
+CREATE INDEX IF NOT EXISTS idx_folders_parent_id ON folders(parent_id);
+CREATE INDEX IF NOT EXISTS idx_folders_path ON folders(path);
+
 -- Password reset tokens table for secure password recovery
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -98,8 +109,8 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     expires_at TIMESTAMPTZ NOT NULL,
     used BOOLEAN DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    ip_address_encrypted BYTEA, -- IP address where reset was requested
-    user_agent_encrypted BYTEA -- User agent of the requester
+    ip_address_hash BYTEA, -- SHA-256 hash of IP address where reset was requested
+    user_agent_hash BYTEA -- SHA-256 hash of user agent
 );
 
 ALTER TABLE password_reset_tokens
@@ -218,21 +229,25 @@ CREATE TABLE IF NOT EXISTS collaborations (
     UNIQUE(note_id, user_id)
 );
 
--- Audit log for security
+-- Audit log for security (zero-knowledge: hashed IP/UA, plaintext metadata)
 CREATE TABLE IF NOT EXISTS audit_log (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id),
     action TEXT NOT NULL,
     resource_type TEXT,
     resource_id UUID,
-    ip_address_encrypted BYTEA,
-    user_agent_encrypted BYTEA,
-    metadata JSONB,
+    ip_address_hash BYTEA, -- SHA-256 hash for privacy
+    user_agent_hash BYTEA, -- SHA-256 hash for privacy
+    metadata JSONB, -- Non-sensitive metadata in plain JSON
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Encrypt audit log metadata field
-ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS metadata_encrypted BYTEA;
+-- Zero-knowledge migration: Drop encrypted columns from audit_log
+ALTER TABLE audit_log DROP COLUMN IF EXISTS ip_address_encrypted;
+ALTER TABLE audit_log DROP COLUMN IF EXISTS user_agent_encrypted;
+ALTER TABLE audit_log DROP COLUMN IF EXISTS metadata_encrypted;
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS ip_address_hash BYTEA;
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS user_agent_hash BYTEA;
 
 -- File attachments with encryption
 CREATE TABLE IF NOT EXISTS attachments (
@@ -470,6 +485,56 @@ ALTER TABLE note_versions ADD COLUMN IF NOT EXISTS change_description TEXT;
 -- Add index on note_versions for performance (latest versions first)
 CREATE INDEX IF NOT EXISTS idx_note_versions_created_at ON note_versions(note_id, created_at DESC);
 
+-- Add is_pinned column for pinned/favorite notes
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT false;
+
+-- Add is_locked column for read-only note protection
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT false;
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS locked_by UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS locked_at TIMESTAMPTZ;
+
+-- Add pinned_order column for custom ordering of pinned notes
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS pinned_order INT DEFAULT 0;
+
+-- Create index for efficient pinned notes queries
+CREATE INDEX IF NOT EXISTS idx_notes_pinned ON notes(is_pinned, pinned_order DESC, updated_at DESC) WHERE deleted_at IS NULL;
+
+-- Create index for locked notes queries
+CREATE INDEX IF NOT EXISTS idx_notes_locked ON notes(is_locked, locked_by) WHERE is_locked = true;
+
+-- Zero-knowledge migration: Convert email_encrypted to email_plaintext
+-- WARNING: This migration assumes SERVER_ENCRYPTION_KEY is no longer used
+-- For existing deployments with encrypted emails, manual migration required
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_plaintext TEXT;
+
+-- Drop encrypted email column (data will be lost - migration assumes fresh install or manual data migration)
+-- To preserve data, decrypt email_encrypted with old SERVER_ENCRYPTION_KEY before running this
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='email_encrypted') THEN
+        -- Check if email_plaintext is populated
+        IF NOT EXISTS (SELECT 1 FROM users WHERE email_plaintext IS NOT NULL LIMIT 1) THEN
+            RAISE WARNING 'email_encrypted exists but email_plaintext is not populated. Manual migration required!';
+        END IF;
+        -- Drop email_encrypted column
+        ALTER TABLE users DROP COLUMN IF EXISTS email_encrypted;
+    END IF;
+END $$;
+
+-- Make email_plaintext NOT NULL after migration
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='email_plaintext' AND is_nullable='YES') THEN
+        ALTER TABLE users ALTER COLUMN email_plaintext SET NOT NULL;
+    END IF;
+END $$;
+
+-- Remove encrypted session metadata from password_reset_tokens
+ALTER TABLE password_reset_tokens DROP COLUMN IF EXISTS ip_address_encrypted;
+ALTER TABLE password_reset_tokens DROP COLUMN IF EXISTS user_agent_encrypted;
+ALTER TABLE password_reset_tokens ADD COLUMN IF NOT EXISTS ip_address_hash BYTEA;
+ALTER TABLE password_reset_tokens ADD COLUMN IF NOT EXISTS user_agent_hash BYTEA;
+
 -- Note links table for internal note connections ([[note]] syntax)
 CREATE TABLE IF NOT EXISTS note_links (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -483,6 +548,70 @@ CREATE TABLE IF NOT EXISTS note_links (
 -- Note links indexes for fast backlink lookups and graph queries
 CREATE INDEX IF NOT EXISTS idx_note_links_source ON note_links(source_note_id);
 CREATE INDEX IF NOT EXISTS idx_note_links_target ON note_links(target_note_id);
+
+-- In-app notifications (Phase 2.2)
+CREATE TABLE IF NOT EXISTS notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('note_shared', 'note_commented', 'folder_shared', 'mention', 'system', 'collaboration_invite')),
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    action_url TEXT, -- Optional URL for clicking the notification
+    metadata JSONB DEFAULT '{}'::jsonb, -- Additional data (note_id, sender_id, etc.)
+    is_read BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    read_at TIMESTAMPTZ
+);
+
+-- Indexes for fast notification queries
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read) WHERE is_read = false;
+
+-- Note enhancements (Phase 2.4)
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS color VARCHAR(7) DEFAULT '#3b82f6';
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS icon VARCHAR(50) DEFAULT 'file-text';
+
+-- Granular collaboration permissions (Phase 3.2)
+ALTER TABLE collaborations ADD COLUMN IF NOT EXISTS can_edit BOOLEAN DEFAULT true;
+ALTER TABLE collaborations ADD COLUMN IF NOT EXISTS can_delete BOOLEAN DEFAULT false;
+ALTER TABLE collaborations ADD COLUMN IF NOT EXISTS can_share BOOLEAN DEFAULT false;
+ALTER TABLE collaborations ADD COLUMN IF NOT EXISTS can_comment BOOLEAN DEFAULT true;
+ALTER TABLE collaborations ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+
+-- Email notification templates (Phase 3.3)
+CREATE TABLE IF NOT EXISTS email_templates (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT UNIQUE NOT NULL,
+    subject TEXT NOT NULL,
+    body_html TEXT NOT NULL,
+    body_text TEXT NOT NULL,
+    variables JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Insert default email templates
+INSERT INTO email_templates (name, subject, body_html, body_text, variables) VALUES
+('note_shared', 'Note shared with you - LeafLock',
+ '<p>Hi {{recipient_name}},</p><p>{{sender_name}} has shared a note with you: <strong>{{note_title}}</strong></p><p>Permission: {{permission}}</p><p><a href="{{note_url}}">View Note</a></p>',
+ 'Hi {{recipient_name}},\n\n{{sender_name}} has shared a note with you: {{note_title}}\n\nPermission: {{permission}}\n\nView Note: {{note_url}}',
+ '["recipient_name", "sender_name", "note_title", "permission", "note_url"]'::jsonb),
+('collaboration_invite', 'Collaboration invite - LeafLock',
+ '<p>Hi {{recipient_name}},</p><p>{{sender_name}} invited you to collaborate on: <strong>{{note_title}}</strong></p><p><a href="{{note_url}}">Accept Invitation</a></p>',
+ 'Hi {{recipient_name}},\n\n{{sender_name}} invited you to collaborate on: {{note_title}}\n\nAccept Invitation: {{note_url}}',
+ '["recipient_name", "sender_name", "note_title", "note_url"]'::jsonb),
+('password_reset', 'Password Reset Request - LeafLock',
+ '<p>Hi {{user_name}},</p><p>You requested a password reset. Click the link below to reset your password:</p><p><a href="{{reset_url}}">Reset Password</a></p><p>This link expires in 1 hour.</p>',
+ 'Hi {{user_name}},\n\nYou requested a password reset. Click the link below:\n\n{{reset_url}}\n\nThis link expires in 1 hour.',
+ '["user_name", "reset_url"]'::jsonb)
+ON CONFLICT (name) DO NOTHING;
+
+-- Email notification preferences
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_on_note_shared BOOLEAN DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_on_collaboration BOOLEAN DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_on_mention BOOLEAN DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_digest_frequency VARCHAR(20) DEFAULT 'never'; -- 'never', 'daily', 'weekly'
 
 -- Note: Cleanup jobs run automatically via background service every 24 hours
 `

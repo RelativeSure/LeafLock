@@ -64,7 +64,11 @@ vi.mock('@/components/ui/dialog', () => {
     if (asChild) {
       return React.cloneElement(children, { onClick: handleClick })
     }
-    return <button type="button" onClick={handleClick}>{children}</button>
+    return (
+      <button type="button" onClick={handleClick}>
+        {children}
+      </button>
+    )
   }
   DialogTrigger.displayName = 'DialogTrigger'
 
@@ -204,10 +208,7 @@ describe('Sidebar', () => {
     fireEvent.click(newNoteButton)
 
     await waitFor(() => {
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Failed to create note:',
-        expect.any(Error)
-      )
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to create note:', expect.any(Error))
     })
 
     consoleErrorSpy.mockRestore()

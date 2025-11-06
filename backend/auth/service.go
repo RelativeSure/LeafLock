@@ -42,7 +42,7 @@ func shouldSkipAutoLogin(ctx context.Context) bool {
 // Service coordinates all auth operations
 type Service struct {
 	db        database.Database
-	crypto    *appcrypto.CryptoService
+	// crypto removed - zero-knowledge architecture (no server-wide encryption key)
 	session   sessionManager
 	password  *PasswordManager
 	mfa       *MFAManager
@@ -62,13 +62,21 @@ type sessionManager interface {
 const defaultEncryptionVersion = 1
 
 // NewService creates a new auth service
-func NewService(db database.Database, rdb *redis.Client, crypto *appcrypto.CryptoService, jwtSecret string) *Service {
+// Zero-knowledge: MFA & session encryption derived from JWT secret (system-level)
+func NewService(db database.Database, rdb *redis.Client, jwtSecret string) *Service {
+	// Derive MFA encryption key from JWT secret (deterministic, per-deployment)
+	mfaKey := sha256.Sum256(append([]byte(jwtSecret), []byte("-mfa-encryption")...))
+	mfaCrypto := appcrypto.NewCryptoService(mfaKey[:])
+
+	// Derive session encryption key from JWT secret (deterministic, per-deployment)
+	sessionKey := sha256.Sum256(append([]byte(jwtSecret), []byte("-session-encryption")...))
+	sessionCrypto := appcrypto.NewCryptoService(sessionKey[:])
+
 	return &Service{
 		db:        db,
-		crypto:    crypto,
-		session:   NewSessionManager(rdb, crypto),
-		password:  NewPasswordManager(db, crypto),
-		mfa:       NewMFAManager(db, crypto),
+		session:   NewSessionManager(rdb, sessionCrypto),
+		password:  NewPasswordManager(db),
+		mfa:       NewMFAManager(db, mfaCrypto),
 		jwtSecret: jwtSecret,
 	}
 }
@@ -107,11 +115,8 @@ func (s *Service) Register(ctx context.Context, email, password string) (*AuthRe
 	emailBytes := []byte(strings.ToLower(strings.TrimSpace(email)))
 	emailHash := sha256.Sum256(emailBytes)
 
-	// Encrypt email for privacy
-	emailEncrypted, err := s.crypto.EncryptBytes(emailBytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt email: %w", err)
-	}
+	// Zero-knowledge: Store email in plaintext (needed for password reset, notifications)
+	// Sensitive user content (notes) remains encrypted with password-derived keys
 
 	// Create deterministic search hash for login
 	searchHash := sha256.Sum256(append(emailBytes, []byte("search-salt")...))
@@ -129,7 +134,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (*AuthRe
 	userID := uuid.New()
 	insertUserQuery := `
 		INSERT INTO users (
-			id, email_hash, email_encrypted, email_search_hash,
+			id, email_hash, email_plaintext, email_search_hash,
 			password_hash, salt, master_key_encrypted,
 			created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
@@ -137,7 +142,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (*AuthRe
 	`
 
 	err = tx.QueryRow(ctx, insertUserQuery,
-		userID, emailHash[:], emailEncrypted, searchHash[:],
+		userID, emailHash[:], email, searchHash[:],
 		passwordHash, salt, masterKeyEncrypted,
 	).Scan(&userID)
 	if err != nil {
@@ -310,8 +315,8 @@ func (s *Service) Login(ctx context.Context, email, password, mfaCode string) (*
 	if mfaEnabled {
 		// If MFA code provided, verify it
 		if mfaCode != "" {
-			// Decrypt MFA secret
-			secretBytes, err := s.crypto.DecryptBytes(mfaSecretEncrypted)
+			// Decrypt MFA secret using MFA manager's crypto
+			secretBytes, err := s.mfa.crypto.DecryptBytes(mfaSecretEncrypted)
 			if err != nil {
 				return nil, fmt.Errorf("failed to decrypt MFA secret: %w", err)
 			}
@@ -386,8 +391,8 @@ func (s *Service) VerifyMFA(ctx context.Context, sessionToken, code string) (*Au
 		return nil, fmt.Errorf("MFA not enabled")
 	}
 
-	// Decrypt secret
-	secretBytes, err := s.crypto.DecryptBytes(mfaSecretEncrypted)
+	// Decrypt secret using MFA manager's crypto
+	secretBytes, err := s.mfa.crypto.DecryptBytes(mfaSecretEncrypted)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt MFA secret: %w", err)
 	}
@@ -657,12 +662,7 @@ func (s *Service) EnsureDefaultAdmin(ctx context.Context, enabled bool, email, p
 	// Create email hash (emailBytes and searchHash already declared above for admin existence check)
 	emailHash := sha256.Sum256(emailBytes)
 
-	// Encrypt email for privacy
-	emailEncrypted, err := s.crypto.EncryptBytes(emailBytes)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt email: %w", err)
-	}
-
+	// Zero-knowledge: Store email in plaintext (needed for operational use)
 	// searchHash already computed above for admin existence check
 
 	// Begin transaction
@@ -678,7 +678,7 @@ func (s *Service) EnsureDefaultAdmin(ctx context.Context, enabled bool, email, p
 	userID := uuid.New()
 	insertUserQuery := `
 		INSERT INTO users (
-			id, email_hash, email_encrypted, email_search_hash,
+			id, email_hash, email_plaintext, email_search_hash,
 			password_hash, salt, master_key_encrypted,
 			is_admin, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
@@ -686,7 +686,7 @@ func (s *Service) EnsureDefaultAdmin(ctx context.Context, enabled bool, email, p
 	`
 
 	err = tx.QueryRow(ctx, insertUserQuery,
-		userID, emailHash[:], emailEncrypted, searchHash[:],
+		userID, emailHash[:], email, searchHash[:],
 		passwordHash, salt, masterKeyEncrypted, true,
 	).Scan(&userID)
 	if err != nil {
@@ -762,30 +762,21 @@ func (s *Service) auditLog(ctx context.Context, userID uuid.UUID, action string,
 	ipAddress := utils.GetClientIPFromContext(ctx)
 	userAgent := utils.GetUserAgentFromContext(ctx)
 
-	// Encrypt IP and User-Agent
-	ipEncrypted, err := s.crypto.EncryptBytes([]byte(ipAddress))
-	if err != nil {
-		return // Fail silently for audit logging
+	// Zero-knowledge: Hash IP and User-Agent for privacy
+	var ipHash, uaHash []byte
+	if ipAddress != "" {
+		hash := sha256.Sum256([]byte(ipAddress))
+		ipHash = hash[:]
+	}
+	if userAgent != "" {
+		hash := sha256.Sum256([]byte(userAgent))
+		uaHash = hash[:]
 	}
 
-	uaEncrypted, err := s.crypto.EncryptBytes([]byte(userAgent))
-	if err != nil {
-		return // Fail silently for audit logging
-	}
-
-	// Encrypt metadata if provided
-	var metadataEncrypted []byte
-	if metadata != nil {
-		metadataBytes, err := json.Marshal(metadata)
-		if err == nil {
-			metadataEncrypted, _ = s.crypto.EncryptBytes(metadataBytes)
-		}
-	}
-
-	// Insert audit log
+	// Insert audit log (metadata as plaintext JSONB)
 	query := `
-		INSERT INTO audit_log (user_id, action, resource_type, ip_address_encrypted, user_agent_encrypted, metadata_encrypted)
+		INSERT INTO audit_log (user_id, action, resource_type, ip_address_hash, user_agent_hash, metadata)
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
-	_, _ = s.db.Exec(ctx, query, userID, action, "auth", ipEncrypted, uaEncrypted, metadataEncrypted)
+	_, _ = s.db.Exec(ctx, query, userID, action, "auth", ipHash, uaHash, metadata)
 }

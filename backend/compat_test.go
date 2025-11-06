@@ -79,10 +79,7 @@ func LoadConfig() *appconfig.Config {
 	if jwtLower == "" || strings.HasPrefix(jwtLower, "test") {
 		_ = os.Setenv("JWT_SECRET", "integration-jwt-secret-value-1234567890abcdef")
 	}
-	encLower := strings.ToLower(os.Getenv("SERVER_ENCRYPTION_KEY"))
-	if encLower == "" || strings.HasPrefix(encLower, "test") {
-		_ = os.Setenv("SERVER_ENCRYPTION_KEY", "integration-encryption-key-value-abcdef1234567890")
-	}
+	// Zero-knowledge: SERVER_ENCRYPTION_KEY no longer used (encryption keys derived from JWT_SECRET)
 	return appconfig.LoadConfig()
 }
 

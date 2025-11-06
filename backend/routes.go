@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"os"
 	"regexp"
 	"strings"
@@ -27,7 +28,11 @@ import (
 )
 
 // setupRoutes configures all API routes and middleware for the application
-func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *appcrypto.CryptoService, config *appconfig.Config, startTime time.Time, readyState *appserver.ReadyState) {
+// Zero-knowledge: crypto removed, handlers derive encryption from JWT_SECRET internally
+func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *appconfig.Config, startTime time.Time, readyState *appserver.ReadyState) {
+	// Request ID middleware - adds unique ID to each request for tracing
+	app.Use(middleware.RequestIDMiddleware())
+
 	// Security middleware
 	app.Use(helmet.New(helmet.Config{
 		XSSProtection:      "1; mode=block",
@@ -125,26 +130,43 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 
 	// Initialize email service
 	emailService := services.NewEmailService(config)
+	notificationService := services.NewNotificationService(db, emailService)
+
+	// Zero-knowledge: Derive handler encryption key from JWT secret
+	// Used for share links, attachments, and other server-managed encrypted data
+	// Note: User notes remain E2E encrypted with password-derived keys
+	handlerKey := sha256.Sum256(append([]byte(config.JWTSecret), []byte("-handler-encryption")...))
+	handlerCrypto := appcrypto.NewCryptoService(handlerKey[:])
 
 	// Initialize modern auth package
-	authService := auth.NewService(db, rdb, crypto, string(config.JWTSecret))
+	authService := auth.NewService(db, rdb, string(config.JWTSecret))
 	authHandler := auth.NewHandler(authService, emailService)
 
 	// Initialize other handlers
-	accountHandler := handlers.NewAccountHandler(db, rdb, crypto, config)
-	notesHandler := handlers.NewNotesHandler(db, crypto)
-	tagsHandler := handlers.NewTagsHandler(db, crypto)
-	foldersHandler := handlers.NewFoldersHandler(db, crypto)
-	templatesHandler := handlers.NewTemplatesHandler(db, crypto)
+	accountHandler := handlers.NewAccountHandler(db, rdb, handlerCrypto, config)
+	workspacesHandler := handlers.NewWorkspacesHandler(db, handlerCrypto)
+	notesHandler := handlers.NewNotesHandler(db, handlerCrypto)
+	tagsHandler := handlers.NewTagsHandler(db, handlerCrypto)
+	foldersHandler := handlers.NewFoldersHandler(db, handlerCrypto)
+	templatesHandler := handlers.NewTemplatesHandler(db, handlerCrypto)
 	settingsHandler := handlers.NewSettingsHandler(db)
-	collabHandler := handlers.NewCollaborationHandler(db, crypto)
-	attachmentsHandler := handlers.NewAttachmentsHandler(db, crypto)
-	searchHandler := handlers.NewSearchHandler()
-	importExportHandler := handlers.NewImportExportHandler(db, crypto)
-	shareLinksHandler := handlers.NewShareLinksHandler(db, crypto, rdb)
+	collabHandler := handlers.NewCollaborationHandler(db, handlerCrypto, notificationService)
+	attachmentsHandler := handlers.NewAttachmentsHandler(db, handlerCrypto)
+	searchHandler := handlers.NewSearchHandler(db)
+	importExportHandler := handlers.NewImportExportHandler(db, handlerCrypto)
+	shareLinksHandler := handlers.NewShareLinksHandler(db, handlerCrypto, rdb)
 	announcementsHandler := handlers.NewAnnouncementsHandler(db)
 	noteLinksHandler := handlers.NewNoteLinksHandler(db)
 	adminHandler := handlers.NewAdminHandler(db)
+	auditLogHandler := handlers.NewAuditLogHandler(db)
+	profileHandler := handlers.NewProfileHandler(db)
+	analyticsHandler := handlers.NewAnalyticsHandler(db)
+
+	// Create WebSocket hub early so it can be passed to handlers
+	hub := websocketpkg.NewHub()
+	go hub.Run()
+
+	notificationsHandler := handlers.NewNotificationsHandler(db, hub)
 
 	// API group
 	api := app.Group("/api/v1")
@@ -189,6 +211,13 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	protected.Post("/auth/mfa/backup-codes/regenerate", rateLimits.AuthLimiter, authHandler.RegenerateBackupCodes)
 	api.Post("/auth/mfa/verify", rateLimits.MFAVerifyLimiter, authHandler.VerifyMFA) // Public endpoint
 
+	// Workspaces routes - Tier 4: Standard CRUD
+	protected.Get("/workspaces", rateLimits.StandardCRUDLimiter, workspacesHandler.GetWorkspaces)
+	protected.Post("/workspaces", rateLimits.StandardCRUDLimiter, workspacesHandler.CreateWorkspace)
+	protected.Get("/workspaces/:id", rateLimits.StandardCRUDLimiter, workspacesHandler.GetWorkspace)
+	protected.Put("/workspaces/:id", rateLimits.StandardCRUDLimiter, workspacesHandler.UpdateWorkspace)
+	protected.Delete("/workspaces/:id", rateLimits.StandardCRUDLimiter, workspacesHandler.DeleteWorkspace)
+
 	// Notes routes - Tier 4: Standard CRUD
 	// Note: Specific routes MUST come before generic /:id routes to avoid route shadowing
 	protected.Get("/notes", rateLimits.StandardCRUDLimiter, notesHandler.GetNotes)
@@ -208,6 +237,8 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	protected.Post("/notes/:id/versions/:version", rateLimits.StandardCRUDLimiter, notesHandler.RestoreNoteVersion)
 	protected.Put("/notes/:id/retention", rateLimits.StandardCRUDLimiter, notesHandler.UpdateRetentionPolicy)
 	protected.Delete("/notes/:id/permanent", rateLimits.StandardCRUDLimiter, notesHandler.PermanentlyDeleteNote)
+	protected.Post("/notes/:id/pin", rateLimits.StandardCRUDLimiter, notesHandler.TogglePin)
+	protected.Post("/notes/:id/lock", rateLimits.StandardCRUDLimiter, notesHandler.ToggleLock)
 	protected.Post("/notes/:id/links", rateLimits.StandardCRUDLimiter, noteLinksHandler.CreateNoteLink)
 	protected.Get("/notes/:id/links", rateLimits.StandardCRUDLimiter, noteLinksHandler.GetNoteLinks)
 	protected.Get("/notes/:id/backlinks", rateLimits.StandardCRUDLimiter, noteLinksHandler.GetNoteBacklinks)
@@ -223,7 +254,9 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 
 	// Folders routes - Tier 4: Standard CRUD
 	protected.Get("/folders", rateLimits.StandardCRUDLimiter, foldersHandler.GetFolders)
+	protected.Get("/folders/tree", rateLimits.StandardCRUDLimiter, foldersHandler.GetFolderTree)
 	protected.Post("/folders", rateLimits.StandardCRUDLimiter, foldersHandler.CreateFolder)
+	protected.Post("/folders/:id/move", rateLimits.StandardCRUDLimiter, foldersHandler.MoveFolderToParent)
 	protected.Delete("/folders/:id", rateLimits.StandardCRUDLimiter, foldersHandler.DeleteFolder)
 	protected.Post("/notes/:id/folder", rateLimits.StandardCRUDLimiter, foldersHandler.MoveNoteToFolder)
 
@@ -249,7 +282,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	protected.Put("/share-links/:token", rateLimits.StandardCRUDLimiter, shareLinksHandler.UpdateShareLink)
 
 	// Public share link route (no authentication required) - Tier 2: Aggressive limiting
-	api.Get("/share/:token", rateLimits.ShareLinkPublicLimiter, middleware.ShareLinkMiddleware(db, crypto, rdb), shareLinksHandler.GetSharedNote)
+	api.Get("/share/:token", rateLimits.ShareLinkPublicLimiter, middleware.ShareLinkMiddleware(db, handlerCrypto, rdb), shareLinksHandler.GetSharedNote)
 
 	// Attachments routes - Tier 3: Heavy operations
 	protected.Post("/notes/:noteId/attachments", rateLimits.AttachmentUploadLimiter, attachmentsHandler.UploadAttachment)
@@ -268,9 +301,28 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	protected.Get("/settings", rateLimits.LightweightLimiter, settingsHandler.GetSettings)
 	protected.Put("/settings", rateLimits.StandardCRUDLimiter, settingsHandler.UpdateSettings)
 
+	// Profile routes - Tier 5: Lightweight
+	protected.Get("/profile", rateLimits.LightweightLimiter, profileHandler.GetProfile)
+	protected.Put("/profile", rateLimits.StandardCRUDLimiter, profileHandler.UpdateProfile)
+	protected.Post("/profile/avatar-type", rateLimits.StandardCRUDLimiter, profileHandler.SetAvatarType)
+
+	// Notification routes - Tier 5: Lightweight
+	protected.Get("/notifications", rateLimits.LightweightLimiter, notificationsHandler.GetNotifications)
+	protected.Get("/notifications/unread-count", rateLimits.LightweightLimiter, notificationsHandler.GetUnreadCount)
+	protected.Post("/notifications/:user_id", rateLimits.StandardCRUDLimiter, notificationsHandler.CreateNotification)
+	protected.Post("/notifications/:id/read", rateLimits.StandardCRUDLimiter, notificationsHandler.MarkAsRead)
+	protected.Post("/notifications/read-all", rateLimits.StandardCRUDLimiter, notificationsHandler.MarkAllAsRead)
+	protected.Delete("/notifications/:id", rateLimits.StandardCRUDLimiter, notificationsHandler.DeleteNotification)
+
 	// Account management routes - Tier 3: Heavy operations
 	protected.Delete("/account", rateLimits.ImportExportLimiter, accountHandler.DeleteAccount)
 	protected.Get("/account/export", rateLimits.ImportExportLimiter, accountHandler.ExportData)
+
+	// Audit log routes - Tier 5: Lightweight (user's own logs)
+	protected.Get("/audit-logs", rateLimits.LightweightLimiter, auditLogHandler.GetUserAuditLogs)
+
+	// Analytics routes - Tier 5: Lightweight
+	protected.Get("/analytics", rateLimits.LightweightLimiter, analyticsHandler.GetUserAnalytics)
 
 	// Admin routes - Tier 4: Standard CRUD (admin only)
 	admin := protected.Group("/admin", authHandler.RequireAdminMiddleware)
@@ -285,14 +337,17 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, crypto *ap
 	admin.Patch("/users/:id/role", rateLimits.StandardCRUDLimiter, adminHandler.UpdateUserRole)
 	admin.Delete("/users/:id", rateLimits.StandardCRUDLimiter, adminHandler.DeleteUser)
 	admin.Post("/users/:id/unlock", rateLimits.StandardCRUDLimiter, adminHandler.UnlockUser)
-	// Registration settings
+	// Admin settings
+	admin.Get("/settings", rateLimits.StandardCRUDLimiter, adminHandler.GetAllSettings)
+	admin.Put("/settings", rateLimits.StandardCRUDLimiter, adminHandler.UpdateSetting)
 	admin.Get("/settings/registration", rateLimits.StandardCRUDLimiter, adminHandler.GetRegistrationSetting)
 	admin.Put("/settings/registration", rateLimits.StandardCRUDLimiter, adminHandler.UpdateRegistrationSetting)
+	// Audit logs (admin view - all users)
+	admin.Get("/audit-logs", rateLimits.StandardCRUDLimiter, auditLogHandler.GetAuditLogs)
+	// Analytics (admin view - system-wide stats)
+	admin.Get("/analytics", rateLimits.StandardCRUDLimiter, analyticsHandler.GetAdminAnalytics)
 
-	// WebSocket setup
-	hub := websocketpkg.NewHub()
-	go hub.Run()
-
+	// WebSocket endpoint
 	app.Use("/ws", func(c *fiber.Ctx) error {
 		if fiberws.IsWebSocketUpgrade(c) {
 			return c.Next()

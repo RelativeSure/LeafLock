@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useNotesStore } from '@/stores/notesStore'
 import { useAuthStore } from '@/stores/authStore'
-import { contentService, organizationService, socialService } from '@/services/api'
+
 import type { Note } from '@/types'
 
 vi.mock('@/services/api', () => ({
@@ -32,6 +32,9 @@ vi.mock('@/lib/encryption-utils', () => ({
   ENCRYPTION_VERSION: 'v1',
   encryptTextWithStoredKey: vi.fn().mockResolvedValue('encrypted'),
 }))
+
+// Import mocked services after mocks are declared
+import { contentService, organizationService, socialService } from '@/services/api'
 
 describe('Integration: Collaboration Flow', () => {
   const owner = {
@@ -400,7 +403,9 @@ describe('Integration: Collaboration Flow', () => {
       await socialService.updateCollaboratorPermission('note-1', 'user-2', 'read')
 
       // Collaborator tries to save changes
-      vi.mocked(contentService.updateNote).mockRejectedValue(new Error('Forbidden: Read-only access'))
+      vi.mocked(contentService.updateNote).mockRejectedValue(
+        new Error('Forbidden: Read-only access')
+      )
 
       await expect(
         useNotesStore.getState().updateNote('note-1', { content: 'Updated' })

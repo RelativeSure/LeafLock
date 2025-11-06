@@ -16,15 +16,23 @@ vi.mock('@/components/ui/card', () => ({
 }))
 
 vi.mock('@/components/ui/tabs', () => ({
-  Tabs: ({ children, defaultValue }: any) => <div data-testid="tabs" data-default={defaultValue}>{children}</div>,
+  Tabs: ({ children, defaultValue }: any) => (
+    <div data-testid="tabs" data-default={defaultValue}>
+      {children}
+    </div>
+  ),
   TabsList: ({ children }: any) => <div data-testid="tabs-list">{children}</div>,
   TabsTrigger: ({ children, value }: any) => <button data-value={value}>{children}</button>,
-  TabsContent: ({ children, value }: any) => <div data-testid={`tab-content-${value}`}>{children}</div>,
+  TabsContent: ({ children, value }: any) => (
+    <div data-testid={`tab-content-${value}`}>{children}</div>
+  ),
 }))
 
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, variant, size }: any) => (
-    <button onClick={onClick} data-variant={variant} data-size={size}>{children}</button>
+    <button onClick={onClick} data-variant={variant} data-size={size}>
+      {children}
+    </button>
   ),
 }))
 
@@ -145,367 +153,529 @@ describe('AdminPage', () => {
 
   it('should render admin dashboard header after loading', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('Admin Dashboard')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('Admin Dashboard')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render admin dashboard description', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('Manage your LeafLock instance')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('Manage your LeafLock instance')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render shield icon in header', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText('shield-icon').length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('shield-icon').length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render refresh button', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('Refresh')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('Refresh')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render export data button', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('Export Data')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('Export Data')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render refresh icon', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText('refresh-icon').length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('refresh-icon').length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render download icon', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText('download-icon').length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('download-icon').length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render system overview cards', async () => {
     const { getAllByTestId } = render(<AdminPage />)
-    await waitFor(() => {
-      const cards = getAllByTestId('card')
-      expect(cards.length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        const cards = getAllByTestId('card')
+        expect(cards.length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should display total users stat', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText('Total Users').length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('Total Users').length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should display total notes stat', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText('Total Notes').length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('Total Notes').length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should display system uptime stat', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText('System Uptime').length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('System Uptime').length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should display memory usage stat', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText('Memory Usage').length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('Memory Usage').length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render tabs component', async () => {
     const { getByTestId } = render(<AdminPage />)
-    await waitFor(() => {
-      expect(getByTestId('tabs')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(getByTestId('tabs')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render tabs list', async () => {
     const { getByTestId } = render(<AdminPage />)
-    await waitFor(() => {
-      expect(getByTestId('tabs-list')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(getByTestId('tabs-list')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render Users tab trigger', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      const button = screen.getAllByRole('button').find((btn) => btn.getAttribute('data-value') === 'users')
-      expect(button).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        const button = screen
+          .getAllByRole('button')
+          .find((btn) => btn.getAttribute('data-value') === 'users')
+        expect(button).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render System tab trigger', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      const button = screen.getAllByRole('button').find((btn) => btn.getAttribute('data-value') === 'system')
-      expect(button).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        const button = screen
+          .getAllByRole('button')
+          .find((btn) => btn.getAttribute('data-value') === 'system')
+        expect(button).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render Announcements tab trigger', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      const button = screen.getAllByRole('button').find((btn) => btn.getAttribute('data-value') === 'announcements')
-      expect(button).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        const button = screen
+          .getAllByRole('button')
+          .find((btn) => btn.getAttribute('data-value') === 'announcements')
+        expect(button).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render Security tab trigger', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      const button = screen.getAllByRole('button').find((btn) => btn.getAttribute('data-value') === 'security')
-      expect(button).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        const button = screen
+          .getAllByRole('button')
+          .find((btn) => btn.getAttribute('data-value') === 'security')
+        expect(button).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render Analytics tab trigger', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      const button = screen.getAllByRole('button').find((btn) => btn.getAttribute('data-value') === 'analytics')
-      expect(button).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        const button = screen
+          .getAllByRole('button')
+          .find((btn) => btn.getAttribute('data-value') === 'analytics')
+        expect(button).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render users icon in tabs', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText('users-icon').length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('users-icon').length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render server icon in tabs', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText('server-icon').length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('server-icon').length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render globe icon in tabs', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText('globe-icon').length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('globe-icon').length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render lock icon in tabs', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText('lock-icon').length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('lock-icon').length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render bar chart icon in tabs', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText('bar-chart-icon').length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('bar-chart-icon').length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render user management section', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('User Management')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('User Management')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render search input for users', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      const input = screen.getByPlaceholderText('Search users...')
-      expect(input).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        const input = screen.getByPlaceholderText('Search users...')
+        expect(input).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render filter button', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('Filter')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('Filter')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render user table with headers', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText('User').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('Role').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('Status').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('Notes').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('Last Login').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('Actions').length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('User').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Role').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Status').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Notes').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Last Login').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Actions').length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render mock user data', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('John Doe')).toBeInTheDocument()
-      expect(screen.getByText('john@example.com')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('John Doe')).toBeInTheDocument()
+        expect(screen.getByText('john@example.com')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render eye icons for viewing users', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText('eye-icon').length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('eye-icon').length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render trash icons for deleting users', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText('trash-icon').length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('trash-icon').length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render system resources section', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('System Resources')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('System Resources')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render database statistics section', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('Database Statistics')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('Database Statistics')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render CPU usage indicator', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('CPU Usage')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('CPU Usage')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render disk usage indicator', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('Disk Usage')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('Disk Usage')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render system announcements section', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('System Announcements')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('System Announcements')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render new announcement button', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('New Announcement')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('New Announcement')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render security settings section', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('Security Settings')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('Security Settings')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render user registration toggle', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('User Registration')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('User Registration')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render MFA requirement toggle', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('Require MFA')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('Require MFA')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render encryption toggle', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('Force Encryption')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('Force Encryption')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render security warning alert', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText(/Security settings changes take effect immediately/i)).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText(/Security settings changes take effect immediately/i)
+        ).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render usage analytics section', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('Usage Analytics')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('Usage Analytics')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render analytics placeholder text', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getByText('Analytics dashboard coming soon...')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getByText('Analytics dashboard coming soon...')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render database icon in overview cards', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText('database-icon').length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('database-icon').length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render activity icon in overview cards', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText('activity-icon').length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('activity-icon').length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render memory icon in overview cards', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      expect(screen.getAllByText('memory-icon').length).toBeGreaterThan(0)
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('memory-icon').length).toBeGreaterThan(0)
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should update search query when typing', async () => {
     render(<AdminPage />)
-    await waitFor(() => {
-      const input = screen.getByPlaceholderText('Search users...') as HTMLInputElement
-      fireEvent.change(input, { target: { value: 'john' } })
-      expect(input.value).toBe('john')
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        const input = screen.getByPlaceholderText('Search users...') as HTMLInputElement
+        fireEvent.change(input, { target: { value: 'john' } })
+        expect(input.value).toBe('john')
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render tabs with default value of users', async () => {
     const { getByTestId } = render(<AdminPage />)
-    await waitFor(() => {
-      const tabs = getByTestId('tabs')
-      expect(tabs.getAttribute('data-default')).toBe('users')
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        const tabs = getByTestId('tabs')
+        expect(tabs.getAttribute('data-default')).toBe('users')
+      },
+      { timeout: 2000 }
+    )
   })
 
   it('should render scroll area for user table', async () => {
     const { getByTestId } = render(<AdminPage />)
-    await waitFor(() => {
-      expect(getByTestId('scroll-area')).toBeInTheDocument()
-    }, { timeout: 2000 })
+    await waitFor(
+      () => {
+        expect(getByTestId('scroll-area')).toBeInTheDocument()
+      },
+      { timeout: 2000 }
+    )
   })
 })

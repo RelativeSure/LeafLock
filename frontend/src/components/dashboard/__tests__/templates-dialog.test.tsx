@@ -222,30 +222,31 @@ describe('TemplatesDialog', () => {
   })
 
   it('filters templates by description', () => {
-    mockTemplatesStore({ templates: [
-      {
-        id: 'tpl-1',
-        name: 'Template A',
-        content: '',
-        description: 'For project planning',
-        tags: [],
-        isPublic: false,
-        createdAt: new Date().toISOString(),
-        usageCount: 0,
-        userId: 'user-1',
-      },
-      {
-        id: 'tpl-2',
-        name: 'Template B',
-        content: '',
-        description: 'For daily tasks',
-        tags: [],
-        isPublic: false,
-        createdAt: new Date().toISOString(),
-        usageCount: 0,
-        userId: 'user-1',
-      },
-    ],
+    mockTemplatesStore({
+      templates: [
+        {
+          id: 'tpl-1',
+          name: 'Template A',
+          content: '',
+          description: 'For project planning',
+          tags: [],
+          isPublic: false,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'user-1',
+        },
+        {
+          id: 'tpl-2',
+          name: 'Template B',
+          content: '',
+          description: 'For daily tasks',
+          tags: [],
+          isPublic: false,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'user-1',
+        },
+      ],
     })
 
     render(<TemplatesDialog open onOpenChange={vi.fn()} />)
@@ -258,30 +259,31 @@ describe('TemplatesDialog', () => {
   })
 
   it('filters templates by tags', () => {
-    mockTemplatesStore({ templates: [
-      {
-        id: 'tpl-1',
-        name: 'Work Template',
-        content: '',
-        description: '',
-        tags: ['work', 'productivity'],
-        isPublic: false,
-        createdAt: new Date().toISOString(),
-        usageCount: 0,
-        userId: 'user-1',
-      },
-      {
-        id: 'tpl-2',
-        name: 'Personal Template',
-        content: '',
-        description: '',
-        tags: ['personal'],
-        isPublic: false,
-        createdAt: new Date().toISOString(),
-        usageCount: 0,
-        userId: 'user-1',
-      },
-    ],
+    mockTemplatesStore({
+      templates: [
+        {
+          id: 'tpl-1',
+          name: 'Work Template',
+          content: '',
+          description: '',
+          tags: ['work', 'productivity'],
+          isPublic: false,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'user-1',
+        },
+        {
+          id: 'tpl-2',
+          name: 'Personal Template',
+          content: '',
+          description: '',
+          tags: ['personal'],
+          isPublic: false,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'user-1',
+        },
+      ],
     })
 
     render(<TemplatesDialog open onOpenChange={vi.fn()} />)
@@ -310,9 +312,38 @@ describe('TemplatesDialog', () => {
 
   it('displays tab counts', () => {
     mockTemplatesStore({
-      templates: [{ id: 't1', name: 'T1', content: '', isPublic: false, createdAt: new Date().toISOString(), usageCount: 0, userId: 'user-1' }],
-      starterTemplates: [{ id: 's1', name: 'S1', content: '', isPublic: false, createdAt: new Date().toISOString(), usageCount: 0 }],
-      communityTemplates: [{ id: 'c1', name: 'C1', content: '', isPublic: true, createdAt: new Date().toISOString(), usageCount: 0, userId: 'other' }],
+      templates: [
+        {
+          id: 't1',
+          name: 'T1',
+          content: '',
+          isPublic: false,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'user-1',
+        },
+      ],
+      starterTemplates: [
+        {
+          id: 's1',
+          name: 'S1',
+          content: '',
+          isPublic: false,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+        },
+      ],
+      communityTemplates: [
+        {
+          id: 'c1',
+          name: 'C1',
+          content: '',
+          isPublic: true,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'other',
+        },
+      ],
     })
 
     render(<TemplatesDialog open onOpenChange={vi.fn()} />)
@@ -323,10 +354,27 @@ describe('TemplatesDialog', () => {
   })
 
   it('excludes current user templates from community tab', () => {
-    mockTemplatesStore({ communityTemplates: [
-      { id: 'c1', name: 'Other User Template', content: '', isPublic: true, createdAt: new Date().toISOString(), usageCount: 0, userId: 'other-user' },
-      { id: 'c2', name: 'My Public Template', content: '', isPublic: true, createdAt: new Date().toISOString(), usageCount: 0, userId: 'user-1' },
-    ],
+    mockTemplatesStore({
+      communityTemplates: [
+        {
+          id: 'c1',
+          name: 'Other User Template',
+          content: '',
+          isPublic: true,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'other-user',
+        },
+        {
+          id: 'c2',
+          name: 'My Public Template',
+          content: '',
+          isPublic: true,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'user-1',
+        },
+      ],
     })
 
     render(<TemplatesDialog open onOpenChange={vi.fn()} />)
@@ -336,19 +384,20 @@ describe('TemplatesDialog', () => {
   })
 
   it('displays public badge for public templates', () => {
-    mockTemplatesStore({ templates: [
-      {
-        id: 'tpl-public',
-        name: 'Public Template',
-        content: '',
-        description: '',
-        tags: [],
-        isPublic: true,
-        createdAt: new Date().toISOString(),
-        usageCount: 0,
-        userId: 'user-1',
-      },
-    ],
+    mockTemplatesStore({
+      templates: [
+        {
+          id: 'tpl-public',
+          name: 'Public Template',
+          content: '',
+          description: '',
+          tags: [],
+          isPublic: true,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'user-1',
+        },
+      ],
     })
 
     render(<TemplatesDialog open onOpenChange={vi.fn()} />)
@@ -356,19 +405,20 @@ describe('TemplatesDialog', () => {
   })
 
   it('displays usage count when greater than 0', () => {
-    mockTemplatesStore({ templates: [
-      {
-        id: 'tpl-used',
-        name: 'Popular Template',
-        content: '',
-        description: '',
-        tags: [],
-        isPublic: false,
-        createdAt: new Date().toISOString(),
-        usageCount: 42,
-        userId: 'user-1',
-      },
-    ],
+    mockTemplatesStore({
+      templates: [
+        {
+          id: 'tpl-used',
+          name: 'Popular Template',
+          content: '',
+          description: '',
+          tags: [],
+          isPublic: false,
+          createdAt: new Date().toISOString(),
+          usageCount: 42,
+          userId: 'user-1',
+        },
+      ],
     })
 
     render(<TemplatesDialog open onOpenChange={vi.fn()} />)
@@ -376,19 +426,20 @@ describe('TemplatesDialog', () => {
   })
 
   it('displays template tags', () => {
-    mockTemplatesStore({ templates: [
-      {
-        id: 'tpl-tags',
-        name: 'Tagged Template',
-        content: '',
-        description: '',
-        tags: ['work', 'meeting'],
-        isPublic: false,
-        createdAt: new Date().toISOString(),
-        usageCount: 0,
-        userId: 'user-1',
-      },
-    ],
+    mockTemplatesStore({
+      templates: [
+        {
+          id: 'tpl-tags',
+          name: 'Tagged Template',
+          content: '',
+          description: '',
+          tags: ['work', 'meeting'],
+          isPublic: false,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'user-1',
+        },
+      ],
     })
 
     render(<TemplatesDialog open onOpenChange={vi.fn()} />)
@@ -397,19 +448,20 @@ describe('TemplatesDialog', () => {
   })
 
   it('deletes template when delete clicked', async () => {
-    mockTemplatesStore({ templates: [
-      {
-        id: 'tpl-delete',
-        name: 'Delete Me',
-        content: '',
-        description: '',
-        tags: [],
-        isPublic: false,
-        createdAt: new Date().toISOString(),
-        usageCount: 0,
-        userId: 'user-1',
-      },
-    ],
+    mockTemplatesStore({
+      templates: [
+        {
+          id: 'tpl-delete',
+          name: 'Delete Me',
+          content: '',
+          description: '',
+          tags: [],
+          isPublic: false,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'user-1',
+        },
+      ],
     })
 
     render(<TemplatesDialog open onOpenChange={vi.fn()} />)
@@ -423,19 +475,20 @@ describe('TemplatesDialog', () => {
   })
 
   it('toggles template to public when share clicked', async () => {
-    mockTemplatesStore({ templates: [
-      {
-        id: 'tpl-share',
-        name: 'Share Me',
-        content: '',
-        description: '',
-        tags: [],
-        isPublic: false,
-        createdAt: new Date().toISOString(),
-        usageCount: 0,
-        userId: 'user-1',
-      },
-    ],
+    mockTemplatesStore({
+      templates: [
+        {
+          id: 'tpl-share',
+          name: 'Share Me',
+          content: '',
+          description: '',
+          tags: [],
+          isPublic: false,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'user-1',
+        },
+      ],
     })
 
     render(<TemplatesDialog open onOpenChange={vi.fn()} />)
@@ -449,19 +502,20 @@ describe('TemplatesDialog', () => {
   })
 
   it('toggles template to private when make private clicked', async () => {
-    mockTemplatesStore({ templates: [
-      {
-        id: 'tpl-private',
-        name: 'Make Private',
-        content: '',
-        description: '',
-        tags: [],
-        isPublic: true,
-        createdAt: new Date().toISOString(),
-        usageCount: 0,
-        userId: 'user-1',
-      },
-    ],
+    mockTemplatesStore({
+      templates: [
+        {
+          id: 'tpl-private',
+          name: 'Make Private',
+          content: '',
+          description: '',
+          tags: [],
+          isPublic: true,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'user-1',
+        },
+      ],
     })
 
     render(<TemplatesDialog open onOpenChange={vi.fn()} />)
@@ -476,19 +530,20 @@ describe('TemplatesDialog', () => {
 
   it('closes dialog after using template', async () => {
     const onOpenChangeMock = vi.fn()
-    mockTemplatesStore({ templates: [
-      {
-        id: 'tpl-close',
-        name: 'Close Test',
-        content: '',
-        description: '',
-        tags: [],
-        isPublic: false,
-        createdAt: new Date().toISOString(),
-        usageCount: 0,
-        userId: 'user-1',
-      },
-    ],
+    mockTemplatesStore({
+      templates: [
+        {
+          id: 'tpl-close',
+          name: 'Close Test',
+          content: '',
+          description: '',
+          tags: [],
+          isPublic: false,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'user-1',
+        },
+      ],
     })
 
     render(<TemplatesDialog open onOpenChange={onOpenChangeMock} />)
@@ -505,19 +560,20 @@ describe('TemplatesDialog', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     applyTemplateMock.mockRejectedValue(new Error('Apply failed'))
 
-    mockTemplatesStore({ templates: [
-      {
-        id: 'tpl-error',
-        name: 'Error Template',
-        content: '',
-        description: '',
-        tags: [],
-        isPublic: false,
-        createdAt: new Date().toISOString(),
-        usageCount: 0,
-        userId: 'user-1',
-      },
-    ],
+    mockTemplatesStore({
+      templates: [
+        {
+          id: 'tpl-error',
+          name: 'Error Template',
+          content: '',
+          description: '',
+          tags: [],
+          isPublic: false,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'user-1',
+        },
+      ],
     })
 
     render(<TemplatesDialog open onOpenChange={vi.fn()} />)
@@ -536,19 +592,20 @@ describe('TemplatesDialog', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     deleteTemplateMock.mockRejectedValue(new Error('Delete failed'))
 
-    mockTemplatesStore({ templates: [
-      {
-        id: 'tpl-delete-error',
-        name: 'Delete Error',
-        content: '',
-        description: '',
-        tags: [],
-        isPublic: false,
-        createdAt: new Date().toISOString(),
-        usageCount: 0,
-        userId: 'user-1',
-      },
-    ],
+    mockTemplatesStore({
+      templates: [
+        {
+          id: 'tpl-delete-error',
+          name: 'Delete Error',
+          content: '',
+          description: '',
+          tags: [],
+          isPublic: false,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'user-1',
+        },
+      ],
     })
 
     render(<TemplatesDialog open onOpenChange={vi.fn()} />)
@@ -567,19 +624,20 @@ describe('TemplatesDialog', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     shareTemplateMock.mockRejectedValue(new Error('Share failed'))
 
-    mockTemplatesStore({ templates: [
-      {
-        id: 'tpl-share-error',
-        name: 'Share Error',
-        content: '',
-        description: '',
-        tags: [],
-        isPublic: false,
-        createdAt: new Date().toISOString(),
-        usageCount: 0,
-        userId: 'user-1',
-      },
-    ],
+    mockTemplatesStore({
+      templates: [
+        {
+          id: 'tpl-share-error',
+          name: 'Share Error',
+          content: '',
+          description: '',
+          tags: [],
+          isPublic: false,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'user-1',
+        },
+      ],
     })
 
     render(<TemplatesDialog open onOpenChange={vi.fn()} />)
@@ -595,19 +653,20 @@ describe('TemplatesDialog', () => {
   })
 
   it('displays formatted creation date', () => {
-    mockTemplatesStore({ templates: [
-      {
-        id: 'tpl-date',
-        name: 'Date Template',
-        content: '',
-        description: '',
-        tags: [],
-        isPublic: false,
-        createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(), // 1 hour ago
-        usageCount: 0,
-        userId: 'user-1',
-      },
-    ],
+    mockTemplatesStore({
+      templates: [
+        {
+          id: 'tpl-date',
+          name: 'Date Template',
+          content: '',
+          description: '',
+          tags: [],
+          isPublic: false,
+          createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(), // 1 hour ago
+          usageCount: 0,
+          userId: 'user-1',
+        },
+      ],
     })
 
     render(<TemplatesDialog open onOpenChange={vi.fn()} />)
@@ -615,19 +674,20 @@ describe('TemplatesDialog', () => {
   })
 
   it('shows Unknown for missing createdAt', () => {
-    mockTemplatesStore({ templates: [
-      {
-        id: 'tpl-no-date',
-        name: 'No Date',
-        content: '',
-        description: '',
-        tags: [],
-        isPublic: false,
-        createdAt: null,
-        usageCount: 0,
-        userId: 'user-1',
-      },
-    ],
+    mockTemplatesStore({
+      templates: [
+        {
+          id: 'tpl-no-date',
+          name: 'No Date',
+          content: '',
+          description: '',
+          tags: [],
+          isPublic: false,
+          createdAt: null,
+          usageCount: 0,
+          userId: 'user-1',
+        },
+      ],
     })
 
     render(<TemplatesDialog open onOpenChange={vi.fn()} />)
@@ -635,20 +695,21 @@ describe('TemplatesDialog', () => {
   })
 
   it('displays template icon when present', () => {
-    mockTemplatesStore({ templates: [
-      {
-        id: 'tpl-icon',
-        name: 'Icon Template',
-        content: '',
-        description: '',
-        tags: [],
-        icon: '🚀',
-        isPublic: false,
-        createdAt: new Date().toISOString(),
-        usageCount: 0,
-        userId: 'user-1',
-      },
-    ],
+    mockTemplatesStore({
+      templates: [
+        {
+          id: 'tpl-icon',
+          name: 'Icon Template',
+          content: '',
+          description: '',
+          tags: [],
+          icon: '🚀',
+          isPublic: false,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'user-1',
+        },
+      ],
     })
 
     render(<TemplatesDialog open onOpenChange={vi.fn()} />)
@@ -658,19 +719,20 @@ describe('TemplatesDialog', () => {
 
   it('truncates long descriptions', () => {
     const longDescription = 'a'.repeat(150)
-    mockTemplatesStore({ templates: [
-      {
-        id: 'tpl-long',
-        name: 'Long Desc',
-        content: '',
-        description: longDescription,
-        tags: [],
-        isPublic: false,
-        createdAt: new Date().toISOString(),
-        usageCount: 0,
-        userId: 'user-1',
-      },
-    ],
+    mockTemplatesStore({
+      templates: [
+        {
+          id: 'tpl-long',
+          name: 'Long Desc',
+          content: '',
+          description: longDescription,
+          tags: [],
+          isPublic: false,
+          createdAt: new Date().toISOString(),
+          usageCount: 0,
+          userId: 'user-1',
+        },
+      ],
     })
 
     render(<TemplatesDialog open onOpenChange={vi.fn()} />)

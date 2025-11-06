@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -343,26 +344,23 @@ func TestPasswordHashing(t *testing.T) {
 func TestConfig(t *testing.T) {
 	// Store original environment
 	originalJWT := os.Getenv("JWT_SECRET")
-	originalEncKey := os.Getenv("SERVER_ENCRYPTION_KEY")
 	originalDBURL := os.Getenv("DATABASE_URL")
 
 	defer func() {
 		// Restore environment
-		_ = os.Setenv("JWT_SECRET", originalJWT)               // Test cleanup
-		_ = os.Setenv("SERVER_ENCRYPTION_KEY", originalEncKey) // Test cleanup
-		_ = os.Setenv("DATABASE_URL", originalDBURL)           // Test cleanup
+		_ = os.Setenv("JWT_SECRET", originalJWT)   // Test cleanup
+		_ = os.Setenv("DATABASE_URL", originalDBURL) // Test cleanup
 	}()
 
 	t.Run("LoadConfigWithDefaults", func(t *testing.T) {
 		// Clear environment variables
-		_ = os.Unsetenv("JWT_SECRET")            // Test setup
-		_ = os.Unsetenv("SERVER_ENCRYPTION_KEY") // Test setup
-		_ = os.Unsetenv("DATABASE_URL")          // Test setup
+		_ = os.Unsetenv("JWT_SECRET")    // Test setup
+		_ = os.Unsetenv("DATABASE_URL")  // Test setup
 
 		config := LoadConfig()
 
+		// Zero-knowledge: No global EncryptionKey, only JWT secret
 		assert.NotEmpty(t, config.JWTSecret)
-		assert.NotEmpty(t, config.EncryptionKey)
 		assert.Equal(t, "postgres://postgres:postgres@localhost:5432/leaflock?sslmode=prefer", config.DatabaseURL) // secretlint-disable-line
 		assert.Equal(t, "8080", config.Port)
 		assert.Equal(t, 5, config.MaxLoginAttempts)
@@ -371,17 +369,14 @@ func TestConfig(t *testing.T) {
 
 	t.Run("LoadConfigWithEnvironment", func(t *testing.T) {
 		testJWT := "unit-test-jwt-secret-key-with-sufficient-length-1234567890"
-		testEncKey := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{0x42}, 32))
 		testDBURL := "postgres://test:test@localhost:5432/testdb" // secretlint-disable-line
 
-		_ = os.Setenv("JWT_SECRET", testJWT)               // Test setup
-		_ = os.Setenv("SERVER_ENCRYPTION_KEY", testEncKey) // Test setup
-		_ = os.Setenv("DATABASE_URL", testDBURL)           // Test setup
+		_ = os.Setenv("JWT_SECRET", testJWT)     // Test setup
+		_ = os.Setenv("DATABASE_URL", testDBURL) // Test setup
 
 		config := LoadConfig()
 
 		assert.Equal(t, testJWT, string(config.JWTSecret))
-		assert.Equal(t, testEncKey, string(config.EncryptionKey))
 		assert.Equal(t, testDBURL, config.DatabaseURL)
 	})
 }
@@ -515,7 +510,7 @@ func (suite *AuthHandlerTestSuite) SetupTest() {
 
 	suite.config = &appconfig.Config{
 		JWTSecret:        []byte("test-jwt-secret-key-for-testing-purposes-with-sufficient-length"),
-		EncryptionKey:    key,
+		// Zero-knowledge: No global EncryptionKey needed
 		MaxLoginAttempts: 5,
 		LockoutDuration:  15 * time.Minute,
 		SessionDuration:  24 * time.Hour,
@@ -935,7 +930,7 @@ func (suite *LockoutTestSuite) SetupTest() {
 	// Test config
 	suite.config = &appconfig.Config{
 		JWTSecret:            []byte("test-secret"),
-		EncryptionKey:        []byte("12345678901234567890123456789012"),
+		// Zero-knowledge: No global EncryptionKey - derive from JWT_SECRET
 		MaxLoginAttempts:     3,
 		MaxIPLoginAttempts:   5,
 		IPLockoutDuration:    3 * time.Second, // Short duration for testing
@@ -949,7 +944,10 @@ func (suite *LockoutTestSuite) SetupTest() {
 	// Test DB and Redis
 	suite.db, suite.cleanupDB = setupTestDB(suite.T())
 	suite.rdb, suite.cleanupRedis = setupTestRedis(suite.T())
-	suite.crypto = appcrypto.NewCryptoService(suite.config.EncryptionKey)
+
+	// Zero-knowledge: Derive test crypto key from JWT_SECRET
+	testKey := sha256.Sum256(append(suite.config.JWTSecret, []byte("-test-crypto")...))
+	suite.crypto = appcrypto.NewCryptoService(testKey[:])
 
 	// Create app
 	suite.app = fiber.New()

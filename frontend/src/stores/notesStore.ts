@@ -25,6 +25,8 @@ interface NotesState {
   updateFolder: (id: string, updates: Partial<Folder>) => Promise<void>
   deleteFolder: (id: string) => Promise<void>
   selectFolder: (id: string | null) => void
+  getFolderTree: () => Promise<Folder[]>
+  moveFolderToParent: (folderId: string, parentId: string | null) => Promise<void>
   selectTag: (tagName: string | null) => void
   createTag: (tag: Partial<Tag>) => Promise<Tag>
   deleteTag: (id: string) => Promise<void>
@@ -61,6 +63,8 @@ interface NotesState {
   getNoteLinks: (noteId: string) => Promise<any[]>
   getNoteBacklinks: (noteId: string) => Promise<any[]>
   deleteNoteLink: (noteId: string, linkId: string) => Promise<void>
+  togglePin: (noteId: string, isPinned: boolean, pinnedOrder?: number) => Promise<void>
+  toggleLock: (noteId: string, isLocked: boolean) => Promise<void>
 }
 
 export const useNotesStore = create<NotesState>((set, get) => ({
@@ -282,6 +286,30 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   selectFolder: (id: string | null) => {
     set({ selectedFolder: id })
+  },
+
+  getFolderTree: async () => {
+    try {
+      const folderTree = await contentService.getFolderTree()
+      set({ folders: folderTree })
+      return folderTree
+    } catch (error) {
+      console.error('Failed to fetch folder tree:', error)
+      throw error
+    }
+  },
+
+  moveFolderToParent: async (folderId: string, parentId: string | null) => {
+    try {
+      await contentService.moveFolderToParent(folderId, parentId)
+
+      // Refresh folder tree after moving
+      const folderTree = await contentService.getFolderTree()
+      set({ folders: folderTree })
+    } catch (error) {
+      console.error('Failed to move folder:', error)
+      throw error
+    }
   },
 
   selectTag: (tagName: string | null) => {
@@ -654,6 +682,38 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       await socialService.deleteNoteLink(noteId, linkId)
     } catch (error) {
       console.error('Failed to delete note link:', error)
+      throw error
+    }
+  },
+
+  togglePin: async (noteId: string, isPinned: boolean, pinnedOrder?: number) => {
+    try {
+      await socialService.togglePin(noteId, isPinned, pinnedOrder)
+
+      // Update local state
+      set((state) => ({
+        notes: state.notes.map((note) =>
+          note.id === noteId ? { ...note, pinned: isPinned, pinnedOrder: pinnedOrder ?? 0 } : note
+        ),
+      }))
+    } catch (error) {
+      console.error('Failed to toggle pin:', error)
+      throw error
+    }
+  },
+
+  toggleLock: async (noteId: string, isLocked: boolean) => {
+    try {
+      await socialService.toggleLock(noteId, isLocked)
+
+      // Update local state
+      set((state) => ({
+        notes: state.notes.map((note) =>
+          note.id === noteId ? { ...note, locked: isLocked } : note
+        ),
+      }))
+    } catch (error) {
+      console.error('Failed to toggle lock:', error)
       throw error
     }
   },

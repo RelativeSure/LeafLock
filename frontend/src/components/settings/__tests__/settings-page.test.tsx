@@ -148,31 +148,41 @@ describe('SettingsPage', () => {
 
   it('should render Profile tab trigger', () => {
     render(<SettingsPage />)
-    const button = screen.getAllByRole('button').find((btn) => btn.getAttribute('data-value') === 'profile')
+    const button = screen
+      .getAllByRole('button')
+      .find((btn) => btn.getAttribute('data-value') === 'profile')
     expect(button).toBeInTheDocument()
   })
 
   it('should render Backup tab trigger', () => {
     render(<SettingsPage />)
-    const button = screen.getAllByRole('button').find((btn) => btn.getAttribute('data-value') === 'backup')
+    const button = screen
+      .getAllByRole('button')
+      .find((btn) => btn.getAttribute('data-value') === 'backup')
     expect(button).toBeInTheDocument()
   })
 
   it('should render Security tab trigger', () => {
     render(<SettingsPage />)
-    const button = screen.getAllByRole('button').find((btn) => btn.getAttribute('data-value') === 'security')
+    const button = screen
+      .getAllByRole('button')
+      .find((btn) => btn.getAttribute('data-value') === 'security')
     expect(button).toBeInTheDocument()
   })
 
   it('should render Preferences tab trigger', () => {
     render(<SettingsPage />)
-    const button = screen.getAllByRole('button').find((btn) => btn.getAttribute('data-value') === 'preferences')
+    const button = screen
+      .getAllByRole('button')
+      .find((btn) => btn.getAttribute('data-value') === 'preferences')
     expect(button).toBeInTheDocument()
   })
 
   it('should render Manage tab trigger', () => {
     render(<SettingsPage />)
-    const button = screen.getAllByRole('button').find((btn) => btn.getAttribute('data-value') === 'manage')
+    const button = screen
+      .getAllByRole('button')
+      .find((btn) => btn.getAttribute('data-value') === 'manage')
     expect(button).toBeInTheDocument()
   })
 

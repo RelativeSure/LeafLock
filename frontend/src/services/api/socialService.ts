@@ -93,6 +93,26 @@ class SocialService extends ApiClient {
       body: JSON.stringify(options),
     })
   }
+
+  // Pin/Lock methods
+  async togglePin(noteId: string, isPinned: boolean, pinnedOrder?: number): Promise<any> {
+    return this.request(`/notes/${noteId}/pin`, {
+      method: 'POST',
+      body: JSON.stringify({
+        is_pinned: isPinned,
+        pinned_order: pinnedOrder,
+      }),
+    })
+  }
+
+  async toggleLock(noteId: string, isLocked: boolean): Promise<any> {
+    return this.request(`/notes/${noteId}/lock`, {
+      method: 'POST',
+      body: JSON.stringify({
+        is_locked: isLocked,
+      }),
+    })
+  }
 }
 
 export const socialService = new SocialService()

@@ -110,7 +110,7 @@ func (h *AdminHandler) GetAllUsers(c *fiber.Ctx) error {
 	ctx := c.Context()
 
 	query := `
-		SELECT u.id, u.email_encrypted, u.is_admin, u.created_at, u.last_login,
+		SELECT u.id, u.email_plaintext, u.is_admin, u.created_at, u.last_login,
 		       u.failed_attempts, u.locked_until,
 		       COALESCE((SELECT COUNT(*) FROM notes WHERE user_id = u.id AND deleted_at IS NULL), 0) as notes_count
 		FROM users u
@@ -129,14 +129,14 @@ func (h *AdminHandler) GetAllUsers(c *fiber.Ctx) error {
 	users := make([]UserDetails, 0)
 	for rows.Next() {
 		var user UserDetails
-		var emailEncrypted []byte
+		var email string // Zero-knowledge: email is plaintext
 		var failedAttempts int
 		var lockedUntil *time.Time
 		var lastLogin *time.Time
 
 		err := rows.Scan(
 			&user.ID,
-			&emailEncrypted,
+			&email,
 			&user.IsAdmin,
 			&user.CreatedAt,
 			&lastLogin,
@@ -148,8 +148,8 @@ func (h *AdminHandler) GetAllUsers(c *fiber.Ctx) error {
 			continue
 		}
 
-		// Decrypt email (just show hash for privacy in admin panel)
-		user.Email = "user-" + user.ID[:8] + "@hidden" // Privacy: don't expose real emails
+		// Zero-knowledge: email available in plaintext for admin operations
+		user.Email = email
 		if lastLogin != nil {
 			user.LastLogin = *lastLogin
 		}
@@ -405,5 +405,91 @@ func (h *AdminHandler) UpdateRegistrationSetting(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"message": "Registration setting updated successfully",
 		"enabled": req.Enabled,
+	})
+}
+
+// GetAllSettings returns all app-wide settings
+// @Summary Get all app settings
+// @Description Get all system-wide settings (admin only)
+// @Tags Admin
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/v1/admin/settings [get]
+func (h *AdminHandler) GetAllSettings(c *fiber.Ctx) error {
+	ctx := c.Context()
+
+	rows, err := h.db.Query(ctx, "SELECT key, value FROM app_settings")
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to fetch settings",
+		})
+	}
+	defer rows.Close()
+
+	settings := make(map[string]interface{})
+	for rows.Next() {
+		var key, value string
+		if err := rows.Scan(&key, &value); err != nil {
+			continue
+		}
+		settings[key] = value
+	}
+
+	return c.JSON(fiber.Map{
+		"settings": settings,
+	})
+}
+
+// UpdateSetting updates a specific app-wide setting
+// @Summary Update app setting
+// @Description Update a system-wide setting (admin only)
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Param request body object true "Setting key and value"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/v1/admin/settings [put]
+func (h *AdminHandler) UpdateSetting(c *fiber.Ctx) error {
+	var req struct {
+		Key   string `json:"key"`
+		Value string `json:"value"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	if req.Key == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Setting key is required",
+		})
+	}
+
+	ctx := c.Context()
+
+	// Upsert the setting
+	query := `
+		INSERT INTO app_settings (key, value, updated_at)
+		VALUES ($1, $2, NOW())
+		ON CONFLICT (key)
+		DO UPDATE SET value = $2, updated_at = NOW()
+	`
+	_, err := h.db.Exec(ctx, query, req.Key, req.Value)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to update setting",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Setting updated successfully",
+		"key":     req.Key,
+		"value":   req.Value,
 	})
 }
