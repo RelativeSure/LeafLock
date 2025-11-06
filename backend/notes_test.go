@@ -75,8 +75,8 @@ func (suite *NotesHandlerTestSuite) TestGetNotesSuccess() {
 	noteID2 := uuid.New()
 	now := time.Now()
 
-	// First note scan
-	mockRows.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+	// First note scan (9 args: id, title, content, createdAt, updatedAt, isPinned, isLocked, lockedBy, pinnedOrder)
+	mockRows.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if id, ok := args[0].(*uuid.UUID); ok {
 			*id = noteID1
 		}
@@ -92,10 +92,20 @@ func (suite *NotesHandlerTestSuite) TestGetNotesSuccess() {
 		if updated, ok := args[4].(*time.Time); ok {
 			*updated = now
 		}
+		if pinned, ok := args[5].(*bool); ok {
+			*pinned = false
+		}
+		if locked, ok := args[6].(*bool); ok {
+			*locked = false
+		}
+		// args[7] is **uuid.UUID (lockedBy) - leave nil
+		if pinnedOrder, ok := args[8].(*int); ok {
+			*pinnedOrder = 0
+		}
 	}).Return(nil).Once()
 
 	// Second note scan
-	mockRows.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+	mockRows.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if id, ok := args[0].(*uuid.UUID); ok {
 			*id = noteID2
 		}
@@ -110,6 +120,16 @@ func (suite *NotesHandlerTestSuite) TestGetNotesSuccess() {
 		}
 		if updated, ok := args[4].(*time.Time); ok {
 			*updated = now
+		}
+		if pinned, ok := args[5].(*bool); ok {
+			*pinned = false
+		}
+		if locked, ok := args[6].(*bool); ok {
+			*locked = false
+		}
+		// args[7] is **uuid.UUID (lockedBy) - leave nil
+		if pinnedOrder, ok := args[8].(*int); ok {
+			*pinnedOrder = 0
 		}
 	}).Return(nil).Once()
 

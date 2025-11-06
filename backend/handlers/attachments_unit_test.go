@@ -134,7 +134,7 @@ func TestAttachmentsHandler_UploadAttachment_MismatchedContentType(t *testing.T)
 
 	var payload map[string]string
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
-	assert.Equal(t, "File type does not match content", payload["error"])
+	assert.Equal(t, "file type does not match content", payload["error"])
 
 	mockDB.AssertExpectations(t)
 }

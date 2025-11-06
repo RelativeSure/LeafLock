@@ -103,8 +103,9 @@ func TestFoldersHandler_CreateFolderWithParent(t *testing.T) {
 	folderID := uuid.New()
 
 	parentRow := new(MockRow)
-	parentRow.On("Scan", mock.AnythingOfType("*bool")).Run(func(args mock.Arguments) {
-		*(args[0].(*bool)) = true
+	parentRow.On("Scan", mock.AnythingOfType("*string"), mock.AnythingOfType("*int")).Run(func(args mock.Arguments) {
+		*(args[0].(*string)) = "/"
+		*(args[1].(*int)) = 0
 	}).Return(nil).Once()
 
 	insertRow := new(MockRow)
@@ -159,7 +160,7 @@ func TestFoldersHandler_CreateFolderInvalidParent(t *testing.T) {
 	parentID := uuid.New()
 
 	parentRow := new(MockRow)
-	parentRow.On("Scan", mock.AnythingOfType("*bool")).Return(assert.AnError).Once()
+	parentRow.On("Scan", mock.AnythingOfType("*string"), mock.AnythingOfType("*int")).Return(assert.AnError).Once()
 
 	mockDB.On("QueryRow",
 		mock.Anything,
