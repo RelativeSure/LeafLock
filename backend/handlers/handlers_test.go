@@ -336,7 +336,7 @@ func (suite *NotesHandlerTestSuite) TestCreateNoteSuccess() {
 	mockNoteRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
 		return contains(sql, "INSERT INTO notes")
-	}), mock.Anything, mock.Anything, mock.Anything, mock.Anything, suite.userID).Return(mockNoteRow)
+	}), mock.Anything, mock.Anything, mock.Anything, mock.Anything, suite.userID, mock.Anything, mock.Anything).Return(mockNoteRow)
 
 	noteID := uuid.New()
 	mockNoteRow.On("Scan", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
