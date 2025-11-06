@@ -17,9 +17,6 @@ import (
 	"leaflock/metrics"
 )
 
-// defaultEncryptionVersion is the current encryption version used by the application
-const defaultEncryptionVersion = 1
-
 // NotesHandler handles note-related requests
 type NotesHandler struct {
 	db     database.Database

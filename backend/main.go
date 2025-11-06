@@ -26,7 +26,6 @@ import (
 
 	"leaflock/auth"
 	appconfig "leaflock/config"
-	appcrypto "leaflock/crypto"
 	appdb "leaflock/database"
 	_ "leaflock/docs"     // Import docs for Swagger
 	_ "leaflock/handlers" // Import handlers for Swagger
