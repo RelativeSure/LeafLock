@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"crypto/sha256"
 	"strings"
 	"testing"
 	"time"
@@ -222,7 +223,10 @@ func TestLogin_MFAEnabledNoCode(t *testing.T) {
 // TestLogin_MFAWithInvalidCode tests login with MFA enabled and invalid code
 func TestLogin_MFAWithInvalidCode(t *testing.T) {
 	userID := uuid.New()
-	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
+	jwtSecret := "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding"
+	// Derive MFA encryption key the same way NewService does
+	mfaKey := sha256.Sum256(append([]byte(jwtSecret), []byte("-mfa-encryption")...))
+	cryptoSvc := appcrypto.NewCryptoService(mfaKey[:])
 	pm := NewPasswordManager(nil)
 	salt, _ := pm.GenerateSalt()
 	passwordHash := pm.HashPassword("Password123!", salt)
@@ -274,7 +278,7 @@ func TestLogin_MFAWithInvalidCode(t *testing.T) {
 
 	rdb, cleanup := newTestRedis(t)
 	defer cleanup()
-	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
+	service := NewService(mockDB, rdb, jwtSecret)
 
 	_, err := service.Login(context.Background(), "mfa-user@example.com", "Password123!", "000000")
 	if err == nil {
