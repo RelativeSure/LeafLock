@@ -222,7 +222,7 @@ func (suite *NotesHandlerTestSuite) TestCreateNoteSuccess() {
 
 	// Mock note creation
 	mockRow2 := &MockRow{}
-	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockRow2)
+	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockRow2)
 	mockRow2.On("Scan", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if nid, ok := args[0].(*uuid.UUID); ok {
 			*nid = noteID

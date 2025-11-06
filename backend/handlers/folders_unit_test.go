@@ -37,7 +37,7 @@ func TestFoldersHandler_GetFoldersSuccess(t *testing.T) {
 	rows.On("Next").Return(false).Once()
 
 	call := 0
-	rows.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	rows.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Run(func(args mock.Arguments) {
 			call++
 			idPtr := args[0].(*uuid.UUID)
@@ -45,11 +45,15 @@ func TestFoldersHandler_GetFoldersSuccess(t *testing.T) {
 			nameEnc := args[2].(*[]byte)
 			color := args[3].(*string)
 			position := args[4].(*int)
-			created := args[5].(*time.Time)
-			updated := args[6].(*time.Time)
+			depth := args[5].(*int)
+			path := args[6].(*string)
+			created := args[7].(*time.Time)
+			updated := args[8].(*time.Time)
 
 			*color = "#abcdef"
 			*position = call
+			*depth = 0
+			*path = "/"
 			*created = time.Now().UTC()
 			*updated = time.Now().UTC()
 
