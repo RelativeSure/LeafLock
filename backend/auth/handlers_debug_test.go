@@ -155,9 +155,9 @@ func TestDebugAdminInfoDecryptsEmail(t *testing.T) {
 				if v, ok := dest[0].(*uuid.UUID); ok {
 					*v = adminID
 				}
-				// Zero-knowledge: email_plaintext field (no encryption)
-				if v, ok := dest[1].(*[]byte); ok {
-					*v = []byte(email)
+				// Zero-knowledge: email_plaintext field is a string (no encryption)
+				if v, ok := dest[1].(*string); ok {
+					*v = email
 				}
 				if v, ok := dest[2].(*bool); ok {
 					*v = true

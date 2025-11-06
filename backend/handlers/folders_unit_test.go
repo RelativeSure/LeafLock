@@ -113,6 +113,11 @@ func TestFoldersHandler_CreateFolderWithParent(t *testing.T) {
 		*(args[0].(*uuid.UUID)) = folderID
 	}).Return(nil).Once()
 
+	pathRow := new(MockRow)
+	pathRow.On("Scan", mock.AnythingOfType("*string")).Run(func(args mock.Arguments) {
+		*(args[0].(*string)) = "/"
+	}).Return(nil).Once()
+
 	mockDB.On("QueryRow",
 		mock.Anything,
 		mock.MatchedBy(func(query string) bool { return true }),
@@ -124,6 +129,20 @@ func TestFoldersHandler_CreateFolderWithParent(t *testing.T) {
 		mock.MatchedBy(func(query string) bool { return true }),
 		userID, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 	).Return(insertRow).Once()
+
+	// Mock path lookup after INSERT
+	mockDB.On("QueryRow",
+		mock.Anything,
+		mock.MatchedBy(func(query string) bool { return true }),
+		parentID,
+	).Return(pathRow).Once()
+
+	// Mock UPDATE for path
+	mockDB.On("Exec",
+		mock.Anything,
+		mock.MatchedBy(func(query string) bool { return true }),
+		mock.Anything, folderID,
+	).Return(&MockResult{tag: "UPDATE 1"}, nil).Once()
 
 	app := fiber.New()
 	app.Post("/folders", func(c *fiber.Ctx) error {
