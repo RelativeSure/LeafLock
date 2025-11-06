@@ -206,7 +206,6 @@ func TestCreateAuthResponsePopulatesFields(t *testing.T) {
 	sessionMgr := &mockSessionManager{}
 	service := &Service{
 		db:        db,
-		crypto:    crypto,
 		session:   sessionMgr,
 		password:  NewPasswordManager(db),
 		mfa:       NewMFAManager(db, crypto),
@@ -347,7 +346,6 @@ func TestEnsureDefaultAdminCreatesRecords(t *testing.T) {
 
 	service := &Service{
 		db:        db,
-		crypto:    crypto,
 		session:   &mockSessionManager{},
 		password:  NewPasswordManager(db),
 		mfa:       NewMFAManager(db, crypto),

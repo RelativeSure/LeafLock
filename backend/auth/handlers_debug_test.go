@@ -49,7 +49,6 @@ func TestDebugLoginReturnsUserInfo(t *testing.T) {
 		db := &mockServiceDB{}
 		service := &Service{
 			db:        db,
-			crypto:    crypto,
 			session:   &mockSessionManager{},
 			password:  NewPasswordManager(db),
 			mfa:       NewMFAManager(db, crypto),
@@ -137,7 +136,6 @@ func TestDebugAdminInfoDecryptsEmail(t *testing.T) {
 		db := &mockServiceDB{}
 		service := &Service{
 			db:        db,
-			crypto:    crypto,
 			session:   &mockSessionManager{},
 			password:  NewPasswordManager(db),
 			mfa:       NewMFAManager(db, crypto),
@@ -207,7 +205,6 @@ func TestDebugEncryptionKeyRoundTrip(t *testing.T) {
 		crypto := appcrypto.NewCryptoService(make([]byte, 32))
 		service := &Service{
 			db:        &mockServiceDB{},
-			crypto:    crypto,
 			session:   &mockSessionManager{},
 			password:  NewPasswordManager(&mockServiceDB{}),
 			mfa:       NewMFAManager(&mockServiceDB{}, crypto),
