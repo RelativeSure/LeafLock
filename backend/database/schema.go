@@ -95,12 +95,6 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 
--- Nested folders enhancements (Phase 2.1)
-ALTER TABLE folders ADD COLUMN IF NOT EXISTS depth INTEGER DEFAULT 0;
-ALTER TABLE folders ADD COLUMN IF NOT EXISTS path TEXT DEFAULT '/';
-CREATE INDEX IF NOT EXISTS idx_folders_parent_id ON folders(parent_id);
-CREATE INDEX IF NOT EXISTS idx_folders_path ON folders(path);
-
 -- Password reset tokens table for secure password recovery
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -285,6 +279,12 @@ CREATE TABLE IF NOT EXISTS folders (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Nested folders enhancements (Phase 2.1)
+ALTER TABLE folders ADD COLUMN IF NOT EXISTS depth INTEGER DEFAULT 0;
+ALTER TABLE folders ADD COLUMN IF NOT EXISTS path TEXT DEFAULT '/';
+CREATE INDEX IF NOT EXISTS idx_folders_parent_id ON folders(parent_id);
+CREATE INDEX IF NOT EXISTS idx_folders_path ON folders(path);
 
 -- Add folder_id to notes table for folder organization
 ALTER TABLE notes ADD COLUMN IF NOT EXISTS folder_id UUID REFERENCES folders(id) ON DELETE SET NULL;
