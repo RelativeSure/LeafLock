@@ -376,7 +376,7 @@ func TestEnsureDefaultAdminSkipsWhenAdminExists(t *testing.T) {
 		},
 	}
 
-	service := &Service{db: db, password: NewPasswordManager(db, appcrypto.NewCryptoService(make([]byte, 32)))}
+	service := &Service{db: db, password: NewPasswordManager(db)}
 
 	if err := service.EnsureDefaultAdmin(context.Background(), true, "admin@example.com", "ComplexPass123!"); err != nil {
 		t.Fatalf("expected no error when admin exists, got %v", err)
