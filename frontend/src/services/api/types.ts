@@ -51,6 +51,8 @@ export interface Note {
   isTrashed: boolean
   trashedAt?: string
   pinned?: boolean
+  pinnedOrder?: number
+  locked?: boolean
   encryptionVersion?: number
 }
 
