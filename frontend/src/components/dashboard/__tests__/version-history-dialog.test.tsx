@@ -106,7 +106,9 @@ vi.mock('@/components/ui/card', () => ({
 }))
 
 vi.mock('@/components/ui/select', () => ({
-  Select: ({ children, onValueChange }: any) => <div onClick={() => onValueChange?.('1')}>{children}</div>,
+  Select: ({ children, onValueChange }: any) => (
+    <div onClick={() => onValueChange?.('1')}>{children}</div>
+  ),
   SelectTrigger: ({ children }: any) => <button type="button">{children}</button>,
   SelectContent: ({ children }: any) => <div>{children}</div>,
   SelectItem: ({ children, value, onSelect }: any) => (
@@ -134,7 +136,8 @@ vi.mock('@/components/ui/hover-card', () => ({
 }))
 
 vi.mock('@/components/ui/alert-dialog', () => ({
-  AlertDialog: ({ children, open }: any) => (open ? <div data-testid="alert-dialog">{children}</div> : null),
+  AlertDialog: ({ children, open }: any) =>
+    open ? <div data-testid="alert-dialog">{children}</div> : null,
   AlertDialogContent: ({ children }: any) => <div>{children}</div>,
   AlertDialogHeader: ({ children }: any) => <div>{children}</div>,
   AlertDialogTitle: ({ children }: any) => <h4>{children}</h4>,
@@ -504,9 +507,12 @@ describe('VersionHistoryDialog', () => {
     fireEvent.click(confirmButton)
 
     await waitFor(() => {
-      expect(toastMock.success).toHaveBeenCalledWith('Version restored', expect.objectContaining({
-        description: expect.stringContaining('Restored to version'),
-      }))
+      expect(toastMock.success).toHaveBeenCalledWith(
+        'Version restored',
+        expect.objectContaining({
+          description: expect.stringContaining('Restored to version'),
+        })
+      )
     })
   })
 

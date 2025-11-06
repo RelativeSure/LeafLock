@@ -27,10 +27,11 @@ const (
 // SessionManager handles session operations
 type SessionManager struct {
 	redis  *redis.Client
-	crypto *appcrypto.CryptoService
+	crypto *appcrypto.CryptoService // Derived from JWT secret, not server encryption key
 }
 
 // NewSessionManager creates a new session manager
+// Zero-knowledge: crypto param is JWT-derived, not from SERVER_ENCRYPTION_KEY
 func NewSessionManager(rdb *redis.Client, crypto *appcrypto.CryptoService) *SessionManager {
 	return &SessionManager{
 		redis:  rdb,

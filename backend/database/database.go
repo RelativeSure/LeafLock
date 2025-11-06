@@ -18,7 +18,7 @@ import (
 )
 
 // MigrationSchemaVersion tracks the current schema version
-const MigrationSchemaVersion = "2025.11.04.001" // Fix: Admin user creation logic - check specific email, not all users
+const MigrationSchemaVersion = "2025.11.05.006" // Email notifications: Add email_templates table and user preferences
 
 // Database interface for dependency injection and testing
 type Database interface {

@@ -109,9 +109,6 @@ export const handlers = [
 
   // Catch-all for unhandled requests - return empty success
   http.all(`${API_BASE}/*`, () => {
-    return HttpResponse.json(
-      { success: true, data: null },
-      { status: 200 }
-    )
+    return HttpResponse.json({ success: true, data: null }, { status: 200 })
   }),
 ]

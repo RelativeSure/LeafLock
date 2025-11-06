@@ -41,8 +41,13 @@ docs/.env.production
 # dependencies
 docs/node_modules/
 
-
-
+# Test coverage
+*.out
+coverage.out
+coverage.html
+coverage/
+*.test
+*.cov
 
 megalinter-reports/
 frontend/src/components/__tests__/

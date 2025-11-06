@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 
-	"leaflock/crypto"
 	"leaflock/database"
 )
 
@@ -336,7 +335,8 @@ Temporary solution (if any):
 }
 
 // SeedDefaultTemplates creates default public templates if they don't exist
-func SeedDefaultTemplates(db database.Database, cryptoSvc *crypto.CryptoService) error {
+// Zero-knowledge: System templates stored in plaintext (they're public defaults, not user data)
+func SeedDefaultTemplates(db database.Database) error {
 	ctx := context.Background()
 
 	// Check if we already have default templates
@@ -354,21 +354,11 @@ func SeedDefaultTemplates(db database.Database, cryptoSvc *crypto.CryptoService)
 	log.Println("Seeding default templates...")
 
 	for _, template := range defaultTemplates {
-		// Encrypt template data (Encrypt returns []byte)
-		nameEncryptedBytes, err := cryptoSvc.Encrypt([]byte(template.Name))
-		if err != nil {
-			return fmt.Errorf("failed to encrypt template name '%s': %w", template.Name, err)
-		}
-
-		descriptionEncryptedBytes, err := cryptoSvc.Encrypt([]byte(template.Description))
-		if err != nil {
-			return fmt.Errorf("failed to encrypt template description '%s': %w", template.Name, err)
-		}
-
-		contentEncryptedBytes, err := cryptoSvc.Encrypt([]byte(template.Content))
-		if err != nil {
-			return fmt.Errorf("failed to encrypt template content '%s': %w", template.Name, err)
-		}
+		// Zero-knowledge: System templates in plaintext (public defaults, visible to all)
+		// User-created templates should use user's master key (future enhancement)
+		nameBytes := []byte(template.Name)
+		descriptionBytes := []byte(template.Description)
+		contentBytes := []byte(template.Content)
 
 		// Add 'system' tag to identify default templates
 		tags := append(template.Tags, "system")
@@ -377,7 +367,7 @@ func SeedDefaultTemplates(db database.Database, cryptoSvc *crypto.CryptoService)
 		_, err = db.Exec(ctx, `
 			INSERT INTO templates (user_id, name_encrypted, description_encrypted, content_encrypted, tags, icon, is_public, usage_count)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		`, nil, nameEncryptedBytes, descriptionEncryptedBytes, contentEncryptedBytes, tags, template.Icon, true, 0)
+		`, nil, nameBytes, descriptionBytes, contentBytes, tags, template.Icon, true, 0)
 		if err != nil {
 			return fmt.Errorf("failed to insert template '%s': %w", template.Name, err)
 		}

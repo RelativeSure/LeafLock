@@ -153,7 +153,12 @@ describe('NoteList', () => {
   })
 
   it('should filter notes by selected folder', () => {
-    const folderNote = { ...mockNote, id: 'folder-note', title: 'Folder Note', folderId: 'folder-1' }
+    const folderNote = {
+      ...mockNote,
+      id: 'folder-note',
+      title: 'Folder Note',
+      folderId: 'folder-1',
+    }
     vi.mocked(useNotesStore).mockReturnValue(
       createMockStore({
         notes: [mockNote, folderNote],
@@ -275,7 +280,6 @@ describe('NoteList', () => {
     expect(screen.getByText('Old Note')).toBeInTheDocument()
     expect(screen.getByText('New Note')).toBeInTheDocument()
   })
-
 
   it('should sort notes by title', () => {
     const noteA = { ...mockNote, id: 'a', title: 'Apple' }

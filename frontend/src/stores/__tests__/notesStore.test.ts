@@ -823,7 +823,10 @@ describe('notesStore', () => {
 
         await useNotesStore.getState().moveNotesToFolder(['note-1', 'note-2'], 'folder-1')
 
-        expect(contentService.moveNotesToFolder).toHaveBeenCalledWith(['note-1', 'note-2'], 'folder-1')
+        expect(contentService.moveNotesToFolder).toHaveBeenCalledWith(
+          ['note-1', 'note-2'],
+          'folder-1'
+        )
         expect(useNotesStore.getState().notes[0].folderId).toBe('folder-1')
         expect(useNotesStore.getState().notes[1].folderId).toBe('folder-1')
       })
@@ -841,7 +844,10 @@ describe('notesStore', () => {
 
         await useNotesStore.getState().addTagsToNotes(['note-1', 'note-2'], ['new-tag'])
 
-        expect(contentService.addTagsToNotes).toHaveBeenCalledWith(['note-1', 'note-2'], ['new-tag'])
+        expect(contentService.addTagsToNotes).toHaveBeenCalledWith(
+          ['note-1', 'note-2'],
+          ['new-tag']
+        )
         expect(useNotesStore.getState().notes[0].tags).toContain('new-tag')
         expect(useNotesStore.getState().notes[1].tags).toContain('new-tag')
       })
@@ -868,7 +874,10 @@ describe('notesStore', () => {
 
         await useNotesStore.getState().removeTagsFromNotes(['note-1', 'note-2'], ['tag1'])
 
-        expect(contentService.removeTagsFromNotes).toHaveBeenCalledWith(['note-1', 'note-2'], ['tag1'])
+        expect(contentService.removeTagsFromNotes).toHaveBeenCalledWith(
+          ['note-1', 'note-2'],
+          ['tag1']
+        )
         expect(useNotesStore.getState().notes[0].tags).not.toContain('tag1')
         expect(useNotesStore.getState().notes[1].tags).not.toContain('tag1')
       })
@@ -900,7 +909,11 @@ describe('notesStore', () => {
           .getState()
           .createNoteLink('note-1', 'note-2', 'Related note')
 
-        expect(socialService.createNoteLink).toHaveBeenCalledWith('note-1', 'note-2', 'Related note')
+        expect(socialService.createNoteLink).toHaveBeenCalledWith(
+          'note-1',
+          'note-2',
+          'Related note'
+        )
         expect(result).toEqual(mockLink)
       })
     })

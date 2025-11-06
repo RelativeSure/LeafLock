@@ -74,9 +74,9 @@ class AuthService extends ApiClient {
   async verifyMFA(code: string, sessionToken?: string): Promise<LoginResponse> {
     const response = await this.request<any>('/auth/mfa/verify', {
       method: 'POST',
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         code,
-        session_token: sessionToken 
+        session_token: sessionToken,
       }),
     })
 

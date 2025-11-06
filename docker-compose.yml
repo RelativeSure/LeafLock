@@ -41,7 +41,7 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-leaflock}?sslmode=disable
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me-please-64-characters-long-1234567890abc}
-      SERVER_ENCRYPTION_KEY: ${SERVER_ENCRYPTION_KEY:-dev-server-side-encryption-key!!}
+      # SERVER_ENCRYPTION_KEY removed - zero-knowledge architecture
       ENABLE_DEFAULT_ADMIN: ${ENABLE_DEFAULT_ADMIN:-true}
       DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-REDACTED_EMAIL}
       DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-REDACTED_PASSWORD}

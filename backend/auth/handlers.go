@@ -293,27 +293,16 @@ func (h *Handler) GetMFAStatus(c *fiber.Ctx) error {
 func (h *Handler) BeginMFASetup(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uuid.UUID)
 
-	// Get user email
+	// Get user email (zero-knowledge: plaintext)
 	var email string
-	query := `SELECT email_encrypted FROM users WHERE id = $1`
-	var emailEncrypted []byte
-	err := h.service.db.QueryRow(c.Context(), query, userID).Scan(&emailEncrypted)
+	query := `SELECT email_plaintext FROM users WHERE id = $1`
+	err := h.service.db.QueryRow(c.Context(), query, userID).Scan(&email)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse{
 			Error: "Failed to get user info",
 			Code:  ErrCodeInternalError,
 		})
 	}
-
-	// Decrypt email
-	emailBytes, err := h.service.crypto.DecryptBytes(emailEncrypted)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse{
-			Error: "Failed to decrypt email",
-			Code:  ErrCodeInternalError,
-		})
-	}
-	email = string(emailBytes)
 
 	// Generate TOTP secret
 	key, err := h.service.mfa.GenerateTOTPSecret(email)
@@ -753,9 +742,9 @@ func (h *Handler) DebugAdminInfo(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get admin user info
+	// Get admin user info (zero-knowledge: email in plaintext)
 	query := `
-		SELECT id, email_encrypted, is_admin, created_at, last_login
+		SELECT id, email_plaintext, is_admin, created_at, last_login
 		FROM users
 		WHERE is_admin = true AND deleted_at IS NULL
 		ORDER BY created_at ASC
@@ -763,13 +752,13 @@ func (h *Handler) DebugAdminInfo(c *fiber.Ctx) error {
 	`
 
 	var userID uuid.UUID
-	var emailEncrypted []byte
+	var email string
 	var isAdmin bool
 	var createdAt time.Time
 	var lastLogin *time.Time
 
 	err := h.service.db.QueryRow(c.Context(), query).Scan(
-		&userID, &emailEncrypted, &isAdmin, &createdAt, &lastLogin,
+		&userID, &email, &isAdmin, &createdAt, &lastLogin,
 	)
 
 	if err != nil {
@@ -779,23 +768,10 @@ func (h *Handler) DebugAdminInfo(c *fiber.Ctx) error {
 		})
 	}
 
-	// Decrypt email
-	emailBytes, err := h.service.crypto.DecryptBytes(emailEncrypted)
-	if err != nil {
-		return c.JSON(map[string]interface{}{
-			"admin_found": true,
-			"user_id":     userID.String(),
-			"is_admin":    isAdmin,
-			"created_at":  createdAt,
-			"last_login":  lastLogin,
-			"email_error": "Failed to decrypt email",
-		})
-	}
-
 	return c.JSON(map[string]interface{}{
 		"admin_found": true,
 		"user_id":     userID.String(),
-		"email":       string(emailBytes),
+		"email":       email,
 		"is_admin":    isAdmin,
 		"created_at":  createdAt,
 		"last_login":  lastLogin,
@@ -835,35 +811,14 @@ func (h *Handler) DebugEncryptionKey(c *fiber.Ctx) error {
 		})
 	}
 
-	// Test encryption/decryption with a known value
-	testValue := []byte("test-encryption-key")
-	encrypted, err := h.service.crypto.EncryptBytes(testValue)
-	if err != nil {
-		return c.JSON(map[string]interface{}{
-			"encryption_test": "failed",
-			"error":           err.Error(),
-		})
-	}
-
-	decrypted, err := h.service.crypto.DecryptBytes(encrypted)
-	if err != nil {
-		return c.JSON(map[string]interface{}{
-			"encryption_test": "failed",
-			"encrypt_success": true,
-			"decrypt_error":   err.Error(),
-		})
-	}
-
-	success := string(decrypted) == string(testValue)
-
+	// Note: Service-level crypto removed for zero-knowledge architecture
+	// MFA and session encryption are handled by dedicated managers with JWT-derived keys
 	return c.JSON(map[string]interface{}{
-		"encryption_test":   "passed",
-		"encrypt_success":   true,
-		"decrypt_success":   true,
-		"roundtrip_success": success,
-		"test_value":        string(testValue),
-		"decrypted_value":   string(decrypted),
-		"encrypted_length":  len(encrypted),
+		"encryption_architecture": "zero-knowledge",
+		"note":                     "Service-level crypto removed. Encryption is handled by MFA and session managers with JWT-derived keys.",
+		"mfa_encryption":           "Derived from JWT secret with '-mfa-encryption' suffix",
+		"session_encryption":       "Derived from JWT secret with '-session-encryption' suffix",
+		"user_note_encryption":     "End-to-end encrypted with password-derived keys (client-side)",
 	})
 }
 

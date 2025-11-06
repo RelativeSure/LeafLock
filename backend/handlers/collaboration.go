@@ -14,32 +14,48 @@ import (
 	"leaflock/crypto"
 	"leaflock/database"
 	"leaflock/metrics"
+	"leaflock/services"
 	"leaflock/utils"
 )
 
 // Collaboration Handler
 type CollaborationHandler struct {
-	db     database.Database
-	crypto *crypto.CryptoService
+	db                  database.Database
+	crypto              *crypto.CryptoService
+	notificationService *services.NotificationService
 }
 
 // NewCollaborationHandler creates a new collaboration handler.
-func NewCollaborationHandler(db database.Database, cryptoService *crypto.CryptoService) *CollaborationHandler {
-	return &CollaborationHandler{db: db, crypto: cryptoService}
+func NewCollaborationHandler(db database.Database, cryptoService *crypto.CryptoService, notificationService *services.NotificationService) *CollaborationHandler {
+	return &CollaborationHandler{
+		db:                  db,
+		crypto:              cryptoService,
+		notificationService: notificationService,
+	}
 }
 
 type ShareNoteRequest struct {
-	UserEmail  string `json:"user_email" validate:"required,email"`
-	Permission string `json:"permission" validate:"required,oneof=read write admin"`
+	UserEmail  string  `json:"user_email" validate:"required,email"`
+	Permission string  `json:"permission" validate:"required,oneof=read write admin"`
+	CanEdit    *bool   `json:"can_edit,omitempty"`
+	CanDelete  *bool   `json:"can_delete,omitempty"`
+	CanShare   *bool   `json:"can_share,omitempty"`
+	CanComment *bool   `json:"can_comment,omitempty"`
+	ExpiresAt  *string `json:"expires_at,omitempty"` // ISO 8601 format
 }
 
 type CollaborationResponse struct {
-	ID         string `json:"id"`
-	NoteID     string `json:"note_id"`
-	UserID     string `json:"user_id"`
-	UserEmail  string `json:"user_email"`
-	Permission string `json:"permission"`
-	CreatedAt  string `json:"created_at"`
+	ID         string  `json:"id"`
+	NoteID     string  `json:"note_id"`
+	UserID     string  `json:"user_id"`
+	UserEmail  string  `json:"user_email"`
+	Permission string  `json:"permission"`
+	CanEdit    bool    `json:"can_edit"`
+	CanDelete  bool    `json:"can_delete"`
+	CanShare   bool    `json:"can_share"`
+	CanComment bool    `json:"can_comment"`
+	ExpiresAt  *string `json:"expires_at,omitempty"`
+	CreatedAt  string  `json:"created_at"`
 }
 
 // ShareNote godoc
@@ -135,12 +151,42 @@ func (h *CollaborationHandler) ShareNote(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt key"})
 	}
 
+	// Set defaults based on permission level if not explicitly provided
+	canEdit := true
+	if req.CanEdit != nil {
+		canEdit = *req.CanEdit
+	}
+	canDelete := false
+	if req.CanDelete != nil {
+		canDelete = *req.CanDelete
+	} else if req.Permission == "admin" {
+		canDelete = true
+	}
+	canShare := false
+	if req.CanShare != nil {
+		canShare = *req.CanShare
+	} else if req.Permission == "admin" {
+		canShare = true
+	}
+	canComment := true
+	if req.CanComment != nil {
+		canComment = *req.CanComment
+	}
+
+	var expiresAt *time.Time
+	if req.ExpiresAt != nil {
+		parsed, err := time.Parse(time.RFC3339, *req.ExpiresAt)
+		if err == nil {
+			expiresAt = &parsed
+		}
+	}
+
 	// Create collaboration record
 	var collaborationID uuid.UUID
 	err = h.db.QueryRow(ctx, `
-		INSERT INTO collaborations (note_id, user_id, permission, key_encrypted)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id`, noteID, targetUserID, req.Permission, encryptedKey).Scan(&collaborationID)
+		INSERT INTO collaborations (note_id, user_id, permission, key_encrypted, can_edit, can_delete, can_share, can_comment, expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id`, noteID, targetUserID, req.Permission, encryptedKey, canEdit, canDelete, canShare, canComment, expiresAt).Scan(&collaborationID)
 
 	if err != nil {
 		utils.LogRequestError(c, "ShareNote: failed to create collaboration record", err, "target_user_id", targetUserID)
@@ -153,6 +199,44 @@ func (h *CollaborationHandler) ShareNote(c *fiber.Ctx) error {
 		"target_user": targetUserID,
 		"permission":  req.Permission,
 	})
+
+	// Send email notification if user has it enabled
+	if h.notificationService != nil {
+		go func() {
+			// Check if recipient wants email notifications
+			enabled, err := h.notificationService.CheckUserEmailPreference(context.Background(), targetUserID.String(), "note_shared")
+			if err == nil && enabled {
+				// Get sender name
+				var senderName string
+				h.db.QueryRow(context.Background(), `SELECT COALESCE(display_name, email_plaintext) FROM users WHERE id = $1`, userID).Scan(&senderName)
+
+				// Get note title (decrypt it)
+				var titleEncrypted []byte
+				h.db.QueryRow(context.Background(), `SELECT title_encrypted FROM notes WHERE id = $1`, noteID).Scan(&titleEncrypted)
+				noteTitle := "Untitled Note"
+				if titleEncrypted != nil {
+					if titleBytes, err := h.crypto.Decrypt(titleEncrypted); err == nil {
+						noteTitle = string(titleBytes)
+					}
+				}
+
+				// Get recipient name
+				var recipientName string
+				h.db.QueryRow(context.Background(), `SELECT COALESCE(display_name, email_plaintext) FROM users WHERE id = $1`, targetUserID).Scan(&recipientName)
+
+				// Send email
+				h.notificationService.SendNoteSharedNotification(
+					context.Background(),
+					req.UserEmail,
+					recipientName,
+					senderName,
+					noteTitle,
+					req.Permission,
+					"", // noteURL - can be constructed from app config
+				)
+			}
+		}()
+	}
 
 	return c.Status(201).JSON(fiber.Map{
 		"message":          "Note shared successfully",
@@ -198,7 +282,7 @@ func (h *CollaborationHandler) GetCollaborators(c *fiber.Ctx) error {
 
 	// Get collaborators
 	rows, err := h.db.Query(ctx, `
-		SELECT c.id, c.user_id, u.email, c.permission, c.created_at
+		SELECT c.id, c.user_id, u.email, c.permission, c.can_edit, c.can_delete, c.can_share, c.can_comment, c.expires_at, c.created_at
 		FROM collaborations c
 		JOIN users u ON c.user_id = u.id
 		WHERE c.note_id = $1
@@ -214,8 +298,10 @@ func (h *CollaborationHandler) GetCollaborators(c *fiber.Ctx) error {
 		var collab CollaborationResponse
 		var collaborationID, collaboratorUserID uuid.UUID
 		var createdAt time.Time
+		var expiresAt *time.Time
 
-		if err := rows.Scan(&collaborationID, &collaboratorUserID, &collab.UserEmail, &collab.Permission, &createdAt); err != nil {
+		if err := rows.Scan(&collaborationID, &collaboratorUserID, &collab.UserEmail, &collab.Permission,
+			&collab.CanEdit, &collab.CanDelete, &collab.CanShare, &collab.CanComment, &expiresAt, &createdAt); err != nil {
 			continue
 		}
 
@@ -223,6 +309,10 @@ func (h *CollaborationHandler) GetCollaborators(c *fiber.Ctx) error {
 		collab.NoteID = noteID.String()
 		collab.UserID = collaboratorUserID.String()
 		collab.CreatedAt = createdAt.Format(time.RFC3339)
+		if expiresAt != nil {
+			expiresAtStr := expiresAt.Format(time.RFC3339)
+			collab.ExpiresAt = &expiresAtStr
+		}
 
 		collaborators = append(collaborators, collab)
 	}

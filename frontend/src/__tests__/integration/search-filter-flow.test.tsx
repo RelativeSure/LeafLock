@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useNotesStore } from '@/stores/notesStore'
-import { contentService, organizationService } from '@/services/api'
+
 import type { Note } from '@/types'
 
 vi.mock('@/services/api', () => ({
@@ -13,6 +13,9 @@ vi.mock('@/services/api', () => ({
     getTags: vi.fn(),
   },
 }))
+
+// Import mocked services after mocks are declared
+import { contentService } from '@/services/api'
 
 describe('Integration: Search and Filter Flow', () => {
   const mockNotes: Note[] = [

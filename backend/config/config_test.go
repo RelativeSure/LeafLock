@@ -316,8 +316,8 @@ func TestIsSupportedLogLevel(t *testing.T) {
 }
 
 func TestLoadConfigUsesDefaults(t *testing.T) {
-	t.Setenv("JWT_SECRET", strings.Repeat("xsecurevalue", 4))          // 44 chars
-	t.Setenv("SERVER_ENCRYPTION_KEY", strings.Repeat("yencryptvalue", 4))
+	t.Setenv("JWT_SECRET", strings.Repeat("xsecurevalue", 4)) // 44 chars
+	// Zero-knowledge: SERVER_ENCRYPTION_KEY no longer used
 	t.Setenv("DEFAULT_ADMIN_PASSWORD", "StrongestAdminPass2024!")
 	t.Setenv("DATABASE_URL", "postgres://user:StrongPass321!@localhost:5432/leaflock?sslmode=require")
 	t.Setenv("LOG_LEVEL", "")
@@ -388,8 +388,8 @@ func TestLoadConfigUsesDefaults(t *testing.T) {
 }
 
 func TestLoadConfigBuildsDatabaseURLFromEnv(t *testing.T) {
-	t.Setenv("JWT_SECRET", strings.Repeat("securejwtvalue", 3))             // 39 chars
-	t.Setenv("SERVER_ENCRYPTION_KEY", strings.Repeat("encryptionvalue", 3)) // 48 chars
+	t.Setenv("JWT_SECRET", strings.Repeat("securejwtvalue", 3)) // 39 chars
+	// Zero-knowledge: SERVER_ENCRYPTION_KEY no longer used
 	t.Setenv("DEFAULT_ADMIN_PASSWORD", "ExtremelySecureAdminPass456!")
 	t.Setenv("DATABASE_URL", "")
 	t.Setenv("POSTGRESQL_HOST", "db.internal.local")

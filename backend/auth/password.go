@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"time"
@@ -39,15 +38,14 @@ const (
 
 // PasswordManager handles password operations
 type PasswordManager struct {
-	db     database.Database
-	crypto *appcrypto.CryptoService
+	db database.Database
+	// crypto removed - zero-knowledge architecture (hash IP/UA instead of encrypting)
 }
 
 // NewPasswordManager creates a new password manager
-func NewPasswordManager(db database.Database, crypto *appcrypto.CryptoService) *PasswordManager {
+func NewPasswordManager(db database.Database) *PasswordManager {
 	return &PasswordManager{
-		db:     db,
-		crypto: crypto,
+		db: db,
 	}
 }
 
@@ -140,30 +138,30 @@ func (pm *PasswordManager) CreateResetToken(ctx context.Context, userID uuid.UUI
 	token := base64.URLEncoding.EncodeToString(tokenBytes)
 
 	// Hash token for storage (SHA-256)
-	hash := sha256.Sum256([]byte(token))
+	tokenHash := sha256.Sum256([]byte(token))
 
-	// Encrypt IP and User-Agent
-	ipEncrypted, err := pm.crypto.EncryptBytes([]byte(ipAddress))
-	if err != nil {
-		return "", fmt.Errorf("failed to encrypt IP address: %w", err)
+	// Zero-knowledge: Hash IP and User-Agent for privacy (can't retrieve, but can verify)
+	var ipHash, uaHash []byte
+	if ipAddress != "" {
+		hash := sha256.Sum256([]byte(ipAddress))
+		ipHash = hash[:]
 	}
-
-	uaEncrypted, err := pm.crypto.EncryptBytes([]byte(userAgent))
-	if err != nil {
-		return "", fmt.Errorf("failed to encrypt user agent: %w", err)
+	if userAgent != "" {
+		hash := sha256.Sum256([]byte(userAgent))
+		uaHash = hash[:]
 	}
 
 	// Store in database
 	query := `
 		INSERT INTO password_reset_tokens
-		(user_id, token_hash, expires_at, ip_address_encrypted, user_agent_encrypted)
+		(user_id, token_hash, expires_at, ip_address_hash, user_agent_hash)
 		VALUES ($1, $2, $3, $4, $5)
 	`
 
 	expiresAt := time.Now().UTC().Add(ResetTokenExpiry)
-	_, err = pm.db.Exec(ctx, query, userID, hash[:], expiresAt, ipEncrypted, uaEncrypted)
-	if err != nil {
-		return "", fmt.Errorf("failed to store reset token: %w", err)
+	_, execErr := pm.db.Exec(ctx, query, userID, tokenHash[:], expiresAt, ipHash, uaHash)
+	if execErr != nil {
+		return "", fmt.Errorf("failed to store reset token: %w", execErr)
 	}
 
 	return token, nil
@@ -346,30 +344,21 @@ func (pm *PasswordManager) auditLog(ctx context.Context, userID uuid.UUID, actio
 	ipAddress := utils.GetClientIPFromContext(ctx)
 	userAgent := utils.GetUserAgentFromContext(ctx)
 
-	// Encrypt IP and User-Agent
-	ipEncrypted, err := pm.crypto.EncryptBytes([]byte(ipAddress))
-	if err != nil {
-		return // Fail silently for audit logging
+	// Zero-knowledge: Hash IP and User-Agent for privacy
+	var ipHash, uaHash []byte
+	if ipAddress != "" {
+		hash := sha256.Sum256([]byte(ipAddress))
+		ipHash = hash[:]
+	}
+	if userAgent != "" {
+		hash := sha256.Sum256([]byte(userAgent))
+		uaHash = hash[:]
 	}
 
-	uaEncrypted, err := pm.crypto.EncryptBytes([]byte(userAgent))
-	if err != nil {
-		return // Fail silently for audit logging
-	}
-
-	// Encrypt metadata if provided
-	var metadataEncrypted []byte
-	if metadata != nil {
-		metadataBytes, err := json.Marshal(metadata)
-		if err == nil {
-			metadataEncrypted, _ = pm.crypto.EncryptBytes(metadataBytes)
-		}
-	}
-
-	// Insert audit log
+	// Insert audit log (metadata as plaintext JSONB)
 	query := `
-		INSERT INTO audit_log (user_id, action, resource_type, ip_address_encrypted, user_agent_encrypted, metadata_encrypted)
+		INSERT INTO audit_log (user_id, action, resource_type, ip_address_hash, user_agent_hash, metadata)
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
-	_, _ = pm.db.Exec(ctx, query, userID, action, "auth", ipEncrypted, uaEncrypted, metadataEncrypted)
+	_, _ = pm.db.Exec(ctx, query, userID, action, "auth", ipHash, uaHash, metadata)
 }

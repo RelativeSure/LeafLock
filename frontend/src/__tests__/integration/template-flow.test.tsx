@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useTemplatesStore } from '@/stores/templatesStore'
 import { useNotesStore } from '@/stores/notesStore'
-import { contentService, organizationService } from '@/services/api'
 
 vi.mock('@/services/api', () => ({
   contentService: {
@@ -24,6 +23,9 @@ vi.mock('@/lib/encryption-utils', () => ({
   ENCRYPTION_VERSION: 'v1',
   encryptTextWithStoredKey: vi.fn().mockResolvedValue('encrypted'),
 }))
+
+// Import mocked services after mocks are declared
+import { contentService, organizationService } from '@/services/api'
 
 describe('Integration: Template Usage Flow', () => {
   const mockUser = {

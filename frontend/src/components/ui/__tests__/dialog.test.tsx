@@ -173,7 +173,7 @@ describe('Dialog', () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Complete Dialog</DialogTitle>
-          <DialogDescription>Test Description</DialogDescription>
+            <DialogDescription>Test Description</DialogDescription>
             <DialogDescription>This is a complete dialog example</DialogDescription>
           </DialogHeader>
           <div>Main Content</div>
@@ -189,9 +189,7 @@ describe('Dialog', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Complete Dialog')).toBeInTheDocument()
-      expect(
-        screen.getByText('This is a complete dialog example')
-      ).toBeInTheDocument()
+      expect(screen.getByText('This is a complete dialog example')).toBeInTheDocument()
       expect(screen.getByText('Main Content')).toBeInTheDocument()
       // Check for visible close button in the portal
       const closeButton = document.querySelector(
@@ -391,7 +389,7 @@ describe('Dialog', () => {
           <DialogTrigger>Open Dialog</DialogTrigger>
           <DialogContent>
             <DialogTitle>Clickaway Dialog</DialogTitle>
-          <DialogDescription>Test Description</DialogDescription>
+            <DialogDescription>Test Description</DialogDescription>
           </DialogContent>
         </Dialog>
       </div>
@@ -422,7 +420,7 @@ describe('Dialog', () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Header Title</DialogTitle>
-          <DialogDescription>Test Description</DialogDescription>
+            <DialogDescription>Test Description</DialogDescription>
             <DialogDescription>Header Description</DialogDescription>
           </DialogHeader>
         </DialogContent>
@@ -474,20 +472,14 @@ describe('Dialog', () => {
       </Dialog>
     )
 
-    expect(
-      container.querySelector('[data-slot="dialog-trigger"]')
-    ).toBeInTheDocument()
+    expect(container.querySelector('[data-slot="dialog-trigger"]')).toBeInTheDocument()
 
     const trigger = screen.getByText('Open Dialog')
     await user.click(trigger)
 
     await waitFor(() => {
-      expect(
-        document.querySelector('[data-slot="dialog-overlay"]')
-      ).toBeInTheDocument()
-      expect(
-        document.querySelector('[data-slot="dialog-content"]')
-      ).toBeInTheDocument()
+      expect(document.querySelector('[data-slot="dialog-overlay"]')).toBeInTheDocument()
+      expect(document.querySelector('[data-slot="dialog-content"]')).toBeInTheDocument()
     })
   })
 
@@ -499,7 +491,7 @@ describe('Dialog', () => {
           <DialogTrigger>Open Dialog</DialogTrigger>
           <DialogContent>
             <DialogTitle>Portal Content</DialogTitle>
-          <DialogDescription>Test Description</DialogDescription>
+            <DialogDescription>Test Description</DialogDescription>
           </DialogContent>
         </Dialog>
       </div>
@@ -639,14 +631,14 @@ describe('Dialog', () => {
           <DialogTrigger>Open Dialog 1</DialogTrigger>
           <DialogContent>
             <DialogTitle>Dialog 1 Title</DialogTitle>
-          <DialogDescription>Test Description</DialogDescription>
+            <DialogDescription>Test Description</DialogDescription>
           </DialogContent>
         </Dialog>
         <Dialog>
           <DialogTrigger>Open Dialog 2</DialogTrigger>
           <DialogContent>
             <DialogTitle>Dialog 2 Title</DialogTitle>
-          <DialogDescription>Test Description</DialogDescription>
+            <DialogDescription>Test Description</DialogDescription>
           </DialogContent>
         </Dialog>
       </div>

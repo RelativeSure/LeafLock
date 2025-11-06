@@ -173,3 +173,34 @@ func (h *Hub) GetConnectedUsers(noteID uuid.UUID) []string {
 	}
 	return users
 }
+
+// BroadcastToUser sends a message to all connections for a specific user
+func (h *Hub) BroadcastToUser(userID uuid.UUID, message WSMessage) error {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	data, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
+
+	sent := false
+	// Send to all connections belonging to this user
+	for _, conn := range h.connections {
+		if conn.UserID == userID {
+			select {
+			case conn.Send <- data:
+				sent = true
+			default:
+				// Connection blocked, skip
+			}
+		}
+	}
+
+	if !sent {
+		// User not connected, not an error
+		return nil
+	}
+
+	return nil
+}
