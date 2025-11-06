@@ -404,7 +404,8 @@ func (suite *SecurityTestSuite) TestRateLimiting() {
 
 // Encryption Security Tests
 func (suite *SecurityTestSuite) TestEncryptionSecurity() {
-	crypto := NewCryptoService(suite.config.EncryptionKey)
+	testKey := make([]byte, 32) // Test encryption key
+	crypto := NewCryptoService(testKey)
 
 	suite.Run("NonceUniqueness", func() {
 		plaintext := []byte("test data")

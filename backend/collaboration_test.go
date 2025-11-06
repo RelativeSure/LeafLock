@@ -40,7 +40,8 @@ func TestCollaborationFeatures(t *testing.T) {
 	cfg := LoadConfig()
 
 	// Create crypto service
-	crypto := NewCryptoService(cfg.EncryptionKey)
+	testKey := make([]byte, 32) // Test encryption key
+	crypto := NewCryptoService(testKey)
 
 	// Setup in-memory Redis for auth flows
 	mr := miniredis.RunT(t)
@@ -50,7 +51,7 @@ func TestCollaborationFeatures(t *testing.T) {
 		Addr: mr.Addr(),
 	})
 
-	authService := auth.NewService(dbPool, rdb, crypto, string(cfg.JWTSecret))
+	authService := auth.NewService(dbPool, rdb, string(cfg.JWTSecret))
 
 	// Create collaboration handler
 	handler := &CollaborationHandler{

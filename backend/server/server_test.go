@@ -46,7 +46,7 @@ func TestReadyState(t *testing.T) {
 	crypto := &MockCryptoService{}
 
 	// Create ReadyState with nil pool and redis for basic testing
-	readyState := NewReadyState(nil, crypto, cfg, nil)
+	readyState := NewReadyState(nil, cfg, nil)
 
 	t.Run("Initial state should be not ready", func(t *testing.T) {
 		assert.False(t, readyState.IsFullyReady())
@@ -91,7 +91,7 @@ func TestCreateFiberApp(t *testing.T) {
 		Port: "8080",
 	}
 	crypto := &MockCryptoService{}
-	readyState := NewReadyState(nil, crypto, cfg, nil)
+	readyState := NewReadyState(nil, cfg, nil)
 	startTime := time.Now()
 
 	app := CreateFiberApp(startTime, readyState)
@@ -177,7 +177,7 @@ func TestReadyStateWithMockServices(t *testing.T) {
 	crypto := &MockCryptoService{}
 
 	t.Run("ReadyState stores and retrieves services correctly", func(t *testing.T) {
-		readyState := NewReadyState(nil, crypto, cfg, rdb)
+		readyState := NewReadyState(nil, cfg, rdb)
 
 		assert.Equal(t, cfg, readyState.GetConfig())
 		assert.Equal(t, crypto, readyState.GetCrypto())
@@ -185,7 +185,7 @@ func TestReadyStateWithMockServices(t *testing.T) {
 	})
 
 	t.Run("Concurrent ready state updates", func(t *testing.T) {
-		readyState := NewReadyState(nil, crypto, cfg, rdb)
+		readyState := NewReadyState(nil, cfg, rdb)
 
 		// Simulate concurrent initialization
 		done := make(chan bool, 4)
@@ -220,7 +220,7 @@ func TestReadyStateWithMockServices(t *testing.T) {
 func BenchmarkReadyStateCheck(b *testing.B) {
 	cfg := &config.Config{Port: "8080"}
 	crypto := &MockCryptoService{}
-	readyState := NewReadyState(nil, crypto, cfg, nil)
+	readyState := NewReadyState(nil, cfg, nil)
 
 	// Mark all as ready
 	readyState.MarkAdminReady()

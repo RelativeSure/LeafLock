@@ -34,7 +34,8 @@ func TestImportExportFeatures(t *testing.T) {
 
 	// Create crypto and auth services
 	cfg := LoadConfig()
-	crypto := NewCryptoService(cfg.EncryptionKey)
+	testKey := make([]byte, 32) // Test encryption key
+	crypto := NewCryptoService(testKey)
 
 	dbPool, ok := db.(*pgxpool.Pool)
 	require.True(t, ok, "expected *pgxpool.Pool")
@@ -43,7 +44,7 @@ func TestImportExportFeatures(t *testing.T) {
 	defer mr.Close()
 
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	authService := auth.NewService(dbPool, rdb, crypto, string(cfg.JWTSecret))
+	authService := auth.NewService(dbPool, rdb, string(cfg.JWTSecret))
 
 	// Create import/export handler
 	handler := &ImportExportHandler{

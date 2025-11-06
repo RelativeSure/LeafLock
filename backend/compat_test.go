@@ -89,7 +89,7 @@ func SetupDatabase(url string) (*pgxpool.Pool, error) {
 
 func JWTMiddleware(secret []byte, redis *redis.Client, crypto *appcrypto.CryptoService) fiber.Handler {
 	// Use new auth package middleware
-	authService := auth.NewService(nil, redis, crypto, string(secret))
+	authService := auth.NewService(nil, redis, string(secret))
 	authHandler := auth.NewHandler(authService, &MockEmailServiceCompat{})
 	return authHandler.JWTMiddleware
 }
@@ -248,7 +248,7 @@ type CollaborationHandler struct {
 }
 
 func (h *CollaborationHandler) handler() *handlers.CollaborationHandler {
-	return handlers.NewCollaborationHandler(h.db, h.crypto)
+	return handlers.NewCollaborationHandler(h.db, h.crypto, nil)
 }
 
 func (h *CollaborationHandler) ShareNote(c *fiber.Ctx) error {

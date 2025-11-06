@@ -39,10 +39,10 @@ func TestSetupRoutesInitializesDocs(t *testing.T) {
 	defer mr.Close()
 
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	readyState := appserver.NewReadyState(nil, cryptoSvc, cfg, rdb)
+	readyState := appserver.NewReadyState(nil, cfg, rdb)
 
 	require.NotPanics(t, func() {
-		setupRoutes(app, nil, rdb, cryptoSvc, cfg, time.Now(), readyState)
+		setupRoutes(app, nil, rdb, cfg, time.Now(), readyState)
 	})
 
 	resp, err := app.Test(httptest.NewRequest("GET", "/api/v1/docs/openapi.json", nil))
@@ -73,10 +73,10 @@ func TestSetupRoutesCorsAndMetricsInProduction(t *testing.T) {
 	defer mr.Close()
 
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	readyState := appserver.NewReadyState(nil, cryptoSvc, cfg, rdb)
+	readyState := appserver.NewReadyState(nil, cfg, rdb)
 
 	require.NotPanics(t, func() {
-		setupRoutes(app, nil, rdb, cryptoSvc, cfg, time.Now(), readyState)
+		setupRoutes(app, nil, rdb, cfg, time.Now(), readyState)
 	})
 
 	// Exact origin match
