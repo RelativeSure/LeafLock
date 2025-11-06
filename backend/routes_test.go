@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	appconfig "leaflock/config"
-	appcrypto "leaflock/crypto"
 	appserver "leaflock/server"
 )
 
@@ -27,12 +26,6 @@ func TestSetupRoutesInitializesDocs(t *testing.T) {
 		JWTSecret:      []byte(strings.Repeat("s", 32)),
 		Environment:    "development",
 	}
-
-	key := make([]byte, 32)
-	for i := range key {
-		key[i] = byte(i + 1)
-	}
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	mr, err := miniredis.Run()
 	require.NoError(t, err)
@@ -61,12 +54,6 @@ func TestSetupRoutesCorsAndMetricsInProduction(t *testing.T) {
 		JWTSecret:      []byte(strings.Repeat("p", 32)),
 		Environment:    "production",
 	}
-
-	key := make([]byte, 32)
-	for i := range key {
-		key[i] = byte(32 - i)
-	}
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	mr, err := miniredis.Run()
 	require.NoError(t, err)

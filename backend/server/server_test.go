@@ -43,7 +43,6 @@ func TestReadyState(t *testing.T) {
 	cfg := &config.Config{
 		Port: "8080",
 	}
-	crypto := &MockCryptoService{}
 
 	// Create ReadyState with nil pool and redis for basic testing
 	readyState := NewReadyState(nil, cfg, nil)
@@ -76,7 +75,6 @@ func TestReadyState(t *testing.T) {
 
 	t.Run("Getters return correct values", func(t *testing.T) {
 		assert.Equal(t, cfg, readyState.GetConfig())
-		assert.Equal(t, crypto, readyState.GetCrypto())
 	})
 }
 
@@ -173,13 +171,11 @@ func TestReadyStateWithMockServices(t *testing.T) {
 		RedisURL:    "localhost:6379",
 		JWTSecret:   []byte("test-secret-key-at-least-32-characters-long"),
 	}
-	crypto := &MockCryptoService{}
 
 	t.Run("ReadyState stores and retrieves services correctly", func(t *testing.T) {
 		readyState := NewReadyState(nil, cfg, rdb)
 
 		assert.Equal(t, cfg, readyState.GetConfig())
-		assert.Equal(t, crypto, readyState.GetCrypto())
 		assert.Equal(t, rdb, readyState.GetRedis())
 	})
 
