@@ -7,6 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// contextKey is a custom type for context keys to avoid collisions
+type contextKey string
+
 // TestEmailValidation tests email format validation
 func TestEmailValidation(t *testing.T) {
 	tests := []struct {
@@ -60,9 +63,10 @@ func TestContextOperations(t *testing.T) {
 	})
 
 	t.Run("Context with value", func(t *testing.T) {
-		ctx := context.WithValue(context.Background(), "key", "value")
+		key := contextKey("key")
+		ctx := context.WithValue(context.Background(), key, "value")
 		assert.NotNil(t, ctx)
-		val := ctx.Value("key")
+		val := ctx.Value(key)
 		assert.Equal(t, "value", val)
 	})
 

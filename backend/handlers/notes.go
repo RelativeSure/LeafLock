@@ -878,7 +878,7 @@ func (h *NotesHandler) UpdateRetentionPolicy(c *fiber.Ctx) error {
 		noteID, req.RetentionPolicy)
 
 	if err != nil {
-		// Log error but don't fail the request
+		utils.LogError("Failed to clean old note versions", err)
 	}
 
 	return c.JSON(fiber.Map{

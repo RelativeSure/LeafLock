@@ -47,10 +47,6 @@ func TestEnsureInitialized(t *testing.T) {
 	}
 }
 
-type noopWriter struct{}
-
-func (noopWriter) Write(p []byte) (int, error) { return len(p), nil }
-
 func TestLevelFromMessage(t *testing.T) {
 	tests := []struct {
 		msg      string
