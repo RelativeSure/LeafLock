@@ -287,7 +287,7 @@ func TestImportNoteSuccess(t *testing.T) {
 	if resp.StatusCode != fiber.StatusCreated {
 		t.Fatalf("expected 201, got %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 
 	if len(db.execCalls) == 0 {
 		t.Fatalf("expected Exec to be called")
@@ -320,7 +320,7 @@ func TestBulkImportMixed(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 
 	if result["imported_count"].(float64) != 1 || result["failed_count"].(float64) != 1 {
 		t.Fatalf("unexpected bulk import result: %#v", result)
@@ -358,7 +358,7 @@ func TestExportNoteMarkdown(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		t.Fatalf("failed to decode export response: %v", err)
 	}
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 
 	if result["title"] != title {
 		t.Fatalf("expected title %q, got %v", title, result["title"])

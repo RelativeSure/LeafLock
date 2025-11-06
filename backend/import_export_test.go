@@ -90,7 +90,7 @@ func TestImportExportFeatures(t *testing.T) {
 
 		var response map[string]interface{}
 		require.NoError(t, json.NewDecoder(resp.Body).Decode(&response))
-		resp.Body.Close()
+		require.NoError(t, resp.Body.Close())
 
 		assert.Equal(t, "Test Note", response["title"])
 	})
@@ -131,7 +131,7 @@ func TestImportExportFeatures(t *testing.T) {
 
 		var response map[string]interface{}
 		require.NoError(t, json.NewDecoder(resp.Body).Decode(&response))
-		resp.Body.Close()
+		require.NoError(t, resp.Body.Close())
 		assert.Equal(t, "markdown", response["format"])
 		assert.Contains(t, response["content"], "Export Test")
 	})
@@ -161,7 +161,7 @@ func TestImportExportFeatures(t *testing.T) {
 
 		var response map[string]interface{}
 		require.NoError(t, json.NewDecoder(resp.Body).Decode(&response))
-		resp.Body.Close()
+		require.NoError(t, resp.Body.Close())
 
 		imported, ok := response["imported"].([]interface{})
 		require.True(t, ok)

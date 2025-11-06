@@ -222,10 +222,10 @@ func (h *CollaborationHandler) ShareNote(c *fiber.Ctx) error {
 
 				// Get recipient name
 				var recipientName string
-				h.db.QueryRow(context.Background(), `SELECT COALESCE(display_name, email_plaintext) FROM users WHERE id = $1`, targetUserID).Scan(&recipientName)
+				_ = h.db.QueryRow(context.Background(), `SELECT COALESCE(display_name, email_plaintext) FROM users WHERE id = $1`, targetUserID).Scan(&recipientName)
 
 				// Send email
-				h.notificationService.SendNoteSharedNotification(
+				_ = h.notificationService.SendNoteSharedNotification(
 					context.Background(),
 					req.UserEmail,
 					recipientName,

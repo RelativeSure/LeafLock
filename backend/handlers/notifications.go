@@ -233,7 +233,7 @@ func (h *NotificationsHandler) CreateNotification(c *fiber.Ctx) error {
 					CreatedAt: notification.CreatedAt.Format(time.RFC3339),
 				},
 			}
-			h.hub.BroadcastToUser(targetUUID, wsMessage)
+			_ = h.hub.BroadcastToUser(targetUUID, wsMessage)
 		}
 	}
 
