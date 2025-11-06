@@ -208,11 +208,11 @@ func (h *CollaborationHandler) ShareNote(c *fiber.Ctx) error {
 			if err == nil && enabled {
 				// Get sender name
 				var senderName string
-				h.db.QueryRow(context.Background(), `SELECT COALESCE(display_name, email_plaintext) FROM users WHERE id = $1`, userID).Scan(&senderName)
+				_ = h.db.QueryRow(context.Background(), `SELECT COALESCE(display_name, email_plaintext) FROM users WHERE id = $1`, userID).Scan(&senderName)
 
 				// Get note title (decrypt it)
 				var titleEncrypted []byte
-				h.db.QueryRow(context.Background(), `SELECT title_encrypted FROM notes WHERE id = $1`, noteID).Scan(&titleEncrypted)
+				_ = h.db.QueryRow(context.Background(), `SELECT title_encrypted FROM notes WHERE id = $1`, noteID).Scan(&titleEncrypted)
 				noteTitle := "Untitled Note"
 				if titleEncrypted != nil {
 					if titleBytes, err := h.crypto.Decrypt(titleEncrypted); err == nil {
