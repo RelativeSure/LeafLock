@@ -168,11 +168,10 @@ func TestReadyStateWithMockServices(t *testing.T) {
 	defer func() { _ = rdb.Close() }() // Test cleanup
 
 	cfg := &config.Config{
-		Port:          "8080",
-		DatabaseURL:   "postgres://test:test@localhost:5432/testdb", // secretlint-disable-line
-		RedisURL:      "localhost:6379",
-		JWTSecret:     []byte("test-secret-key-at-least-32-characters-long"),
-		EncryptionKey: []byte("test-encryption-key-32-chars!!"),
+		Port:        "8080",
+		DatabaseURL: "postgres://test:test@localhost:5432/testdb", // secretlint-disable-line
+		RedisURL:    "localhost:6379",
+		JWTSecret:   []byte("test-secret-key-at-least-32-characters-long"),
 	}
 	crypto := &MockCryptoService{}
 
