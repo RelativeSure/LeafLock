@@ -142,7 +142,7 @@ func TestFoldersHandler_CreateFolderWithParent(t *testing.T) {
 		mock.Anything,
 		mock.MatchedBy(func(query string) bool { return true }),
 		mock.Anything, folderID,
-	).Return(&MockResult{tag: "UPDATE 1"}, nil).Once()
+	).Return(int64(1), nil).Once()
 
 	app := fiber.New()
 	app.Post("/folders", func(c *fiber.Ctx) error {
