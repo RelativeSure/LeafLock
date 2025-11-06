@@ -111,7 +111,7 @@ func TestListenWithIPv6Fallback_PortInUse(t *testing.T) {
 }
 
 func TestReadyState_NewReadyState(t *testing.T) {
-	rs := NewReadyState(nil, nil, nil, nil)
+	rs := NewReadyState(nil, nil, nil)
 	
 	assert.NotNil(t, rs)
 	assert.False(t, rs.IsAdminReady())
@@ -122,7 +122,7 @@ func TestReadyState_NewReadyState(t *testing.T) {
 }
 
 func TestReadyState_MarkAdminReady(t *testing.T) {
-	rs := NewReadyState(nil, nil, nil, nil)
+	rs := NewReadyState(nil, nil, nil)
 	
 	assert.False(t, rs.IsAdminReady())
 	rs.MarkAdminReady()
@@ -130,7 +130,7 @@ func TestReadyState_MarkAdminReady(t *testing.T) {
 }
 
 func TestReadyState_MarkTemplatesReady(t *testing.T) {
-	rs := NewReadyState(nil, nil, nil, nil)
+	rs := NewReadyState(nil, nil, nil)
 	
 	assert.False(t, rs.IsTemplatesReady())
 	rs.MarkTemplatesReady()
@@ -138,7 +138,7 @@ func TestReadyState_MarkTemplatesReady(t *testing.T) {
 }
 
 func TestReadyState_MarkAllowlistReady(t *testing.T) {
-	rs := NewReadyState(nil, nil, nil, nil)
+	rs := NewReadyState(nil, nil, nil)
 	
 	assert.False(t, rs.IsAllowlistReady())
 	rs.MarkAllowlistReady()
@@ -146,7 +146,7 @@ func TestReadyState_MarkAllowlistReady(t *testing.T) {
 }
 
 func TestReadyState_MarkRedisReady(t *testing.T) {
-	rs := NewReadyState(nil, nil, nil, nil)
+	rs := NewReadyState(nil, nil, nil)
 	
 	assert.False(t, rs.IsRedisReady())
 	rs.MarkRedisReady()
@@ -154,7 +154,7 @@ func TestReadyState_MarkRedisReady(t *testing.T) {
 }
 
 func TestReadyState_IsFullyReady(t *testing.T) {
-	rs := NewReadyState(nil, nil, nil, nil)
+	rs := NewReadyState(nil, nil, nil)
 	
 	assert.False(t, rs.IsFullyReady())
 	
@@ -172,16 +172,15 @@ func TestReadyState_IsFullyReady(t *testing.T) {
 }
 
 func TestReadyState_GetMethods(t *testing.T) {
-	rs := NewReadyState(nil, nil, nil, nil)
-	
+	rs := NewReadyState(nil, nil, nil)
+
 	assert.Nil(t, rs.GetDB())
 	assert.Nil(t, rs.GetRedis())
 	assert.Nil(t, rs.GetConfig())
-	assert.Nil(t, rs.GetCrypto())
 }
 
 func TestReadyState_ConcurrentAccess(t *testing.T) {
-	rs := NewReadyState(nil, nil, nil, nil)
+	rs := NewReadyState(nil, nil, nil)
 	
 	// Test concurrent reads and writes
 	done := make(chan bool)
@@ -228,7 +227,7 @@ func TestReadyState_ConcurrentAccess(t *testing.T) {
 }
 
 func TestReadyState_PartialReady(t *testing.T) {
-	rs := NewReadyState(nil, nil, nil, nil)
+	rs := NewReadyState(nil, nil, nil)
 	
 	// Mark only some as ready
 	rs.MarkAdminReady()
