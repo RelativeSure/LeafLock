@@ -36,7 +36,6 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 		},
 	}
 
-	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
 	rdb, cleanup := newTestRedis(t)
 	defer cleanup()
 	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
@@ -53,7 +52,6 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 // TestLogin_WrongPassword tests login with correct email but wrong password
 func TestLogin_WrongPassword(t *testing.T) {
 	userID := uuid.New()
-	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
 	pm := NewPasswordManager(nil)
 	salt, _ := pm.GenerateSalt()
 	correctPasswordHash := pm.HashPassword("CorrectPassword123!", salt)
@@ -147,7 +145,6 @@ func TestLogin_AccountLocked(t *testing.T) {
 		},
 	}
 
-	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
 	rdb, cleanup := newTestRedis(t)
 	defer cleanup()
 	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
@@ -164,7 +161,6 @@ func TestLogin_AccountLocked(t *testing.T) {
 // TestLogin_MFAEnabledNoCode tests login with MFA enabled but no code provided
 func TestLogin_MFAEnabledNoCode(t *testing.T) {
 	userID := uuid.New()
-	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
 	pm := NewPasswordManager(nil)
 	salt, _ := pm.GenerateSalt()
 	passwordHash := pm.HashPassword("Password123!", salt)
@@ -292,7 +288,6 @@ func TestLogin_MFAWithInvalidCode(t *testing.T) {
 // TestLogin_MFADecryptionError tests login when MFA secret decryption fails
 func TestLogin_MFADecryptionError(t *testing.T) {
 	userID := uuid.New()
-	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
 	pm := NewPasswordManager(nil)
 	salt, _ := pm.GenerateSalt()
 	passwordHash := pm.HashPassword("Password123!", salt)

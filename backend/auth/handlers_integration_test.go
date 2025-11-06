@@ -75,7 +75,6 @@ func TestAuthHandler_Register_InvalidJSON(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -106,7 +105,6 @@ func TestAuthHandler_Register_MissingEmail(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -142,7 +140,6 @@ func TestAuthHandler_Login_InvalidJSON(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -173,7 +170,6 @@ func TestAuthHandler_Login_MissingCredentials(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -209,7 +205,6 @@ func TestAuthHandler_BeginMFASetup_InvalidRequest(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -242,7 +237,6 @@ func TestAuthHandler_EnableMFA_MissingToken(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -279,7 +273,6 @@ func TestAuthHandler_DisableMFA_Request(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -312,7 +305,6 @@ func TestAuthHandler_VerifyMFA_InvalidJSON(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -343,7 +335,6 @@ func TestAuthHandler_RequestPasswordReset_InvalidEmail(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -379,7 +370,6 @@ func TestAuthHandler_ConfirmPasswordReset_InvalidToken(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -416,7 +406,6 @@ func TestAuthHandler_Logout_ValidRequest(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -450,7 +439,6 @@ func TestAuthHandler_GetMFAStatus_ValidRequest(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -485,7 +473,6 @@ func TestAuthHandler_GetRegistrationStatus_Check(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -515,7 +502,6 @@ func TestAuthHandler_RegenerateBackupCodes_Request(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -548,7 +534,6 @@ func TestAuthHandler_VerifyResetToken_InvalidToken(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -578,7 +563,6 @@ func TestAuthHandler_Register_WeakPassword(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -615,7 +599,6 @@ func TestAuthHandler_Login_InvalidEmail(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -652,7 +635,6 @@ func TestAuthHandler_VerifyMFA_MissingToken(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -688,7 +670,6 @@ func TestAuthHandler_EnableMFA_InvalidToken(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -727,7 +708,6 @@ func TestAuthHandler_RequestPasswordReset_MissingEmail(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -762,7 +742,6 @@ func TestAuthHandler_ConfirmPasswordReset_MissingNewPassword(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -800,7 +779,6 @@ func TestAuthHandler_Register_DuplicateEmail(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -844,7 +822,6 @@ func TestAuthHandler_Login_EmptyPassword(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -881,7 +858,6 @@ func TestAuthHandler_VerifyMFA_InvalidSessionID(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -918,7 +894,6 @@ func TestAuthHandler_BeginMFASetup_AlreadyEnabled(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -951,7 +926,6 @@ func TestAuthHandler_ConfirmPasswordReset_WeakNewPassword(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -988,7 +962,6 @@ func TestAuthHandler_Logout_MissingSessionID(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -1021,7 +994,6 @@ func TestAuthHandler_Register_EmptyEmail(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})
@@ -1058,7 +1030,6 @@ func TestAuthHandler_VerifyMFA_EmptyToken(t *testing.T) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	require.NoError(t, err)
-	cryptoSvc := appcrypto.NewCryptoService(key)
 
 	service := NewService(pool, rdb, "test-jwt-secret")
 	handler := NewHandler(service, &MockEmailService{})

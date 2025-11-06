@@ -17,7 +17,6 @@ import (
 // TestRegister_WeakPassword tests registration with weak passwords
 func TestRegister_WeakPassword(t *testing.T) {
 	mockDB := &mockServiceDB{}
-	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
 	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
 	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
@@ -55,7 +54,6 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 		},
 	}
 
-	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
 	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
 	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
@@ -76,7 +74,6 @@ func TestRegister_TransactionBeginError(t *testing.T) {
 		},
 	}
 
-	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
 	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
 	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
@@ -105,7 +102,6 @@ func TestRegister_UserInsertError(t *testing.T) {
 		},
 	}
 
-	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
 	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
 	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
@@ -148,7 +144,6 @@ func TestRegister_GDPRKeyInsertError(t *testing.T) {
 		},
 	}
 
-	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
 	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
 	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
