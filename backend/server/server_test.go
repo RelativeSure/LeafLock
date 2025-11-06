@@ -27,17 +27,6 @@ func setupTestEnvironment() error {
 	return nil
 }
 
-// MockCryptoService implements CryptoService for testing
-type MockCryptoService struct{}
-
-func (m *MockCryptoService) Encrypt(plaintext []byte) ([]byte, error) {
-	return plaintext, nil
-}
-
-func (m *MockCryptoService) Decrypt(ciphertext []byte) ([]byte, error) {
-	return ciphertext, nil
-}
-
 // TestReadyState tests the ReadyState struct and its methods
 func TestReadyState(t *testing.T) {
 	cfg := &config.Config{
@@ -88,7 +77,6 @@ func TestCreateFiberApp(t *testing.T) {
 	cfg := &config.Config{
 		Port: "8080",
 	}
-	crypto := &MockCryptoService{}
 	readyState := NewReadyState(nil, cfg, nil)
 	startTime := time.Now()
 
@@ -214,7 +202,6 @@ func TestReadyStateWithMockServices(t *testing.T) {
 // BenchmarkReadyStateCheck benchmarks the IsFullyReady check
 func BenchmarkReadyStateCheck(b *testing.B) {
 	cfg := &config.Config{Port: "8080"}
-	crypto := &MockCryptoService{}
 	readyState := NewReadyState(nil, cfg, nil)
 
 	// Mark all as ready
