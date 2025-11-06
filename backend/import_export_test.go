@@ -113,9 +113,9 @@ func TestImportExportFeatures(t *testing.T) {
 
 		contentHash := sha256.Sum256([]byte(content))
 		_, err = db.Exec(ctx, `
-			INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted, content_hash, created_by)
-			VALUES ($1, $2, $3, $4, $5, $6)`,
-			noteID, workspaceID, encryptedTitle, encryptedContent, contentHash[:], userID)
+			INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted, content_hash, created_by, is_pinned, pinned_order)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			noteID, workspaceID, encryptedTitle, encryptedContent, contentHash[:], userID, false, 0)
 		require.NoError(t, err)
 
 		payload := map[string]string{"format": "markdown"}

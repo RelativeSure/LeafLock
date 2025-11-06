@@ -92,9 +92,9 @@ func TestCollaborationFeatures(t *testing.T) {
 	contentHash := sha256.Sum256(content)
 
 	_, err = db.Exec(ctx, `
-		INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted, content_hash, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
-		noteID, workspace1ID, encryptedTitle, encryptedContent, contentHash[:], user1ID)
+		INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted, content_hash, created_by, is_pinned, pinned_order)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		noteID, workspace1ID, encryptedTitle, encryptedContent, contentHash[:], user1ID, false, 0)
 	require.NoError(t, err)
 
 	t.Run("ShareNote", func(t *testing.T) {

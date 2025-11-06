@@ -615,10 +615,10 @@ func (suite *DatabaseIntegrationTestSuite) TestNotesOperations() {
 
 	var noteID uuid.UUID
 	err := suite.db.QueryRow(ctx, `
-		INSERT INTO notes (workspace_id, title_encrypted, content_encrypted, content_hash, created_by)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO notes (workspace_id, title_encrypted, content_encrypted, content_hash, created_by, is_pinned, pinned_order)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id`,
-		workspaceID, encryptedTitle, encryptedContent, contentHash, userID,
+		workspaceID, encryptedTitle, encryptedContent, contentHash, userID, false, 0,
 	).Scan(&noteID)
 
 	suite.NoError(err)
