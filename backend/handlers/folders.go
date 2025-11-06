@@ -169,11 +169,15 @@ func (h *FoldersHandler) CreateFolder(c *fiber.Ctx) error {
 		err = h.db.QueryRow(ctx, `SELECT path FROM folders WHERE id = $1`, *parentID).Scan(&parentPath)
 		if err == nil {
 			path = parentPath + folderID.String() + "/"
-			_, err = h.db.Exec(ctx, `UPDATE folders SET path = $1 WHERE id = $2`, path, folderID)
+			if _, err = h.db.Exec(ctx, `UPDATE folders SET path = $1 WHERE id = $2`, path, folderID); err != nil {
+				return c.Status(500).JSON(fiber.Map{"error": "Failed to update folder path"})
+			}
 		}
 	} else {
 		path = "/" + folderID.String() + "/"
-		_, err = h.db.Exec(ctx, `UPDATE folders SET path = $1 WHERE id = $2`, path, folderID)
+		if _, err = h.db.Exec(ctx, `UPDATE folders SET path = $1 WHERE id = $2`, path, folderID); err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to update folder path"})
+		}
 	}
 
 	return c.JSON(fiber.Map{
