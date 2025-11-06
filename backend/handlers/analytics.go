@@ -155,7 +155,9 @@ func (h *AnalyticsHandler) GetUserAnalytics(c *fiber.Ctx) error {
 		for rows.Next() {
 			var activity ActivityData
 			var date time.Time
-			rows.Scan(&date, &activity.Count)
+			if err := rows.Scan(&date, &activity.Count); err != nil {
+				continue
+			}
 			activity.Date = date.Format("2006-01-02")
 			stats.ActivityByDay = append(stats.ActivityByDay, activity)
 		}
@@ -178,7 +180,9 @@ func (h *AnalyticsHandler) GetUserAnalytics(c *fiber.Ctx) error {
 		stats.NotesByFolder = []CountData{}
 		for rows.Next() {
 			var data CountData
-			rows.Scan(&data.Name, &data.Count)
+			if err := rows.Scan(&data.Name, &data.Count); err != nil {
+				continue
+			}
 			stats.NotesByFolder = append(stats.NotesByFolder, data)
 		}
 	}

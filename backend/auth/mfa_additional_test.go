@@ -59,7 +59,8 @@ func TestVerifyBackupCodeSuccess(t *testing.T) {
 	mgr := NewMFAManager(&mfaMockDB{}, crypto)
 
 	testSalt := make([]byte, 32)
-	rand.Read(testSalt)
+	_, err := rand.Read(testSalt)
+	require.NoError(t, err)
 
 	code := mgr.formatBackupCode("ABCDEFGHIJKL")
 	normalized := mgr.normalizeBackupCode(code)
@@ -117,7 +118,8 @@ func TestVerifyBackupCodeAlreadyUsed(t *testing.T) {
 	mgr := NewMFAManager(&mfaMockDB{}, crypto)
 
 	testSalt := make([]byte, 32)
-	rand.Read(testSalt)
+	_, err := rand.Read(testSalt)
+	require.NoError(t, err)
 
 	code := mgr.formatBackupCode("MNOPQRSTUVWZ")
 	normalized := mgr.normalizeBackupCode(code)
@@ -155,7 +157,8 @@ func TestDisableMFAWithBackupCode(t *testing.T) {
 	mgr := NewMFAManager(&mfaMockDB{}, crypto)
 
 	testSalt := make([]byte, 32)
-	rand.Read(testSalt)
+	_, err := rand.Read(testSalt)
+	require.NoError(t, err)
 
 	secret := []byte("totp-secret-value")
 	encryptedSecret, err := crypto.EncryptBytes(secret)

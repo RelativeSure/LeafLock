@@ -141,7 +141,7 @@ func TestCollaborationFeatures(t *testing.T) {
 
 	var response map[string]interface{}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&response))
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 
 		collaborators, ok := response["collaborators"].([]interface{})
 		require.True(t, ok)

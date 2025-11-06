@@ -793,7 +793,8 @@ func TestAuthHandler_Register_DuplicateEmail(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/auth/register", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	app.Test(req, -1)
+	_, err = app.Test(req, -1)
+	require.NoError(t, err)
 
 	// Second registration with same email
 	req2 := httptest.NewRequest("POST", "/auth/register", bytes.NewBuffer(body))

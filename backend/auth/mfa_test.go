@@ -118,7 +118,8 @@ func TestGenerateBackupCodes_Uniqueness(t *testing.T) {
 	mm := &MFAManager{}
 
 	testSalt := make([]byte, 32)
-	rand.Read(testSalt)
+	_, err := rand.Read(testSalt)
+	require.NoError(t, err)
 
 	codes, _, err := mm.GenerateBackupCodes(testSalt)
 	require.NoError(t, err)
@@ -214,7 +215,8 @@ func TestBackupCodeFormat_Length(t *testing.T) {
 	mm := &MFAManager{}
 
 	testSalt := make([]byte, 32)
-	rand.Read(testSalt)
+	_, err := rand.Read(testSalt)
+	require.NoError(t, err)
 
 	codes, _, err := mm.GenerateBackupCodes(testSalt)
 	require.NoError(t, err)
