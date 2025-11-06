@@ -414,7 +414,7 @@ func (suite *NotesHandlerTestSuite) TestUpdateNoteNotFound() {
 	currentTitle := []byte("existing-title")
 	currentContent := []byte("existing-content")
 	currentHash := []byte("existing-hash")
-	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if version, ok := args[0].(*int); ok {
 			*version = currentVersion
 		}
@@ -427,8 +427,11 @@ func (suite *NotesHandlerTestSuite) TestUpdateNoteNotFound() {
 		if hash, ok := args[3].(*[]byte); ok {
 			*hash = currentHash
 		}
-		if created, ok := args[4].(*time.Time); ok {
-			*created = time.Unix(0, 0).UTC()
+		if createdAt, ok := args[4].(*time.Time); ok {
+			*createdAt = time.Now().UTC()
+		}
+		if isLocked, ok := args[5].(*bool); ok {
+			*isLocked = false
 		}
 	}).Return(nil)
 

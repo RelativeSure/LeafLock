@@ -122,7 +122,7 @@ func TestFoldersHandler_CreateFolderWithParent(t *testing.T) {
 	mockDB.On("QueryRow",
 		mock.Anything,
 		mock.MatchedBy(func(query string) bool { return true }),
-		userID, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		userID, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 	).Return(insertRow).Once()
 
 	app := fiber.New()
