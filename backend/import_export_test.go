@@ -143,12 +143,12 @@ func TestImportExportFeatures(t *testing.T) {
 			return handler.BulkImport(c)
 		})
 
-	payload := map[string]interface{}{
-		"files": []map[string]string{
-			{"format": "markdown", "content": "# Note 1\n\nFirst note content.", "title": "Note 1"},
-			{"format": "text", "content": "Note 2\n\nSecond note content.", "title": "Note 2"},
-		},
-	}
+		payload := map[string]interface{}{
+			"files": []map[string]string{
+				{"format": "markdown", "content": "# Note 1\n\nFirst note content.", "title": "Note 1"},
+				{"format": "text", "content": "Note 2\n\nSecond note content.", "title": "Note 2"},
+			},
+		}
 		body, err := json.Marshal(payload)
 		require.NoError(t, err)
 
@@ -169,19 +169,19 @@ func TestImportExportFeatures(t *testing.T) {
 	})
 
 	t.Run("ImportUnsupportedFileType", func(t *testing.T) {
-	app := fiber.New()
-	app.Post("/notes/import", func(c *fiber.Ctx) error {
-		c.Locals("user_id", userID)
-		return handler.ImportNote(c)
-	})
+		app := fiber.New()
+		app.Post("/notes/import", func(c *fiber.Ctx) error {
+			c.Locals("user_id", userID)
+			return handler.ImportNote(c)
+		})
 
-	payload := map[string]string{
-		"format":  "pdf",
-		"content": "fake pdf content",
-		"title":   "Unsupported",
-	}
-	body, err := json.Marshal(payload)
-	require.NoError(t, err)
+		payload := map[string]string{
+			"format":  "pdf",
+			"content": "fake pdf content",
+			"title":   "Unsupported",
+		}
+		body, err := json.Marshal(payload)
+		require.NoError(t, err)
 
 		req := httptest.NewRequest("POST", "/notes/import", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")

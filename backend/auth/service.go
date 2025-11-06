@@ -41,7 +41,7 @@ func shouldSkipAutoLogin(ctx context.Context) bool {
 
 // Service coordinates all auth operations
 type Service struct {
-	db        database.Database
+	db database.Database
 	// crypto removed - zero-knowledge architecture (no server-wide encryption key)
 	session   sessionManager
 	password  *PasswordManager

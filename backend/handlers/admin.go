@@ -32,13 +32,13 @@ type SystemStats struct {
 
 // UserDetails represents detailed user information for admin
 type UserDetails struct {
-	ID         string    `json:"id"`
-	Email      string    `json:"email"`
-	IsAdmin    bool      `json:"isAdmin"`
-	CreatedAt  time.Time `json:"createdAt"`
-	LastLogin  time.Time `json:"lastLogin"`
-	NotesCount int       `json:"notesCount"`
-	IsLocked   bool      `json:"isLocked"`
+	ID          string     `json:"id"`
+	Email       string     `json:"email"`
+	IsAdmin     bool       `json:"isAdmin"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	LastLogin   time.Time  `json:"lastLogin"`
+	NotesCount  int        `json:"notesCount"`
+	IsLocked    bool       `json:"isLocked"`
 	LockedUntil *time.Time `json:"lockedUntil,omitempty"`
 }
 

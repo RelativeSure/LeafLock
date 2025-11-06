@@ -815,10 +815,10 @@ func (h *Handler) DebugEncryptionKey(c *fiber.Ctx) error {
 	// MFA and session encryption are handled by dedicated managers with JWT-derived keys
 	return c.JSON(map[string]interface{}{
 		"encryption_architecture": "zero-knowledge",
-		"note":                     "Service-level crypto removed. Encryption is handled by MFA and session managers with JWT-derived keys.",
-		"mfa_encryption":           "Derived from JWT secret with '-mfa-encryption' suffix",
-		"session_encryption":       "Derived from JWT secret with '-session-encryption' suffix",
-		"user_note_encryption":     "End-to-end encrypted with password-derived keys (client-side)",
+		"note":                    "Service-level crypto removed. Encryption is handled by MFA and session managers with JWT-derived keys.",
+		"mfa_encryption":          "Derived from JWT secret with '-mfa-encryption' suffix",
+		"session_encryption":      "Derived from JWT secret with '-session-encryption' suffix",
+		"user_note_encryption":    "End-to-end encrypted with password-derived keys (client-side)",
 	})
 }
 

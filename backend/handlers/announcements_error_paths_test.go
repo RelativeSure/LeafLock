@@ -89,7 +89,7 @@ func TestDeleteAnnouncement_UUIDParsing(t *testing.T) {
 	validID := uuid.New().String()
 	_, err := uuid.Parse(validID)
 	assert.NoError(t, err)
-	
+
 	_, err = uuid.Parse("invalid-uuid")
 	assert.Error(t, err)
 }

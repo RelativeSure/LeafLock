@@ -13,10 +13,10 @@ import (
 
 // Config holds application configuration
 type Config struct {
-	DatabaseURL        string
-	RedisURL           string
-	RedisPassword      string
-	JWTSecret          []byte
+	DatabaseURL   string
+	RedisURL      string
+	RedisPassword string
+	JWTSecret     []byte
 	// EncryptionKey removed - zero-knowledge architecture (no global encryption key)
 	Port               string
 	AllowedOrigins     []string
@@ -142,7 +142,7 @@ func LoadConfig() *Config {
 		RedisPassword: resolveRedisPassword(os.Getenv("REDIS_URL"), os.Getenv("REDIS_PASSWORD")),
 		JWTSecret:     []byte(jwtSecret),
 		// EncryptionKey removed - zero-knowledge architecture
-		Port:          GetEnvOrDefault("PORT", "8080"),
+		Port: GetEnvOrDefault("PORT", "8080"),
 		AllowedOrigins: func() []string {
 			environment := GetEnvOrDefault("APP_ENV", "development")
 

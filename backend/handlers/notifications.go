@@ -178,12 +178,12 @@ func (h *NotificationsHandler) CreateNotification(c *fiber.Ctx) error {
 
 	// Validate notification type
 	validTypes := map[string]bool{
-		"note_shared":           true,
-		"note_commented":        true,
-		"folder_shared":         true,
-		"mention":               true,
-		"system":                true,
-		"collaboration_invite":  true,
+		"note_shared":          true,
+		"note_commented":       true,
+		"folder_shared":        true,
+		"mention":              true,
+		"system":               true,
+		"collaboration_invite": true,
 	}
 	if !validTypes[req.Type] {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{

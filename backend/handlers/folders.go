@@ -270,16 +270,16 @@ func (h *FoldersHandler) MoveNoteToFolder(c *fiber.Ctx) error {
 
 // FolderTreeNode represents a folder in the tree structure
 type FolderTreeNode struct {
-	ID        string            `json:"id"`
-	ParentID  *string           `json:"parent_id"`
-	Name      string            `json:"name"`
-	Color     string            `json:"color"`
-	Position  int               `json:"position"`
-	Depth     int               `json:"depth"`
-	Path      string            `json:"path"`
-	Children  []FolderTreeNode  `json:"children"`
-	CreatedAt time.Time         `json:"created_at"`
-	UpdatedAt time.Time         `json:"updated_at"`
+	ID        string           `json:"id"`
+	ParentID  *string          `json:"parent_id"`
+	Name      string           `json:"name"`
+	Color     string           `json:"color"`
+	Position  int              `json:"position"`
+	Depth     int              `json:"depth"`
+	Path      string           `json:"path"`
+	Children  []FolderTreeNode `json:"children"`
+	CreatedAt time.Time        `json:"created_at"`
+	UpdatedAt time.Time        `json:"updated_at"`
 }
 
 // GetFolderTree returns folders in a hierarchical tree structure

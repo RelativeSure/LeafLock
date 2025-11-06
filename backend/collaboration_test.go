@@ -98,24 +98,24 @@ func TestCollaborationFeatures(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ShareNote", func(t *testing.T) {
-	app := fiber.New()
-	app.Post("/notes/:id/share", func(c *fiber.Ctx) error {
-		c.Locals("user_id", user1ID)
-		return handler.ShareNote(c)
-	})
+		app := fiber.New()
+		app.Post("/notes/:id/share", func(c *fiber.Ctx) error {
+			c.Locals("user_id", user1ID)
+			return handler.ShareNote(c)
+		})
 
-	shareReq := ShareNoteRequest{
-		UserEmail:  user2Email,
-		Permission: "write",
-	}
-	reqBody, _ := json.Marshal(shareReq)
+		shareReq := ShareNoteRequest{
+			UserEmail:  user2Email,
+			Permission: "write",
+		}
+		reqBody, _ := json.Marshal(shareReq)
 
-	req := httptest.NewRequest("POST", fmt.Sprintf("/notes/%s/share", noteID), bytes.NewReader(reqBody))
-	req.Header.Set("Content-Type", "application/json")
+		req := httptest.NewRequest("POST", fmt.Sprintf("/notes/%s/share", noteID), bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
 
-	resp, err := app.Test(req)
-	require.NoError(t, err)
-	assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
 
 		// Verify collaboration was created
 		var count int
@@ -128,20 +128,20 @@ func TestCollaborationFeatures(t *testing.T) {
 	})
 
 	t.Run("GetCollaborators", func(t *testing.T) {
-	app := fiber.New()
-	app.Get("/notes/:id/collaborators", func(c *fiber.Ctx) error {
-		c.Locals("user_id", user1ID)
-		return handler.GetCollaborators(c)
-	})
+		app := fiber.New()
+		app.Get("/notes/:id/collaborators", func(c *fiber.Ctx) error {
+			c.Locals("user_id", user1ID)
+			return handler.GetCollaborators(c)
+		})
 
-	req := httptest.NewRequest("GET", fmt.Sprintf("/notes/%s/collaborators", noteID), nil)
-	resp, err := app.Test(req)
-	require.NoError(t, err)
-	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+		req := httptest.NewRequest("GET", fmt.Sprintf("/notes/%s/collaborators", noteID), nil)
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-	var response map[string]interface{}
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&response))
-	require.NoError(t, resp.Body.Close())
+		var response map[string]interface{}
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&response))
+		require.NoError(t, resp.Body.Close())
 
 		collaborators, ok := response["collaborators"].([]interface{})
 		require.True(t, ok)
