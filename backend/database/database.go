@@ -18,7 +18,7 @@ import (
 )
 
 // MigrationSchemaVersion tracks the current schema version
-const MigrationSchemaVersion = "2025.11.05.006" // Email notifications: Add email_templates table and user preferences
+const MigrationSchemaVersion = "2025.11.06.001" // Fix folders table ALTER statements ordering (must create table before altering)
 
 // Database interface for dependency injection and testing
 type Database interface {
