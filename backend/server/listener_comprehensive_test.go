@@ -18,7 +18,7 @@ func TestListenWithIPv6Fallback_IPv4Success(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	assert.NoError(t, err)
 	port := listener.Addr().(*net.TCPAddr).Port
-	listener.Close()
+	_ = listener.Close()
 
 	// Run server in goroutine
 	go func() {
@@ -53,7 +53,7 @@ func TestListenWithIPv6Fallback_StartupTiming(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	assert.NoError(t, err)
 	port := listener.Addr().(*net.TCPAddr).Port
-	listener.Close()
+	_ = listener.Close()
 
 	go func() {
 		_ = ListenWithIPv6Fallback(app, string(rune(port)), startupStart)
@@ -75,7 +75,7 @@ func TestListenWithIPv6Fallback_DualStackAttempt(t *testing.T) {
 	listener, err := net.Listen("tcp", ":0")
 	assert.NoError(t, err)
 	port := listener.Addr().(*net.TCPAddr).Port
-	listener.Close()
+	_ = listener.Close()
 
 	// Attempt dual-stack binding
 	go func() {
@@ -87,7 +87,7 @@ func TestListenWithIPv6Fallback_DualStackAttempt(t *testing.T) {
 	// Verify server is listening
 	conn, err := net.DialTimeout("tcp", "127.0.0.1:"+string(rune(port)), time.Second)
 	if err == nil {
-		conn.Close()
+		_ = conn.Close()
 	}
 
 	_ = app.Shutdown()
@@ -97,7 +97,7 @@ func TestListenWithIPv6Fallback_PortInUse(t *testing.T) {
 	// Occupy a port
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	assert.NoError(t, err)
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 	
 	port := listener.Addr().(*net.TCPAddr).Port
 

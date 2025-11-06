@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/redis/go-redis/v9"
+	"github.com/stretchr/testify/require"
 
 	appcrypto "leaflock/crypto"
 	"leaflock/services"
@@ -72,7 +73,7 @@ func TestShareLinkMiddlewareSuccessWithCache(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 		t.Fatalf("failed to parse response: %v", err)
 	}
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 
 	if body["note_id"] != noteID.String() || body["permission"] != "read" || body["is_share"].(bool) != true {
 		t.Fatalf("unexpected locals in response: %#v", body)
@@ -440,7 +441,7 @@ func TestShareLinkMiddlewareRaceConditionPrevention(t *testing.T) {
 	if err := json.NewDecoder(resp2.Body).Decode(&body); err != nil {
 		t.Fatalf("failed to parse error response: %v", err)
 	}
-	resp2.Body.Close()
+	require.NoError(t, resp2.Body.Close())
 
 	if !strings.Contains(body["error"].(string), "usage limit") {
 		t.Fatalf("expected usage limit error, got: %v", body["error"])
