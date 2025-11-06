@@ -16,11 +16,11 @@ type SearchHandlerTestSuite struct {
 }
 
 func (suite *SearchHandlerTestSuite) SetupTest() {
-	suite.handler = NewSearchHandler()
+	suite.handler = NewSearchHandler(nil)
 }
 
 func (suite *SearchHandlerTestSuite) TestNewSearchHandler() {
-	handler := NewSearchHandler()
+	handler := NewSearchHandler(nil)
 	suite.NotNil(handler)
 }
 

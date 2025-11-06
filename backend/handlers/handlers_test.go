@@ -985,12 +985,12 @@ func (suite *CollaborationHandlerTestSuite) SetupTest() {
 	}
 	suite.cryptoSvc = crypto.NewCryptoService(key)
 
-	suite.handler = NewCollaborationHandler(suite.mockDB, suite.cryptoSvc)
+	suite.handler = NewCollaborationHandler(suite.mockDB, suite.cryptoSvc, nil)
 	suite.userID = uuid.New()
 }
 
 func (suite *CollaborationHandlerTestSuite) TestNewCollaborationHandler() {
-	handler := NewCollaborationHandler(suite.mockDB, suite.cryptoSvc)
+	handler := NewCollaborationHandler(suite.mockDB, suite.cryptoSvc, nil)
 	suite.NotNil(handler)
 }
 

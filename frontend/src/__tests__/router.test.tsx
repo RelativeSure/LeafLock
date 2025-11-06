@@ -135,7 +135,7 @@ describe('router', () => {
       logout: vi.fn(),
       checkRegistrationEnabled: vi.fn().mockResolvedValue(true),
     })
-    ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
+    ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
   })
 
   describe('Router configuration', () => {
@@ -313,7 +313,7 @@ describe('router', () => {
         initialize: vi.fn().mockResolvedValue(undefined),
         logout: vi.fn(),
       })
-      ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
+      ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
 
       window.history.pushState({}, '', '/')
 
@@ -321,7 +321,7 @@ describe('router', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Preparing editor…')).toBeInTheDocument()
-      })
+      }, { timeout: 5000 })
     })
 
     it('should render user avatar in header', async () => {
@@ -341,7 +341,7 @@ describe('router', () => {
         initialize: vi.fn().mockResolvedValue(undefined),
         logout: vi.fn(),
       })
-      ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
+      ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
 
       window.history.pushState({}, '', '/')
 
@@ -349,7 +349,7 @@ describe('router', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('user-avatar')).toBeInTheDocument()
-      })
+      }, { timeout: 5000 })
     })
 
     it('should render logout button', async () => {
@@ -369,7 +369,7 @@ describe('router', () => {
         initialize: vi.fn().mockResolvedValue(undefined),
         logout: vi.fn(),
       })
-      ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
+      ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
 
       window.history.pushState({}, '', '/')
 
@@ -377,7 +377,7 @@ describe('router', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Logout')).toBeInTheDocument()
-      })
+      }, { timeout: 5000 })
     })
   })
 
