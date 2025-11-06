@@ -116,7 +116,7 @@ func (h *AuthHandler) handler() *auth.Handler {
 	if !ok {
 		panic("AuthHandler requires *pgxpool.Pool, not database.Database interface")
 	}
-	authService := auth.NewService(db, h.redis, h.crypto, string(h.config.JWTSecret))
+	authService := auth.NewService(db, h.redis, string(h.config.JWTSecret))
 	return auth.NewHandler(authService, &MockEmailServiceCompat{})
 }
 
