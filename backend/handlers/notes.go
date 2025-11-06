@@ -15,6 +15,7 @@ import (
 	"leaflock/crypto"
 	"leaflock/database"
 	"leaflock/metrics"
+	"leaflock/utils"
 )
 
 // NotesHandler handles note-related requests
