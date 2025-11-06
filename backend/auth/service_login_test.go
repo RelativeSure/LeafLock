@@ -39,7 +39,7 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
 	rdb, cleanup := newTestRedis(t)
 	defer cleanup()
-	service := NewService(mockDB, rdb, cryptoSvc, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
+	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
 	_, err := service.Login(context.Background(), "nonexistent@example.com", "password", "")
 	if err == nil {
@@ -54,7 +54,7 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 func TestLogin_WrongPassword(t *testing.T) {
 	userID := uuid.New()
 	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
-	pm := NewPasswordManager(nil, cryptoSvc)
+	pm := NewPasswordManager(nil)
 	salt, _ := pm.GenerateSalt()
 	correctPasswordHash := pm.HashPassword("CorrectPassword123!", salt)
 
@@ -99,7 +99,7 @@ func TestLogin_WrongPassword(t *testing.T) {
 
 	rdb, cleanup := newTestRedis(t)
 	defer cleanup()
-	service := NewService(mockDB, rdb, cryptoSvc, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
+	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
 	_, err := service.Login(context.Background(), "user@example.com", "WrongPassword123!", "")
 	if err == nil {
@@ -150,7 +150,7 @@ func TestLogin_AccountLocked(t *testing.T) {
 	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
 	rdb, cleanup := newTestRedis(t)
 	defer cleanup()
-	service := NewService(mockDB, rdb, cryptoSvc, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
+	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
 	_, err := service.Login(context.Background(), "locked@example.com", "password", "")
 	if err == nil {
@@ -165,7 +165,7 @@ func TestLogin_AccountLocked(t *testing.T) {
 func TestLogin_MFAEnabledNoCode(t *testing.T) {
 	userID := uuid.New()
 	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
-	pm := NewPasswordManager(nil, cryptoSvc)
+	pm := NewPasswordManager(nil)
 	salt, _ := pm.GenerateSalt()
 	passwordHash := pm.HashPassword("Password123!", salt)
 
@@ -209,7 +209,7 @@ func TestLogin_MFAEnabledNoCode(t *testing.T) {
 
 	rdb, cleanup := newTestRedis(t)
 	defer cleanup()
-	service := NewService(mockDB, rdb, cryptoSvc, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
+	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
 	resp, err := service.Login(context.Background(), "mfa-user@example.com", "Password123!", "")
 	if err != nil {
@@ -227,7 +227,7 @@ func TestLogin_MFAEnabledNoCode(t *testing.T) {
 func TestLogin_MFAWithInvalidCode(t *testing.T) {
 	userID := uuid.New()
 	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
-	pm := NewPasswordManager(nil, cryptoSvc)
+	pm := NewPasswordManager(nil)
 	salt, _ := pm.GenerateSalt()
 	passwordHash := pm.HashPassword("Password123!", salt)
 
@@ -278,7 +278,7 @@ func TestLogin_MFAWithInvalidCode(t *testing.T) {
 
 	rdb, cleanup := newTestRedis(t)
 	defer cleanup()
-	service := NewService(mockDB, rdb, cryptoSvc, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
+	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
 	_, err := service.Login(context.Background(), "mfa-user@example.com", "Password123!", "000000")
 	if err == nil {
@@ -293,7 +293,7 @@ func TestLogin_MFAWithInvalidCode(t *testing.T) {
 func TestLogin_MFADecryptionError(t *testing.T) {
 	userID := uuid.New()
 	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
-	pm := NewPasswordManager(nil, cryptoSvc)
+	pm := NewPasswordManager(nil)
 	salt, _ := pm.GenerateSalt()
 	passwordHash := pm.HashPassword("Password123!", salt)
 
@@ -337,7 +337,7 @@ func TestLogin_MFADecryptionError(t *testing.T) {
 
 	rdb, cleanup := newTestRedis(t)
 	defer cleanup()
-	service := NewService(mockDB, rdb, cryptoSvc, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
+	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
 	_, err := service.Login(context.Background(), "mfa-user@example.com", "Password123!", "123456")
 	if err == nil {

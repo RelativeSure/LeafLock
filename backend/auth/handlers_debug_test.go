@@ -51,7 +51,7 @@ func TestDebugLoginReturnsUserInfo(t *testing.T) {
 			db:        db,
 			crypto:    crypto,
 			session:   &mockSessionManager{},
-			password:  NewPasswordManager(db, crypto),
+			password:  NewPasswordManager(db),
 			mfa:       NewMFAManager(db, crypto),
 			jwtSecret: "secret",
 		}
@@ -139,7 +139,7 @@ func TestDebugAdminInfoDecryptsEmail(t *testing.T) {
 			db:        db,
 			crypto:    crypto,
 			session:   &mockSessionManager{},
-			password:  NewPasswordManager(db, crypto),
+			password:  NewPasswordManager(db),
 			mfa:       NewMFAManager(db, crypto),
 			jwtSecret: "secret",
 		}
@@ -209,7 +209,7 @@ func TestDebugEncryptionKeyRoundTrip(t *testing.T) {
 			db:        &mockServiceDB{},
 			crypto:    crypto,
 			session:   &mockSessionManager{},
-			password:  NewPasswordManager(&mockServiceDB{}, crypto),
+			password:  NewPasswordManager(&mockServiceDB{}),
 			mfa:       NewMFAManager(&mockServiceDB{}, crypto),
 			jwtSecret: "secret",
 		}

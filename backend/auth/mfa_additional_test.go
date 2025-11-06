@@ -223,7 +223,7 @@ func TestRegenerateBackupCodes(t *testing.T) {
 	crypto := appcrypto.NewCryptoService(make([]byte, 32))
 	password := "ComplexPass123!"
 	salt := []byte("1234567890abcdef")
-	pm := NewPasswordManager(&mfaMockDB{}, crypto)
+	pm := NewPasswordManager(&mfaMockDB{})
 	passwordHash := pm.HashPassword(password, salt)
 
 	mdb := &mfaMockDB{

@@ -208,7 +208,7 @@ func TestCreateAuthResponsePopulatesFields(t *testing.T) {
 		db:        db,
 		crypto:    crypto,
 		session:   sessionMgr,
-		password:  NewPasswordManager(db, crypto),
+		password:  NewPasswordManager(db),
 		mfa:       NewMFAManager(db, crypto),
 		jwtSecret: "unit-secret",
 	}
@@ -303,8 +303,7 @@ func TestAuditLogExecutesInsert(t *testing.T) {
 		},
 	}
 
-	crypto := appcrypto.NewCryptoService(make([]byte, 32))
-	service := &Service{db: db, crypto: crypto}
+	service := &Service{db: db}
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, utils.ContextKeyClientIP, "203.0.113.5")
 	ctx = context.WithValue(ctx, utils.ContextKeyUserAgent, "Mozilla/5.0")
@@ -350,7 +349,7 @@ func TestEnsureDefaultAdminCreatesRecords(t *testing.T) {
 		db:        db,
 		crypto:    crypto,
 		session:   &mockSessionManager{},
-		password:  NewPasswordManager(db, crypto),
+		password:  NewPasswordManager(db),
 		mfa:       NewMFAManager(db, crypto),
 		jwtSecret: "secret",
 	}
