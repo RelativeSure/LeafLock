@@ -23,15 +23,15 @@ func NewProfileHandler(db database.Database) *ProfileHandler {
 
 // Profile represents a user's profile information
 type Profile struct {
-	ID                   string  `json:"id"`
-	Email                string  `json:"email"`
-	DisplayName          *string `json:"display_name"`
-	Bio                  *string `json:"bio"`
-	AvatarURL            *string `json:"avatar_url"`
-	ProfilePictureType   string  `json:"profile_picture_type"`
-	GravatarURL          string  `json:"gravatar_url"` // Computed Gravatar URL
-	CreatedAt            string  `json:"created_at"`
-	LastLogin            *string `json:"last_login,omitempty"`
+	ID                 string  `json:"id"`
+	Email              string  `json:"email"`
+	DisplayName        *string `json:"display_name"`
+	Bio                *string `json:"bio"`
+	AvatarURL          *string `json:"avatar_url"`
+	ProfilePictureType string  `json:"profile_picture_type"`
+	GravatarURL        string  `json:"gravatar_url"` // Computed Gravatar URL
+	CreatedAt          string  `json:"created_at"`
+	LastLogin          *string `json:"last_login,omitempty"`
 }
 
 // UpdateProfileRequest represents the request body for updating profile

@@ -17,28 +17,19 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-
-	appcrypto "leaflock/crypto"
 )
 
 // PasswordManagerTestSuite tests PasswordManager
 type PasswordManagerTestSuite struct {
 	suite.Suite
-	pm        *PasswordManager
-	mockDB    *MockDB
-	cryptoSvc *appcrypto.CryptoService
+	pm     *PasswordManager
+	mockDB *MockDB
 }
 
 func (suite *PasswordManagerTestSuite) SetupTest() {
 	suite.mockDB = &MockDB{}
 
-	key := make([]byte, 32)
-	if _, err := rand.Read(key); err != nil {
-		suite.T().Fatalf("Failed to generate random key: %v", err)
-	}
-	suite.cryptoSvc = appcrypto.NewCryptoService(key)
-
-	suite.pm = NewPasswordManager(suite.mockDB, suite.cryptoSvc)
+	suite.pm = NewPasswordManager(suite.mockDB)
 }
 
 func TestPasswordManagerTestSuite(t *testing.T) {

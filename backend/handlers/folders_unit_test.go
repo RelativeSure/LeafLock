@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -37,7 +38,7 @@ func TestFoldersHandler_GetFoldersSuccess(t *testing.T) {
 	rows.On("Next").Return(false).Once()
 
 	call := 0
-	rows.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	rows.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Run(func(args mock.Arguments) {
 			call++
 			idPtr := args[0].(*uuid.UUID)
@@ -45,11 +46,15 @@ func TestFoldersHandler_GetFoldersSuccess(t *testing.T) {
 			nameEnc := args[2].(*[]byte)
 			color := args[3].(*string)
 			position := args[4].(*int)
-			created := args[5].(*time.Time)
-			updated := args[6].(*time.Time)
+			depth := args[5].(*int)
+			path := args[6].(*string)
+			created := args[7].(*time.Time)
+			updated := args[8].(*time.Time)
 
 			*color = "#abcdef"
 			*position = call
+			*depth = 0
+			*path = "/"
 			*created = time.Now().UTC()
 			*updated = time.Now().UTC()
 
@@ -99,13 +104,19 @@ func TestFoldersHandler_CreateFolderWithParent(t *testing.T) {
 	folderID := uuid.New()
 
 	parentRow := new(MockRow)
-	parentRow.On("Scan", mock.AnythingOfType("*bool")).Run(func(args mock.Arguments) {
-		*(args[0].(*bool)) = true
+	parentRow.On("Scan", mock.AnythingOfType("*string"), mock.AnythingOfType("*int")).Run(func(args mock.Arguments) {
+		*(args[0].(*string)) = "/"
+		*(args[1].(*int)) = 0
 	}).Return(nil).Once()
 
 	insertRow := new(MockRow)
 	insertRow.On("Scan", mock.AnythingOfType("*uuid.UUID")).Run(func(args mock.Arguments) {
 		*(args[0].(*uuid.UUID)) = folderID
+	}).Return(nil).Once()
+
+	pathRow := new(MockRow)
+	pathRow.On("Scan", mock.AnythingOfType("*string")).Run(func(args mock.Arguments) {
+		*(args[0].(*string)) = "/"
 	}).Return(nil).Once()
 
 	mockDB.On("QueryRow",
@@ -117,8 +128,22 @@ func TestFoldersHandler_CreateFolderWithParent(t *testing.T) {
 	mockDB.On("QueryRow",
 		mock.Anything,
 		mock.MatchedBy(func(query string) bool { return true }),
-		userID, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		userID, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 	).Return(insertRow).Once()
+
+	// Mock path lookup after INSERT
+	mockDB.On("QueryRow",
+		mock.Anything,
+		mock.MatchedBy(func(query string) bool { return true }),
+		parentID,
+	).Return(pathRow).Once()
+
+	// Mock UPDATE for path
+	mockDB.On("Exec",
+		mock.Anything,
+		mock.MatchedBy(func(query string) bool { return true }),
+		mock.Anything, folderID,
+	).Return(int64(1), nil).Once()
 
 	app := fiber.New()
 	app.Post("/folders", func(c *fiber.Ctx) error {
@@ -146,6 +171,57 @@ func TestFoldersHandler_CreateFolderWithParent(t *testing.T) {
 	insertRow.AssertExpectations(t)
 }
 
+func TestFoldersHandler_CreateFolderRootUpdatesPath(t *testing.T) {
+	mockDB := new(MockDB)
+	cryptoSvc := crypto.NewCryptoService(make([]byte, 32))
+	handler := NewFoldersHandler(mockDB, cryptoSvc)
+
+	userID := uuid.New()
+	folderID := uuid.New()
+
+	insertRow := new(MockRow)
+	insertRow.On("Scan", mock.AnythingOfType("*uuid.UUID")).Run(func(args mock.Arguments) {
+		*(args[0].(*uuid.UUID)) = folderID
+	}).Return(nil).Once()
+
+	mockDB.On("QueryRow",
+		mock.Anything,
+		mock.MatchedBy(func(query string) bool {
+			return strings.Contains(query, "INSERT INTO folders")
+		}),
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+	).Return(insertRow).Once()
+
+	mockDB.On("Exec",
+		mock.Anything,
+		mock.MatchedBy(func(query string) bool {
+			return strings.Contains(query, "UPDATE folders SET path")
+		}),
+		"/"+folderID.String()+"/", folderID,
+	).Return(int64(1), nil).Once()
+
+	app := fiber.New()
+	app.Post("/folders", func(c *fiber.Ctx) error {
+		c.Locals("user_id", userID)
+		return handler.CreateFolder(c)
+	})
+
+	body, err := json.Marshal(map[string]interface{}{
+		"name": "Root Folder",
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest("POST", "/folders", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+	mockDB.AssertExpectations(t)
+	insertRow.AssertExpectations(t)
+}
+
 func TestFoldersHandler_CreateFolderInvalidParent(t *testing.T) {
 	mockDB := new(MockDB)
 	cryptoSvc := crypto.NewCryptoService(make([]byte, 32))
@@ -155,7 +231,7 @@ func TestFoldersHandler_CreateFolderInvalidParent(t *testing.T) {
 	parentID := uuid.New()
 
 	parentRow := new(MockRow)
-	parentRow.On("Scan", mock.AnythingOfType("*bool")).Return(assert.AnError).Once()
+	parentRow.On("Scan", mock.AnythingOfType("*string"), mock.AnythingOfType("*int")).Return(assert.AnError).Once()
 
 	mockDB.On("QueryRow",
 		mock.Anything,

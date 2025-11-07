@@ -56,7 +56,7 @@ Successfully improved backend test coverage from **40.1% to 40.6%** through targ
 
 ## Test Execution Summary
 
-```
+```text
 ✅ All tests passing
 ✅ No build errors
 ✅ Test execution time: <5s

@@ -169,11 +169,15 @@ func (h *FoldersHandler) CreateFolder(c *fiber.Ctx) error {
 		err = h.db.QueryRow(ctx, `SELECT path FROM folders WHERE id = $1`, *parentID).Scan(&parentPath)
 		if err == nil {
 			path = parentPath + folderID.String() + "/"
-			_, err = h.db.Exec(ctx, `UPDATE folders SET path = $1 WHERE id = $2`, path, folderID)
+			if _, err = h.db.Exec(ctx, `UPDATE folders SET path = $1 WHERE id = $2`, path, folderID); err != nil {
+				return c.Status(500).JSON(fiber.Map{"error": "Failed to update folder path"})
+			}
 		}
 	} else {
 		path = "/" + folderID.String() + "/"
-		_, err = h.db.Exec(ctx, `UPDATE folders SET path = $1 WHERE id = $2`, path, folderID)
+		if _, err = h.db.Exec(ctx, `UPDATE folders SET path = $1 WHERE id = $2`, path, folderID); err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to update folder path"})
+		}
 	}
 
 	return c.JSON(fiber.Map{
@@ -266,16 +270,16 @@ func (h *FoldersHandler) MoveNoteToFolder(c *fiber.Ctx) error {
 
 // FolderTreeNode represents a folder in the tree structure
 type FolderTreeNode struct {
-	ID        string            `json:"id"`
-	ParentID  *string           `json:"parent_id"`
-	Name      string            `json:"name"`
-	Color     string            `json:"color"`
-	Position  int               `json:"position"`
-	Depth     int               `json:"depth"`
-	Path      string            `json:"path"`
-	Children  []FolderTreeNode  `json:"children"`
-	CreatedAt time.Time         `json:"created_at"`
-	UpdatedAt time.Time         `json:"updated_at"`
+	ID        string           `json:"id"`
+	ParentID  *string          `json:"parent_id"`
+	Name      string           `json:"name"`
+	Color     string           `json:"color"`
+	Position  int              `json:"position"`
+	Depth     int              `json:"depth"`
+	Path      string           `json:"path"`
+	Children  []FolderTreeNode `json:"children"`
+	CreatedAt time.Time        `json:"created_at"`
+	UpdatedAt time.Time        `json:"updated_at"`
 }
 
 // GetFolderTree returns folders in a hierarchical tree structure

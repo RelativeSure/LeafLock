@@ -47,7 +47,7 @@ func (m *MockSessionManager) DeleteAllUserSessions(ctx context.Context, userID u
 
 // TestNewServiceWithSecret tests service constructor with secret
 func TestNewServiceWithSecret(t *testing.T) {
-	service := NewService(nil, nil, nil, "test-secret")
+	service := NewService(nil, nil, "test-secret")
 	require.NotNil(t, service)
 	// Service has private fields, so we can't directly access them
 	// But we verified it was created successfully
@@ -55,7 +55,7 @@ func TestNewServiceWithSecret(t *testing.T) {
 
 // TestNewServiceEmptySecret tests service constructor with empty secret
 func TestNewServiceEmptySecret(t *testing.T) {
-	service := NewService(nil, nil, nil, "")
+	service := NewService(nil, nil, "")
 	require.NotNil(t, service)
 	// Service created with empty secret (edge case)
 }

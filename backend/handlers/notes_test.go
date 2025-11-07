@@ -63,6 +63,10 @@ func TestNotesHandler_GetNotesSuccess(t *testing.T) {
 			mock.AnythingOfType("*[]uint8"),
 			mock.AnythingOfType("*time.Time"),
 			mock.AnythingOfType("*time.Time"),
+			mock.AnythingOfType("*bool"),
+			mock.AnythingOfType("*bool"),
+			mock.AnythingOfType("**uuid.UUID"),
+			mock.AnythingOfType("*int"),
 		).
 		Run(func(args mock.Arguments) {
 			*args[0].(*uuid.UUID) = noteID
@@ -70,6 +74,10 @@ func TestNotesHandler_GetNotesSuccess(t *testing.T) {
 			*args[2].(*[]byte) = []byte("content-bytes")
 			*args[3].(*time.Time) = now.Add(-time.Hour)
 			*args[4].(*time.Time) = now
+			*args[5].(*bool) = false
+			*args[6].(*bool) = false
+			*args[7].(**uuid.UUID) = nil
+			*args[8].(*int) = 0
 		}).
 		Return(nil)
 
@@ -203,7 +211,7 @@ func TestNotesHandler_CreateNoteSuccess(t *testing.T) {
 			mock.MatchedBy(func(query string) bool {
 				return strings.Contains(query, "INSERT INTO notes")
 			}),
-			mock.Anything, mock.Anything, mock.Anything, mock.Anything, userID,
+			mock.Anything, mock.Anything, mock.Anything, mock.Anything, userID, mock.Anything, mock.Anything,
 		).
 		Return(insertRow).
 		Once()
@@ -309,6 +317,7 @@ func TestNotesHandler_UpdateNoteNotFound(t *testing.T) {
 
 	row.
 		On("Scan",
+			mock.Anything,
 			mock.Anything,
 			mock.Anything,
 			mock.Anything,

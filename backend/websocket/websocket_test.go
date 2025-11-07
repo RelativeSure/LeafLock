@@ -129,10 +129,11 @@ func TestHubMultipleUsersPerNote(t *testing.T) {
 	assert.Equal(t, 2, len(hub.noteUsers[noteID]))
 	hub.mu.RUnlock()
 
-	// Clean up
+	// Clean up - unregister connections before stopping
+	hub.unregister <- conn1
+	hub.unregister <- conn2
+	time.Sleep(50 * time.Millisecond) // Wait for unregister to complete
 	hub.Stop()
-	close(conn1.Send)
-	close(conn2.Send)
 }
 
 // TestHubMultipleNotes tests users connected to different notes
@@ -174,10 +175,11 @@ func TestHubMultipleNotes(t *testing.T) {
 	assert.Equal(t, 1, len(hub.noteUsers[note2ID]))
 	hub.mu.RUnlock()
 
-	// Clean up
+	// Clean up - unregister connections before stopping
+	hub.unregister <- conn1
+	hub.unregister <- conn2
+	time.Sleep(50 * time.Millisecond) // Wait for unregister to complete
 	hub.Stop()
-	close(conn1.Send)
-	close(conn2.Send)
 }
 
 // TestGetConnectedUsers tests retrieving connected users for a note
@@ -221,10 +223,11 @@ func TestGetConnectedUsers(t *testing.T) {
 	emptyUsers := hub.GetConnectedUsers(emptyNoteID)
 	assert.Equal(t, 0, len(emptyUsers))
 
-	// Clean up
+	// Clean up - unregister connections before stopping
+	hub.unregister <- conn1
+	hub.unregister <- conn2
+	time.Sleep(50 * time.Millisecond) // Wait for unregister to complete
 	hub.Stop()
-	close(conn1.Send)
-	close(conn2.Send)
 }
 
 // TestBroadcastToNote tests message broadcasting to note users

@@ -7,7 +7,7 @@ import (
 )
 
 func TestReadyStateLifecycle(t *testing.T) {
-	ready := NewReadyState(nil, nil, nil, nil)
+	ready := NewReadyState(nil, nil, nil)
 
 	assert.False(t, ready.IsFullyReady())
 	assert.False(t, ready.IsAdminReady())
@@ -28,9 +28,8 @@ func TestReadyStateLifecycle(t *testing.T) {
 }
 
 func TestReadyStateGetters(t *testing.T) {
-	ready := NewReadyState(nil, nil, nil, nil)
+	ready := NewReadyState(nil, nil, nil)
 	assert.Nil(t, ready.GetDB())
 	assert.Nil(t, ready.GetRedis())
 	assert.Nil(t, ready.GetConfig())
-	assert.Nil(t, ready.GetCrypto())
 }

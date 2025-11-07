@@ -75,8 +75,8 @@ func (suite *NotesHandlerTestSuite) TestGetNotesSuccess() {
 	noteID2 := uuid.New()
 	now := time.Now()
 
-	// First note scan
-	mockRows.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+	// First note scan (9 args: id, title, content, createdAt, updatedAt, isPinned, isLocked, lockedBy, pinnedOrder)
+	mockRows.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if id, ok := args[0].(*uuid.UUID); ok {
 			*id = noteID1
 		}
@@ -92,10 +92,20 @@ func (suite *NotesHandlerTestSuite) TestGetNotesSuccess() {
 		if updated, ok := args[4].(*time.Time); ok {
 			*updated = now
 		}
+		if pinned, ok := args[5].(*bool); ok {
+			*pinned = false
+		}
+		if locked, ok := args[6].(*bool); ok {
+			*locked = false
+		}
+		// args[7] is **uuid.UUID (lockedBy) - leave nil
+		if pinnedOrder, ok := args[8].(*int); ok {
+			*pinnedOrder = 0
+		}
 	}).Return(nil).Once()
 
 	// Second note scan
-	mockRows.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+	mockRows.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if id, ok := args[0].(*uuid.UUID); ok {
 			*id = noteID2
 		}
@@ -110,6 +120,16 @@ func (suite *NotesHandlerTestSuite) TestGetNotesSuccess() {
 		}
 		if updated, ok := args[4].(*time.Time); ok {
 			*updated = now
+		}
+		if pinned, ok := args[5].(*bool); ok {
+			*pinned = false
+		}
+		if locked, ok := args[6].(*bool); ok {
+			*locked = false
+		}
+		// args[7] is **uuid.UUID (lockedBy) - leave nil
+		if pinnedOrder, ok := args[8].(*int); ok {
+			*pinnedOrder = 0
 		}
 	}).Return(nil).Once()
 
@@ -222,7 +242,7 @@ func (suite *NotesHandlerTestSuite) TestCreateNoteSuccess() {
 
 	// Mock note creation
 	mockRow2 := &MockRow{}
-	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockRow2)
+	suite.mockDB.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockRow2)
 	mockRow2.On("Scan", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if nid, ok := args[0].(*uuid.UUID); ok {
 			*nid = noteID
@@ -317,7 +337,7 @@ func (suite *NotesHandlerTestSuite) TestUpdateNoteSuccess() {
 	currentTitle := []byte("current-title")
 	currentContent := []byte("current-content")
 	currentHash := []byte("current-hash")
-	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if version, ok := args[0].(*int); ok {
 			*version = currentVersion
 		}
@@ -332,6 +352,9 @@ func (suite *NotesHandlerTestSuite) TestUpdateNoteSuccess() {
 		}
 		if created, ok := args[4].(*time.Time); ok {
 			*created = time.Unix(0, 0).UTC()
+		}
+		if isLocked, ok := args[5].(*bool); ok {
+			*isLocked = false
 		}
 	}).Return(nil)
 
@@ -394,7 +417,7 @@ func (suite *NotesHandlerTestSuite) TestUpdateNoteNotFound() {
 	currentTitle := []byte("existing-title")
 	currentContent := []byte("existing-content")
 	currentHash := []byte("existing-hash")
-	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+	mockRow.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if version, ok := args[0].(*int); ok {
 			*version = currentVersion
 		}
@@ -407,8 +430,11 @@ func (suite *NotesHandlerTestSuite) TestUpdateNoteNotFound() {
 		if hash, ok := args[3].(*[]byte); ok {
 			*hash = currentHash
 		}
-		if created, ok := args[4].(*time.Time); ok {
-			*created = time.Unix(0, 0).UTC()
+		if createdAt, ok := args[4].(*time.Time); ok {
+			*createdAt = time.Now().UTC()
+		}
+		if isLocked, ok := args[5].(*bool); ok {
+			*isLocked = false
 		}
 	}).Return(nil)
 
@@ -589,10 +615,10 @@ func (suite *DatabaseIntegrationTestSuite) TestNotesOperations() {
 
 	var noteID uuid.UUID
 	err := suite.db.QueryRow(ctx, `
-		INSERT INTO notes (workspace_id, title_encrypted, content_encrypted, content_hash, created_by)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO notes (workspace_id, title_encrypted, content_encrypted, content_hash, created_by, is_pinned, pinned_order)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id`,
-		workspaceID, encryptedTitle, encryptedContent, contentHash, userID,
+		workspaceID, encryptedTitle, encryptedContent, contentHash, userID, false, 0,
 	).Scan(&noteID)
 
 	suite.NoError(err)

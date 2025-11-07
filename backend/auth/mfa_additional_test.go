@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/stretchr/testify/require"
 )
 
 type mfaMockRow struct {
@@ -59,7 +60,8 @@ func TestVerifyBackupCodeSuccess(t *testing.T) {
 	mgr := NewMFAManager(&mfaMockDB{}, crypto)
 
 	testSalt := make([]byte, 32)
-	rand.Read(testSalt)
+	_, err := rand.Read(testSalt)
+	require.NoError(t, err)
 
 	code := mgr.formatBackupCode("ABCDEFGHIJKL")
 	normalized := mgr.normalizeBackupCode(code)
@@ -117,7 +119,8 @@ func TestVerifyBackupCodeAlreadyUsed(t *testing.T) {
 	mgr := NewMFAManager(&mfaMockDB{}, crypto)
 
 	testSalt := make([]byte, 32)
-	rand.Read(testSalt)
+	_, err := rand.Read(testSalt)
+	require.NoError(t, err)
 
 	code := mgr.formatBackupCode("MNOPQRSTUVWZ")
 	normalized := mgr.normalizeBackupCode(code)
@@ -155,7 +158,8 @@ func TestDisableMFAWithBackupCode(t *testing.T) {
 	mgr := NewMFAManager(&mfaMockDB{}, crypto)
 
 	testSalt := make([]byte, 32)
-	rand.Read(testSalt)
+	_, err := rand.Read(testSalt)
+	require.NoError(t, err)
 
 	secret := []byte("totp-secret-value")
 	encryptedSecret, err := crypto.EncryptBytes(secret)
@@ -223,7 +227,7 @@ func TestRegenerateBackupCodes(t *testing.T) {
 	crypto := appcrypto.NewCryptoService(make([]byte, 32))
 	password := "ComplexPass123!"
 	salt := []byte("1234567890abcdef")
-	pm := NewPasswordManager(&mfaMockDB{}, crypto)
+	pm := NewPasswordManager(&mfaMockDB{})
 	passwordHash := pm.HashPassword(password, salt)
 
 	mdb := &mfaMockDB{

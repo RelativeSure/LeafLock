@@ -229,12 +229,10 @@ func (s *Service) createDefaultAdmin(ctx context.Context, config AdminConfig) er
 // updateDefaultAdmin updates an existing admin user if needed
 func (s *Service) updateDefaultAdmin(ctx context.Context, userID uuid.UUID, config AdminConfig, isAdmin bool, currentPasswordHash string, currentSalt []byte) error {
 	needsUpdate := false
-	updates := []string{}
 
 	// Check if admin flag needs to be set
 	if !isAdmin {
 		log.Printf("[Admin] User %s exists but is not admin - promoting to admin", config.Email)
-		updates = append(updates, "SET is_admin = true")
 		needsUpdate = true
 	}
 

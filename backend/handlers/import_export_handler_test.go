@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/stretchr/testify/require"
 
 	appcrypto "leaflock/crypto"
 	"leaflock/database"
@@ -49,7 +50,7 @@ func TestImportNoteHandlerSuccess(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 
 	noteID, ok := body["note_id"].(string)
 	if !ok || noteID == "" {
@@ -130,7 +131,7 @@ func TestBulkImportHandlerMixedResults(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 
 	if imported := int(body["imported_count"].(float64)); imported != 1 {
 		t.Fatalf("expected 1 imported note, got %d", imported)

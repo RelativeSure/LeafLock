@@ -6,8 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	appcrypto "leaflock/crypto"
-
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -17,9 +15,8 @@ import (
 // TestRegister_WeakPassword tests registration with weak passwords
 func TestRegister_WeakPassword(t *testing.T) {
 	mockDB := &mockServiceDB{}
-	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
 	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
-	service := NewService(mockDB, rdb, cryptoSvc, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
+	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
 	weakPasswords := []string{
 		"short",
@@ -55,9 +52,8 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 		},
 	}
 
-	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
 	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
-	service := NewService(mockDB, rdb, cryptoSvc, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
+	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
 	_, err := service.Register(context.Background(), "existing@example.com", "ValidPassword123!")
 	if err == nil {
@@ -76,9 +72,8 @@ func TestRegister_TransactionBeginError(t *testing.T) {
 		},
 	}
 
-	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
 	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
-	service := NewService(mockDB, rdb, cryptoSvc, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
+	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
 	_, err := service.Register(context.Background(), "test@example.com", "ValidPassword123!")
 	if err == nil {
@@ -105,9 +100,8 @@ func TestRegister_UserInsertError(t *testing.T) {
 		},
 	}
 
-	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
 	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
-	service := NewService(mockDB, rdb, cryptoSvc, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
+	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
 	_, err := service.Register(context.Background(), "test@example.com", "ValidPassword123!")
 	if err == nil {
@@ -148,9 +142,8 @@ func TestRegister_GDPRKeyInsertError(t *testing.T) {
 		},
 	}
 
-	cryptoSvc := appcrypto.NewCryptoService(make([]byte, 32))
 	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
-	service := NewService(mockDB, rdb, cryptoSvc, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
+	service := NewService(mockDB, rdb, "test-secret-key-must-be-at-least-64-chars-long-for-HS512-padding")
 
 	_, err := service.Register(context.Background(), "test@example.com", "ValidPassword123!")
 	if err == nil {

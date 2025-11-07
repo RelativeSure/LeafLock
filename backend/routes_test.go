@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	appconfig "leaflock/config"
-	appcrypto "leaflock/crypto"
 	appserver "leaflock/server"
 )
 
@@ -28,21 +27,15 @@ func TestSetupRoutesInitializesDocs(t *testing.T) {
 		Environment:    "development",
 	}
 
-	key := make([]byte, 32)
-	for i := range key {
-		key[i] = byte(i + 1)
-	}
-	cryptoSvc := appcrypto.NewCryptoService(key)
-
 	mr, err := miniredis.Run()
 	require.NoError(t, err)
 	defer mr.Close()
 
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	readyState := appserver.NewReadyState(nil, cryptoSvc, cfg, rdb)
+	readyState := appserver.NewReadyState(nil, cfg, rdb)
 
 	require.NotPanics(t, func() {
-		setupRoutes(app, nil, rdb, cryptoSvc, cfg, time.Now(), readyState)
+		setupRoutes(app, nil, rdb, cfg, time.Now(), readyState)
 	})
 
 	resp, err := app.Test(httptest.NewRequest("GET", "/api/v1/docs/openapi.json", nil))
@@ -62,21 +55,15 @@ func TestSetupRoutesCorsAndMetricsInProduction(t *testing.T) {
 		Environment:    "production",
 	}
 
-	key := make([]byte, 32)
-	for i := range key {
-		key[i] = byte(32 - i)
-	}
-	cryptoSvc := appcrypto.NewCryptoService(key)
-
 	mr, err := miniredis.Run()
 	require.NoError(t, err)
 	defer mr.Close()
 
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	readyState := appserver.NewReadyState(nil, cryptoSvc, cfg, rdb)
+	readyState := appserver.NewReadyState(nil, cfg, rdb)
 
 	require.NotPanics(t, func() {
-		setupRoutes(app, nil, rdb, cryptoSvc, cfg, time.Now(), readyState)
+		setupRoutes(app, nil, rdb, cfg, time.Now(), readyState)
 	})
 
 	// Exact origin match

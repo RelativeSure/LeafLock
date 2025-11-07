@@ -13,9 +13,9 @@ func TestEncryptDecryptBytes(t *testing.T) {
 	for i := range key {
 		key[i] = byte(i)
 	}
-	
+
 	svc := NewCryptoService(key)
-	
+
 	tests := []struct {
 		name string
 		data []byte
@@ -26,7 +26,7 @@ func TestEncryptDecryptBytes(t *testing.T) {
 		{"Single byte", []byte{0x42}},
 		{"Unicode data", []byte("Hello 世界 🔐")},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Encrypt
@@ -34,7 +34,7 @@ func TestEncryptDecryptBytes(t *testing.T) {
 			require.NoError(t, err)
 			assert.NotEmpty(t, encrypted)
 			assert.NotEqual(t, tt.data, encrypted)
-			
+
 			// Decrypt
 			decrypted, err := svc.DecryptBytes(encrypted)
 			require.NoError(t, err)
@@ -47,18 +47,18 @@ func TestEncryptDecryptBytes(t *testing.T) {
 func TestEncryptBytes_Uniqueness(t *testing.T) {
 	key := make([]byte, 32)
 	svc := NewCryptoService(key)
-	
+
 	data := []byte("Same data")
-	
+
 	encrypted1, err1 := svc.EncryptBytes(data)
 	require.NoError(t, err1)
-	
+
 	encrypted2, err2 := svc.EncryptBytes(data)
 	require.NoError(t, err2)
-	
+
 	// Should produce different ciphertext due to random nonce
 	assert.NotEqual(t, encrypted1, encrypted2)
-	
+
 	// But both should decrypt to same plaintext
 	decrypted1, _ := svc.DecryptBytes(encrypted1)
 	decrypted2, _ := svc.DecryptBytes(encrypted2)
@@ -70,7 +70,7 @@ func TestEncryptBytes_Uniqueness(t *testing.T) {
 func TestDecryptBytes_InvalidData(t *testing.T) {
 	key := make([]byte, 32)
 	svc := NewCryptoService(key)
-	
+
 	tests := []struct {
 		name string
 		data []byte
@@ -80,7 +80,7 @@ func TestDecryptBytes_InvalidData(t *testing.T) {
 		{"Invalid ciphertext", []byte("this is not encrypted")},
 		{"Corrupted data", []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := svc.DecryptBytes(tt.data)
@@ -93,17 +93,17 @@ func TestDecryptBytes_InvalidData(t *testing.T) {
 func TestEncryptBytes_LargeData(t *testing.T) {
 	key := make([]byte, 32)
 	svc := NewCryptoService(key)
-	
+
 	// Create 1MB of data
 	largeData := make([]byte, 1024*1024)
 	for i := range largeData {
 		largeData[i] = byte(i % 256)
 	}
-	
+
 	encrypted, err := svc.EncryptBytes(largeData)
 	require.NoError(t, err)
 	assert.NotEmpty(t, encrypted)
-	
+
 	decrypted, err := svc.DecryptBytes(encrypted)
 	require.NoError(t, err)
 	assert.Equal(t, largeData, decrypted)
@@ -116,15 +116,15 @@ func TestDecryptBytes_WrongKey(t *testing.T) {
 	for i := range key2 {
 		key2[i] = byte(i + 1)
 	}
-	
+
 	svc1 := NewCryptoService(key1)
 	svc2 := NewCryptoService(key2)
-	
+
 	data := []byte("Secret message")
-	
+
 	encrypted, err := svc1.EncryptBytes(data)
 	require.NoError(t, err)
-	
+
 	// Try to decrypt with wrong key
 	_, err = svc2.DecryptBytes(encrypted)
 	assert.Error(t, err)

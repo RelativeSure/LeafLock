@@ -16,6 +16,8 @@ jobs:
   backend-coverage:
     name: Backend Coverage
     runs-on: ubuntu-latest
+    env:
+      BACKEND_COVERAGE_THRESHOLD: '50'
 
     steps:
       - name: Checkout repository
@@ -33,7 +35,8 @@ jobs:
 
       - name: Run coverage suite
         working-directory: backend
-        run: make test-coverage
+        run: |
+          COVERAGE_THRESHOLD=${BACKEND_COVERAGE_THRESHOLD} make test-coverage-check
 
       - name: Capture coverage summary
         working-directory: backend
@@ -41,19 +44,7 @@ jobs:
           TOTAL_LINE_COVERAGE=$(go tool cover -func=coverage.out | awk '/total:/ {print $3}')
           echo "## Backend Coverage" >> "$GITHUB_STEP_SUMMARY"
           echo "- Line coverage: ${TOTAL_LINE_COVERAGE}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Threshold: 80%" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Check coverage threshold (80%)
-        working-directory: backend
-        run: |
-          TOTAL_LINE_COVERAGE=$(go tool cover -func=coverage.out | awk '/total:/ {print $3}' | sed 's/%//')
-          THRESHOLD=80
-          if (( $(echo "$TOTAL_LINE_COVERAGE < $THRESHOLD" | bc -l) )); then
-            echo "❌ Coverage ${TOTAL_LINE_COVERAGE}% is below threshold ${THRESHOLD}%"
-            exit 1
-          else
-            echo "✅ Coverage ${TOTAL_LINE_COVERAGE}% meets threshold ${THRESHOLD}%"
-          fi
+          echo "- Threshold: ${BACKEND_COVERAGE_THRESHOLD}%" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5

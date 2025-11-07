@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -348,14 +347,14 @@ func TestConfig(t *testing.T) {
 
 	defer func() {
 		// Restore environment
-		_ = os.Setenv("JWT_SECRET", originalJWT)   // Test cleanup
+		_ = os.Setenv("JWT_SECRET", originalJWT)     // Test cleanup
 		_ = os.Setenv("DATABASE_URL", originalDBURL) // Test cleanup
 	}()
 
 	t.Run("LoadConfigWithDefaults", func(t *testing.T) {
 		// Clear environment variables
-		_ = os.Unsetenv("JWT_SECRET")    // Test setup
-		_ = os.Unsetenv("DATABASE_URL")  // Test setup
+		_ = os.Unsetenv("JWT_SECRET")   // Test setup
+		_ = os.Unsetenv("DATABASE_URL") // Test setup
 
 		config := LoadConfig()
 
@@ -509,7 +508,7 @@ func (suite *AuthHandlerTestSuite) SetupTest() {
 	suite.crypto = appcrypto.NewCryptoService(key)
 
 	suite.config = &appconfig.Config{
-		JWTSecret:        []byte("test-jwt-secret-key-for-testing-purposes-with-sufficient-length"),
+		JWTSecret: []byte("test-jwt-secret-key-for-testing-purposes-with-sufficient-length"),
 		// Zero-knowledge: No global EncryptionKey needed
 		MaxLoginAttempts: 5,
 		LockoutDuration:  15 * time.Minute,
@@ -929,7 +928,7 @@ func (suite *LockoutTestSuite) SetupTest() {
 	suite.T().Skip("Skipping LockoutTestSuite - incompatible with new auth system that requires real database connections")
 	// Test config
 	suite.config = &appconfig.Config{
-		JWTSecret:            []byte("test-secret"),
+		JWTSecret: []byte("test-secret"),
 		// Zero-knowledge: No global EncryptionKey - derive from JWT_SECRET
 		MaxLoginAttempts:     3,
 		MaxIPLoginAttempts:   5,

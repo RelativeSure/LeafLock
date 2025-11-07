@@ -34,7 +34,8 @@ func TestImportExportFeatures(t *testing.T) {
 
 	// Create crypto and auth services
 	cfg := LoadConfig()
-	crypto := NewCryptoService(cfg.EncryptionKey)
+	testKey := make([]byte, 32) // Test encryption key
+	crypto := NewCryptoService(testKey)
 
 	dbPool, ok := db.(*pgxpool.Pool)
 	require.True(t, ok, "expected *pgxpool.Pool")
@@ -43,7 +44,7 @@ func TestImportExportFeatures(t *testing.T) {
 	defer mr.Close()
 
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	authService := auth.NewService(dbPool, rdb, crypto, string(cfg.JWTSecret))
+	authService := auth.NewService(dbPool, rdb, string(cfg.JWTSecret))
 
 	// Create import/export handler
 	handler := &ImportExportHandler{
@@ -89,7 +90,7 @@ func TestImportExportFeatures(t *testing.T) {
 
 		var response map[string]interface{}
 		require.NoError(t, json.NewDecoder(resp.Body).Decode(&response))
-		resp.Body.Close()
+		require.NoError(t, resp.Body.Close())
 
 		assert.Equal(t, "Test Note", response["title"])
 	})
@@ -112,9 +113,9 @@ func TestImportExportFeatures(t *testing.T) {
 
 		contentHash := sha256.Sum256([]byte(content))
 		_, err = db.Exec(ctx, `
-			INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted, content_hash, created_by)
-			VALUES ($1, $2, $3, $4, $5, $6)`,
-			noteID, workspaceID, encryptedTitle, encryptedContent, contentHash[:], userID)
+			INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted, content_hash, created_by, is_pinned, pinned_order)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			noteID, workspaceID, encryptedTitle, encryptedContent, contentHash[:], userID, false, 0)
 		require.NoError(t, err)
 
 		payload := map[string]string{"format": "markdown"}
@@ -130,7 +131,7 @@ func TestImportExportFeatures(t *testing.T) {
 
 		var response map[string]interface{}
 		require.NoError(t, json.NewDecoder(resp.Body).Decode(&response))
-		resp.Body.Close()
+		require.NoError(t, resp.Body.Close())
 		assert.Equal(t, "markdown", response["format"])
 		assert.Contains(t, response["content"], "Export Test")
 	})
@@ -142,12 +143,12 @@ func TestImportExportFeatures(t *testing.T) {
 			return handler.BulkImport(c)
 		})
 
-	payload := map[string]interface{}{
-		"files": []map[string]string{
-			{"format": "markdown", "content": "# Note 1\n\nFirst note content.", "title": "Note 1"},
-			{"format": "text", "content": "Note 2\n\nSecond note content.", "title": "Note 2"},
-		},
-	}
+		payload := map[string]interface{}{
+			"files": []map[string]string{
+				{"format": "markdown", "content": "# Note 1\n\nFirst note content.", "title": "Note 1"},
+				{"format": "text", "content": "Note 2\n\nSecond note content.", "title": "Note 2"},
+			},
+		}
 		body, err := json.Marshal(payload)
 		require.NoError(t, err)
 
@@ -160,7 +161,7 @@ func TestImportExportFeatures(t *testing.T) {
 
 		var response map[string]interface{}
 		require.NoError(t, json.NewDecoder(resp.Body).Decode(&response))
-		resp.Body.Close()
+		require.NoError(t, resp.Body.Close())
 
 		imported, ok := response["imported"].([]interface{})
 		require.True(t, ok)
@@ -168,19 +169,19 @@ func TestImportExportFeatures(t *testing.T) {
 	})
 
 	t.Run("ImportUnsupportedFileType", func(t *testing.T) {
-	app := fiber.New()
-	app.Post("/notes/import", func(c *fiber.Ctx) error {
-		c.Locals("user_id", userID)
-		return handler.ImportNote(c)
-	})
+		app := fiber.New()
+		app.Post("/notes/import", func(c *fiber.Ctx) error {
+			c.Locals("user_id", userID)
+			return handler.ImportNote(c)
+		})
 
-	payload := map[string]string{
-		"format":  "pdf",
-		"content": "fake pdf content",
-		"title":   "Unsupported",
-	}
-	body, err := json.Marshal(payload)
-	require.NoError(t, err)
+		payload := map[string]string{
+			"format":  "pdf",
+			"content": "fake pdf content",
+			"title":   "Unsupported",
+		}
+		body, err := json.Marshal(payload)
+		require.NoError(t, err)
 
 		req := httptest.NewRequest("POST", "/notes/import", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
