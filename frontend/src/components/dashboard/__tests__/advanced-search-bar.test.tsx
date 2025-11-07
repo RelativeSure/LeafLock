@@ -1,8 +1,18 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { AdvancedSearchBar } from '../advanced-search-bar'
 
-// Mock the encryption context
+const useNotesStoreMock = vi.fn()
+const useDecryptedNotesMock = vi.fn()
+
+vi.mock('@/stores/notesStore', () => ({
+  useNotesStore: (...args: unknown[]) => useNotesStoreMock(...args),
+}))
+
+vi.mock('@/hooks/use-decrypted-notes', () => ({
+  useDecryptedNotes: (...args: unknown[]) => useDecryptedNotesMock(...args),
+}))
+
 vi.mock('@/lib/encryption-context', () => ({
   useEncryption: () => ({
     isUnlocked: true,
@@ -11,28 +21,16 @@ vi.mock('@/lib/encryption-context', () => ({
   }),
 }))
 
-// Mock the decrypted notes hook
-vi.mock('@/hooks/use-decrypted-notes', () => ({
-  useDecryptedNotes: () => ({
-    decryptedNotes: {},
-    isUnlocked: true,
-    isDecrypting: false,
-  }),
-}))
-
-// Mock the notes store
-vi.mock('@/stores/notesStore', () => ({
-  useNotesStore: () => ({
-    notes: [],
-    folders: [],
-    tags: [],
-    selectNote: vi.fn(),
-  }),
-}))
-
 vi.mock('@/components/ui/input', () => ({
-  Input: ({ onChange, value, ...props }: any) => (
-    <input onChange={onChange} value={value} {...props} />
+  Input: ({ onChange, value, onFocus, placeholder, className }: any) => (
+    <input
+      aria-label={placeholder}
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+      onFocus={onFocus}
+      className={className}
+    />
   ),
 }))
 
@@ -45,15 +43,19 @@ vi.mock('@/components/ui/button', () => ({
 }))
 
 vi.mock('@/components/ui/badge', () => ({
-  Badge: ({ children, ...props }: any) => <span {...props}>{children}</span>,
+  Badge: ({ children, ...props }: any) => (
+    <span data-testid="badge" {...props}>
+      {children}
+    </span>
+  ),
 }))
 
 vi.mock('@/components/ui/card', () => ({
   Card: ({ children }: any) => <div>{children}</div>,
-  CardContent: ({ children }: any) => <div>{children}</div>,
-  CardDescription: ({ children }: any) => <div>{children}</div>,
   CardHeader: ({ children }: any) => <div>{children}</div>,
   CardTitle: ({ children }: any) => <div>{children}</div>,
+  CardContent: ({ children }: any) => <div>{children}</div>,
+  CardDescription: ({ children }: any) => <div>{children}</div>,
 }))
 
 vi.mock('@/components/ui/scroll-area', () => ({
@@ -62,108 +64,173 @@ vi.mock('@/components/ui/scroll-area', () => ({
 
 vi.mock('@/components/ui/dialog', () => ({
   Dialog: ({ children, open }: any) => <div>{open && children}</div>,
-  DialogContent: ({ children }: any) => <div data-testid="dialog-content">{children}</div>,
+  DialogContent: ({ children }: any) => <div>{children}</div>,
   DialogHeader: ({ children }: any) => <div>{children}</div>,
   DialogTitle: ({ children }: any) => <div>{children}</div>,
   DialogTrigger: ({ children }: any) => <div>{children}</div>,
 }))
 
 vi.mock('@/components/ui/select', () => ({
-  Select: ({ children, onValueChange }: any) => (
-    <div data-testid="select" onClick={() => onValueChange && onValueChange('test')}>
-      {children}
-    </div>
-  ),
+  Select: ({ children }: any) => <div>{children}</div>,
   SelectTrigger: ({ children }: any) => <div>{children}</div>,
   SelectContent: ({ children }: any) => <div>{children}</div>,
-  SelectItem: ({ children, value }: any) => <option value={value}>{children}</option>,
+  SelectItem: ({ children }: any) => <div>{children}</div>,
   SelectValue: ({ placeholder }: any) => <span>{placeholder}</span>,
 }))
 
-// Mock date-fns
 vi.mock('date-fns', () => ({
-  formatDistanceToNow: () => '2 hours ago',
+  formatDistanceToNow: () => 'moments ago',
 }))
+
+const selectNoteMock = vi.fn()
+
+const sampleNotes = [
+  {
+    id: 'note-1',
+    folderId: 'folder-1',
+    tags: ['urgent', 'project'],
+    updatedAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    encrypted: true,
+    pinned: true,
+    isTrashed: false,
+  },
+  {
+    id: 'note-2',
+    folderId: 'folder-2',
+    tags: ['ideas'],
+    updatedAt: new Date(Date.now() - 86400000).toISOString(),
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    encrypted: false,
+    pinned: false,
+    isTrashed: false,
+  },
+] as any
+
+const setupDefaults = () => {
+  useNotesStoreMock.mockReturnValue({
+    notes: sampleNotes,
+    folders: [
+      { id: 'folder-1', name: 'Projects' },
+      { id: 'folder-2', name: 'Archive' },
+    ],
+    tags: [
+      { id: 'tag-1', name: 'urgent' },
+      { id: 'tag-2', name: 'ideas' },
+    ],
+    selectNote: selectNoteMock,
+  })
+
+  useDecryptedNotesMock.mockReturnValue({
+    decryptedNotes: {
+      'note-1': { title: 'Meeting Notes', content: '<p>Discuss roadmap</p>' },
+      'note-2': { title: 'Random Ideas', content: '<p>Brainstorm session</p>' },
+    },
+    isUnlocked: true,
+    isDecrypting: false,
+  })
+}
+
+const openSearch = () => {
+  const input = screen.getByPlaceholderText('Search notes...')
+  fireEvent.focus(input)
+  return input
+}
 
 describe('AdvancedSearchBar', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setupDefaults()
   })
 
-  it('should render advanced search bar', () => {
+  it('renders matching results for a query and selects a note', async () => {
     render(<AdvancedSearchBar />)
-    expect(screen.getByRole('textbox')).toBeInTheDocument()
+
+    const input = openSearch()
+    await waitFor(() => expect(screen.getByText(/results/i)).toBeInTheDocument())
+    fireEvent.change(input, { target: { value: 'meeting' } })
+
+    await waitFor(() => {
+      expect(screen.getByText('Meeting Notes')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Meeting Notes'))
+    expect(selectNoteMock).toHaveBeenCalledWith('note-1')
   })
 
-  it('should accept search query', () => {
+  it('shows locked messaging when workspace is locked', async () => {
+    useDecryptedNotesMock.mockReturnValue({
+      decryptedNotes: {},
+      isUnlocked: false,
+      isDecrypting: false,
+    })
+
     render(<AdvancedSearchBar />)
+    openSearch()
+    await waitFor(() => expect(screen.getByText(/results/i)).toBeInTheDocument())
 
-    const input = screen.getByRole('textbox')
-    fireEvent.change(input, { target: { value: 'search term' } })
-
-    expect(input).toHaveValue('search term')
+    await waitFor(() => {
+      expect(screen.getByText('Encrypted notes are locked')).toBeInTheDocument()
+    })
   })
 
-  it('should update search query when typing', () => {
+  it('shows decrypting state while unlocking notes', async () => {
+    useDecryptedNotesMock.mockReturnValue({
+      decryptedNotes: {},
+      isUnlocked: true,
+      isDecrypting: true,
+    })
+
     render(<AdvancedSearchBar />)
+    openSearch()
+    await waitFor(() => expect(screen.getByText(/results/i)).toBeInTheDocument())
 
-    const input = screen.getByRole('textbox')
-    fireEvent.change(input, { target: { value: 'test' } })
-
-    expect(input).toHaveValue('test')
+    await waitFor(() => {
+      expect(screen.getByText('Decrypting notes…')).toBeInTheDocument()
+    })
   })
 
-  it('should render search input with placeholder', () => {
+  it('clears applied filters and removes filter badge', async () => {
     render(<AdvancedSearchBar />)
 
-    const input = screen.getByPlaceholderText('Search notes...')
-    expect(input).toBeInTheDocument()
+    openSearch()
+    await waitFor(() => expect(screen.getByText(/results/i)).toBeInTheDocument())
+    const encryptedCheckbox = screen.getByLabelText('Encrypted only') as HTMLInputElement
+    const pinnedCheckbox = screen.getByLabelText('Pinned only') as HTMLInputElement
+
+    fireEvent.click(encryptedCheckbox)
+    fireEvent.click(pinnedCheckbox)
+
+    await waitFor(() => {
+      const badges = screen.getAllByTestId('badge')
+      expect(
+        badges.some((badge) => /filters$/i.test((badge.textContent || '').trim()))
+      ).toBe(true)
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /clear filters/i }))
+
+    await waitFor(() => {
+      expect(encryptedCheckbox.checked).toBe(false)
+      expect(pinnedCheckbox.checked).toBe(false)
+      const badges = screen.queryAllByTestId('badge')
+      expect(
+        badges.some((badge) => /filters$/i.test((badge.textContent || '').trim()))
+      ).toBe(false)
+    })
   })
 
-  it('should handle empty search', () => {
+  it('filters results by pinned status when pinned only is enabled', async () => {
     render(<AdvancedSearchBar />)
 
-    const input = screen.getByRole('textbox')
-    fireEvent.change(input, { target: { value: '' } })
+    openSearch()
+    await waitFor(() => expect(screen.getByText(/results/i)).toBeInTheDocument())
+    const pinnedCheckbox = screen.getByLabelText('Pinned only')
+    fireEvent.click(pinnedCheckbox)
 
-    expect(input).toHaveValue('')
-  })
-
-  it('should render with proper structure', () => {
-    render(<AdvancedSearchBar />)
-
-    const input = screen.getByRole('textbox')
-    expect(input).toHaveAttribute('placeholder', 'Search notes...')
-  })
-
-  it('should support tag filtering', () => {
-    render(<AdvancedSearchBar />)
-
-    expect(document.body).toBeTruthy()
-  })
-
-  it('should support folder filtering', () => {
-    render(<AdvancedSearchBar />)
-
-    expect(document.body).toBeTruthy()
-  })
-
-  it('should clear search filters', () => {
-    render(<AdvancedSearchBar />)
-
-    const clearButton = screen.queryByRole('button', { name: /clear/i })
-    if (clearButton) {
-      fireEvent.click(clearButton)
-      expect(clearButton).toBeInTheDocument()
-    }
-  })
-
-  it('should handle keyboard shortcuts', () => {
-    render(<AdvancedSearchBar />)
-
-    const input = screen.getByRole('textbox')
-    fireEvent.keyDown(input, { key: 'Enter' })
-
-    expect(document.body).toBeTruthy()
+    await waitFor(() => {
+      expect(screen.getByText('Meeting Notes')).toBeInTheDocument()
+      expect(screen.queryByText('Random Ideas')).toBeNull()
+    })
   })
 })

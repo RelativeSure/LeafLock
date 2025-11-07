@@ -311,8 +311,8 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
                                   <CardTitle className="text-sm">
                                     {version.changeDescription || 'No description'}
                                   </CardTitle>
-                                  <CardDescription className="text-xs">
-                                    <div className="flex items-center gap-4">
+                                  <CardDescription asChild>
+                                    <span className="text-xs flex flex-wrap items-center gap-4">
                                       <span className="flex items-center gap-1">
                                         <Calendar className="h-3 w-3" />
                                         {format(new Date(version.createdAt), 'MMM d, yyyy')}
@@ -327,7 +327,7 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
                                         <User className="h-3 w-3" />
                                         {version.createdBy}
                                       </span>
-                                    </div>
+                                    </span>
                                   </CardDescription>
                                 </div>
                                 <div className="flex items-center gap-1">
