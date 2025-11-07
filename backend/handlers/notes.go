@@ -214,6 +214,9 @@ func (h *NotesHandler) CreateNote(c *fiber.Ctx) error {
 		updatedAt time.Time
 	)
 
+	log.Printf("DEBUG: CreateNote params - workspaceID type=%T val=%s, userID type=%T val=%s, is_pinned=%v, pinned_order=%d",
+		workspaceID, workspaceID, userID, userID, req.IsPinned, req.PinnedOrder)
+
 	err = h.db.QueryRow(ctx, `
         INSERT INTO notes (workspace_id, title_encrypted, content_encrypted, content_hash, created_by, is_pinned, pinned_order)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
