@@ -489,16 +489,45 @@ ALTER TABLE note_versions ADD COLUMN IF NOT EXISTS change_description TEXT;
 -- Add index on note_versions for performance (latest versions first)
 CREATE INDEX IF NOT EXISTS idx_note_versions_created_at ON note_versions(note_id, created_at DESC);
 
--- Add is_pinned column for pinned/favorite notes
-ALTER TABLE notes ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT false;
+-- Fix: Add missing columns with proper type checking
+-- This checks if columns exist and adds them only if missing
+DO $$
+BEGIN
+    -- Add is_pinned if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='notes' AND column_name='is_pinned') THEN
+        ALTER TABLE notes ADD COLUMN is_pinned BOOLEAN DEFAULT false;
+        RAISE NOTICE 'Added is_pinned column to notes table';
+    END IF;
 
--- Add is_locked column for read-only note protection
-ALTER TABLE notes ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT false;
-ALTER TABLE notes ADD COLUMN IF NOT EXISTS locked_by UUID REFERENCES users(id) ON DELETE SET NULL;
-ALTER TABLE notes ADD COLUMN IF NOT EXISTS locked_at TIMESTAMPTZ;
+    -- Add pinned_order if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='notes' AND column_name='pinned_order') THEN
+        ALTER TABLE notes ADD COLUMN pinned_order INT DEFAULT 0;
+        RAISE NOTICE 'Added pinned_order column to notes table';
+    END IF;
 
--- Add pinned_order column for custom ordering of pinned notes
-ALTER TABLE notes ADD COLUMN IF NOT EXISTS pinned_order INT DEFAULT 0;
+    -- Add is_locked if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='notes' AND column_name='is_locked') THEN
+        ALTER TABLE notes ADD COLUMN is_locked BOOLEAN DEFAULT false;
+        RAISE NOTICE 'Added is_locked column to notes table';
+    END IF;
+
+    -- Add locked_by if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='notes' AND column_name='locked_by') THEN
+        ALTER TABLE notes ADD COLUMN locked_by UUID REFERENCES users(id) ON DELETE SET NULL;
+        RAISE NOTICE 'Added locked_by column to notes table';
+    END IF;
+
+    -- Add locked_at if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='notes' AND column_name='locked_at') THEN
+        ALTER TABLE notes ADD COLUMN locked_at TIMESTAMPTZ;
+        RAISE NOTICE 'Added locked_at column to notes table';
+    END IF;
+END $$;
 
 -- Create index for efficient pinned notes queries
 CREATE INDEX IF NOT EXISTS idx_notes_pinned ON notes(is_pinned, pinned_order DESC, updated_at DESC) WHERE deleted_at IS NULL;
