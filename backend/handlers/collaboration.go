@@ -14,7 +14,6 @@ import (
 	"leaflock/crypto"
 	"leaflock/database"
 	"leaflock/metrics"
-	"leaflock/services"
 	"leaflock/utils"
 )
 
@@ -22,11 +21,17 @@ import (
 type CollaborationHandler struct {
 	db                  database.Database
 	crypto              *crypto.CryptoService
-	notificationService *services.NotificationService
+	notificationService ShareNotificationService
+}
+
+// ShareNotificationService defines the minimal notification functionality used by the handler.
+type ShareNotificationService interface {
+	CheckUserEmailPreference(ctx context.Context, userID, preferenceType string) (bool, error)
+	SendNoteSharedNotification(ctx context.Context, recipientEmail, recipientName, senderName, noteTitle, permission, noteURL string) error
 }
 
 // NewCollaborationHandler creates a new collaboration handler.
-func NewCollaborationHandler(db database.Database, cryptoService *crypto.CryptoService, notificationService *services.NotificationService) *CollaborationHandler {
+func NewCollaborationHandler(db database.Database, cryptoService *crypto.CryptoService, notificationService ShareNotificationService) *CollaborationHandler {
 	return &CollaborationHandler{
 		db:                  db,
 		crypto:              cryptoService,
@@ -202,46 +207,52 @@ func (h *CollaborationHandler) ShareNote(c *fiber.Ctx) error {
 
 	// Send email notification if user has it enabled
 	if h.notificationService != nil {
-		go func() {
-			// Check if recipient wants email notifications
-			enabled, err := h.notificationService.CheckUserEmailPreference(context.Background(), targetUserID.String(), "note_shared")
-			if err == nil && enabled {
-				// Get sender name
-				var senderName string
-				_ = h.db.QueryRow(context.Background(), `SELECT COALESCE(display_name, email_plaintext) FROM users WHERE id = $1`, userID).Scan(&senderName)
-
-				// Get note title (decrypt it)
-				var titleEncrypted []byte
-				_ = h.db.QueryRow(context.Background(), `SELECT title_encrypted FROM notes WHERE id = $1`, noteID).Scan(&titleEncrypted)
-				noteTitle := "Untitled Note"
-				if titleEncrypted != nil {
-					if titleBytes, err := h.crypto.Decrypt(titleEncrypted); err == nil {
-						noteTitle = string(titleBytes)
-					}
-				}
-
-				// Get recipient name
-				var recipientName string
-				_ = h.db.QueryRow(context.Background(), `SELECT COALESCE(display_name, email_plaintext) FROM users WHERE id = $1`, targetUserID).Scan(&recipientName)
-
-				// Send email
-				_ = h.notificationService.SendNoteSharedNotification(
-					context.Background(),
-					req.UserEmail,
-					recipientName,
-					senderName,
-					noteTitle,
-					req.Permission,
-					"", // noteURL - can be constructed from app config
-				)
-			}
-		}()
+		go h.sendShareNotification(context.Background(), req, userID, targetUserID, noteID)
 	}
 
 	return c.Status(201).JSON(fiber.Map{
 		"message":          "Note shared successfully",
 		"collaboration_id": collaborationID,
 	})
+}
+
+func (h *CollaborationHandler) sendShareNotification(ctx context.Context, req ShareNoteRequest, userID, targetUserID, noteID uuid.UUID) {
+	if h.notificationService == nil {
+		return
+	}
+
+	enabled, err := h.notificationService.CheckUserEmailPreference(ctx, targetUserID.String(), "note_shared")
+	if err != nil || !enabled {
+		return
+	}
+
+	var senderName string
+	if err := h.db.QueryRow(ctx, `SELECT COALESCE(display_name, email_plaintext) FROM users WHERE id = $1`, userID).Scan(&senderName); err != nil {
+		senderName = "LeafLock user"
+	}
+
+	var titleEncrypted []byte
+	noteTitle := "Untitled Note"
+	if err := h.db.QueryRow(ctx, `SELECT title_encrypted FROM notes WHERE id = $1`, noteID).Scan(&titleEncrypted); err == nil && len(titleEncrypted) > 0 {
+		if titleBytes, err := h.crypto.Decrypt(titleEncrypted); err == nil && len(titleBytes) > 0 {
+			noteTitle = string(titleBytes)
+		}
+	}
+
+	var recipientName string
+	if err := h.db.QueryRow(ctx, `SELECT COALESCE(display_name, email_plaintext) FROM users WHERE id = $1`, targetUserID).Scan(&recipientName); err != nil {
+		recipientName = req.UserEmail
+	}
+
+	_ = h.notificationService.SendNoteSharedNotification(
+		ctx,
+		req.UserEmail,
+		recipientName,
+		senderName,
+		noteTitle,
+		req.Permission,
+		"",
+	)
 }
 
 // GetCollaborators godoc

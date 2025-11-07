@@ -11,14 +11,18 @@ import (
 	"github.com/google/uuid"
 )
 
+type notificationBroadcaster interface {
+	BroadcastToUser(uuid.UUID, websocket.WSMessage) error
+}
+
 // NotificationsHandler handles notification operations
 type NotificationsHandler struct {
 	db  database.Database
-	hub *websocket.Hub
+	hub notificationBroadcaster
 }
 
 // NewNotificationsHandler creates a new notifications handler
-func NewNotificationsHandler(db database.Database, hub *websocket.Hub) *NotificationsHandler {
+func NewNotificationsHandler(db database.Database, hub notificationBroadcaster) *NotificationsHandler {
 	return &NotificationsHandler{
 		db:  db,
 		hub: hub,

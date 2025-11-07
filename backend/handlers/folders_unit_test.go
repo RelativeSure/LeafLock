@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -167,6 +168,57 @@ func TestFoldersHandler_CreateFolderWithParent(t *testing.T) {
 
 	mockDB.AssertExpectations(t)
 	parentRow.AssertExpectations(t)
+	insertRow.AssertExpectations(t)
+}
+
+func TestFoldersHandler_CreateFolderRootUpdatesPath(t *testing.T) {
+	mockDB := new(MockDB)
+	cryptoSvc := crypto.NewCryptoService(make([]byte, 32))
+	handler := NewFoldersHandler(mockDB, cryptoSvc)
+
+	userID := uuid.New()
+	folderID := uuid.New()
+
+	insertRow := new(MockRow)
+	insertRow.On("Scan", mock.AnythingOfType("*uuid.UUID")).Run(func(args mock.Arguments) {
+		*(args[0].(*uuid.UUID)) = folderID
+	}).Return(nil).Once()
+
+	mockDB.On("QueryRow",
+		mock.Anything,
+		mock.MatchedBy(func(query string) bool {
+			return strings.Contains(query, "INSERT INTO folders")
+		}),
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+	).Return(insertRow).Once()
+
+	mockDB.On("Exec",
+		mock.Anything,
+		mock.MatchedBy(func(query string) bool {
+			return strings.Contains(query, "UPDATE folders SET path")
+		}),
+		"/"+folderID.String()+"/", folderID,
+	).Return(int64(1), nil).Once()
+
+	app := fiber.New()
+	app.Post("/folders", func(c *fiber.Ctx) error {
+		c.Locals("user_id", userID)
+		return handler.CreateFolder(c)
+	})
+
+	body, err := json.Marshal(map[string]interface{}{
+		"name": "Root Folder",
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest("POST", "/folders", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+	mockDB.AssertExpectations(t)
 	insertRow.AssertExpectations(t)
 }
 
