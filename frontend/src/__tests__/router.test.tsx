@@ -129,7 +129,7 @@ const setAuthStoreState = (state: any) => {
     }
     return state
   })
-  mockedUseAuthStore.getState.mockImplementation(() => state)
+  mockedUseAuthStore.getState = vi.fn(() => state)
 }
 
 describe('router', () => {
@@ -151,7 +151,7 @@ describe('router', () => {
       }
       return mockAuthState
     })
-    mockedUseAuthStore.getState.mockImplementation(() => ({
+    mockedUseAuthStore.getState = vi.fn(() => ({
       ...mockAuthState,
     }))
   })
