@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useTemplatesStore } from '../../stores/templatesStore'
 import { useAuthStore } from '../../stores/authStore'
 import { Button } from '@/components/ui/button'
@@ -13,12 +14,12 @@ import type { Template } from '@/types'
 
 export function TemplatesPage() {
   const { templates, starterTemplates, communityTemplates, loadTemplates } = useTemplatesStore(
-    (state) => ({
+    useShallow((state) => ({
       templates: state.templates,
       starterTemplates: state.starterTemplates,
       communityTemplates: state.communityTemplates,
       loadTemplates: state.loadTemplates,
-    })
+    }))
   )
   const { user } = useAuthStore()
   const [searchQuery, setSearchQuery] = useState('')
