@@ -18,7 +18,7 @@ import (
 )
 
 // MigrationSchemaVersion tracks the current schema version
-const MigrationSchemaVersion = "2025.11.07.004" // Fix uuid_generate_v7 function PERFORM -> RETURN bug
+const MigrationSchemaVersion = "2025.11.07.005" // Fix uuid_generate_v7 BYTEA to UUID conversion
 
 // Database interface for dependency injection and testing
 type Database interface {

@@ -11,27 +11,32 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 -- UUIDv7 function for time-ordered UUIDs (PostgreSQL 18+ native or custom implementation)
 CREATE OR REPLACE FUNCTION uuid_generate_v7()
 RETURNS UUID AS $$
+DECLARE
+    unix_ts_ms BIGINT;
+    uuid_bytes BYTEA;
+    hex_string TEXT;
 BEGIN
-    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_uuidv7') THEN
-        -- Use native pg_uuidv7 if available
-        RETURN uuid_generate_v7();
-    ELSE
-        -- Custom implementation for older PostgreSQL versions
-        DECLARE
-            unix_ts_ms BIGINT;
-            timestamp_bytes BYTEA;
-            random_bytes BYTEA;
-            combined BYTEA;
-        BEGIN
-            unix_ts_ms := EXTRACT(EPOCH FROM NOW()) * 1000;
-            timestamp_bytes := substring(int8send(unix_ts_ms::INT8) FROM 2 FOR 6);
-            random_bytes := gen_random_bytes(10);
+    -- Get current timestamp in milliseconds
+    unix_ts_ms := EXTRACT(EPOCH FROM NOW()) * 1000;
 
-            -- Construct UUIDv7 format: timestamp (48 bits) + version (4 bits) + random (62 bits)
-            combined := timestamp_bytes || substring(random_bytes FROM 1);
-            return combined::UUID;
-        END;
-    END IF;
+    -- Build 16-byte UUID:
+    -- 6 bytes: timestamp (48 bits)
+    -- 2 bytes: version (4 bits = 0x7) + random (12 bits)
+    -- 8 bytes: variant (2 bits = 0b10) + random (62 bits)
+    uuid_bytes :=
+        substring(int8send(unix_ts_ms::BIGINT) FROM 3 FOR 6) ||  -- 6 bytes timestamp
+        set_byte(gen_random_bytes(2), 0, (get_byte(gen_random_bytes(1), 0) & 15) | 112) || -- version byte (0x70 = version 7)
+        set_byte(gen_random_bytes(8), 0, (get_byte(gen_random_bytes(1), 0) & 63) | 128);   -- variant byte (0x80-0xBF)
+
+    -- Convert to hex and format as UUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+    hex_string := encode(uuid_bytes, 'hex');
+    RETURN (
+        substring(hex_string FROM 1 FOR 8) || '-' ||
+        substring(hex_string FROM 9 FOR 4) || '-' ||
+        substring(hex_string FROM 13 FOR 4) || '-' ||
+        substring(hex_string FROM 17 FOR 4) || '-' ||
+        substring(hex_string FROM 21 FOR 12)
+    )::UUID;
 END;
 $$ LANGUAGE plpgsql;
 
