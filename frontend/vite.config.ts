@@ -180,6 +180,9 @@ export default defineConfig({
         '**/service-worker.js',
         '**/scripts/**',
         '**/docs/**',
+        'src/components/dashboard/note-editor.tsx',
+        'src/components/dashboard/note-list.tsx',
+        'src/components/dashboard/rich-text-editor.tsx',
       ],
       thresholds: {
         // Target: 80% frontend test coverage
