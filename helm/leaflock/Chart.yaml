@@ -26,7 +26,7 @@ dependencies:
     tags:
       - database
   - name: redis
-    version: 23.2.6
+    version: 23.2.11
     repository: https://charts.bitnami.com/bitnami
     condition: redis.enabled
     tags:
