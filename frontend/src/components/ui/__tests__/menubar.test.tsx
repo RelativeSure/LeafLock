@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { describe, it, expect } from 'vitest'
+import userEvent from '@testing-library/user-event'
 import {
   Menubar,
   MenubarMenu,
@@ -7,189 +8,73 @@ import {
   MenubarContent,
   MenubarItem,
   MenubarSeparator,
-  MenubarLabel,
   MenubarCheckboxItem,
   MenubarRadioGroup,
   MenubarRadioItem,
   MenubarSub,
-  MenubarSubContent,
   MenubarSubTrigger,
+  MenubarSubContent,
+  MenubarLabel,
   MenubarShortcut,
 } from '../menubar'
 
-describe('Menubar', () => {
-  it('should render menubar with menus', () => {
+describe('Menubar UI primitives', () => {
+  it('renders nested primitives via the shared Radix context', async () => {
+    const user = userEvent.setup()
     render(
-      <Menubar>
+      <Menubar data-testid="menubar">
         <MenubarMenu>
           <MenubarTrigger>File</MenubarTrigger>
-          <MenubarContent>
-            <MenubarItem>New</MenubarItem>
-            <MenubarItem>Open</MenubarItem>
-          </MenubarContent>
-        </MenubarMenu>
-      </Menubar>
-    )
-
-    expect(screen.getByText('File')).toBeInTheDocument()
-  })
-
-  it('should render multiple menus', () => {
-    render(
-      <Menubar>
-        <MenubarMenu>
-          <MenubarTrigger>File</MenubarTrigger>
-          <MenubarContent>
-            <MenubarItem>New</MenubarItem>
-          </MenubarContent>
-        </MenubarMenu>
-        <MenubarMenu>
-          <MenubarTrigger>Edit</MenubarTrigger>
-          <MenubarContent>
-            <MenubarItem>Cut</MenubarItem>
-          </MenubarContent>
-        </MenubarMenu>
-      </Menubar>
-    )
-
-    expect(screen.getByText('File')).toBeInTheDocument()
-    expect(screen.getByText('Edit')).toBeInTheDocument()
-  })
-
-  it('should render menu items with separators', () => {
-    render(
-      <Menubar>
-        <MenubarMenu>
-          <MenubarTrigger>File</MenubarTrigger>
-          <MenubarContent>
-            <MenubarItem>New</MenubarItem>
+          <MenubarContent forceMount>
+            <MenubarItem>New Tab</MenubarItem>
             <MenubarSeparator />
-            <MenubarItem>Exit</MenubarItem>
-          </MenubarContent>
-        </MenubarMenu>
-      </Menubar>
-    )
-
-    // Verify separator renders without error and trigger is present
-    expect(screen.getByText('File')).toBeInTheDocument()
-  })
-
-  it('should render menu label', () => {
-    render(
-      <Menubar>
-        <MenubarMenu>
-          <MenubarTrigger>View</MenubarTrigger>
-          <MenubarContent>
-            <MenubarLabel>Appearance</MenubarLabel>
-            <MenubarItem>Zoom In</MenubarItem>
-          </MenubarContent>
-        </MenubarMenu>
-      </Menubar>
-    )
-
-    expect(screen.getByText('View')).toBeInTheDocument()
-  })
-
-  it('should render checkbox items', () => {
-    render(
-      <Menubar>
-        <MenubarMenu>
-          <MenubarTrigger>View</MenubarTrigger>
-          <MenubarContent>
-            <MenubarCheckboxItem checked>Show Toolbar</MenubarCheckboxItem>
-            <MenubarCheckboxItem>Show Sidebar</MenubarCheckboxItem>
-          </MenubarContent>
-        </MenubarMenu>
-      </Menubar>
-    )
-
-    expect(screen.getByText('View')).toBeInTheDocument()
-  })
-
-  it('should render radio items', () => {
-    render(
-      <Menubar>
-        <MenubarMenu>
-          <MenubarTrigger>Theme</MenubarTrigger>
-          <MenubarContent>
-            <MenubarRadioGroup value="light">
-              <MenubarRadioItem value="light">Light</MenubarRadioItem>
-              <MenubarRadioItem value="dark">Dark</MenubarRadioItem>
+            <MenubarCheckboxItem checked>Show Status Bar</MenubarCheckboxItem>
+            <MenubarRadioGroup value="compact">
+              <MenubarRadioItem value="compact">Compact Mode</MenubarRadioItem>
             </MenubarRadioGroup>
-          </MenubarContent>
-        </MenubarMenu>
-      </Menubar>
-    )
-
-    expect(screen.getByText('Theme')).toBeInTheDocument()
-  })
-
-  it('should render submenu', () => {
-    render(
-      <Menubar>
-        <MenubarMenu>
-          <MenubarTrigger>File</MenubarTrigger>
-          <MenubarContent>
             <MenubarSub>
-              <MenubarSubTrigger>Recent Files</MenubarSubTrigger>
-              <MenubarSubContent>
-                <MenubarItem>File1.txt</MenubarItem>
-                <MenubarItem>File2.txt</MenubarItem>
+              <MenubarSubTrigger inset>Share</MenubarSubTrigger>
+              <MenubarSubContent forceMount>
+                <MenubarItem>Copy Link</MenubarItem>
               </MenubarSubContent>
             </MenubarSub>
+            <MenubarLabel inset>Shortcuts</MenubarLabel>
+            <MenubarShortcut>⌘N</MenubarShortcut>
           </MenubarContent>
         </MenubarMenu>
-      </Menubar>
+      </Menubar>,
     )
 
+    await user.click(screen.getByText('File'))
+
+    expect(screen.getByTestId('menubar')).toBeInTheDocument()
     expect(screen.getByText('File')).toBeInTheDocument()
+    expect(await screen.findByText('New Tab')).toBeInTheDocument()
+    expect(screen.getByText('Show Status Bar')).toBeInTheDocument()
+    expect(screen.getByText('Compact Mode')).toBeInTheDocument()
+    expect(screen.getByText('Share')).toBeInTheDocument()
+    await user.hover(screen.getByText('Share'))
+    expect(await screen.findByText('Copy Link')).toBeInTheDocument()
+    expect(screen.getByText('Shortcuts')).toBeInTheDocument()
+    expect(screen.getByText('⌘N')).toBeInTheDocument()
   })
 
-  it('should render shortcuts', () => {
+  it('honors custom class names on triggers and shortcuts', async () => {
+    const user = userEvent.setup()
     render(
       <Menubar>
         <MenubarMenu>
-          <MenubarTrigger>File</MenubarTrigger>
-          <MenubarContent>
-            <MenubarItem>
-              New <MenubarShortcut>⌘N</MenubarShortcut>
-            </MenubarItem>
+          <MenubarTrigger className="custom-trigger">Edit</MenubarTrigger>
+          <MenubarContent forceMount>
+            <MenubarShortcut className="text-primary">⌘E</MenubarShortcut>
           </MenubarContent>
         </MenubarMenu>
-      </Menubar>
+      </Menubar>,
     )
 
-    expect(screen.getByText('File')).toBeInTheDocument()
-  })
+    await user.click(screen.getByText('Edit'))
 
-  it('should render disabled items', () => {
-    render(
-      <Menubar>
-        <MenubarMenu>
-          <MenubarTrigger>Edit</MenubarTrigger>
-          <MenubarContent>
-            <MenubarItem disabled>Undo</MenubarItem>
-            <MenubarItem>Redo</MenubarItem>
-          </MenubarContent>
-        </MenubarMenu>
-      </Menubar>
-    )
-
-    expect(screen.getByText('Edit')).toBeInTheDocument()
-  })
-
-  it('should apply custom className', () => {
-    const { container } = render(
-      <Menubar className="custom-menubar">
-        <MenubarMenu>
-          <MenubarTrigger>File</MenubarTrigger>
-          <MenubarContent>
-            <MenubarItem>New</MenubarItem>
-          </MenubarContent>
-        </MenubarMenu>
-      </Menubar>
-    )
-
-    expect(container.querySelector('.custom-menubar')).toBeInTheDocument()
+    expect(screen.getByText('Edit')).toHaveClass('custom-trigger')
+    expect(screen.getByText('⌘E')).toHaveClass('text-primary')
   })
 })

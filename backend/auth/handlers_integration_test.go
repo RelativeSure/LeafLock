@@ -22,7 +22,7 @@ import (
 func setupAuthTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 	dbURL := os.Getenv("TEST_DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgres://test:test@localhost:5433/leaflock_test?sslmode=disable"
+		dbURL = "postgres://test:test@localhost:5433/leaflock_test?sslmode=disable" // secretlint-disable-line
 	}
 
 	ctx := context.Background()
