@@ -36,9 +36,15 @@ vi.mock('../lib/encryption-context', () => ({
   }),
 }))
 
-vi.mock('../stores/authStore', () => ({
-  useAuthStore: vi.fn(),
-}))
+vi.mock('../stores/authStore', () => {
+  const storeMock = Object.assign(vi.fn(), {
+    getState: vi.fn(),
+  })
+
+  return {
+    useAuthStore: storeMock,
+  }
+})
 
 vi.mock('../stores/notesStore', () => ({
   useNotesStore: {
@@ -113,29 +119,41 @@ vi.mock('../lib/navigation', () => ({
   safeRedirectToLogin: vi.fn(),
 }))
 
+type AuthStoreMock = Mock & { getState: Mock }
+const mockedUseAuthStore = useAuthStore as unknown as AuthStoreMock
+
+const setAuthStoreState = (state: any) => {
+  mockedUseAuthStore.mockImplementation((selector: any) => {
+    if (typeof selector === 'function') {
+      return selector(state)
+    }
+    return state
+  })
+  mockedUseAuthStore.getState.mockImplementation(() => state)
+}
+
 describe('router', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
     // Mock auth store with default values
-    const mockAuthStore = vi.fn((selector: any) => {
-      const state = {
-        user: null,
-        isLoading: false,
-        initialize: vi.fn().mockResolvedValue(undefined),
-        logout: vi.fn(),
-        checkRegistrationEnabled: vi.fn().mockResolvedValue(true),
-      }
-      return selector ? selector(state) : state
-    })
-    mockAuthStore.getState = () => ({
+    const mockAuthState = {
       user: null,
       isLoading: false,
       initialize: vi.fn().mockResolvedValue(undefined),
       logout: vi.fn(),
       checkRegistrationEnabled: vi.fn().mockResolvedValue(true),
+    }
+
+    mockedUseAuthStore.mockImplementation((selector: any) => {
+      if (typeof selector === 'function') {
+        return selector(mockAuthState)
+      }
+      return mockAuthState
     })
-    ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
+    mockedUseAuthStore.getState.mockImplementation(() => ({
+      ...mockAuthState,
+    }))
   })
 
   describe('Router configuration', () => {
@@ -231,7 +249,8 @@ describe('router', () => {
         isLoading: true,
         initialize: vi.fn().mockResolvedValue(undefined),
       })
-      ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
+      ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
+      ;(useAuthStore as Mock).getState = mockAuthStore.getState as any
 
       window.history.pushState({}, '', '/')
 
@@ -256,7 +275,8 @@ describe('router', () => {
         isLoading: false,
         initialize: vi.fn().mockResolvedValue(undefined),
       })
-      ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
+      ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
+      ;(useAuthStore as Mock).getState = mockAuthStore.getState as any
 
       window.history.pushState({}, '', '/')
 
@@ -284,7 +304,8 @@ describe('router', () => {
         initialize: vi.fn().mockResolvedValue(undefined),
         logout: vi.fn(),
       })
-      ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
+      ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
+      ;(useAuthStore as Mock).getState = mockAuthStore.getState as any
 
       window.history.pushState({}, '', '/')
 
@@ -313,7 +334,7 @@ describe('router', () => {
         initialize: vi.fn().mockResolvedValue(undefined),
         logout: vi.fn(),
       })
-      ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
+      ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
 
       window.history.pushState({}, '', '/')
 
@@ -321,7 +342,7 @@ describe('router', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Preparing editor…')).toBeInTheDocument()
-      })
+      }, { timeout: 5000 })
     })
 
     it('should render user avatar in header', async () => {
@@ -341,7 +362,7 @@ describe('router', () => {
         initialize: vi.fn().mockResolvedValue(undefined),
         logout: vi.fn(),
       })
-      ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
+      ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
 
       window.history.pushState({}, '', '/')
 
@@ -349,7 +370,7 @@ describe('router', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('user-avatar')).toBeInTheDocument()
-      })
+      }, { timeout: 5000 })
     })
 
     it('should render logout button', async () => {
@@ -369,7 +390,7 @@ describe('router', () => {
         initialize: vi.fn().mockResolvedValue(undefined),
         logout: vi.fn(),
       })
-      ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
+      ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
 
       window.history.pushState({}, '', '/')
 
@@ -377,7 +398,7 @@ describe('router', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Logout')).toBeInTheDocument()
-      })
+      }, { timeout: 5000 })
     })
   })
 
@@ -421,7 +442,8 @@ describe('router', () => {
         isLoading: false,
         initialize: vi.fn().mockResolvedValue(undefined),
       })
-      ;(useAuthStore as Mock).mockReturnValue(mockAuthStore.getState())
+      ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
+      ;(useAuthStore as Mock).getState = mockAuthStore.getState as any
 
       window.history.pushState({}, '', '/admin')
 

@@ -11,7 +11,7 @@
 
 **Status**: ✅ **PASS - No High/Critical Vulnerabilities**
 
-```
+```text
 Vulnerabilities Found: 2 LOW severity
 Audit Level: HIGH
 ```
@@ -95,7 +95,7 @@ The sandbox environment prevents Go module downloads from storage.googleapis.com
 | main | 8.8% | ❌ Low | - |
 | database | 6.2% | ❌ Low | - |
 
-#### New Features Coverage Impact
+#### Backend New Features Coverage Impact
 
 **Handlers Modified** (handlers/notes.go):
 - Added: `TogglePin()` handler - **NOT TESTED** (new code)
@@ -130,7 +130,7 @@ The sandbox environment prevents Go module downloads from storage.googleapis.com
 - Issues are in test infrastructure, not application code
 - Coverage is still measured correctly
 
-#### New Features Coverage Impact
+#### Frontend New Features Coverage Impact
 
 | Feature | File | Lines Added | Tests | Coverage Impact |
 |---------|------|-------------|-------|----------------|
@@ -174,7 +174,7 @@ read udp [::1]:53: read: connection refused
 
 **TypeScript Type Check**: ❌ **Failed**
 
-```
+```text
 64 type errors in 3 integration test files:
 - collaboration-flow.test.tsx (42 errors)
 - search-filter-flow.test.tsx (8 errors)

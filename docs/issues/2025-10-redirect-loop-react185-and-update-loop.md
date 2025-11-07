@@ -1,4 +1,4 @@
-Title: Login redirect loop and React 185/update-depth errors on dashboard
+# Login redirect loop and React 185/update-depth errors on dashboard
 
 Status
 - Current: Site stable with Sidebar only; NoteEditor disabled temporarily.

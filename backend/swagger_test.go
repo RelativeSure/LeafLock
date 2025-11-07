@@ -9,8 +9,8 @@ import (
 )
 
 func TestAdminOnlyFromEnv(t *testing.T) {
-	os.Setenv("ADMIN_USER_IDS", "123e4567-e89b-12d3-a456-426614174000,abcd")
-	defer os.Unsetenv("ADMIN_USER_IDS")
+	_ = os.Setenv("ADMIN_USER_IDS", "123e4567-e89b-12d3-a456-426614174000,abcd")
+	defer func() { _ = os.Unsetenv("ADMIN_USER_IDS") }()
 
 	unauthorizedApp := fiber.New()
 	unauthorizedApp.Get("/protected", AdminOnlyFromEnv(), func(c *fiber.Ctx) error {

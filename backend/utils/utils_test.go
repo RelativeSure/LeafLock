@@ -179,7 +179,7 @@ func TestClientIP(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	TrustProxyHeaders.Store(true)
 
@@ -206,7 +206,7 @@ func TestClientIP(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 			body, _ := io.ReadAll(resp.Body)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			assert.Equal(t, tc.expect, string(body))
 		})
 	}

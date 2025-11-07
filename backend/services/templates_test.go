@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"testing"
 
-	"leaflock/crypto"
 	"leaflock/database"
 )
 
@@ -57,10 +56,7 @@ func TestSeedDefaultTemplatesSkipWhenExisting(t *testing.T) {
 		*args[0].(*int) = 5
 	}).Return(nil)
 
-	key := make([]byte, 32)
-	cryptoSvc := crypto.NewCryptoService(key)
-
-	err := SeedDefaultTemplates(db, cryptoSvc)
+	err := SeedDefaultTemplates(db)
 	assert.NoError(t, err)
 	db.AssertNumberOfCalls(t, "Exec", 0)
 }
@@ -95,10 +91,7 @@ func TestSeedDefaultTemplatesInsertsDefaults(t *testing.T) {
 		},
 	).Return(int64(1), nil)
 
-	key := make([]byte, 32)
-	cryptoSvc := crypto.NewCryptoService(key)
-
-	err := SeedDefaultTemplates(db, cryptoSvc)
+	err := SeedDefaultTemplates(db)
 	assert.NoError(t, err)
 	assert.Equal(t, len(defaultTemplates), insertCalls)
 }
@@ -109,10 +102,7 @@ func TestSeedDefaultTemplatesQueryError(t *testing.T) {
 	db.On("QueryRow", mock.Anything, mock.Anything, mock.Anything).Return(row)
 	row.On("Scan", mock.Anything).Return(errors.New("db failure"))
 
-	key := make([]byte, 32)
-	cryptoSvc := crypto.NewCryptoService(key)
-
-	err := SeedDefaultTemplates(db, cryptoSvc)
+	err := SeedDefaultTemplates(db)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check existing templates")
 }
@@ -127,10 +117,7 @@ func TestSeedDefaultTemplatesInsertError(t *testing.T) {
 
 	db.On("Exec", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(int64(0), assert.AnError)
 
-	key := make([]byte, 32)
-	cryptoSvc := crypto.NewCryptoService(key)
-
-	err := SeedDefaultTemplates(db, cryptoSvc)
+	err := SeedDefaultTemplates(db)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to insert template")
 }

@@ -64,6 +64,48 @@ describe('organizationService', () => {
         })
       )
     })
+
+    it('removes a tag from a note', async () => {
+      const { organizationService, requestSpy } = await setupOrganizationService()
+      requestSpy.mockResolvedValue({})
+
+      await organizationService.removeTagFromNote('note-2', 'tag-9')
+
+      expect(requestSpy).toHaveBeenCalledWith(
+        '/notes/note-2/tags/tag-9',
+        expect.objectContaining({
+          method: 'DELETE',
+        })
+      )
+    })
+
+    it('deletes a tag', async () => {
+      const { organizationService, requestSpy } = await setupOrganizationService()
+      requestSpy.mockResolvedValue({})
+
+      await organizationService.deleteTag('tag-42')
+
+      expect(requestSpy).toHaveBeenCalledWith(
+        '/tags/tag-42',
+        expect.objectContaining({
+          method: 'DELETE',
+        })
+      )
+    })
+
+    it('fetches notes for a tag', async () => {
+      const notes = [
+        { id: 'note-1', title: 'A', content: 'x' },
+        { id: 'note-2', title: 'B', content: 'y' },
+      ]
+      const { organizationService, requestSpy } = await setupOrganizationService()
+      requestSpy.mockResolvedValue(notes)
+
+      const result = await organizationService.getNotesByTag('tag-7')
+
+      expect(requestSpy).toHaveBeenCalledWith('/tags/tag-7/notes')
+      expect(result).toEqual(notes)
+    })
   })
 
   describe('settings', () => {

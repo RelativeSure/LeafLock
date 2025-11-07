@@ -49,9 +49,8 @@ func TestDebugLoginReturnsUserInfo(t *testing.T) {
 		db := &mockServiceDB{}
 		service := &Service{
 			db:        db,
-			crypto:    crypto,
 			session:   &mockSessionManager{},
-			password:  NewPasswordManager(db, crypto),
+			password:  NewPasswordManager(db),
 			mfa:       NewMFAManager(db, crypto),
 			jwtSecret: "secret",
 		}
@@ -137,18 +136,13 @@ func TestDebugAdminInfoDecryptsEmail(t *testing.T) {
 		db := &mockServiceDB{}
 		service := &Service{
 			db:        db,
-			crypto:    crypto,
 			session:   &mockSessionManager{},
-			password:  NewPasswordManager(db, crypto),
+			password:  NewPasswordManager(db),
 			mfa:       NewMFAManager(db, crypto),
 			jwtSecret: "secret",
 		}
 
-		email := []byte("admin@example.com")
-		encryptedEmail, err := crypto.EncryptBytes(email)
-		if err != nil {
-			t.Fatalf("failed to encrypt email: %v", err)
-		}
+		email := "admin@example.com"
 		adminID := uuid.New()
 		createdAt := time.Now().UTC().Add(-time.Hour)
 		lastLogin := time.Now().UTC()
@@ -161,8 +155,9 @@ func TestDebugAdminInfoDecryptsEmail(t *testing.T) {
 				if v, ok := dest[0].(*uuid.UUID); ok {
 					*v = adminID
 				}
-				if v, ok := dest[1].(*[]byte); ok {
-					*v = encryptedEmail
+				// Zero-knowledge: email_plaintext field is a string (no encryption)
+				if v, ok := dest[1].(*string); ok {
+					*v = email
 				}
 				if v, ok := dest[2].(*bool); ok {
 					*v = true
@@ -196,8 +191,8 @@ func TestDebugAdminInfoDecryptsEmail(t *testing.T) {
 		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 			t.Fatalf("failed to decode response: %v", err)
 		}
-		if body["email"] != string(email) {
-			t.Fatalf("expected decrypted email, got %v", body["email"])
+		if body["email"] != email {
+			t.Fatalf("expected plaintext email %s, got %v", email, body["email"])
 		}
 	})
 }
@@ -207,9 +202,8 @@ func TestDebugEncryptionKeyRoundTrip(t *testing.T) {
 		crypto := appcrypto.NewCryptoService(make([]byte, 32))
 		service := &Service{
 			db:        &mockServiceDB{},
-			crypto:    crypto,
 			session:   &mockSessionManager{},
-			password:  NewPasswordManager(&mockServiceDB{}, crypto),
+			password:  NewPasswordManager(&mockServiceDB{}),
 			mfa:       NewMFAManager(&mockServiceDB{}, crypto),
 			jwtSecret: "secret",
 		}
@@ -232,8 +226,12 @@ func TestDebugEncryptionKeyRoundTrip(t *testing.T) {
 		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 			t.Fatalf("failed to decode response: %v", err)
 		}
-		if body["encryption_test"] != "passed" {
-			t.Fatalf("expected encryption_test passed, got %v", body["encryption_test"])
+		// Zero-knowledge architecture response
+		if body["encryption_architecture"] != "zero-knowledge" {
+			t.Fatalf("expected zero-knowledge architecture, got %v", body["encryption_architecture"])
+		}
+		if body["mfa_encryption"] == nil {
+			t.Fatalf("expected mfa_encryption field to exist")
 		}
 	})
 }

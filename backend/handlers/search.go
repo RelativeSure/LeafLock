@@ -25,17 +25,17 @@ func NewSearchHandler(db database.Database) *SearchHandler {
 // SearchRequest represents advanced search parameters
 type SearchRequest struct {
 	// Metadata filters (server-side)
-	Tags         []string `json:"tags"`
-	FolderIDs    []string `json:"folder_ids"`
-	StartDate    string   `json:"start_date"`
-	EndDate      string   `json:"end_date"`
-	IsPinned     *bool    `json:"is_pinned"`
-	IsLocked     *bool    `json:"is_locked"`
-	IsTrashed    *bool    `json:"is_trashed"`
-	SortBy       string   `json:"sort_by"`        // "created_at"|"updated_at"|"title"
-	SortOrder    string   `json:"sort_order"`     // "asc"|"desc"
-	Limit        int      `json:"limit"`
-	Offset       int      `json:"offset"`
+	Tags      []string `json:"tags"`
+	FolderIDs []string `json:"folder_ids"`
+	StartDate string   `json:"start_date"`
+	EndDate   string   `json:"end_date"`
+	IsPinned  *bool    `json:"is_pinned"`
+	IsLocked  *bool    `json:"is_locked"`
+	IsTrashed *bool    `json:"is_trashed"`
+	SortBy    string   `json:"sort_by"`    // "created_at"|"updated_at"|"title"
+	SortOrder string   `json:"sort_order"` // "asc"|"desc"
+	Limit     int      `json:"limit"`
+	Offset    int      `json:"offset"`
 }
 
 // SearchResponse represents search results

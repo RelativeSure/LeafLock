@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -18,11 +19,11 @@ func TestListenWithIPv6Fallback_IPv4Success(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	assert.NoError(t, err)
 	port := listener.Addr().(*net.TCPAddr).Port
-	listener.Close()
+	_ = listener.Close()
 
 	// Run server in goroutine
 	go func() {
-		_ = ListenWithIPv6Fallback(app, string(rune(port)), time.Now())
+		_ = ListenWithIPv6Fallback(app, fmt.Sprintf("%d", port), time.Now())
 	}()
 
 	// Give server time to start
@@ -53,10 +54,10 @@ func TestListenWithIPv6Fallback_StartupTiming(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	assert.NoError(t, err)
 	port := listener.Addr().(*net.TCPAddr).Port
-	listener.Close()
+	_ = listener.Close()
 
 	go func() {
-		_ = ListenWithIPv6Fallback(app, string(rune(port)), startupStart)
+		_ = ListenWithIPv6Fallback(app, fmt.Sprintf("%d", port), startupStart)
 	}()
 
 	time.Sleep(100 * time.Millisecond)
@@ -75,19 +76,19 @@ func TestListenWithIPv6Fallback_DualStackAttempt(t *testing.T) {
 	listener, err := net.Listen("tcp", ":0")
 	assert.NoError(t, err)
 	port := listener.Addr().(*net.TCPAddr).Port
-	listener.Close()
+	_ = listener.Close()
 
 	// Attempt dual-stack binding
 	go func() {
-		_ = ListenWithIPv6Fallback(app, string(rune(port)), time.Now())
+		_ = ListenWithIPv6Fallback(app, fmt.Sprintf("%d", port), time.Now())
 	}()
 
 	time.Sleep(100 * time.Millisecond)
 
 	// Verify server is listening
-	conn, err := net.DialTimeout("tcp", "127.0.0.1:"+string(rune(port)), time.Second)
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), time.Second)
 	if err == nil {
-		conn.Close()
+		_ = conn.Close()
 	}
 
 	_ = app.Shutdown()
@@ -97,7 +98,7 @@ func TestListenWithIPv6Fallback_PortInUse(t *testing.T) {
 	// Occupy a port
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	assert.NoError(t, err)
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 	
 	port := listener.Addr().(*net.TCPAddr).Port
 
@@ -106,12 +107,12 @@ func TestListenWithIPv6Fallback_PortInUse(t *testing.T) {
 	})
 
 	// Try to bind to the same port - should fail
-	err = ListenWithIPv6Fallback(app, string(rune(port)), time.Now())
+	err = ListenWithIPv6Fallback(app, fmt.Sprintf("%d", port), time.Now())
 	assert.Error(t, err)
 }
 
 func TestReadyState_NewReadyState(t *testing.T) {
-	rs := NewReadyState(nil, nil, nil, nil)
+	rs := NewReadyState(nil, nil, nil)
 	
 	assert.NotNil(t, rs)
 	assert.False(t, rs.IsAdminReady())
@@ -122,7 +123,7 @@ func TestReadyState_NewReadyState(t *testing.T) {
 }
 
 func TestReadyState_MarkAdminReady(t *testing.T) {
-	rs := NewReadyState(nil, nil, nil, nil)
+	rs := NewReadyState(nil, nil, nil)
 	
 	assert.False(t, rs.IsAdminReady())
 	rs.MarkAdminReady()
@@ -130,7 +131,7 @@ func TestReadyState_MarkAdminReady(t *testing.T) {
 }
 
 func TestReadyState_MarkTemplatesReady(t *testing.T) {
-	rs := NewReadyState(nil, nil, nil, nil)
+	rs := NewReadyState(nil, nil, nil)
 	
 	assert.False(t, rs.IsTemplatesReady())
 	rs.MarkTemplatesReady()
@@ -138,7 +139,7 @@ func TestReadyState_MarkTemplatesReady(t *testing.T) {
 }
 
 func TestReadyState_MarkAllowlistReady(t *testing.T) {
-	rs := NewReadyState(nil, nil, nil, nil)
+	rs := NewReadyState(nil, nil, nil)
 	
 	assert.False(t, rs.IsAllowlistReady())
 	rs.MarkAllowlistReady()
@@ -146,7 +147,7 @@ func TestReadyState_MarkAllowlistReady(t *testing.T) {
 }
 
 func TestReadyState_MarkRedisReady(t *testing.T) {
-	rs := NewReadyState(nil, nil, nil, nil)
+	rs := NewReadyState(nil, nil, nil)
 	
 	assert.False(t, rs.IsRedisReady())
 	rs.MarkRedisReady()
@@ -154,7 +155,7 @@ func TestReadyState_MarkRedisReady(t *testing.T) {
 }
 
 func TestReadyState_IsFullyReady(t *testing.T) {
-	rs := NewReadyState(nil, nil, nil, nil)
+	rs := NewReadyState(nil, nil, nil)
 	
 	assert.False(t, rs.IsFullyReady())
 	
@@ -172,16 +173,15 @@ func TestReadyState_IsFullyReady(t *testing.T) {
 }
 
 func TestReadyState_GetMethods(t *testing.T) {
-	rs := NewReadyState(nil, nil, nil, nil)
-	
+	rs := NewReadyState(nil, nil, nil)
+
 	assert.Nil(t, rs.GetDB())
 	assert.Nil(t, rs.GetRedis())
 	assert.Nil(t, rs.GetConfig())
-	assert.Nil(t, rs.GetCrypto())
 }
 
 func TestReadyState_ConcurrentAccess(t *testing.T) {
-	rs := NewReadyState(nil, nil, nil, nil)
+	rs := NewReadyState(nil, nil, nil)
 	
 	// Test concurrent reads and writes
 	done := make(chan bool)
@@ -228,7 +228,7 @@ func TestReadyState_ConcurrentAccess(t *testing.T) {
 }
 
 func TestReadyState_PartialReady(t *testing.T) {
-	rs := NewReadyState(nil, nil, nil, nil)
+	rs := NewReadyState(nil, nil, nil)
 	
 	// Mark only some as ready
 	rs.MarkAdminReady()

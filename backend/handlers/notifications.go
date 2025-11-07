@@ -11,14 +11,18 @@ import (
 	"github.com/google/uuid"
 )
 
+type notificationBroadcaster interface {
+	BroadcastToUser(uuid.UUID, websocket.WSMessage) error
+}
+
 // NotificationsHandler handles notification operations
 type NotificationsHandler struct {
 	db  database.Database
-	hub *websocket.Hub
+	hub notificationBroadcaster
 }
 
 // NewNotificationsHandler creates a new notifications handler
-func NewNotificationsHandler(db database.Database, hub *websocket.Hub) *NotificationsHandler {
+func NewNotificationsHandler(db database.Database, hub notificationBroadcaster) *NotificationsHandler {
 	return &NotificationsHandler{
 		db:  db,
 		hub: hub,
@@ -178,12 +182,12 @@ func (h *NotificationsHandler) CreateNotification(c *fiber.Ctx) error {
 
 	// Validate notification type
 	validTypes := map[string]bool{
-		"note_shared":           true,
-		"note_commented":        true,
-		"folder_shared":         true,
-		"mention":               true,
-		"system":                true,
-		"collaboration_invite":  true,
+		"note_shared":          true,
+		"note_commented":       true,
+		"folder_shared":        true,
+		"mention":              true,
+		"system":               true,
+		"collaboration_invite": true,
 	}
 	if !validTypes[req.Type] {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -233,7 +237,7 @@ func (h *NotificationsHandler) CreateNotification(c *fiber.Ctx) error {
 					CreatedAt: notification.CreatedAt.Format(time.RFC3339),
 				},
 			}
-			h.hub.BroadcastToUser(targetUUID, wsMessage)
+			_ = h.hub.BroadcastToUser(targetUUID, wsMessage)
 		}
 	}
 

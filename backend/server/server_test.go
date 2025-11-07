@@ -27,26 +27,14 @@ func setupTestEnvironment() error {
 	return nil
 }
 
-// MockCryptoService implements CryptoService for testing
-type MockCryptoService struct{}
-
-func (m *MockCryptoService) Encrypt(plaintext []byte) ([]byte, error) {
-	return plaintext, nil
-}
-
-func (m *MockCryptoService) Decrypt(ciphertext []byte) ([]byte, error) {
-	return ciphertext, nil
-}
-
 // TestReadyState tests the ReadyState struct and its methods
 func TestReadyState(t *testing.T) {
 	cfg := &config.Config{
 		Port: "8080",
 	}
-	crypto := &MockCryptoService{}
 
 	// Create ReadyState with nil pool and redis for basic testing
-	readyState := NewReadyState(nil, crypto, cfg, nil)
+	readyState := NewReadyState(nil, cfg, nil)
 
 	t.Run("Initial state should be not ready", func(t *testing.T) {
 		assert.False(t, readyState.IsFullyReady())
@@ -76,7 +64,6 @@ func TestReadyState(t *testing.T) {
 
 	t.Run("Getters return correct values", func(t *testing.T) {
 		assert.Equal(t, cfg, readyState.GetConfig())
-		assert.Equal(t, crypto, readyState.GetCrypto())
 	})
 }
 
@@ -90,8 +77,7 @@ func TestCreateFiberApp(t *testing.T) {
 	cfg := &config.Config{
 		Port: "8080",
 	}
-	crypto := &MockCryptoService{}
-	readyState := NewReadyState(nil, crypto, cfg, nil)
+	readyState := NewReadyState(nil, cfg, nil)
 	startTime := time.Now()
 
 	app := CreateFiberApp(startTime, readyState)
@@ -168,24 +154,21 @@ func TestReadyStateWithMockServices(t *testing.T) {
 	defer func() { _ = rdb.Close() }() // Test cleanup
 
 	cfg := &config.Config{
-		Port:          "8080",
-		DatabaseURL:   "postgres://test:test@localhost:5432/testdb", // secretlint-disable-line
-		RedisURL:      "localhost:6379",
-		JWTSecret:     []byte("test-secret-key-at-least-32-characters-long"),
-		EncryptionKey: []byte("test-encryption-key-32-chars!!"),
+		Port:        "8080",
+		DatabaseURL: "postgres://test:test@localhost:5432/testdb", // secretlint-disable-line
+		RedisURL:    "localhost:6379",
+		JWTSecret:   []byte("test-secret-key-at-least-32-characters-long"),
 	}
-	crypto := &MockCryptoService{}
 
 	t.Run("ReadyState stores and retrieves services correctly", func(t *testing.T) {
-		readyState := NewReadyState(nil, crypto, cfg, rdb)
+		readyState := NewReadyState(nil, cfg, rdb)
 
 		assert.Equal(t, cfg, readyState.GetConfig())
-		assert.Equal(t, crypto, readyState.GetCrypto())
 		assert.Equal(t, rdb, readyState.GetRedis())
 	})
 
 	t.Run("Concurrent ready state updates", func(t *testing.T) {
-		readyState := NewReadyState(nil, crypto, cfg, rdb)
+		readyState := NewReadyState(nil, cfg, rdb)
 
 		// Simulate concurrent initialization
 		done := make(chan bool, 4)
@@ -219,8 +202,7 @@ func TestReadyStateWithMockServices(t *testing.T) {
 // BenchmarkReadyStateCheck benchmarks the IsFullyReady check
 func BenchmarkReadyStateCheck(b *testing.B) {
 	cfg := &config.Config{Port: "8080"}
-	crypto := &MockCryptoService{}
-	readyState := NewReadyState(nil, crypto, cfg, nil)
+	readyState := NewReadyState(nil, cfg, nil)
 
 	// Mark all as ready
 	readyState.MarkAdminReady()

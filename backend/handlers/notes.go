@@ -15,6 +15,7 @@ import (
 	"leaflock/crypto"
 	"leaflock/database"
 	"leaflock/metrics"
+	"leaflock/utils"
 )
 
 // NotesHandler handles note-related requests
@@ -878,7 +879,7 @@ func (h *NotesHandler) UpdateRetentionPolicy(c *fiber.Ctx) error {
 		noteID, req.RetentionPolicy)
 
 	if err != nil {
-		// Log error but don't fail the request
+		utils.LogError("Failed to clean old note versions", err)
 	}
 
 	return c.JSON(fiber.Map{

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import React from 'react'
 import { VersionHistoryDialog } from '../version-history-dialog'
 import { useNotesStore } from '@/stores/notesStore'
@@ -101,7 +101,8 @@ vi.mock('@/components/ui/card', () => ({
   Card: ({ children }: any) => <div>{children}</div>,
   CardHeader: ({ children }: any) => <div>{children}</div>,
   CardTitle: ({ children }: any) => <h3>{children}</h3>,
-  CardDescription: ({ children }: any) => <p>{children}</p>,
+  CardDescription: ({ children, asChild }: any) =>
+    asChild ? <>{children}</> : <p>{children}</p>,
   CardContent: ({ children }: any) => <div>{children}</div>,
 }))
 
@@ -656,7 +657,9 @@ describe('VersionHistoryDialog', () => {
       expect(screen.getByText('0 versions available')).toBeInTheDocument()
     })
 
-    resolveVersions([])
+    await act(async () => {
+      resolveVersions([])
+    })
   })
 
   it('handles load versions error', async () => {

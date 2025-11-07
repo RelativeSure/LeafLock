@@ -115,7 +115,6 @@ func TestFoldersHandler_GetFolders_Success(t *testing.T) {
 	assert.NotNil(t, result)
 }
 
-
 func TestFoldersHandler_MoveNoteToFolder_InvalidJSON(t *testing.T) {
 	pool, cleanup := setupFoldersTestDB(t)
 	defer cleanup()

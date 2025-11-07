@@ -40,7 +40,8 @@ func TestCollaborationFeatures(t *testing.T) {
 	cfg := LoadConfig()
 
 	// Create crypto service
-	crypto := NewCryptoService(cfg.EncryptionKey)
+	testKey := make([]byte, 32) // Test encryption key
+	crypto := NewCryptoService(testKey)
 
 	// Setup in-memory Redis for auth flows
 	mr := miniredis.RunT(t)
@@ -50,7 +51,7 @@ func TestCollaborationFeatures(t *testing.T) {
 		Addr: mr.Addr(),
 	})
 
-	authService := auth.NewService(dbPool, rdb, crypto, string(cfg.JWTSecret))
+	authService := auth.NewService(dbPool, rdb, string(cfg.JWTSecret))
 
 	// Create collaboration handler
 	handler := &CollaborationHandler{
@@ -91,30 +92,30 @@ func TestCollaborationFeatures(t *testing.T) {
 	contentHash := sha256.Sum256(content)
 
 	_, err = db.Exec(ctx, `
-		INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted, content_hash, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
-		noteID, workspace1ID, encryptedTitle, encryptedContent, contentHash[:], user1ID)
+		INSERT INTO notes (id, workspace_id, title_encrypted, content_encrypted, content_hash, created_by, is_pinned, pinned_order)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		noteID, workspace1ID, encryptedTitle, encryptedContent, contentHash[:], user1ID, false, 0)
 	require.NoError(t, err)
 
 	t.Run("ShareNote", func(t *testing.T) {
-	app := fiber.New()
-	app.Post("/notes/:id/share", func(c *fiber.Ctx) error {
-		c.Locals("user_id", user1ID)
-		return handler.ShareNote(c)
-	})
+		app := fiber.New()
+		app.Post("/notes/:id/share", func(c *fiber.Ctx) error {
+			c.Locals("user_id", user1ID)
+			return handler.ShareNote(c)
+		})
 
-	shareReq := ShareNoteRequest{
-		UserEmail:  user2Email,
-		Permission: "write",
-	}
-	reqBody, _ := json.Marshal(shareReq)
+		shareReq := ShareNoteRequest{
+			UserEmail:  user2Email,
+			Permission: "write",
+		}
+		reqBody, _ := json.Marshal(shareReq)
 
-	req := httptest.NewRequest("POST", fmt.Sprintf("/notes/%s/share", noteID), bytes.NewReader(reqBody))
-	req.Header.Set("Content-Type", "application/json")
+		req := httptest.NewRequest("POST", fmt.Sprintf("/notes/%s/share", noteID), bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
 
-	resp, err := app.Test(req)
-	require.NoError(t, err)
-	assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
 
 		// Verify collaboration was created
 		var count int
@@ -127,20 +128,20 @@ func TestCollaborationFeatures(t *testing.T) {
 	})
 
 	t.Run("GetCollaborators", func(t *testing.T) {
-	app := fiber.New()
-	app.Get("/notes/:id/collaborators", func(c *fiber.Ctx) error {
-		c.Locals("user_id", user1ID)
-		return handler.GetCollaborators(c)
-	})
+		app := fiber.New()
+		app.Get("/notes/:id/collaborators", func(c *fiber.Ctx) error {
+			c.Locals("user_id", user1ID)
+			return handler.GetCollaborators(c)
+		})
 
-	req := httptest.NewRequest("GET", fmt.Sprintf("/notes/%s/collaborators", noteID), nil)
-	resp, err := app.Test(req)
-	require.NoError(t, err)
-	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+		req := httptest.NewRequest("GET", fmt.Sprintf("/notes/%s/collaborators", noteID), nil)
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-	var response map[string]interface{}
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&response))
-	resp.Body.Close()
+		var response map[string]interface{}
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&response))
+		require.NoError(t, resp.Body.Close())
 
 		collaborators, ok := response["collaborators"].([]interface{})
 		require.True(t, ok)

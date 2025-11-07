@@ -155,7 +155,9 @@ func (h *AnalyticsHandler) GetUserAnalytics(c *fiber.Ctx) error {
 		for rows.Next() {
 			var activity ActivityData
 			var date time.Time
-			rows.Scan(&date, &activity.Count)
+			if err := rows.Scan(&date, &activity.Count); err != nil {
+				continue
+			}
 			activity.Date = date.Format("2006-01-02")
 			stats.ActivityByDay = append(stats.ActivityByDay, activity)
 		}
@@ -178,7 +180,9 @@ func (h *AnalyticsHandler) GetUserAnalytics(c *fiber.Ctx) error {
 		stats.NotesByFolder = []CountData{}
 		for rows.Next() {
 			var data CountData
-			rows.Scan(&data.Name, &data.Count)
+			if err := rows.Scan(&data.Name, &data.Count); err != nil {
+				continue
+			}
 			stats.NotesByFolder = append(stats.NotesByFolder, data)
 		}
 	}
@@ -199,7 +203,9 @@ func (h *AnalyticsHandler) GetUserAnalytics(c *fiber.Ctx) error {
 		stats.NotesByTag = []CountData{}
 		for rows.Next() {
 			var data CountData
-			rows.Scan(&data.Name, &data.Count)
+			if err := rows.Scan(&data.Name, &data.Count); err != nil {
+				continue
+			}
 			stats.NotesByTag = append(stats.NotesByTag, data)
 		}
 	}
@@ -220,7 +226,9 @@ func (h *AnalyticsHandler) GetUserAnalytics(c *fiber.Ctx) error {
 			var action string
 			var metadata interface{}
 			var createdAt time.Time
-			rows.Scan(&action, &metadata, &createdAt)
+			if err := rows.Scan(&action, &metadata, &createdAt); err != nil {
+				continue
+			}
 
 			entry := RecentActivityEntry{
 				Type:      action,
@@ -250,22 +258,22 @@ func (h *AnalyticsHandler) GetAdminAnalytics(c *fiber.Ctx) error {
 
 	// Total users
 	var totalUsers int
-	h.db.QueryRow(ctx, `SELECT COUNT(*) FROM users WHERE deleted_at IS NULL`).Scan(&totalUsers)
+	_ = h.db.QueryRow(ctx, `SELECT COUNT(*) FROM users WHERE deleted_at IS NULL`).Scan(&totalUsers)
 	stats["total_users"] = totalUsers
 
 	// Total notes
 	var totalNotes int
-	h.db.QueryRow(ctx, `SELECT COUNT(*) FROM notes WHERE deleted_at IS NULL`).Scan(&totalNotes)
+	_ = h.db.QueryRow(ctx, `SELECT COUNT(*) FROM notes WHERE deleted_at IS NULL`).Scan(&totalNotes)
 	stats["total_notes"] = totalNotes
 
 	// Total workspaces
 	var totalWorkspaces int
-	h.db.QueryRow(ctx, `SELECT COUNT(*) FROM workspaces`).Scan(&totalWorkspaces)
+	_ = h.db.QueryRow(ctx, `SELECT COUNT(*) FROM workspaces`).Scan(&totalWorkspaces)
 	stats["total_workspaces"] = totalWorkspaces
 
 	// Active users (logged in last 30 days)
 	var activeUsers int
-	h.db.QueryRow(ctx, `
+	_ = h.db.QueryRow(ctx, `
 		SELECT COUNT(*) FROM users
 		WHERE last_login >= CURRENT_DATE - INTERVAL '30 days'
 		AND deleted_at IS NULL`).Scan(&activeUsers)
@@ -285,7 +293,9 @@ func (h *AnalyticsHandler) GetAdminAnalytics(c *fiber.Ctx) error {
 		for rows.Next() {
 			var activity ActivityData
 			var date time.Time
-			rows.Scan(&date, &activity.Count)
+			if err := rows.Scan(&date, &activity.Count); err != nil {
+				continue
+			}
 			activity.Date = date.Format("2006-01-02")
 			userGrowth = append(userGrowth, activity)
 		}
@@ -306,7 +316,9 @@ func (h *AnalyticsHandler) GetAdminAnalytics(c *fiber.Ctx) error {
 		for rows.Next() {
 			var activity ActivityData
 			var date time.Time
-			rows.Scan(&date, &activity.Count)
+			if err := rows.Scan(&date, &activity.Count); err != nil {
+				continue
+			}
 			activity.Date = date.Format("2006-01-02")
 			noteGrowth = append(noteGrowth, activity)
 		}

@@ -47,11 +47,11 @@ type GetAuditLogsRequest struct {
 
 // GetAuditLogsResponse represents the response for audit logs
 type GetAuditLogsResponse struct {
-	Logs       []AuditLogEntry `json:"logs"`
-	Total      int             `json:"total"`
-	Limit      int             `json:"limit"`
-	Offset     int             `json:"offset"`
-	HasMore    bool            `json:"has_more"`
+	Logs    []AuditLogEntry `json:"logs"`
+	Total   int             `json:"total"`
+	Limit   int             `json:"limit"`
+	Offset  int             `json:"offset"`
+	HasMore bool            `json:"has_more"`
 }
 
 // GetAuditLogs returns audit logs with pagination and filtering (admin only)

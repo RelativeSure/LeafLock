@@ -36,9 +36,9 @@ var allowedAttachmentMIMEs = map[string]bool{
 }
 
 var (
-	errUnsupportedAttachmentType = errors.New("File content type not allowed")
-	errAttachmentTypeMismatch    = errors.New("File type does not match content")
-	errAttachmentEmptyFile       = errors.New("File is empty")
+	errUnsupportedAttachmentType = errors.New("file content type not allowed")
+	errAttachmentTypeMismatch    = errors.New("file type does not match content")
+	errAttachmentEmptyFile       = errors.New("file is empty")
 )
 
 // NewAttachmentsHandler creates an attachments handler.

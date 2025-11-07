@@ -30,7 +30,7 @@ func TestConfigDefaults(t *testing.T) {
 // TestHTTPMethods tests HTTP method constants
 func TestHTTPMethods(t *testing.T) {
 	methods := []string{"GET", "POST", "PUT", "DELETE", "PATCH"}
-	
+
 	for _, method := range methods {
 		t.Run(method, func(t *testing.T) {
 			assert.NotEmpty(t, method)

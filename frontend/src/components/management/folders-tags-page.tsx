@@ -157,9 +157,9 @@ export function FoldersTagsPage() {
                     <div className="space-y-2">
                       <Label>Color</Label>
                       <div className="flex gap-2 flex-wrap">
-                        {colorOptions.map((color) => (
+                        {colorOptions.map((color, index) => (
                           <button
-                            key={color}
+                            key={`${color}-${index}`}
                             type="button"
                             onClick={() => setNewFolderColor(color)}
                             className={`w-8 h-8 rounded-full border-2 transition-all ${
@@ -275,9 +275,9 @@ export function FoldersTagsPage() {
                     <div className="space-y-2">
                       <Label>Color</Label>
                       <div className="flex gap-2 flex-wrap">
-                        {colorOptions.map((color) => (
+                        {colorOptions.map((color, index) => (
                           <button
-                            key={color}
+                            key={`${color}-${index}`}
                             type="button"
                             onClick={() => setNewTagColor(color)}
                             className={`w-8 h-8 rounded-full border-2 transition-all ${

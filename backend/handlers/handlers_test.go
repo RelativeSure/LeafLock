@@ -282,7 +282,8 @@ func (suite *NotesHandlerTestSuite) TestGetNotesSuccess() {
 	noteID := uuid.New()
 	now := time.Now()
 
-	mockRows.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+	mockRows.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if id, ok := args[0].(*uuid.UUID); ok {
 			*id = noteID
 		}
@@ -297,6 +298,18 @@ func (suite *NotesHandlerTestSuite) TestGetNotesSuccess() {
 		}
 		if updated, ok := args[4].(*time.Time); ok {
 			*updated = now
+		}
+		if isPinned, ok := args[5].(*bool); ok {
+			*isPinned = false
+		}
+		if isLocked, ok := args[6].(*bool); ok {
+			*isLocked = false
+		}
+		if lockedBy, ok := args[7].(**uuid.UUID); ok {
+			*lockedBy = nil
+		}
+		if pinnedOrder, ok := args[8].(*int); ok {
+			*pinnedOrder = 0
 		}
 	}).Return(nil)
 
@@ -336,7 +349,7 @@ func (suite *NotesHandlerTestSuite) TestCreateNoteSuccess() {
 	mockNoteRow := &MockRow{}
 	suite.mockDB.On("QueryRow", mock.Anything, mock.MatchedBy(func(sql string) bool {
 		return contains(sql, "INSERT INTO notes")
-	}), mock.Anything, mock.Anything, mock.Anything, mock.Anything, suite.userID).Return(mockNoteRow)
+	}), mock.Anything, mock.Anything, mock.Anything, mock.Anything, suite.userID, mock.Anything, mock.Anything).Return(mockNoteRow)
 
 	noteID := uuid.New()
 	mockNoteRow.On("Scan", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
@@ -985,12 +998,12 @@ func (suite *CollaborationHandlerTestSuite) SetupTest() {
 	}
 	suite.cryptoSvc = crypto.NewCryptoService(key)
 
-	suite.handler = NewCollaborationHandler(suite.mockDB, suite.cryptoSvc)
+	suite.handler = NewCollaborationHandler(suite.mockDB, suite.cryptoSvc, nil)
 	suite.userID = uuid.New()
 }
 
 func (suite *CollaborationHandlerTestSuite) TestNewCollaborationHandler() {
-	handler := NewCollaborationHandler(suite.mockDB, suite.cryptoSvc)
+	handler := NewCollaborationHandler(suite.mockDB, suite.cryptoSvc, nil)
 	suite.NotNil(handler)
 }
 

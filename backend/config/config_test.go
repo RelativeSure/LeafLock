@@ -319,7 +319,7 @@ func TestLoadConfigUsesDefaults(t *testing.T) {
 	t.Setenv("JWT_SECRET", strings.Repeat("xsecurevalue", 4)) // 44 chars
 	// Zero-knowledge: SERVER_ENCRYPTION_KEY no longer used
 	t.Setenv("DEFAULT_ADMIN_PASSWORD", "StrongestAdminPass2024!")
-	t.Setenv("DATABASE_URL", "postgres://user:StrongPass321!@localhost:5432/leaflock?sslmode=require")
+	t.Setenv("DATABASE_URL", "postgres://user:StrongPass321!@localhost:5432/leaflock?sslmode=require") // secretlint-disable-line
 	t.Setenv("LOG_LEVEL", "")
 	t.Setenv("LOGLEVEL", "")
 	t.Setenv("SMTP_ENABLED", "")

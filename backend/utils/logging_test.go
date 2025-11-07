@@ -31,10 +31,10 @@ func TestEnsureInitialized(t *testing.T) {
 	defer func() {
 		os.Stdout = oldStdout
 		os.Stderr = oldStderr
-		stdoutR.Close()
-		stdoutW.Close()
-		stderrR.Close()
-		stderrW.Close()
+		_ = stdoutR.Close()
+		_ = stdoutW.Close()
+		_ = stderrR.Close()
+		_ = stderrW.Close()
 	}()
 
 	os.Stdout = stdoutW
@@ -46,10 +46,6 @@ func TestEnsureInitialized(t *testing.T) {
 		t.Fatal("ensureInitialized should create all loggers when they are nil")
 	}
 }
-
-type noopWriter struct{}
-
-func (noopWriter) Write(p []byte) (int, error) { return len(p), nil }
 
 func TestLevelFromMessage(t *testing.T) {
 	tests := []struct {
@@ -84,21 +80,21 @@ func TestShouldLogRespectsLevel(t *testing.T) {
 }
 
 func TestParseLogLevelFallback(t *testing.T) {
-	os.Unsetenv("LOG_LEVEL")
-	os.Unsetenv("LOGLEVEL")
+	_ = os.Unsetenv("LOG_LEVEL")
+	_ = os.Unsetenv("LOGLEVEL")
 	level, err := parseConfiguredLogLevel()
 	if err != nil || level != LevelInfo {
 		t.Fatalf("expected default LevelInfo, got %v err=%v", level, err)
 	}
 
-	os.Setenv("LOG_LEVEL", "debug")
-	defer os.Unsetenv("LOG_LEVEL")
+	_ = os.Setenv("LOG_LEVEL", "debug")
+	defer func() { _ = os.Unsetenv("LOG_LEVEL") }()
 	level, err = parseConfiguredLogLevel()
 	if err != nil || level != LevelDebug {
 		t.Fatalf("expected LevelDebug, got %v err=%v", level, err)
 	}
 
-	os.Setenv("LOG_LEVEL", "invalid")
+	_ = os.Setenv("LOG_LEVEL", "invalid")
 	level, err = parseConfiguredLogLevel()
 	if err == nil || level != LevelInfo {
 		t.Fatalf("expected fallback LevelInfo with error, got level=%v err=%v", level, err)

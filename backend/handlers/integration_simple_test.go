@@ -60,7 +60,7 @@ func TestAnnouncementsHandler_InvalidJSON(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/announcements", bytes.NewBufferString("{invalid json"))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
@@ -81,7 +81,7 @@ func TestAnnouncementsHandler_GetAnnouncements(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/announcements", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 }
@@ -101,7 +101,7 @@ func TestAnnouncementsHandler_UpdateInvalidID(t *testing.T) {
 
 	req := httptest.NewRequest("PUT", "/announcements/invalid-uuid", bytes.NewBufferString(`{"message":"test"}`))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
@@ -122,7 +122,7 @@ func TestAnnouncementsHandler_DeleteInvalidID(t *testing.T) {
 
 	req := httptest.NewRequest("DELETE", "/announcements/invalid-uuid", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 }
@@ -143,7 +143,7 @@ func TestFoldersHandler_InvalidJSON(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/folders", bytes.NewBufferString("{invalid json"))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
@@ -165,7 +165,7 @@ func TestFoldersHandler_GetFolders(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/folders", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	// May return error due to workspace not existing, but handler is exercised
 	assert.NotEqual(t, 0, resp.StatusCode)
@@ -187,7 +187,7 @@ func TestFoldersHandler_DeleteInvalidID(t *testing.T) {
 
 	req := httptest.NewRequest("DELETE", "/folders/invalid-uuid", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 }
@@ -209,7 +209,7 @@ func TestAttachmentsHandler_GetAttachments(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/notes/"+noteID.String()+"/attachments", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	// May return error or empty list, but handler is exercised
 	assert.NotEqual(t, 0, resp.StatusCode)
@@ -231,7 +231,7 @@ func TestAttachmentsHandler_DeleteInvalidID(t *testing.T) {
 
 	req := httptest.NewRequest("DELETE", "/attachments/invalid-uuid", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 }
@@ -253,7 +253,7 @@ func TestCollaborationHandler_GetCollaborators(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/notes/"+noteID.String()+"/collaborators", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	// Handler is exercised, may return error or empty list
 	assert.NotEqual(t, 0, resp.StatusCode)
@@ -276,7 +276,7 @@ func TestCollaborationHandler_RemoveInvalidID(t *testing.T) {
 
 	req := httptest.NewRequest("DELETE", "/notes/"+noteID.String()+"/collaborators/invalid-uuid", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 }
@@ -298,7 +298,7 @@ func TestCollaborationHandler_ShareNoteInvalidJSON(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/notes/"+noteID.String()+"/share", bytes.NewBufferString("{invalid json"))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
@@ -319,7 +319,7 @@ func TestAnnouncementsHandler_GetAllAnnouncements(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/announcements/all", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 }
@@ -340,7 +340,7 @@ func TestAttachmentsHandler_DownloadInvalidID(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/attachments/invalid-uuid/download", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 }
@@ -360,7 +360,7 @@ func TestAnnouncementsHandler_CreateInvalidData(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/announcements", bytes.NewBufferString(`{}`))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	// May be 400 or 500 depending on validation
@@ -383,7 +383,7 @@ func TestFoldersHandler_CreateInvalidData(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/folders", bytes.NewBufferString(`{}`))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	// May be 400 or 500 depending on validation
@@ -406,7 +406,7 @@ func TestCollaborationHandler_ShareNoteInvalidID(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/notes/invalid-uuid/share", bytes.NewBufferString(`{"email":"test@example.com"}`))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
@@ -428,7 +428,7 @@ func TestAttachmentsHandler_UploadInvalidNoteID(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/notes/invalid-uuid/attachments", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 }
@@ -449,7 +449,7 @@ func TestCollaborationHandler_GetCollaboratorsInvalidID(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/notes/invalid-uuid/collaborators", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 }
@@ -470,7 +470,7 @@ func TestAnnouncementsHandler_UpdateNotFound(t *testing.T) {
 
 	req := httptest.NewRequest("PUT", "/announcements/"+randomID.String(), bytes.NewBufferString(`{"message":"test"}`))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	// Likely 404 or 500
@@ -493,7 +493,7 @@ func TestAnnouncementsHandler_DeleteNotFound(t *testing.T) {
 
 	req := httptest.NewRequest("DELETE", "/announcements/"+randomID.String(), nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	// Likely 404
 	assert.NotEqual(t, 0, resp.StatusCode)
@@ -516,7 +516,7 @@ func TestFoldersHandler_DeleteNotFound(t *testing.T) {
 
 	req := httptest.NewRequest("DELETE", "/folders/"+randomID.String(), nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	// Likely 404
 	assert.NotEqual(t, 0, resp.StatusCode)
@@ -539,7 +539,7 @@ func TestAttachmentsHandler_DeleteNotFound(t *testing.T) {
 
 	req := httptest.NewRequest("DELETE", "/attachments/"+randomID.String(), nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	// Likely 404
 	assert.NotEqual(t, 0, resp.StatusCode)
@@ -563,7 +563,7 @@ func TestCollaborationHandler_RemoveNotFound(t *testing.T) {
 
 	req := httptest.NewRequest("DELETE", "/notes/"+randomNoteID.String()+"/collaborators/"+randomUserID.String(), nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	// Likely 404
 	assert.NotEqual(t, 0, resp.StatusCode)
@@ -585,7 +585,7 @@ func TestAttachmentsHandler_GetAttachmentsInvalidNoteID(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/notes/invalid-uuid/attachments", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 }
@@ -607,14 +607,14 @@ func TestAnnouncementsHandler_CreateValidData(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/announcements", bytes.NewBufferString(`{"message":"Test announcement"}`))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	// May succeed or fail depending on admin check
 	assert.NotEqual(t, 0, resp.StatusCode)
 }
 
-// TestFoldersHandler_CreateValidData tests create with valid minimal data  
+// TestFoldersHandler_CreateValidData tests create with valid minimal data
 func TestFoldersHandler_CreateValidData(t *testing.T) {
 	pool, cleanup := setupTestDB(t)
 	defer cleanup()
@@ -630,7 +630,7 @@ func TestFoldersHandler_CreateValidData(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/folders", bytes.NewBufferString(`{"name":"Test folder"}`))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	// May fail due to workspace not existing
@@ -654,7 +654,7 @@ func TestCollaborationHandler_ShareNoteValidData(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/notes/"+noteID.String()+"/share", bytes.NewBufferString(`{"email":"test@example.com"}`))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	// May fail due to note not existing
@@ -678,7 +678,7 @@ func TestAttachmentsHandler_UploadNoFile(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/notes/"+noteID.String()+"/attachments", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	// Likely 400 due to missing file
 	assert.NotEqual(t, 200, resp.StatusCode)
@@ -731,7 +731,7 @@ func TestNoteLinksHandler_GetBacklinksInvalidID(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/notes/invalid-uuid/backlinks", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 }
@@ -751,7 +751,7 @@ func TestNoteLinksHandler_DeleteInvalidID(t *testing.T) {
 
 	req := httptest.NewRequest("DELETE", "/notes/invalid-uuid/links/"+uuid.New().String(), nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 }
@@ -771,7 +771,7 @@ func TestNoteLinksHandler_GetAllNotesForLinking(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/notes/linkable", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	// May succeed or fail depending on workspace
 	assert.NotEqual(t, 0, resp.StatusCode)
@@ -794,7 +794,7 @@ func TestFoldersHandler_MoveNoteInvalidJSON(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/folders/"+folderID.String()+"/notes", bytes.NewBufferString("{invalid json"))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
@@ -816,7 +816,7 @@ func TestFoldersHandler_MoveNoteInvalidFolderID(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/folders/invalid-uuid/notes", bytes.NewBufferString(`{"note_id":"`+uuid.New().String()+`"}`))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
@@ -839,7 +839,7 @@ func TestNotesHandler_UpdateInvalidJSON(t *testing.T) {
 
 	req := httptest.NewRequest("PUT", "/notes/"+noteID.String(), bytes.NewBufferString("{invalid json"))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
@@ -861,7 +861,7 @@ func TestNotesHandler_UpdateInvalidID(t *testing.T) {
 
 	req := httptest.NewRequest("PUT", "/notes/invalid-uuid", bytes.NewBufferString(`{"title":"test"}`))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
@@ -883,7 +883,7 @@ func TestNotesHandler_GetVersionsInvalidID(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/notes/invalid-uuid/versions", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 }
@@ -904,7 +904,7 @@ func TestNotesHandler_RestoreVersionInvalidIDs(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/notes/invalid-uuid/versions/"+uuid.New().String()+"/restore", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 }
@@ -925,7 +925,7 @@ func TestNotesHandler_CompareVersionsInvalidID(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/notes/invalid-uuid/versions/compare?v1=1&v2=2", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 }
@@ -946,7 +946,7 @@ func TestNotesHandler_DeleteVersionInvalidIDs(t *testing.T) {
 
 	req := httptest.NewRequest("DELETE", "/notes/invalid-uuid/versions/"+uuid.New().String(), nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 }
@@ -967,7 +967,7 @@ func TestNoteLinksHandler_CreateInvalidJSON(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/notes/"+noteID.String()+"/links", bytes.NewBufferString("{invalid json"))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
@@ -988,7 +988,7 @@ func TestNoteLinksHandler_CreateInvalidNoteID(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/notes/invalid-uuid/links", bytes.NewBufferString(`{"target_note_id":"`+uuid.New().String()+`"}`))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
@@ -1011,7 +1011,7 @@ func TestNotesHandler_GetVersions(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/notes/"+noteID.String()+"/versions", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	// May return empty or error depending on note existence
 	assert.NotEqual(t, 0, resp.StatusCode)
@@ -1034,7 +1034,7 @@ func TestNotesHandler_UpdateValidData(t *testing.T) {
 
 	req := httptest.NewRequest("PUT", "/notes/"+noteID.String(), bytes.NewBufferString(`{"title":"Updated Title","content":"Updated content"}`))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	// May fail if note doesn't exist
@@ -1058,7 +1058,7 @@ func TestFoldersHandler_MoveNoteValidData(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/folders/"+folderID.String()+"/notes", bytes.NewBufferString(`{"note_id":"`+uuid.New().String()+`"}`))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	// May fail if folder/note doesn't exist
@@ -1081,7 +1081,7 @@ func TestNotesHandler_UpdateRetentionPolicyInvalidID(t *testing.T) {
 
 	req := httptest.NewRequest("PUT", "/notes/invalid-uuid/retention", bytes.NewBufferString(`{"days":30}`))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
@@ -1103,7 +1103,7 @@ func TestNotesHandler_BulkDeleteInvalidJSON(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/notes/bulk-delete", bytes.NewBufferString("{invalid json"))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
@@ -1125,7 +1125,7 @@ func TestNotesHandler_BulkRestoreInvalidJSON(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/notes/bulk-restore", bytes.NewBufferString("{invalid json"))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
@@ -1148,10 +1148,10 @@ func TestNotesHandler_BulkDeleteValidData(t *testing.T) {
 	noteIDs := []string{uuid.New().String(), uuid.New().String()}
 	reqBody := map[string]interface{}{"note_ids": noteIDs}
 	body, _ := json.Marshal(reqBody)
-	
+
 	req := httptest.NewRequest("POST", "/notes/bulk-delete", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	// May succeed with 0 deleted or fail if notes don't exist
@@ -1175,10 +1175,10 @@ func TestNotesHandler_BulkRestoreValidData(t *testing.T) {
 	noteIDs := []string{uuid.New().String(), uuid.New().String()}
 	reqBody := map[string]interface{}{"note_ids": noteIDs}
 	body, _ := json.Marshal(reqBody)
-	
+
 	req := httptest.NewRequest("POST", "/notes/bulk-restore", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	// May succeed with 0 restored or fail if notes don't exist
@@ -1201,7 +1201,7 @@ func TestCollaborationHandler_GetSharedNotes(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/notes/shared", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 }
@@ -1222,7 +1222,7 @@ func TestNoteLinksHandler_GetLinks(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/notes/"+noteID.String()+"/links", nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	// May return empty or error
 	assert.NotEqual(t, 0, resp.StatusCode)
@@ -1245,10 +1245,8 @@ func TestNoteLinksHandler_DeleteValidIDs(t *testing.T) {
 
 	req := httptest.NewRequest("DELETE", "/notes/"+noteID.String()+"/links/"+linkID.String(), nil)
 	resp, err := app.Test(req, -1)
-	
+
 	require.NoError(t, err)
 	// May return 404 if link doesn't exist, but handler is exercised
 	assert.NotEqual(t, 0, resp.StatusCode)
 }
-
-

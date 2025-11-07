@@ -21,9 +21,9 @@ func TestIsUserInAdminAllowlist_NotInList(t *testing.T) {
 func TestIsUserInAdminAllowlist_FromEnv(t *testing.T) {
 	// Set environment variable
 	originalEnv := os.Getenv("ADMIN_USER_IDS")
-	defer os.Setenv("ADMIN_USER_IDS", originalEnv)
+	defer func() { _ = os.Setenv("ADMIN_USER_IDS", originalEnv) }()
 
-	os.Setenv("ADMIN_USER_IDS", "admin-1,admin-2,admin-3")
+	_ = os.Setenv("ADMIN_USER_IDS", "admin-1,admin-2,admin-3")
 
 	result := IsUserInAdminAllowlist("admin-2")
 	assert.True(t, result)
@@ -34,9 +34,9 @@ func TestIsUserInAdminAllowlist_FromEnv(t *testing.T) {
 
 func TestIsUserInAdminAllowlist_TrimmedSpaces(t *testing.T) {
 	originalEnv := os.Getenv("ADMIN_USER_IDS")
-	defer os.Setenv("ADMIN_USER_IDS", originalEnv)
+	defer func() { _ = os.Setenv("ADMIN_USER_IDS", originalEnv) }()
 
-	os.Setenv("ADMIN_USER_IDS", " admin-1 , admin-2 ")
+	_ = os.Setenv("ADMIN_USER_IDS", " admin-1 , admin-2 ")
 
 	result := IsUserInAdminAllowlist("admin-1")
 	assert.True(t, result)
