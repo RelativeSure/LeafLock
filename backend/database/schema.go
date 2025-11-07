@@ -187,7 +187,11 @@ CREATE TABLE IF NOT EXISTS notes (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
-    version INT DEFAULT 1
+    version INT DEFAULT 1,
+    is_pinned BOOLEAN DEFAULT FALSE,
+    pinned_order INT DEFAULT 0,
+    is_locked BOOLEAN DEFAULT FALSE,
+    locked_by UUID REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Note versions for history tracking
