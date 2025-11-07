@@ -37,8 +37,10 @@ vi.mock('../lib/encryption-context', () => ({
 }))
 
 vi.mock('../stores/authStore', () => {
-  const storeMock = vi.fn()
-  storeMock.getState = vi.fn()
+  const storeMock = Object.assign(vi.fn(), {
+    getState: vi.fn(),
+  })
+
   return {
     useAuthStore: storeMock,
   }
@@ -117,6 +119,19 @@ vi.mock('../lib/navigation', () => ({
   safeRedirectToLogin: vi.fn(),
 }))
 
+type AuthStoreMock = Mock & { getState: Mock }
+const mockedUseAuthStore = useAuthStore as unknown as AuthStoreMock
+
+const setAuthStoreState = (state: any) => {
+  mockedUseAuthStore.mockImplementation((selector: any) => {
+    if (typeof selector === 'function') {
+      return selector(state)
+    }
+    return state
+  })
+  mockedUseAuthStore.getState.mockImplementation(() => state)
+}
+
 describe('router', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -130,17 +145,15 @@ describe('router', () => {
       checkRegistrationEnabled: vi.fn().mockResolvedValue(true),
     }
 
-    const mockAuthStore = vi.fn((selector: any) => {
+    mockedUseAuthStore.mockImplementation((selector: any) => {
       if (typeof selector === 'function') {
         return selector(mockAuthState)
       }
       return mockAuthState
     })
-    mockAuthStore.getState = () => ({
+    mockedUseAuthStore.getState.mockImplementation(() => ({
       ...mockAuthState,
-    })
-    ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
-    ;(useAuthStore as Mock).getState = mockAuthStore.getState as any
+    }))
   })
 
   describe('Router configuration', () => {
