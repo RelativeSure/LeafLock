@@ -18,7 +18,7 @@ import (
 )
 
 // MigrationSchemaVersion tracks the current schema version
-const MigrationSchemaVersion = "2025.11.07.001" // Add is_pinned, pinned_order, is_locked, locked_by columns to notes table
+const MigrationSchemaVersion = "2025.11.07.003" // Fix missing notes columns with proper existence checks
 
 // Database interface for dependency injection and testing
 type Database interface {
