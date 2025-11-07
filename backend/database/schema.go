@@ -490,30 +490,15 @@ ALTER TABLE note_versions ADD COLUMN IF NOT EXISTS change_description TEXT;
 CREATE INDEX IF NOT EXISTS idx_note_versions_created_at ON note_versions(note_id, created_at DESC);
 
 -- Add is_pinned column for pinned/favorite notes
-DO $$
-BEGIN
-    -- Drop and recreate to ensure correct type
-    ALTER TABLE notes DROP COLUMN IF EXISTS is_pinned CASCADE;
-    ALTER TABLE notes ADD COLUMN is_pinned BOOLEAN DEFAULT false;
-END $$;
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT false;
 
 -- Add is_locked column for read-only note protection
-DO $$
-BEGIN
-    ALTER TABLE notes DROP COLUMN IF EXISTS is_locked CASCADE;
-    ALTER TABLE notes ADD COLUMN is_locked BOOLEAN DEFAULT false;
-    ALTER TABLE notes DROP COLUMN IF EXISTS locked_by CASCADE;
-    ALTER TABLE notes ADD COLUMN locked_by UUID REFERENCES users(id) ON DELETE SET NULL;
-    ALTER TABLE notes DROP COLUMN IF EXISTS locked_at CASCADE;
-    ALTER TABLE notes ADD COLUMN locked_at TIMESTAMPTZ;
-END $$;
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT false;
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS locked_by UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS locked_at TIMESTAMPTZ;
 
 -- Add pinned_order column for custom ordering of pinned notes
-DO $$
-BEGIN
-    ALTER TABLE notes DROP COLUMN IF EXISTS pinned_order CASCADE;
-    ALTER TABLE notes ADD COLUMN pinned_order INT DEFAULT 0;
-END $$;
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS pinned_order INT DEFAULT 0;
 
 -- Create index for efficient pinned notes queries
 CREATE INDEX IF NOT EXISTS idx_notes_pinned ON notes(is_pinned, pinned_order DESC, updated_at DESC) WHERE deleted_at IS NULL;
