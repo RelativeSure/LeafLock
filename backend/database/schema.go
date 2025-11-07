@@ -14,7 +14,7 @@ RETURNS UUID AS $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_uuidv7') THEN
         -- Use native pg_uuidv7 if available
-        PERFORM uuid_generate_v7();
+        RETURN uuid_generate_v7();
     ELSE
         -- Custom implementation for older PostgreSQL versions
         DECLARE
