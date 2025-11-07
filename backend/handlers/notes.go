@@ -220,7 +220,9 @@ func (h *NotesHandler) CreateNote(c *fiber.Ctx) error {
 		workspaceID, titleEnc, contentEnc, contentHash, userID, req.IsPinned, req.PinnedOrder).Scan(&noteID, &createdAt, &updatedAt)
 
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to create note"})
+		log.Printf("ERROR: Failed to create note: %v (workspace_id=%s, user_id=%s, is_pinned=%v, pinned_order=%d)",
+			err, workspaceID, userID, req.IsPinned, req.PinnedOrder)
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create note", "details": err.Error()})
 	}
 
 	// Record metrics
