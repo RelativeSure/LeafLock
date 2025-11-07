@@ -282,7 +282,8 @@ func (suite *NotesHandlerTestSuite) TestGetNotesSuccess() {
 	noteID := uuid.New()
 	now := time.Now()
 
-	mockRows.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+	mockRows.On("Scan", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		if id, ok := args[0].(*uuid.UUID); ok {
 			*id = noteID
 		}
@@ -297,6 +298,18 @@ func (suite *NotesHandlerTestSuite) TestGetNotesSuccess() {
 		}
 		if updated, ok := args[4].(*time.Time); ok {
 			*updated = now
+		}
+		if isPinned, ok := args[5].(*bool); ok {
+			*isPinned = false
+		}
+		if isLocked, ok := args[6].(*bool); ok {
+			*isLocked = false
+		}
+		if lockedBy, ok := args[7].(**uuid.UUID); ok {
+			*lockedBy = nil
+		}
+		if pinnedOrder, ok := args[8].(*int); ok {
+			*pinnedOrder = 0
 		}
 	}).Return(nil)
 

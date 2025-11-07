@@ -24,20 +24,22 @@ func (suite *SearchHandlerTestSuite) TestNewSearchHandler() {
 	suite.NotNil(handler)
 }
 
-func (suite *SearchHandlerTestSuite) TestSearchNotes_NotImplemented() {
+func (suite *SearchHandlerTestSuite) TestSearchNotes_InvalidRequest() {
 	app := fiber.New()
-	app.Get("/search", suite.handler.SearchNotes)
+	app.Post("/search", func(c *fiber.Ctx) error {
+		c.Locals("user_id", "test-user-id")
+		return suite.handler.SearchNotes(c)
+	})
 
-	req := httptest.NewRequest("GET", "/search", nil)
+	req := httptest.NewRequest("POST", "/search", nil)
 	resp, err := app.Test(req)
 	suite.NoError(err)
-	suite.Equal(501, resp.StatusCode) // StatusNotImplemented
+	suite.Equal(400, resp.StatusCode) // Bad Request
 
 	var result map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	suite.NoError(err)
-	suite.Equal("SearchDisabled", result["error"])
-	suite.Contains(result["message"], "Server-side search is disabled")
+	suite.Equal("Invalid request body", result["error"])
 }
 
 func TestSearchHandlerTestSuite(t *testing.T) {
