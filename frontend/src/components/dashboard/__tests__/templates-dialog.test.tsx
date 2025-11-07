@@ -80,19 +80,23 @@ vi.mock('lucide-react', () => ({
 
 describe('TemplatesDialog', () => {
   const mockTemplatesStore = (overrides?: any) => {
+    const state = {
+      templates: [],
+      starterTemplates: [],
+      communityTemplates: [],
+      deleteTemplate: deleteTemplateMock,
+      shareTemplate: shareTemplateMock,
+      applyTemplate: applyTemplateMock,
+      loadTemplates: loadTemplatesMock,
+      ...overrides,
+    }
+
     vi.mocked(useTemplatesStore).mockImplementation((selector?: any) => {
-      const state = {
-        templates: [],
-        starterTemplates: [],
-        communityTemplates: [],
-        deleteTemplate: deleteTemplateMock,
-        shareTemplate: shareTemplateMock,
-        applyTemplate: applyTemplateMock,
-        loadTemplates: loadTemplatesMock,
-        ...overrides,
-      }
       return selector ? selector(state) : state
     })
+
+    // Mock getState() method
+    ;(useTemplatesStore as any).getState = vi.fn(() => state)
   }
 
   beforeEach(() => {

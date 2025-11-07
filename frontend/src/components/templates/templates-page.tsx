@@ -13,20 +13,19 @@ import { formatDistanceToNow } from 'date-fns'
 import type { Template } from '@/types'
 
 export function TemplatesPage() {
-  const { templates, starterTemplates, communityTemplates, loadTemplates } = useTemplatesStore(
+  const { templates, starterTemplates, communityTemplates } = useTemplatesStore(
     useShallow((state) => ({
       templates: state.templates,
       starterTemplates: state.starterTemplates,
       communityTemplates: state.communityTemplates,
-      loadTemplates: state.loadTemplates,
     }))
   )
   const { user } = useAuthStore()
   const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
-    void loadTemplates()
-  }, [loadTemplates])
+    void useTemplatesStore.getState().loadTemplates()
+  }, [])
 
   const myTemplates = templates || []
   const starter = starterTemplates || []

@@ -26,23 +26,11 @@ interface TemplatesDialogProps {
 
 export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
   const { user } = useAuthStore()
-  const {
-    templates,
-    starterTemplates,
-    communityTemplates,
-    deleteTemplate,
-    shareTemplate,
-    applyTemplate,
-    loadTemplates,
-  } = useTemplatesStore(
+  const { templates, starterTemplates, communityTemplates } = useTemplatesStore(
     useShallow((state) => ({
       templates: state.templates,
       starterTemplates: state.starterTemplates,
       communityTemplates: state.communityTemplates,
-      deleteTemplate: state.deleteTemplate,
-      shareTemplate: state.shareTemplate,
-      applyTemplate: state.applyTemplate,
-      loadTemplates: state.loadTemplates,
     }))
   )
   const { createNote, selectNote } = useNotesStore()
@@ -54,9 +42,9 @@ export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
 
   useEffect(() => {
     if (open) {
-      void loadTemplates()
+      void useTemplatesStore.getState().loadTemplates()
     }
-  }, [open, loadTemplates])
+  }, [open])
 
   const filterTemplates = (templateList: Template[]) => {
     if (!searchQuery) return templateList
@@ -77,7 +65,7 @@ export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
 
   const handleUseTemplate = async (templateId: string) => {
     try {
-      const templateData = await applyTemplate(templateId)
+      const templateData = await useTemplatesStore.getState().applyTemplate(templateId)
       const note = await createNote({ content: templateData.content, tags: templateData.tags })
       selectNote(note.id)
       onOpenChange(false)
@@ -88,7 +76,7 @@ export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
 
   const handleToggleShare = async (templateId: string, currentIsPublic: boolean) => {
     try {
-      await shareTemplate(templateId, !currentIsPublic)
+      await useTemplatesStore.getState().shareTemplate(templateId, !currentIsPublic)
     } catch (error) {
       console.error('Failed to toggle share:', error)
     }
@@ -96,7 +84,7 @@ export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
 
   const handleDeleteTemplate = async (templateId: string) => {
     try {
-      await deleteTemplate(templateId)
+      await useTemplatesStore.getState().deleteTemplate(templateId)
     } catch (error) {
       console.error('Failed to delete template:', error)
     }
