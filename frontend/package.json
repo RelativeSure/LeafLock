@@ -15,7 +15,7 @@
     "format:check": "prettier --check --no-error-on-unmatched-pattern \"**/*.{js,ts,tsx,css}\"",
     "typecheck": "tsc --noEmit",
     "type-check": "tsc --noEmit",
-    "test": "NODE_OPTIONS=--max-old-space-size=16384 vitest run --pool=forks --max-workers=1",
+    "test": "NODE_OPTIONS=--max-old-space-size=16384 vitest run --pool=threads --max-workers=1",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
