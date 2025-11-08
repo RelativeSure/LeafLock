@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Mock ReactDOM
+// Mock ReactDOM - needs both default export and named export
+const mockCreateRoot = vi.fn(() => ({
+  render: vi.fn(),
+}))
+
 vi.mock('react-dom/client', () => ({
-  createRoot: vi.fn(() => ({
-    render: vi.fn(),
-  })),
+  default: {
+    createRoot: mockCreateRoot,
+  },
+  createRoot: mockCreateRoot,
 }))
 
 // Mock App
