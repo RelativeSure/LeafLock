@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
-	"log"
 	"strconv"
 	"time"
 
@@ -214,9 +213,6 @@ func (h *NotesHandler) CreateNote(c *fiber.Ctx) error {
 		updatedAt time.Time
 	)
 
-	log.Printf("DEBUG: CreateNote params - workspaceID type=%T val=%s, userID type=%T val=%s, is_pinned=%v, pinned_order=%d",
-		workspaceID, workspaceID, userID, userID, req.IsPinned, req.PinnedOrder)
-
 	err = h.db.QueryRow(ctx, `
         INSERT INTO notes (workspace_id, title_encrypted, content_encrypted, content_hash, created_by, is_pinned, pinned_order)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -224,9 +220,7 @@ func (h *NotesHandler) CreateNote(c *fiber.Ctx) error {
 		workspaceID, titleEnc, contentEnc, contentHash, userID, req.IsPinned, req.PinnedOrder).Scan(&noteID, &createdAt, &updatedAt)
 
 	if err != nil {
-		log.Printf("ERROR: Failed to create note: %v (workspace_id=%s, user_id=%s, is_pinned=%v, pinned_order=%d)",
-			err, workspaceID, userID, req.IsPinned, req.PinnedOrder)
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to create note", "details": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create note"})
 	}
 
 	// Record metrics
