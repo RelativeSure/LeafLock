@@ -203,9 +203,7 @@ describe('AdvancedSearchBar', () => {
 
     await waitFor(() => {
       const badges = screen.getAllByTestId('badge')
-      expect(
-        badges.some((badge) => /filters$/i.test((badge.textContent || '').trim()))
-      ).toBe(true)
+      expect(badges.some((badge) => /filters$/i.test((badge.textContent || '').trim()))).toBe(true)
     })
 
     fireEvent.click(screen.getByRole('button', { name: /clear filters/i }))
@@ -214,9 +212,7 @@ describe('AdvancedSearchBar', () => {
       expect(encryptedCheckbox.checked).toBe(false)
       expect(pinnedCheckbox.checked).toBe(false)
       const badges = screen.queryAllByTestId('badge')
-      expect(
-        badges.some((badge) => /filters$/i.test((badge.textContent || '').trim()))
-      ).toBe(false)
+      expect(badges.some((badge) => /filters$/i.test((badge.textContent || '').trim()))).toBe(false)
     })
   })
 

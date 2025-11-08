@@ -55,9 +55,7 @@ vi.mock('@/components/ui/select', () => ({
   Select: ({ children, onValueChange }: any) => {
     const index = selectHandlers.push(onValueChange) - 1
     return (
-      <div data-select-index={index}>
-        {typeof children === 'function' ? children() : children}
-      </div>
+      <div data-select-index={index}>{typeof children === 'function' ? children() : children}</div>
     )
   },
   SelectTrigger: ({ children }: any) => <div>{children}</div>,
@@ -209,9 +207,7 @@ describe('BulkOperationsBar', () => {
     render(<BulkOperationsBar selectedNotes={['note-1']} onClose={onClose} />)
 
     fireEvent.click(screen.getByRole('button', { name: /tags/i }))
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /create/i })).toBeInTheDocument()
-    )
+    await waitFor(() => expect(screen.getByRole('button', { name: /create/i })).toBeInTheDocument())
     const input = screen.getByPlaceholderText('Enter tag name...')
     fireEvent.change(input, { target: { value: 'custom-tag' } })
     fireEvent.click(screen.getByRole('button', { name: /create/i }))

@@ -340,9 +340,12 @@ describe('router', () => {
 
       render(<RouterProvider router={router} />)
 
-      await waitFor(() => {
-        expect(screen.getByText('Preparing editor…')).toBeInTheDocument()
-      }, { timeout: 5000 })
+      await waitFor(
+        () => {
+          expect(screen.getByText('Preparing editor…')).toBeInTheDocument()
+        },
+        { timeout: 5000 }
+      )
     })
 
     it('should render user avatar in header', async () => {
@@ -368,9 +371,12 @@ describe('router', () => {
 
       render(<RouterProvider router={router} />)
 
-      await waitFor(() => {
-        expect(screen.getByTestId('user-avatar')).toBeInTheDocument()
-      }, { timeout: 5000 })
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('user-avatar')).toBeInTheDocument()
+        },
+        { timeout: 5000 }
+      )
     })
 
     it('should render logout button', async () => {
@@ -396,9 +402,12 @@ describe('router', () => {
 
       render(<RouterProvider router={router} />)
 
-      await waitFor(() => {
-        expect(screen.getByText('Logout')).toBeInTheDocument()
-      }, { timeout: 5000 })
+      await waitFor(
+        () => {
+          expect(screen.getByText('Logout')).toBeInTheDocument()
+        },
+        { timeout: 5000 }
+      )
     })
   })
 

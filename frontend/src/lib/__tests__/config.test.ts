@@ -31,9 +31,7 @@ describe('config utilities', () => {
     const configModule = await loadConfigModule()
 
     expect(configModule.config.isRailway).toBe(true)
-    expect(configModule.config.apiUrl).toBe(
-      'https://railway-backend.leaflock.test/api/v1',
-    )
+    expect(configModule.config.apiUrl).toBe('https://railway-backend.leaflock.test/api/v1')
   })
 
   test('applies environment specific metadata', async () => {
@@ -44,9 +42,7 @@ describe('config utilities', () => {
     expect(configModule.config.environment).toBe('development')
     expect(configModule.config.serviceName).toBe('leaflock-api')
     expect(configModule.getConfig().environment).toBe('development')
-    expect(
-      configModule.getConfig({ environment: 'preview' }).environment,
-    ).toBe('preview')
+    expect(configModule.getConfig({ environment: 'preview' }).environment).toBe('preview')
   })
 
   test('logConfig emits structured diagnostics', async () => {
@@ -73,7 +69,7 @@ describe('config utilities', () => {
           RAILWAY_SERVICE_NAME: 'leaflock-preview',
           RAILWAY_INTERNAL_HOST: 'backend.internal',
         }),
-      }),
+      })
     )
 
     consoleSpy.mockRestore()

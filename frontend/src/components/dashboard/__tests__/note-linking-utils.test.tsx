@@ -25,8 +25,7 @@ vi.mock('@/components/ui/card', () => ({
   Card: ({ children }: any) => <div data-testid="card">{children}</div>,
   CardHeader: ({ children }: any) => <div>{children}</div>,
   CardTitle: ({ children }: any) => <h3>{children}</h3>,
-  CardDescription: ({ children, asChild }: any) =>
-    asChild ? <>{children}</> : <p>{children}</p>,
+  CardDescription: ({ children, asChild }: any) => (asChild ? <>{children}</> : <p>{children}</p>),
   CardContent: ({ children }: any) => <div>{children}</div>,
 }))
 
@@ -183,7 +182,7 @@ describe('note-linking-utils', () => {
       expect(container.firstChild).toBeNull()
     })
 
-   it('should handle notes without titles', async () => {
+    it('should handle notes without titles', async () => {
       setupNotesStore({
         notes: [
           { id: 'note-1', title: 'Target Note', content: '', createdAt: '', updatedAt: '' },
@@ -317,9 +316,7 @@ describe('note-linking-utils', () => {
       render(<NoteLinkPreview noteId="note-123" onClose={vi.fn()} onNavigate={vi.fn()} />)
 
       await waitFor(() => {
-        expect(
-          screen.getByText('Unlock your notes to preview linked content.')
-        ).toBeInTheDocument()
+        expect(screen.getByText('Unlock your notes to preview linked content.')).toBeInTheDocument()
       })
     })
 

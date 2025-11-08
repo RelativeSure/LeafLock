@@ -471,7 +471,10 @@ describe('notesStore', () => {
 
       await useNotesStore.getState().moveNotesToFolder(['note-1', 'note-2'], 'folder-x')
 
-      expect(contentService.moveNotesToFolder).toHaveBeenCalledWith(['note-1', 'note-2'], 'folder-x')
+      expect(contentService.moveNotesToFolder).toHaveBeenCalledWith(
+        ['note-1', 'note-2'],
+        'folder-x'
+      )
       const notes = useNotesStore.getState().notes
       expect(notes.every((note) => note.folderId === 'folder-x')).toBe(true)
     })
