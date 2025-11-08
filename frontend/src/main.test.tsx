@@ -20,7 +20,9 @@ vi.mock('libsodium-wrappers-sumo', () => ({
 
 // Mock QueryClientProvider
 vi.mock('@tanstack/react-query', () => ({
-  QueryClient: vi.fn(() => ({})),
+  QueryClient: vi.fn().mockImplementation(function (this: any) {
+    return {}
+  }),
   QueryClientProvider: ({ children }: any) => children,
 }))
 
