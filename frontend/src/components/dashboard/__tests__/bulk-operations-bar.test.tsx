@@ -51,34 +51,31 @@ vi.mock('@/components/ui/dialog', () => ({
   DialogFooter: ({ children }: any) => <div>{children}</div>,
 }))
 
-vi.mock('@/components/ui/select', () => {
-  const React = require('react')
-  return {
-    Select: ({ children, onValueChange }: any) => {
-      const index = selectHandlers.push(onValueChange) - 1
-      return (
-        <div data-select-index={index}>
-          {typeof children === 'function' ? children() : children}
-        </div>
-      )
-    },
-    SelectTrigger: ({ children }: any) => <div>{children}</div>,
-    SelectContent: ({ children }: any) => <div>{children}</div>,
-    SelectItem: ({ children, value }: any) => (
-      <button
-        type="button"
-        onClick={(event) => {
-          const container = event.currentTarget.closest('[data-select-index]') as HTMLElement | null
-          const idx = Number(container?.dataset.selectIndex ?? selectHandlers.length - 1)
-          selectHandlers[idx]?.(value)
-        }}
-      >
-        {children}
-      </button>
-    ),
-    SelectValue: ({ placeholder }: any) => <span>{placeholder}</span>,
-  }
-})
+vi.mock('@/components/ui/select', () => ({
+  Select: ({ children, onValueChange }: any) => {
+    const index = selectHandlers.push(onValueChange) - 1
+    return (
+      <div data-select-index={index}>
+        {typeof children === 'function' ? children() : children}
+      </div>
+    )
+  },
+  SelectTrigger: ({ children }: any) => <div>{children}</div>,
+  SelectContent: ({ children }: any) => <div>{children}</div>,
+  SelectItem: ({ children, value }: any) => (
+    <button
+      type="button"
+      onClick={(event) => {
+        const container = event.currentTarget.closest('[data-select-index]') as HTMLElement | null
+        const idx = Number(container?.dataset.selectIndex ?? selectHandlers.length - 1)
+        selectHandlers[idx]?.(value)
+      }}
+    >
+      {children}
+    </button>
+  ),
+  SelectValue: ({ placeholder }: any) => <span>{placeholder}</span>,
+}))
 
 vi.mock('@/components/ui/checkbox', () => ({
   Checkbox: ({ checked, onCheckedChange }: any) => (
