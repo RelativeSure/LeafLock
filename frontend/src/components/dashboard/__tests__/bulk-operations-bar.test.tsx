@@ -240,4 +240,204 @@ describe('BulkOperationsBar', () => {
     })
     expect(onClose).toHaveBeenCalled()
   })
+
+  // Error handling and edge case tests
+  describe('Error handling', () => {
+    it('handles move to folder error', async () => {
+      const store = setupStore({
+        moveNotesToFolder: vi.fn().mockRejectedValue(new Error('Move failed')),
+      })
+      render(<BulkOperationsBar selectedNotes={['note-1']} onClose={onClose} />)
+
+      fireEvent.click(screen.getByRole('button', { name: /move/i }))
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /move notes/i })).toBeInTheDocument()
+      )
+      fireEvent.click(screen.getByText('Projects'))
+      fireEvent.click(screen.getByRole('button', { name: /move notes/i }))
+
+      await waitFor(() => {
+        expect(store.moveNotesToFolder).toHaveBeenCalled()
+        expect(toastErrorMock).toHaveBeenCalledWith('Failed to move notes.')
+      })
+    })
+
+    it('handles add tags error', async () => {
+      const store = setupStore({
+        addTagsToNotes: vi.fn().mockRejectedValue(new Error('Add tags failed')),
+      })
+      render(<BulkOperationsBar selectedNotes={['note-1']} onClose={onClose} />)
+
+      fireEvent.click(screen.getByRole('button', { name: /tags/i }))
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /add tags/i })).toBeInTheDocument()
+      )
+      const tagCheckbox = screen.getAllByRole('checkbox')[0]
+      fireEvent.click(tagCheckbox)
+      fireEvent.click(screen.getByRole('button', { name: /add tags/i }))
+
+      await waitFor(() => {
+        expect(store.addTagsToNotes).toHaveBeenCalled()
+        expect(toastErrorMock).toHaveBeenCalledWith('Failed to add tags.')
+      })
+    })
+
+    it('handles remove tags error', async () => {
+      const store = setupStore({
+        removeTagsFromNotes: vi.fn().mockRejectedValue(new Error('Remove tags failed')),
+      })
+      render(<BulkOperationsBar selectedNotes={['note-1']} onClose={onClose} />)
+
+      fireEvent.click(screen.getByRole('button', { name: /tags/i }))
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /remove tags/i })).toBeInTheDocument()
+      )
+      const tagCheckbox = screen.getAllByRole('checkbox')[0]
+      fireEvent.click(tagCheckbox)
+      fireEvent.click(screen.getByRole('button', { name: /remove tags/i }))
+
+      await waitFor(() => {
+        expect(store.removeTagsFromNotes).toHaveBeenCalled()
+        expect(toastErrorMock).toHaveBeenCalledWith('Failed to remove tags.')
+      })
+    })
+
+    it('handles bulk delete error', async () => {
+      const bulkDeleteNotes = vi.fn().mockRejectedValue(new Error('Delete failed'))
+      setupStore({ bulkDeleteNotes })
+      useNotesStoreMock.getState = vi.fn(() => ({ bulkDeleteNotes }))
+
+      render(<BulkOperationsBar selectedNotes={['note-1']} onClose={onClose} />)
+
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }))
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /move to trash/i })).toBeInTheDocument()
+      )
+      fireEvent.click(screen.getByRole('button', { name: /move to trash/i }))
+
+      await waitFor(() => {
+        expect(bulkDeleteNotes).toHaveBeenCalled()
+        expect(toastErrorMock).toHaveBeenCalledWith('Failed to delete notes.')
+      })
+    })
+
+    it('handles create tag error', async () => {
+      const store = setupStore({
+        createTag: vi.fn().mockRejectedValue(new Error('Create failed')),
+      })
+      render(<BulkOperationsBar selectedNotes={['note-1']} onClose={onClose} />)
+
+      fireEvent.click(screen.getByRole('button', { name: /tags/i }))
+      await waitFor(() => expect(screen.getByRole('button', { name: /create/i })).toBeInTheDocument())
+      const input = screen.getByPlaceholderText('Enter tag name...')
+      fireEvent.change(input, { target: { value: 'custom-tag' } })
+      fireEvent.click(screen.getByRole('button', { name: /create/i }))
+
+      await waitFor(() => {
+        expect(store.createTag).toHaveBeenCalled()
+        expect(toastErrorMock).toHaveBeenCalledWith('Failed to create tag.')
+      })
+    })
+  })
+
+  describe('Edge cases', () => {
+    it('shows singular message for single note', async () => {
+      const store = setupStore()
+      render(<BulkOperationsBar selectedNotes={['note-1']} onClose={onClose} />)
+
+      fireEvent.click(screen.getByRole('button', { name: /move/i }))
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /move notes/i })).toBeInTheDocument()
+      )
+      fireEvent.click(screen.getByText('Projects'))
+      fireEvent.click(screen.getByRole('button', { name: /move notes/i }))
+
+      await waitFor(() => {
+        expect(toastSuccessMock).toHaveBeenCalledWith('1 note moved to folder.')
+      })
+    })
+
+    it('shows plural message for multiple notes', async () => {
+      const store = setupStore()
+      render(<BulkOperationsBar selectedNotes={['note-1', 'note-2']} onClose={onClose} />)
+
+      fireEvent.click(screen.getByRole('button', { name: /move/i }))
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /move notes/i })).toBeInTheDocument()
+      )
+      fireEvent.click(screen.getByText('Projects'))
+      fireEvent.click(screen.getByRole('button', { name: /move notes/i }))
+
+      await waitFor(() => {
+        expect(toastSuccessMock).toHaveBeenCalledWith('2 notes moved to folder.')
+      })
+    })
+
+    it('handles bulk delete with some failures', async () => {
+      const bulkDeleteNotes = vi.fn().mockResolvedValue({
+        successful: 1,
+        failed: 1,
+        errors: ['Error deleting note-2'],
+      })
+      setupStore({ bulkDeleteNotes })
+      useNotesStoreMock.getState = vi.fn(() => ({ bulkDeleteNotes }))
+
+      render(<BulkOperationsBar selectedNotes={['note-1', 'note-2']} onClose={onClose} />)
+
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }))
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /move to trash/i })).toBeInTheDocument()
+      )
+      fireEvent.click(screen.getByRole('button', { name: /move to trash/i }))
+
+      await waitFor(() => {
+        expect(bulkDeleteNotes).toHaveBeenCalled()
+        expect(toastSuccessMock).toHaveBeenCalled()
+      })
+    })
+
+    it('closes on X button click', () => {
+      setupStore()
+      render(<BulkOperationsBar selectedNotes={['note-1']} onClose={onClose} />)
+
+      const closeButton = screen.getByRole('button', { name: '' })
+      fireEvent.click(closeButton)
+
+      expect(onClose).toHaveBeenCalled()
+    })
+
+    it('does not create tag with empty name', async () => {
+      const store = setupStore()
+      render(<BulkOperationsBar selectedNotes={['note-1']} onClose={onClose} />)
+
+      fireEvent.click(screen.getByRole('button', { name: /tags/i }))
+      await waitFor(() => expect(screen.getByRole('button', { name: /create/i })).toBeInTheDocument())
+
+      // Try to create with empty input
+      fireEvent.click(screen.getByRole('button', { name: /create/i }))
+
+      // Should not call createTag
+      expect(store.createTag).not.toHaveBeenCalled()
+    })
+
+    it('toggles tag selection correctly', async () => {
+      setupStore()
+      render(<BulkOperationsBar selectedNotes={['note-1']} onClose={onClose} />)
+
+      fireEvent.click(screen.getByRole('button', { name: /tags/i }))
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /add tags/i })).toBeInTheDocument()
+      )
+
+      const firstCheckbox = screen.getAllByRole('checkbox')[0]
+
+      // Select tag
+      fireEvent.click(firstCheckbox)
+      expect(firstCheckbox).toBeChecked()
+
+      // Deselect tag
+      fireEvent.click(firstCheckbox)
+      expect(firstCheckbox).not.toBeChecked()
+    })
+  })
 })
