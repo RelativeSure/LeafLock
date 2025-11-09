@@ -347,9 +347,34 @@ describe('AdvancedSearchBar', () => {
     openSearch()
     await waitFor(() => expect(screen.getByText(/results/i)).toBeInTheDocument())
 
-    // Initially both notes should be visible
+    // Both notes should be visible initially
     expect(screen.getByText('Meeting Notes')).toBeInTheDocument()
     expect(screen.getByText('Random Ideas')).toBeInTheDocument()
+
+    // Click on the urgent tag filter
+    const tagButtons = screen.getAllByRole('button')
+    const urgentTagButton = tagButtons.find((btn) => btn.textContent?.includes('urgent'))
+    if (urgentTagButton) {
+      fireEvent.click(urgentTagButton)
+    }
+
+    // Now only notes with urgent tag should be visible
+    await waitFor(() => {
+      expect(screen.getByText('Meeting Notes')).toBeInTheDocument()
+      expect(screen.queryByText('Random Ideas')).not.toBeInTheDocument()
+    })
+
+    // Find and click the X button to remove the tag filter
+    const clearFilterButton = screen.getByRole('button', { name: /clear filters/i })
+    if (clearFilterButton) {
+      fireEvent.click(clearFilterButton)
+
+      // Both notes should be visible again
+      await waitFor(() => {
+        expect(screen.getByText('Meeting Notes')).toBeInTheDocument()
+        expect(screen.getByText('Random Ideas')).toBeInTheDocument()
+      })
+    }
   })
 
   it('shows results count in results panel header', async () => {
