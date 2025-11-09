@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi, type MockInstance } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SettingsPage } from '../settings-page'
 import { useAuthStore } from '@/stores/authStore'
@@ -369,17 +369,20 @@ describe('SettingsPage', () => {
   describe('Import/Export functionality', () => {
     const originalCreateObjectURL = global.URL.createObjectURL
     const originalRevokeObjectURL = global.URL.revokeObjectURL
+    let appendChildSpy: MockInstance | undefined
+    let removeChildSpy: MockInstance | undefined
 
     beforeEach(() => {
       // Mock global objects
       global.URL.createObjectURL = vi.fn(() => 'blob:mock-url') as typeof global.URL.createObjectURL
       global.URL.revokeObjectURL = vi.fn() as typeof global.URL.revokeObjectURL
-      vi.spyOn(document.body, 'appendChild')
-      vi.spyOn(document.body, 'removeChild')
+      appendChildSpy = vi.spyOn(document.body, 'appendChild')
+      removeChildSpy = vi.spyOn(document.body, 'removeChild')
     })
 
     afterEach(() => {
-      vi.restoreAllMocks()
+      appendChildSpy?.mockRestore()
+      removeChildSpy?.mockRestore()
       global.URL.createObjectURL = originalCreateObjectURL
       global.URL.revokeObjectURL = originalRevokeObjectURL
     })
@@ -430,22 +433,23 @@ describe('SettingsPage', () => {
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
 
       if (fileInput) {
-        const mockFile = new File(
-          [
+        const mockFile = {
+          text: vi.fn().mockResolvedValue(
             JSON.stringify({
               version: '1.0',
               notes: [{ title: 'Test', content: 'Content', tags: [], encrypted: false }],
               folders: [{ name: 'Folder1', color: '#ff0000' }],
               tags: [{ name: 'tag1', color: '#00ff00' }],
-            }),
-          ],
-          'backup.json',
-          { type: 'application/json' }
-        )
+            })
+          ),
+        } as unknown as File
 
-        fireEvent.change(fileInput, {
-          target: { files: [mockFile] as unknown as FileList },
+        Object.defineProperty(fileInput, 'files', {
+          value: [mockFile],
+          configurable: true,
         })
+
+        fireEvent.change(fileInput, { target: { files: [mockFile] } })
 
         await waitFor(() => {
           expect(createFolder).toHaveBeenCalled()
@@ -459,11 +463,16 @@ describe('SettingsPage', () => {
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
 
       if (fileInput) {
-        const mockFile = new File(['invalid json'], 'backup.json', { type: 'application/json' })
+        const mockFile = {
+          text: vi.fn().mockResolvedValue('invalid json'),
+        } as unknown as File
 
-        fireEvent.change(fileInput, {
-          target: { files: [mockFile] as unknown as FileList },
+        Object.defineProperty(fileInput, 'files', {
+          value: [mockFile],
+          configurable: true,
         })
+
+        fireEvent.change(fileInput, { target: { files: [mockFile] } })
 
         // Error should be handled
         await waitFor(() => {
@@ -478,13 +487,16 @@ describe('SettingsPage', () => {
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
 
       if (fileInput) {
-        const mockFile = new File([JSON.stringify({ notes: [] })], 'backup.json', {
-          type: 'application/json',
+        const mockFile = {
+          text: vi.fn().mockResolvedValue(JSON.stringify({ notes: [] })),
+        } as unknown as File
+
+        Object.defineProperty(fileInput, 'files', {
+          value: [mockFile],
+          configurable: true,
         })
 
-        fireEvent.change(fileInput, {
-          target: { files: [mockFile] as unknown as FileList },
-        })
+        fireEvent.change(fileInput, { target: { files: [mockFile] } })
 
         await waitFor(() => {
           expect(fileInput).toBeInTheDocument()
@@ -505,21 +517,22 @@ describe('SettingsPage', () => {
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
 
       if (fileInput) {
-        const mockFile = new File(
-          [
+        const mockFile = {
+          text: vi.fn().mockResolvedValue(
             JSON.stringify({
               version: '1.0',
               notes: [],
               templates: [{ name: 'Template1', content: 'Content', tags: [], isPublic: false }],
-            }),
-          ],
-          'backup.json',
-          { type: 'application/json' }
-        )
+            })
+          ),
+        } as unknown as File
 
-        fireEvent.change(fileInput, {
-          target: { files: [mockFile] as unknown as FileList },
+        Object.defineProperty(fileInput, 'files', {
+          value: [mockFile],
+          configurable: true,
         })
+
+        fireEvent.change(fileInput, { target: { files: [mockFile] } })
 
         await waitFor(() => {
           expect(createTemplate).toHaveBeenCalled()

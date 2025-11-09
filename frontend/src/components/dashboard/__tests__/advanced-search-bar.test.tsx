@@ -365,7 +365,6 @@ describe('AdvancedSearchBar', () => {
 
     const tagOption = screen.getByTestId('select-item-urgent')
     fireEvent.click(tagOption)
-
     await waitFor(() => {
       expect(screen.getByText('Meeting Notes')).toBeInTheDocument()
       expect(screen.queryByText('Random Ideas')).not.toBeInTheDocument()
