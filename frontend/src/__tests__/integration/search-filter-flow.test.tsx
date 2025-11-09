@@ -96,6 +96,10 @@ describe('Integration: Search and Filter Flow', () => {
           parentId: null,
           userId: 'user-1',
           createdAt: '2024-01-01',
+          updatedAt: '2024-01-01',
+          position: 0,
+          depth: 0,
+          path: 'folder-1',
         },
         {
           id: 'folder-2',
@@ -104,6 +108,10 @@ describe('Integration: Search and Filter Flow', () => {
           parentId: null,
           userId: 'user-1',
           createdAt: '2024-01-01',
+          updatedAt: '2024-01-01',
+          position: 1,
+          depth: 0,
+          path: 'folder-2',
         },
       ],
       tags: [

@@ -18,7 +18,7 @@ import (
 )
 
 // MigrationSchemaVersion tracks the current schema version
-const MigrationSchemaVersion = "2025.11.06.001" // Fix folders table ALTER statements ordering (must create table before altering)
+const MigrationSchemaVersion = "2025.11.07.005" // Fix uuid_generate_v7 BYTEA to UUID conversion
 
 // Database interface for dependency injection and testing
 type Database interface {

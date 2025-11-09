@@ -23,16 +23,14 @@ export const profileService = {
    * Get current user's profile
    */
   getProfile: async (): Promise<Profile> => {
-    const response = await apiClient.get('/profile')
-    return response.data
+    return await apiClient.get<Profile>('/profile')
   },
 
   /**
    * Update current user's profile
    */
   updateProfile: async (data: UpdateProfileRequest): Promise<Profile> => {
-    const response = await apiClient.put('/profile', data)
-    return response.data
+    return await apiClient.put<Profile>('/profile', data)
   },
 
   /**

@@ -311,22 +311,20 @@ export function VersionHistoryDialog({ noteId, noteTitle, children }: VersionHis
                                   <CardTitle className="text-sm">
                                     {version.changeDescription || 'No description'}
                                   </CardTitle>
-                                  <CardDescription asChild>
-                                    <span className="text-xs flex flex-wrap items-center gap-4">
-                                      <span className="flex items-center gap-1">
-                                        <Calendar className="h-3 w-3" />
-                                        {format(new Date(version.createdAt), 'MMM d, yyyy')}
-                                      </span>
-                                      <span className="flex items-center gap-1">
-                                        <Clock className="h-3 w-3" />
-                                        {formatDistanceToNow(new Date(version.createdAt), {
-                                          addSuffix: true,
-                                        })}
-                                      </span>
-                                      <span className="flex items-center gap-1">
-                                        <User className="h-3 w-3" />
-                                        {version.createdBy}
-                                      </span>
+                                  <CardDescription className="text-xs flex flex-wrap items-center gap-4">
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="h-3 w-3" />
+                                      {format(new Date(version.createdAt), 'MMM d, yyyy')}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      {formatDistanceToNow(new Date(version.createdAt), {
+                                        addSuffix: true,
+                                      })}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <User className="h-3 w-3" />
+                                      {version.createdBy}
                                     </span>
                                   </CardDescription>
                                 </div>

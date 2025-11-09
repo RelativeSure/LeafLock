@@ -1,6 +1,6 @@
 import path from 'path'
 import { fileURLToPath } from 'node:url'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
@@ -192,7 +192,6 @@ export default defineConfig({
         lines: 80,
       },
       reportOnFailure: true,
-      all: false,
       clean: true,
       skipFull: false,
     },

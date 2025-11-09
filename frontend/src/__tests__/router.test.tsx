@@ -236,21 +236,11 @@ describe('router', () => {
 
   describe('DashboardComponent', () => {
     it('should show loading state when isLoading is true', async () => {
-      const mockAuthStore = vi.fn((selector: any) => {
-        const state = {
-          user: null,
-          isLoading: true,
-          initialize: vi.fn().mockResolvedValue(undefined),
-        }
-        return selector(state)
-      })
-      mockAuthStore.getState = () => ({
+      setAuthStoreState({
         user: null,
         isLoading: true,
         initialize: vi.fn().mockResolvedValue(undefined),
       })
-      ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
-      ;(useAuthStore as Mock).getState = mockAuthStore.getState as any
 
       window.history.pushState({}, '', '/')
 
@@ -262,21 +252,11 @@ describe('router', () => {
     })
 
     it('should show loading state when user is null', async () => {
-      const mockAuthStore = vi.fn((selector: any) => {
-        const state = {
-          user: null,
-          isLoading: false,
-          initialize: vi.fn().mockResolvedValue(undefined),
-        }
-        return selector(state)
-      })
-      mockAuthStore.getState = () => ({
+      setAuthStoreState({
         user: null,
         isLoading: false,
         initialize: vi.fn().mockResolvedValue(undefined),
       })
-      ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
-      ;(useAuthStore as Mock).getState = mockAuthStore.getState as any
 
       window.history.pushState({}, '', '/')
 
@@ -289,23 +269,12 @@ describe('router', () => {
 
     it('should render dashboard when user is authenticated', async () => {
       const mockUser = { id: '1', email: 'test@example.com', name: 'Test User' }
-      const mockAuthStore = vi.fn((selector: any) => {
-        const state = {
-          user: mockUser,
-          isLoading: false,
-          initialize: vi.fn().mockResolvedValue(undefined),
-          logout: vi.fn(),
-        }
-        return selector(state)
-      })
-      mockAuthStore.getState = () => ({
+      setAuthStoreState({
         user: mockUser,
         isLoading: false,
         initialize: vi.fn().mockResolvedValue(undefined),
         logout: vi.fn(),
       })
-      ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
-      ;(useAuthStore as Mock).getState = mockAuthStore.getState as any
 
       window.history.pushState({}, '', '/')
 
@@ -319,86 +288,65 @@ describe('router', () => {
 
     it('should show preparing editor message before editor is ready', async () => {
       const mockUser = { id: '1', email: 'test@example.com', name: 'Test User' }
-      const mockAuthStore = vi.fn((selector: any) => {
-        const state = {
-          user: mockUser,
-          isLoading: false,
-          initialize: vi.fn().mockResolvedValue(undefined),
-          logout: vi.fn(),
-        }
-        return selector(state)
-      })
-      mockAuthStore.getState = () => ({
+      setAuthStoreState({
         user: mockUser,
         isLoading: false,
         initialize: vi.fn().mockResolvedValue(undefined),
         logout: vi.fn(),
       })
-      ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
 
       window.history.pushState({}, '', '/')
 
       render(<RouterProvider router={router} />)
 
-      await waitFor(() => {
-        expect(screen.getByText('Preparing editor…')).toBeInTheDocument()
-      }, { timeout: 5000 })
+      await waitFor(
+        () => {
+          expect(screen.getByText('Preparing editor…')).toBeInTheDocument()
+        },
+        { timeout: 5000 }
+      )
     })
 
     it('should render user avatar in header', async () => {
       const mockUser = { id: '1', email: 'test@example.com', name: 'Test User' }
-      const mockAuthStore = vi.fn((selector: any) => {
-        const state = {
-          user: mockUser,
-          isLoading: false,
-          initialize: vi.fn().mockResolvedValue(undefined),
-          logout: vi.fn(),
-        }
-        return selector(state)
-      })
-      mockAuthStore.getState = () => ({
+      setAuthStoreState({
         user: mockUser,
         isLoading: false,
         initialize: vi.fn().mockResolvedValue(undefined),
         logout: vi.fn(),
       })
-      ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
 
       window.history.pushState({}, '', '/')
 
       render(<RouterProvider router={router} />)
 
-      await waitFor(() => {
-        expect(screen.getByTestId('user-avatar')).toBeInTheDocument()
-      }, { timeout: 5000 })
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('user-avatar')).toBeInTheDocument()
+        },
+        { timeout: 5000 }
+      )
     })
 
     it('should render logout button', async () => {
       const mockUser = { id: '1', email: 'test@example.com', name: 'Test User' }
-      const mockAuthStore = vi.fn((selector: any) => {
-        const state = {
-          user: mockUser,
-          isLoading: false,
-          initialize: vi.fn().mockResolvedValue(undefined),
-          logout: vi.fn(),
-        }
-        return selector(state)
-      })
-      mockAuthStore.getState = () => ({
+      setAuthStoreState({
         user: mockUser,
         isLoading: false,
         initialize: vi.fn().mockResolvedValue(undefined),
         logout: vi.fn(),
       })
-      ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
 
       window.history.pushState({}, '', '/')
 
       render(<RouterProvider router={router} />)
 
-      await waitFor(() => {
-        expect(screen.getByText('Logout')).toBeInTheDocument()
-      }, { timeout: 5000 })
+      await waitFor(
+        () => {
+          expect(screen.getByText('Logout')).toBeInTheDocument()
+        },
+        { timeout: 5000 }
+      )
     })
   })
 
@@ -429,21 +377,11 @@ describe('router', () => {
   describe('Admin route', () => {
     it('should render admin page', async () => {
       const mockUser = { id: '1', email: 'test@example.com', name: 'Test User', isAdmin: true }
-      const mockAuthStore = vi.fn((selector: any) => {
-        const state = {
-          user: mockUser,
-          isLoading: false,
-          initialize: vi.fn().mockResolvedValue(undefined),
-        }
-        return selector ? selector(state) : state
-      })
-      mockAuthStore.getState = () => ({
+      setAuthStoreState({
         user: mockUser,
         isLoading: false,
         initialize: vi.fn().mockResolvedValue(undefined),
       })
-      ;(useAuthStore as Mock).mockImplementation(mockAuthStore)
-      ;(useAuthStore as Mock).getState = mockAuthStore.getState as any
 
       window.history.pushState({}, '', '/admin')
 

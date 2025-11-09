@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Mock ReactDOM
+// Mock ReactDOM - needs both default export and named export
+const mockCreateRoot = vi.fn(() => ({
+  render: vi.fn(),
+}))
+
 vi.mock('react-dom/client', () => ({
-  createRoot: vi.fn(() => ({
-    render: vi.fn(),
-  })),
+  default: {
+    createRoot: mockCreateRoot,
+  },
+  createRoot: mockCreateRoot,
 }))
 
 // Mock App
@@ -20,7 +25,9 @@ vi.mock('libsodium-wrappers-sumo', () => ({
 
 // Mock QueryClientProvider
 vi.mock('@tanstack/react-query', () => ({
-  QueryClient: vi.fn(() => ({})),
+  QueryClient: vi.fn().mockImplementation(function (this: any) {
+    return {}
+  }),
   QueryClientProvider: ({ children }: any) => children,
 }))
 

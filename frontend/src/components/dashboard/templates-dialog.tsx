@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useTemplatesStore } from '../../stores/templatesStore'
 import { useNotesStore } from '../../stores/notesStore'
 import { useAuthStore } from '../../stores/authStore'
@@ -33,15 +34,17 @@ export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
     shareTemplate,
     applyTemplate,
     loadTemplates,
-  } = useTemplatesStore((state) => ({
-    templates: state.templates,
-    starterTemplates: state.starterTemplates,
-    communityTemplates: state.communityTemplates,
-    deleteTemplate: state.deleteTemplate,
-    shareTemplate: state.shareTemplate,
-    applyTemplate: state.applyTemplate,
-    loadTemplates: state.loadTemplates,
-  }))
+  } = useTemplatesStore(
+    useShallow((state) => ({
+      templates: state.templates,
+      starterTemplates: state.starterTemplates,
+      communityTemplates: state.communityTemplates,
+      deleteTemplate: state.deleteTemplate,
+      shareTemplate: state.shareTemplate,
+      applyTemplate: state.applyTemplate,
+      loadTemplates: state.loadTemplates,
+    }))
+  )
   const { createNote, selectNote } = useNotesStore()
   const [searchQuery, setSearchQuery] = useState('')
 

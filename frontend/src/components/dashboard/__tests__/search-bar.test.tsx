@@ -93,6 +93,7 @@ describe('SearchBar', () => {
         [noteId]: {
           title: 'Project Meeting',
           content: 'Discuss roadmap',
+          timestamp: Date.now(),
         },
       },
       isUnlocked: true,
@@ -119,6 +120,7 @@ describe('SearchBar', () => {
         [noteId]: {
           title: 'Weekly Sync',
           content: 'Agenda and action items',
+          timestamp: Date.now(),
         },
       },
       isUnlocked: true,
@@ -173,7 +175,7 @@ describe('SearchBar', () => {
       selectNote: selectNoteMock,
     } as any)
     vi.mocked(useDecryptedNotes).mockReturnValue({
-      decryptedNotes: { 'note-1': { title: 'Test', content: '' } },
+      decryptedNotes: { 'note-1': { title: 'Test', content: '', timestamp: Date.now() } },
       isUnlocked: true,
       isDecrypting: false,
     })
@@ -208,7 +210,9 @@ describe('SearchBar', () => {
       selectNote: selectNoteMock,
     } as any)
     vi.mocked(useDecryptedNotes).mockReturnValue({
-      decryptedNotes: { 'note-1': { title: 'Different', content: 'Content' } },
+      decryptedNotes: {
+        'note-1': { title: 'Different', content: 'Content', timestamp: Date.now() },
+      },
       isUnlocked: true,
       isDecrypting: false,
     })
@@ -231,6 +235,7 @@ describe('SearchBar', () => {
         [noteId]: {
           title: 'Meeting Notes',
           content: 'Discussed the quarterly roadmap',
+          timestamp: Date.now(),
         },
       },
       isUnlocked: true,
@@ -258,6 +263,7 @@ describe('SearchBar', () => {
         [noteId]: {
           title: 'Task List',
           content: 'Things to do',
+          timestamp: Date.now(),
         },
       },
       isUnlocked: true,
@@ -285,6 +291,7 @@ describe('SearchBar', () => {
         [noteId]: {
           title: 'Tagged Note',
           content: 'Content',
+          timestamp: Date.now(),
         },
       },
       isUnlocked: true,
@@ -311,6 +318,7 @@ describe('SearchBar', () => {
         [noteId]: {
           title: 'Many Tags',
           content: 'Content',
+          timestamp: Date.now(),
         },
       },
       isUnlocked: true,
@@ -340,8 +348,8 @@ describe('SearchBar', () => {
     } as any)
     vi.mocked(useDecryptedNotes).mockReturnValue({
       decryptedNotes: {
-        old: { title: 'Old Note', content: 'test' },
-        new: { title: 'New Note', content: 'test' },
+        old: { title: 'Old Note', content: 'test', timestamp: Date.now() },
+        new: { title: 'New Note', content: 'test', timestamp: Date.now() },
       },
       isUnlocked: true,
       isDecrypting: false,
@@ -371,6 +379,7 @@ describe('SearchBar', () => {
       decryptedNotes[`note-${i}`] = {
         title: `Note ${i}`,
         content: 'searchable content',
+        timestamp: Date.now(),
       }
     }
 

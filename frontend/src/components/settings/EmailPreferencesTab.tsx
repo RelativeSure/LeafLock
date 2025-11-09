@@ -39,22 +39,17 @@ export function EmailPreferencesTab() {
   const fetchPreferences = async () => {
     try {
       setIsLoading(true)
-      const response = await apiClient.get('/settings')
-      const data = response.data
+      const data = await apiClient.get<any>('/settings')
 
       setPreferences({
-        email_notifications: data.emailNotifications || false,
+        email_notifications: data.email_notifications || false,
         email_on_note_shared: data.email_on_note_shared ?? true,
         email_on_collaboration: data.email_on_collaboration ?? true,
         email_on_mention: data.email_on_mention ?? true,
         email_digest_frequency: data.email_digest_frequency || 'never',
       })
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load email preferences',
-        variant: 'destructive',
-      })
+      toast.error('Failed to load email preferences')
     } finally {
       setIsLoading(false)
     }
@@ -71,16 +66,9 @@ export function EmailPreferencesTab() {
         [key]: value,
       }))
 
-      toast({
-        title: 'Success',
-        description: 'Email preference updated',
-      })
+      toast.success('Email preference updated')
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update preference',
-        variant: 'destructive',
-      })
+      toast.error('Failed to update preference')
     }
   }
 

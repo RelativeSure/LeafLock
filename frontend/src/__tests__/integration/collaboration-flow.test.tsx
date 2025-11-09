@@ -34,7 +34,7 @@ vi.mock('@/lib/encryption-utils', () => ({
 }))
 
 // Import mocked services after mocks are declared
-import { contentService, organizationService, socialService } from '@/services/api'
+import { contentService, socialService } from '@/services/api'
 
 describe('Integration: Collaboration Flow', () => {
   const owner = {
