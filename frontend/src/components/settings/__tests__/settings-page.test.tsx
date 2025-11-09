@@ -352,5 +352,4 @@ describe('SettingsPage', () => {
     render(<SettingsPage />)
     expect(screen.getByTestId('tabs')).toBeInTheDocument()
   })
-
 })
