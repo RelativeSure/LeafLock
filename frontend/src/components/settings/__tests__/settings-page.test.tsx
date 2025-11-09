@@ -356,6 +356,17 @@ describe('SettingsPage', () => {
   // Interaction and conditional logic tests
   describe('Export and Import functionality', () => {
     beforeEach(() => {
+      vi.clearAllMocks()
+      vi.mocked(useAuthStore).mockReturnValue({
+        user: mockUser,
+        isAuthenticated: true,
+      } as any)
+
+      vi.mocked(useSettingsStore).mockReturnValue({
+        settings: mockSettings,
+        updateSettings: vi.fn(),
+      } as any)
+
       global.URL.createObjectURL = vi.fn(() => 'blob:mock-url')
       global.URL.revokeObjectURL = vi.fn()
       document.body.appendChild = vi.fn()
@@ -373,12 +384,6 @@ describe('SettingsPage', () => {
     })
 
     it('should handle export notes', () => {
-      const mockCreateNote = vi.fn()
-      const mockCreateFolder = vi.fn()
-      const mockCreateTag = vi.fn()
-      const mockCreateTemplate = vi.fn()
-      const mockToast = { success: vi.fn(), error: vi.fn() }
-
       vi.mocked(useNotesStore).mockReturnValue({
         notes: [
           {
@@ -396,179 +401,72 @@ describe('SettingsPage', () => {
         ],
         folders: [],
         tags: [],
-        createNote: mockCreateNote,
-        createFolder: mockCreateFolder,
-        createTag: mockCreateTag,
+        createNote: vi.fn(),
+        createFolder: vi.fn(),
+        createTag: vi.fn(),
       } as any)
 
       vi.mocked(useTemplatesStore).mockReturnValue({
         templates: [],
-        createTemplate: mockCreateTemplate,
+        createTemplate: vi.fn(),
       } as any)
 
       render(<SettingsPage />)
       expect(screen.getByTestId('tabs')).toBeInTheDocument()
     })
 
-    it('should handle import with valid data including folders', async () => {
-      const mockCreateFolder = vi.fn().mockResolvedValue({})
-      const mockCreateTag = vi.fn().mockResolvedValue({})
-      const mockCreateNote = vi.fn().mockResolvedValue({})
-      const mockCreateTemplate = vi.fn().mockResolvedValue({})
-
+    it('should render with folders data for export', async () => {
       vi.mocked(useNotesStore).mockReturnValue({
         notes: [],
-        folders: [],
+        folders: [{ id: '1', name: 'Folder1', color: '#ff0000' }],
         tags: [],
-        createNote: mockCreateNote,
-        createFolder: mockCreateFolder,
-        createTag: mockCreateTag,
+        createNote: vi.fn(),
+        createFolder: vi.fn(),
+        createTag: vi.fn(),
       } as any)
 
       vi.mocked(useTemplatesStore).mockReturnValue({
         templates: [],
-        createTemplate: mockCreateTemplate,
+        createTemplate: vi.fn(),
       } as any)
-
-      const mockFile = new File(
-        [
-          JSON.stringify({
-            version: '1.0',
-            notes: [{ title: 'Test', content: 'Content' }],
-            folders: [{ name: 'Folder1', color: '#ff0000' }],
-          }),
-        ],
-        'backup.json',
-        { type: 'application/json' }
-      )
-
-      render(<SettingsPage />)
-
-      // The import is tested indirectly through the component render
-      expect(screen.getByTestId('tabs')).toBeInTheDocument()
-    })
-
-    it('should handle import with tags', async () => {
-      const mockCreateFolder = vi.fn().mockResolvedValue({})
-      const mockCreateTag = vi.fn().mockResolvedValue({})
-      const mockCreateNote = vi.fn().mockResolvedValue({})
-      const mockCreateTemplate = vi.fn().mockResolvedValue({})
-
-      vi.mocked(useNotesStore).mockReturnValue({
-        notes: [],
-        folders: [],
-        tags: [],
-        createNote: mockCreateNote,
-        createFolder: mockCreateFolder,
-        createTag: mockCreateTag,
-      } as any)
-
-      vi.mocked(useTemplatesStore).mockReturnValue({
-        templates: [],
-        createTemplate: mockCreateTemplate,
-      } as any)
-
-      const mockFile = new File(
-        [
-          JSON.stringify({
-            version: '1.0',
-            notes: [{ title: 'Test', content: 'Content' }],
-            tags: [{ name: 'tag1', color: '#00ff00' }],
-          }),
-        ],
-        'backup.json',
-        { type: 'application/json' }
-      )
 
       render(<SettingsPage />)
       expect(screen.getByTestId('tabs')).toBeInTheDocument()
     })
 
-    it('should handle import with templates', async () => {
-      const mockCreateFolder = vi.fn().mockResolvedValue({})
-      const mockCreateTag = vi.fn().mockResolvedValue({})
-      const mockCreateNote = vi.fn().mockResolvedValue({})
-      const mockCreateTemplate = vi.fn().mockResolvedValue({})
-
+    it('should render with tags data for export', async () => {
       vi.mocked(useNotesStore).mockReturnValue({
         notes: [],
         folders: [],
-        tags: [],
-        createNote: mockCreateNote,
-        createFolder: mockCreateFolder,
-        createTag: mockCreateTag,
+        tags: [{ id: '1', name: 'tag1', color: '#00ff00' }],
+        createNote: vi.fn(),
+        createFolder: vi.fn(),
+        createTag: vi.fn(),
       } as any)
 
       vi.mocked(useTemplatesStore).mockReturnValue({
         templates: [],
-        createTemplate: mockCreateTemplate,
+        createTemplate: vi.fn(),
       } as any)
-
-      const mockFile = new File(
-        [
-          JSON.stringify({
-            version: '1.0',
-            notes: [{ title: 'Test', content: 'Content' }],
-            templates: [{ name: 'Template1', content: 'Template content' }],
-          }),
-        ],
-        'backup.json',
-        { type: 'application/json' }
-      )
 
       render(<SettingsPage />)
       expect(screen.getByTestId('tabs')).toBeInTheDocument()
     })
 
-    it('should handle import error for invalid format', async () => {
-      const mockCreateNote = vi.fn()
-      const mockCreateFolder = vi.fn()
-      const mockCreateTag = vi.fn()
-      const mockCreateTemplate = vi.fn()
-
+    it('should render with templates data for export', async () => {
       vi.mocked(useNotesStore).mockReturnValue({
         notes: [],
         folders: [],
         tags: [],
-        createNote: mockCreateNote,
-        createFolder: mockCreateFolder,
-        createTag: mockCreateTag,
+        createNote: vi.fn(),
+        createFolder: vi.fn(),
+        createTag: vi.fn(),
       } as any)
 
       vi.mocked(useTemplatesStore).mockReturnValue({
-        templates: [],
-        createTemplate: mockCreateTemplate,
+        templates: [{ id: '1', name: 'Template1', content: 'Template content' }],
+        createTemplate: vi.fn(),
       } as any)
-
-      const mockFile = new File([JSON.stringify({ invalid: 'data' })], 'backup.json', {
-        type: 'application/json',
-      })
-
-      render(<SettingsPage />)
-      expect(screen.getByTestId('tabs')).toBeInTheDocument()
-    })
-
-    it('should handle import error for malformed JSON', async () => {
-      const mockCreateNote = vi.fn()
-      const mockCreateFolder = vi.fn()
-      const mockCreateTag = vi.fn()
-      const mockCreateTemplate = vi.fn()
-
-      vi.mocked(useNotesStore).mockReturnValue({
-        notes: [],
-        folders: [],
-        tags: [],
-        createNote: mockCreateNote,
-        createFolder: mockCreateFolder,
-        createTag: mockCreateTag,
-      } as any)
-
-      vi.mocked(useTemplatesStore).mockReturnValue({
-        templates: [],
-        createTemplate: mockCreateTemplate,
-      } as any)
-
-      const mockFile = new File(['invalid json'], 'backup.json', { type: 'application/json' })
 
       render(<SettingsPage />)
       expect(screen.getByTestId('tabs')).toBeInTheDocument()
@@ -576,6 +474,28 @@ describe('SettingsPage', () => {
   })
 
   describe('Profile picture settings', () => {
+    beforeEach(() => {
+      vi.clearAllMocks()
+      vi.mocked(useAuthStore).mockReturnValue({
+        user: mockUser,
+        isAuthenticated: true,
+      } as any)
+
+      vi.mocked(useNotesStore).mockReturnValue({
+        notes: [],
+        folders: [],
+        tags: [],
+        createNote: vi.fn(),
+        createFolder: vi.fn(),
+        createTag: vi.fn(),
+      } as any)
+
+      vi.mocked(useTemplatesStore).mockReturnValue({
+        templates: [],
+        createTemplate: vi.fn(),
+      } as any)
+    })
+
     it('should show gravatar as selected when using gravatar', () => {
       vi.mocked(useSettingsStore).mockReturnValue({
         settings: {
@@ -669,12 +589,44 @@ describe('SettingsPage', () => {
   })
 
   describe('User data display', () => {
+    beforeEach(() => {
+      vi.clearAllMocks()
+      vi.mocked(useSettingsStore).mockReturnValue({
+        settings: mockSettings,
+        updateSettings: vi.fn(),
+      } as any)
+
+      vi.mocked(useNotesStore).mockReturnValue({
+        notes: [],
+        folders: [],
+        tags: [],
+        createNote: vi.fn(),
+        createFolder: vi.fn(),
+        createTag: vi.fn(),
+      } as any)
+
+      vi.mocked(useTemplatesStore).mockReturnValue({
+        templates: [],
+        createTemplate: vi.fn(),
+      } as any)
+    })
+
     it('should display user name in profile', () => {
+      vi.mocked(useAuthStore).mockReturnValue({
+        user: mockUser,
+        isAuthenticated: true,
+      } as any)
+
       render(<SettingsPage />)
       expect(screen.getByTestId('tabs')).toBeInTheDocument()
     })
 
     it('should display user email in profile', () => {
+      vi.mocked(useAuthStore).mockReturnValue({
+        user: mockUser,
+        isAuthenticated: true,
+      } as any)
+
       render(<SettingsPage />)
       expect(screen.getByTestId('tabs')).toBeInTheDocument()
     })
@@ -690,6 +642,11 @@ describe('SettingsPage', () => {
     })
 
     it('should render with encrypted notes', () => {
+      vi.mocked(useAuthStore).mockReturnValue({
+        user: mockUser,
+        isAuthenticated: true,
+      } as any)
+
       vi.mocked(useNotesStore).mockReturnValue({
         notes: [
           {
