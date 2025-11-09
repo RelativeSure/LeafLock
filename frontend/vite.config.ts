@@ -185,7 +185,9 @@ export default defineConfig({
         'src/components/dashboard/rich-text-editor.tsx',
       ],
       thresholds: {
-        // Temporarily lower the bar so CI passes while we work toward 80%
+        // TODO(coverage): temporary relief while global coverage sits ~65%; once
+        // sidebar.tsx/export-utils.ts/workspaces components have baseline tests,
+        // restore these to the original 80% target.
         statements: 60,
         branches: 60,
         functions: 60,
