@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi, type MockInstance } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SettingsPage } from '../settings-page'
 import { useAuthStore } from '@/stores/authStore'
@@ -369,8 +369,8 @@ describe('SettingsPage', () => {
   describe('Import/Export functionality', () => {
     const originalCreateObjectURL = global.URL.createObjectURL
     const originalRevokeObjectURL = global.URL.revokeObjectURL
-    let appendChildSpy: ReturnType<typeof vi.spyOn>
-    let removeChildSpy: ReturnType<typeof vi.spyOn>
+    let appendChildSpy: MockInstance | undefined
+    let removeChildSpy: MockInstance | undefined
 
     beforeEach(() => {
       // Mock global objects
