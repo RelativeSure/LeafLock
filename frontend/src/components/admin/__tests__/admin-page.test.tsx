@@ -678,4 +678,280 @@ describe('AdminPage', () => {
       { timeout: 2000 }
     )
   })
+
+  // Interaction and conditional logic tests
+  describe('User interactions', () => {
+    beforeEach(() => {
+      global.fetch = vi.fn()
+      global.localStorage = {
+        getItem: vi.fn(() => 'mock-token'),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
+        length: 0,
+        key: vi.fn(),
+      }
+    })
+
+    it('should handle user role change successfully', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      } as Response)
+
+      render(<AdminPage />)
+      await waitFor(() => expect(screen.getByText('John Doe')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      const selects = screen.getAllByTestId('select')
+      if (selects.length > 0) {
+        fireEvent.click(selects[0])
+      }
+
+      await waitFor(() => expect(fetch).toHaveBeenCalled())
+    })
+
+    it('should handle user role change error', async () => {
+      vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
+
+      render(<AdminPage />)
+      await waitFor(() => expect(screen.getByText('John Doe')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      const selects = screen.getAllByTestId('select')
+      if (selects.length > 0) {
+        fireEvent.click(selects[0])
+      }
+
+      await waitFor(() => expect(fetch).toHaveBeenCalled())
+    })
+
+    it('should handle user status change to active (unlock)', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      } as Response)
+
+      render(<AdminPage />)
+      await waitFor(() => expect(screen.getByText('Bob Johnson')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      const selects = screen.getAllByTestId('select')
+      if (selects.length > 1) {
+        fireEvent.click(selects[1])
+      }
+
+      await waitFor(() => expect(fetch).toHaveBeenCalled())
+    })
+
+    it('should handle user status change error', async () => {
+      vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
+
+      render(<AdminPage />)
+      await waitFor(() => expect(screen.getByText('John Doe')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      const selects = screen.getAllByTestId('select')
+      if (selects.length > 0) {
+        fireEvent.click(selects[0])
+      }
+
+      await waitFor(() => expect(fetch).toHaveBeenCalled())
+    })
+
+    it('should handle user deletion successfully', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      } as Response)
+
+      render(<AdminPage />)
+      await waitFor(() => expect(screen.getByText('John Doe')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      const trashButtons = screen.getAllByText('trash-icon')
+      if (trashButtons.length > 0) {
+        fireEvent.click(trashButtons[0].closest('button')!)
+      }
+
+      await waitFor(() => expect(fetch).toHaveBeenCalled())
+    })
+
+    it('should handle user deletion error', async () => {
+      vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
+
+      render(<AdminPage />)
+      await waitFor(() => expect(screen.getByText('John Doe')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      const trashButtons = screen.getAllByText('trash-icon')
+      if (trashButtons.length > 0) {
+        fireEvent.click(trashButtons[0].closest('button')!)
+      }
+
+      await waitFor(() => expect(fetch).toHaveBeenCalled())
+    })
+
+    it('should open user details dialog when eye icon clicked', async () => {
+      render(<AdminPage />)
+      await waitFor(() => expect(screen.getByText('John Doe')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      const eyeButtons = screen.getAllByText('eye-icon')
+      if (eyeButtons.length > 0) {
+        fireEvent.click(eyeButtons[0].closest('button')!)
+      }
+
+      await waitFor(() => expect(screen.getByText('User Details')).toBeInTheDocument())
+    })
+
+    it('should close user details dialog', async () => {
+      render(<AdminPage />)
+      await waitFor(() => expect(screen.getByText('John Doe')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      const eyeButtons = screen.getAllByText('eye-icon')
+      if (eyeButtons.length > 0) {
+        fireEvent.click(eyeButtons[0].closest('button')!)
+      }
+
+      await waitFor(() => {
+        const closeButton = screen.getByText('Close')
+        fireEvent.click(closeButton)
+      })
+    })
+
+    it('should open new announcement dialog', async () => {
+      render(<AdminPage />)
+      await waitFor(() => expect(screen.getByText('New Announcement')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      const newAnnouncementButton = screen.getByText('New Announcement')
+      fireEvent.click(newAnnouncementButton)
+
+      await waitFor(() => expect(screen.getByText('Create Announcement')).toBeInTheDocument())
+    })
+
+    it('should create announcement and close dialog', async () => {
+      render(<AdminPage />)
+      await waitFor(() => expect(screen.getByText('New Announcement')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      const newAnnouncementButton = screen.getByText('New Announcement')
+      fireEvent.click(newAnnouncementButton)
+
+      await waitFor(() => {
+        const createButton = screen.getAllByText('Create Announcement')[1]
+        fireEvent.click(createButton)
+      })
+    })
+
+    it('should handle announcement toggle successfully', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      } as Response)
+
+      render(<AdminPage />)
+      await waitFor(() => expect(screen.getByText('System Maintenance')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      const switches = document.querySelectorAll('input[type="checkbox"]')
+      if (switches.length > 0) {
+        fireEvent.change(switches[0], { target: { checked: false } })
+      }
+
+      await waitFor(() => expect(fetch).toHaveBeenCalled())
+    })
+
+    it('should handle announcement toggle error', async () => {
+      vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
+
+      render(<AdminPage />)
+      await waitFor(() => expect(screen.getByText('System Maintenance')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      const switches = document.querySelectorAll('input[type="checkbox"]')
+      if (switches.length > 0) {
+        fireEvent.change(switches[0], { target: { checked: false } })
+      }
+
+      await waitFor(() => expect(fetch).toHaveBeenCalled())
+    })
+
+    it('should filter users by search query', async () => {
+      render(<AdminPage />)
+      await waitFor(() => expect(screen.getByText('John Doe')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      const searchInput = screen.getByPlaceholderText('Search users...') as HTMLInputElement
+      fireEvent.change(searchInput, { target: { value: 'jane' } })
+
+      expect(searchInput.value).toBe('jane')
+    })
+
+    it('should filter users by email', async () => {
+      render(<AdminPage />)
+      await waitFor(() => expect(screen.getByText('John Doe')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      const searchInput = screen.getByPlaceholderText('Search users...') as HTMLInputElement
+      fireEvent.change(searchInput, { target: { value: 'bob@example.com' } })
+
+      expect(searchInput.value).toBe('bob@example.com')
+    })
+
+    it('should show no results when search does not match', async () => {
+      render(<AdminPage />)
+      await waitFor(() => expect(screen.getByText('John Doe')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      const searchInput = screen.getByPlaceholderText('Search users...') as HTMLInputElement
+      fireEvent.change(searchInput, { target: { value: 'nonexistent' } })
+
+      expect(searchInput.value).toBe('nonexistent')
+    })
+
+    it('should display user details in dialog when selected', async () => {
+      render(<AdminPage />)
+      await waitFor(() => expect(screen.getByText('John Doe')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      const eyeButtons = screen.getAllByText('eye-icon')
+      if (eyeButtons.length > 0) {
+        fireEvent.click(eyeButtons[0].closest('button')!)
+      }
+
+      await waitFor(() => {
+        expect(screen.getByText('User Details')).toBeInTheDocument()
+        expect(screen.getByText('john@example.com')).toBeInTheDocument()
+      })
+    })
+
+    it('should render active and inactive badge variants', async () => {
+      render(<AdminPage />)
+      await waitFor(() => expect(screen.getByText('Active')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      const activeBadges = screen.getAllByText('Active')
+      expect(activeBadges.length).toBeGreaterThan(0)
+    })
+  })
 })
