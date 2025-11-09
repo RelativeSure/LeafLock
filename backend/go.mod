@@ -9,7 +9,7 @@ require (
 	github.com/gofiber/storage/redis/v3 v3.4.1
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
-	github.com/jackc/pgx/v5 v5.7.5
+	github.com/jackc/pgx/v5 v5.7.6
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/pquerna/otp v1.5.0
 	github.com/prometheus/client_golang v1.23.2
