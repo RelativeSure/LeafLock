@@ -344,7 +344,7 @@ describe('BulkOperationsBar', () => {
 
   describe('Edge cases', () => {
     it('shows singular message for single note', async () => {
-      const store = setupStore()
+      setupStore()
       render(<BulkOperationsBar selectedNotes={['note-1']} onClose={onClose} />)
 
       fireEvent.click(screen.getByRole('button', { name: /move/i }))
@@ -360,7 +360,7 @@ describe('BulkOperationsBar', () => {
     })
 
     it('shows plural message for multiple notes', async () => {
-      const store = setupStore()
+      setupStore()
       render(<BulkOperationsBar selectedNotes={['note-1', 'note-2']} onClose={onClose} />)
 
       fireEvent.click(screen.getByRole('button', { name: /move/i }))

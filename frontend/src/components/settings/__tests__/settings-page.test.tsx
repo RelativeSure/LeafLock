@@ -363,7 +363,7 @@ describe('SettingsPage', () => {
     })
 
     it('should export notes when export button is clicked', () => {
-      const { container } = render(<SettingsPage />)
+      render(<SettingsPage />)
 
       // Find and click export button by text
       const buttons = screen.getAllByRole('button')
