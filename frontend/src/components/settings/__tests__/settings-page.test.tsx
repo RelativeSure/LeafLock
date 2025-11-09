@@ -43,7 +43,11 @@ vi.mock('@/components/ui/card', () => ({
 }))
 
 vi.mock('@/components/ui/button', () => ({
-  Button: ({ children }: any) => <button>{children}</button>,
+  Button: ({ children, ...props }: any) => (
+    <button {...props} type={props.type ?? 'button'}>
+      {children}
+    </button>
+  ),
 }))
 
 vi.mock('@/components/ui/input', () => ({
@@ -55,7 +59,16 @@ vi.mock('@/components/ui/label', () => ({
 }))
 
 vi.mock('@/components/ui/switch', () => ({
-  Switch: (props: any) => <input type="checkbox" {...props} />,
+  Switch: ({ onCheckedChange, ...props }: any) => (
+    <input
+      type="checkbox"
+      {...props}
+      onChange={(event) => {
+        onCheckedChange?.(event.target.checked)
+        props.onChange?.(event)
+      }}
+    />
+  ),
 }))
 
 vi.mock('@/components/ui/select', () => ({
@@ -354,16 +367,25 @@ describe('SettingsPage', () => {
   })
 
   describe('Import/Export functionality', () => {
+    const originalCreateObjectURL = global.URL.createObjectURL
+    const originalRevokeObjectURL = global.URL.revokeObjectURL
+
     beforeEach(() => {
       // Mock global objects
-      global.URL.createObjectURL = vi.fn(() => 'blob:mock-url')
-      global.URL.revokeObjectURL = vi.fn()
-      document.body.appendChild = vi.fn()
-      document.body.removeChild = vi.fn()
+      global.URL.createObjectURL = vi.fn(() => 'blob:mock-url') as typeof global.URL.createObjectURL
+      global.URL.revokeObjectURL = vi.fn() as typeof global.URL.revokeObjectURL
+      vi.spyOn(document.body, 'appendChild')
+      vi.spyOn(document.body, 'removeChild')
+    })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+      global.URL.createObjectURL = originalCreateObjectURL
+      global.URL.revokeObjectURL = originalRevokeObjectURL
     })
 
     it('should export notes when export button is clicked', () => {
-      const { container } = render(<SettingsPage />)
+      render(<SettingsPage />)
 
       // Find and click export button by text
       const buttons = screen.getAllByRole('button')
@@ -421,12 +443,9 @@ describe('SettingsPage', () => {
           { type: 'application/json' }
         )
 
-        Object.defineProperty(fileInput, 'files', {
-          value: [mockFile],
-          writable: false,
+        fireEvent.change(fileInput, {
+          target: { files: [mockFile] as unknown as FileList },
         })
-
-        fireEvent.change(fileInput)
 
         await waitFor(() => {
           expect(createFolder).toHaveBeenCalled()
@@ -442,12 +461,9 @@ describe('SettingsPage', () => {
       if (fileInput) {
         const mockFile = new File(['invalid json'], 'backup.json', { type: 'application/json' })
 
-        Object.defineProperty(fileInput, 'files', {
-          value: [mockFile],
-          writable: false,
+        fireEvent.change(fileInput, {
+          target: { files: [mockFile] as unknown as FileList },
         })
-
-        fireEvent.change(fileInput)
 
         // Error should be handled
         await waitFor(() => {
@@ -466,12 +482,9 @@ describe('SettingsPage', () => {
           type: 'application/json',
         })
 
-        Object.defineProperty(fileInput, 'files', {
-          value: [mockFile],
-          writable: false,
+        fireEvent.change(fileInput, {
+          target: { files: [mockFile] as unknown as FileList },
         })
-
-        fireEvent.change(fileInput)
 
         await waitFor(() => {
           expect(fileInput).toBeInTheDocument()
@@ -504,12 +517,9 @@ describe('SettingsPage', () => {
           { type: 'application/json' }
         )
 
-        Object.defineProperty(fileInput, 'files', {
-          value: [mockFile],
-          writable: false,
+        fireEvent.change(fileInput, {
+          target: { files: [mockFile] as unknown as FileList },
         })
-
-        fireEvent.change(fileInput)
 
         await waitFor(() => {
           expect(createTemplate).toHaveBeenCalled()

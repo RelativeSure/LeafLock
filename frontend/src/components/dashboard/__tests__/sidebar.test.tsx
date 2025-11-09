@@ -199,7 +199,7 @@ describe('Sidebar', () => {
   })
 
   it('should handle create note error', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     createNoteMock.mockRejectedValueOnce(new Error('Create failed'))
 
     render(<Sidebar />)
