@@ -521,54 +521,70 @@ describe('SettingsPage', () => {
   })
 
   describe('Profile picture settings', () => {
+    beforeEach(() => {
+      vi.mocked(useAuthStore).mockReturnValue({
+        user: mockUser,
+        isAuthenticated: true,
+      } as any)
+
+      vi.mocked(useSettingsStore).mockReturnValue({
+        settings: mockSettings,
+        updateSettings: vi.fn(),
+      } as any)
+
+      vi.mocked(useNotesStore).mockReturnValue({
+        notes: [],
+        folders: [],
+        tags: [],
+        createNote: vi.fn(),
+        createFolder: vi.fn(),
+        createTag: vi.fn(),
+      } as any)
+
+      vi.mocked(useTemplatesStore).mockReturnValue({
+        templates: [],
+        createTemplate: vi.fn(),
+      } as any)
+    })
+
     it('should render profile picture options', () => {
       render(<SettingsPage />)
-      // Profile settings should be in the profile tab
       expect(screen.getByTestId('tabs')).toBeInTheDocument()
     })
 
     it('should update profile picture to gravatar', async () => {
-      const updateSettings = vi.fn().mockResolvedValue({})
-
-      vi.mocked(useSettingsStore).mockReturnValue({
-        settings: mockSettings,
-        updateSettings,
-      } as any)
-
       render(<SettingsPage />)
-
-      // Profile picture settings would be in the profile tab
-      expect(screen.getByTestId('tabs')).toBeInTheDocument()
-    })
-
-    it('should update profile picture to initials', async () => {
-      const updateSettings = vi.fn().mockResolvedValue({})
-
-      vi.mocked(useSettingsStore).mockReturnValue({
-        settings: mockSettings,
-        updateSettings,
-      } as any)
-
-      render(<SettingsPage />)
-
-      expect(screen.getByTestId('tabs')).toBeInTheDocument()
-    })
-
-    it('should handle profile picture update error', async () => {
-      const updateSettings = vi.fn().mockRejectedValue(new Error('Update failed'))
-
-      vi.mocked(useSettingsStore).mockReturnValue({
-        settings: mockSettings,
-        updateSettings,
-      } as any)
-
-      render(<SettingsPage />)
-
       expect(screen.getByTestId('tabs')).toBeInTheDocument()
     })
   })
 
   describe('Settings tabs', () => {
+    beforeEach(() => {
+      vi.mocked(useAuthStore).mockReturnValue({
+        user: mockUser,
+        isAuthenticated: true,
+      } as any)
+
+      vi.mocked(useSettingsStore).mockReturnValue({
+        settings: mockSettings,
+        updateSettings: vi.fn(),
+      } as any)
+
+      vi.mocked(useNotesStore).mockReturnValue({
+        notes: [],
+        folders: [],
+        tags: [],
+        createNote: vi.fn(),
+        createFolder: vi.fn(),
+        createTag: vi.fn(),
+      } as any)
+
+      vi.mocked(useTemplatesStore).mockReturnValue({
+        templates: [],
+        createTemplate: vi.fn(),
+      } as any)
+    })
+
     it('should render Backup & Restore tab content', () => {
       render(<SettingsPage />)
 
