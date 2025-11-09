@@ -355,6 +355,31 @@ describe('SettingsPage', () => {
 
   describe('Import/Export functionality', () => {
     beforeEach(() => {
+      // Mock store returns
+      vi.mocked(useAuthStore).mockReturnValue({
+        user: mockUser,
+        isAuthenticated: true,
+      } as any)
+
+      vi.mocked(useSettingsStore).mockReturnValue({
+        settings: mockSettings,
+        updateSettings: vi.fn(),
+      } as any)
+
+      vi.mocked(useNotesStore).mockReturnValue({
+        notes: [],
+        folders: [],
+        tags: [],
+        createNote: vi.fn(),
+        createFolder: vi.fn(),
+        createTag: vi.fn(),
+      } as any)
+
+      vi.mocked(useTemplatesStore).mockReturnValue({
+        templates: [],
+        createTemplate: vi.fn(),
+      } as any)
+
       // Mock global objects
       global.URL.createObjectURL = vi.fn(() => 'blob:mock-url')
       global.URL.revokeObjectURL = vi.fn()
