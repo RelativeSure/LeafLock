@@ -52,7 +52,7 @@ describe('App', () => {
   // Skip this test as it's testing implementation details of async router loading
   // which is difficult to properly mock with dynamic imports in vitest
   it.skip('should render router provider after loading', async () => {
-    const { container } = render(<App />)
+    render(<App />)
 
     // Give the dynamic import time to resolve
     await new Promise((resolve) => setTimeout(resolve, 100))
@@ -116,7 +116,7 @@ describe('App', () => {
   })
 
   it.skip('should render with all providers', async () => {
-    const { container } = render(<App />)
+    render(<App />)
 
     await waitFor(() => {
       expect(screen.getByTestId('theme-provider')).toBeInTheDocument()
