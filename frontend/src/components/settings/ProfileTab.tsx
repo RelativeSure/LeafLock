@@ -225,7 +225,7 @@ export function ProfileTab() {
               id="bio"
               placeholder="Tell us about yourself..."
               value={bio}
-              onChange={(e) => setBio(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setBio(e.target.value)}
               maxLength={500}
               rows={4}
             />

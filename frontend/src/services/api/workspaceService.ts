@@ -21,32 +21,29 @@ export const workspaceService = {
    * Get all workspaces for the current user
    */
   getWorkspaces: async (): Promise<Workspace[]> => {
-    const response = await apiClient.get('/workspaces')
-    return response.data.workspaces || []
+    const response = await apiClient.get<{ workspaces: Workspace[] }>('/workspaces')
+    return response.workspaces || []
   },
 
   /**
    * Get a specific workspace
    */
   getWorkspace: async (id: string): Promise<Workspace> => {
-    const response = await apiClient.get(`/workspaces/${id}`)
-    return response.data
+    return await apiClient.get<Workspace>(`/workspaces/${id}`)
   },
 
   /**
    * Create a new workspace
    */
   createWorkspace: async (data: CreateWorkspaceRequest): Promise<Workspace> => {
-    const response = await apiClient.post('/workspaces', data)
-    return response.data
+    return await apiClient.post<Workspace>('/workspaces', data)
   },
 
   /**
    * Update a workspace
    */
   updateWorkspace: async (id: string, data: UpdateWorkspaceRequest): Promise<Workspace> => {
-    const response = await apiClient.put(`/workspaces/${id}`, data)
-    return response.data
+    return await apiClient.put<Workspace>(`/workspaces/${id}`, data)
   },
 
   /**

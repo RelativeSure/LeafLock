@@ -25,14 +25,10 @@ export function AdminSettingsPanel() {
   const fetchSettings = async () => {
     try {
       setIsLoading(true)
-      const response = await apiClient.get('/admin/settings')
-      setSettings(response.data.settings || {})
+      const response = await apiClient.get<{ settings: Record<string, string> }>('/admin/settings')
+      setSettings(response.settings || {})
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load settings',
-        variant: 'destructive',
-      })
+      toast.error('Failed to load settings')
     } finally {
       setIsLoading(false)
     }
@@ -43,16 +39,9 @@ export function AdminSettingsPanel() {
       setIsSaving(true)
       await apiClient.put('/admin/settings', { key, value })
       setSettings({ ...settings, [key]: value })
-      toast({
-        title: 'Success',
-        description: 'Setting updated successfully',
-      })
+      toast.success('Setting updated successfully')
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update setting',
-        variant: 'destructive',
-      })
+      toast.error('Failed to update setting')
     } finally {
       setIsSaving(false)
     }

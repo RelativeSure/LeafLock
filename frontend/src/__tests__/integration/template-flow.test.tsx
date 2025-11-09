@@ -25,7 +25,7 @@ vi.mock('@/lib/encryption-utils', () => ({
 }))
 
 // Import mocked services after mocks are declared
-import { contentService, organizationService } from '@/services/api'
+import { contentService } from '@/services/api'
 
 describe('Integration: Template Usage Flow', () => {
   const mockUser = {

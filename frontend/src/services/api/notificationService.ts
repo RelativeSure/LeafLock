@@ -43,18 +43,20 @@ export const notificationService = {
     offset = 0,
     unreadOnly = false
   ): Promise<NotificationsResponse> => {
-    const response = await apiClient.get('/notifications', {
-      params: { limit, offset, unread_only: unreadOnly },
+    const queryParams = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+      unread_only: unreadOnly.toString(),
     })
-    return response.data
+    return await apiClient.get<NotificationsResponse>(`/notifications?${queryParams}`)
   },
 
   /**
    * Get unread notification count
    */
   getUnreadCount: async (): Promise<number> => {
-    const response = await apiClient.get('/notifications/unread-count')
-    return response.data.unread_count
+    const response = await apiClient.get<{ unread_count: number }>('/notifications/unread-count')
+    return response.unread_count
   },
 
   /**
@@ -64,8 +66,7 @@ export const notificationService = {
     userId: string,
     notification: CreateNotificationRequest
   ): Promise<Notification> => {
-    const response = await apiClient.post(`/notifications/${userId}`, notification)
-    return response.data
+    return await apiClient.post<Notification>(`/notifications/${userId}`, notification)
   },
 
   /**

@@ -34,17 +34,23 @@ export const auditLogService = {
    * Get current user's audit logs
    */
   getUserAuditLogs: async (limit: number = 50, offset: number = 0): Promise<AuditLogsResponse> => {
-    const response = await apiClient.get('/audit-logs', {
-      params: { limit, offset },
-    })
-    return response.data
+    const queryParams = new URLSearchParams({ limit: limit.toString(), offset: offset.toString() })
+    return await apiClient.get<AuditLogsResponse>(`/audit-logs?${queryParams}`)
   },
 
   /**
    * Get all audit logs (admin only)
    */
   getAllAuditLogs: async (params: GetAuditLogsParams = {}): Promise<AuditLogsResponse> => {
-    const response = await apiClient.get('/admin/audit-logs', { params })
-    return response.data
+    const queryParams = new URLSearchParams()
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        queryParams.append(key, value.toString())
+      }
+    })
+    const queryString = queryParams.toString()
+    return await apiClient.get<AuditLogsResponse>(
+      `/admin/audit-logs${queryString ? `?${queryString}` : ''}`
+    )
   },
 }

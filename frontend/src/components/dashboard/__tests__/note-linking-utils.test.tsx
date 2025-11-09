@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { BacklinksSection, NoteLinkPreview, NoteLinkingUtils } from '../note-linking-utils'
-import { useNotesStore } from '@/stores/notesStore'
 import { useDecryptedNotes } from '@/hooks/use-decrypted-notes'
 
 const useNotesStoreMock = vi.hoisted(() => vi.fn())
@@ -18,7 +17,7 @@ vi.mock('@/stores/notesStore', () => ({
 }))
 
 vi.mock('@/hooks/use-decrypted-notes', () => ({
-  useDecryptedNotes: (...args: unknown[]) => useDecryptedNotesMock(...args),
+  useDecryptedNotes: () => useDecryptedNotesMock(),
 }))
 
 vi.mock('@/components/ui/card', () => ({
@@ -281,7 +280,11 @@ describe('note-linking-utils', () => {
       setupNotesStore({ notes: [baseNote] })
       setupDecryptedNotes({
         decryptedNotes: {
-          'note-123': { title: 'Decrypted Title', content: '<p>Hello world</p>' },
+          'note-123': {
+            title: 'Decrypted Title',
+            content: '<p>Hello world</p>',
+            timestamp: Date.now(),
+          },
         },
         isUnlocked: true,
         isDecrypting: false,
@@ -374,7 +377,11 @@ describe('note-linking-utils', () => {
       setupNotesStore({ notes: overrideNotes })
       setupDecryptedNotes({
         decryptedNotes: {
-          'note-123': { title: 'Sample Note', content: '<p>Preview content</p>' },
+          'note-123': {
+            title: 'Sample Note',
+            content: '<p>Preview content</p>',
+            timestamp: Date.now(),
+          },
         },
         isUnlocked: true,
         isDecrypting: false,

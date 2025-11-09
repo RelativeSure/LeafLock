@@ -41,12 +41,10 @@ export interface AdminStats {
 
 export const analyticsService = {
   async getUserAnalytics(): Promise<UserStats> {
-    const response = await apiClient.get('/analytics')
-    return response.data
+    return await apiClient.get<UserStats>('/analytics')
   },
 
   async getAdminAnalytics(): Promise<AdminStats> {
-    const response = await apiClient.get('/admin/analytics')
-    return response.data
+    return await apiClient.get<AdminStats>('/admin/analytics')
   },
 }

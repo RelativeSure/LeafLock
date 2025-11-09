@@ -60,10 +60,10 @@ describe('router', () => {
 
   it('should have all required methods', async () => {
     const { router } = await import('./router')
-    const methods = ['navigate', 'invalidate', 'update']
+    const methods = ['navigate', 'invalidate', 'update'] as const
     methods.forEach((method) => {
       expect(router).toHaveProperty(method)
-      expect(typeof router[method]).toBe('function')
+      expect(typeof (router as any)[method]).toBe('function')
     })
   })
 
