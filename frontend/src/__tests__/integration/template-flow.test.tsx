@@ -389,6 +389,7 @@ describe('Integration: Template Usage Flow', () => {
 
   describe('Template Error Handling', () => {
     it('should handle template creation failure', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
       vi.mocked(contentService.createTemplate).mockRejectedValue(new Error('Server error'))
 
       await expect(
@@ -399,9 +400,12 @@ describe('Integration: Template Usage Flow', () => {
       ).rejects.toThrow('Server error')
 
       expect(useTemplatesStore.getState().templates).toHaveLength(0)
+      expect(consoleErrorSpy).toHaveBeenCalled()
+      consoleErrorSpy.mockRestore()
     })
 
     it('should handle template deletion failure', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
       const template = {
         id: 'tpl-1',
         name: 'Template',
@@ -422,6 +426,8 @@ describe('Integration: Template Usage Flow', () => {
 
       // Template should still exist after failed deletion
       expect(useTemplatesStore.getState().templates).toHaveLength(1)
+      expect(consoleErrorSpy).toHaveBeenCalled()
+      consoleErrorSpy.mockRestore()
     })
   })
 })

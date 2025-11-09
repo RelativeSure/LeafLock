@@ -51,7 +51,7 @@ describe('config utilities', () => {
     process.env.RAILWAY_INTERNAL_HOST = 'backend.internal'
     process.env.VITE_API_URL = 'https://preview-api.leaflock.test'
     process.env.NODE_ENV = 'production'
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined)
 
     const configModule = await loadConfigModule()
     configModule.logConfig()

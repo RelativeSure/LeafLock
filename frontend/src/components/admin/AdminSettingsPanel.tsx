@@ -103,7 +103,7 @@ export function AdminSettingsPanel() {
               type="number"
               value={getSettingValue('session_timeout', '24')}
               onChange={(e) => updateSetting('session_timeout', e.target.value)}
-              onBlur={() => {}}
+              onBlur={() => undefined}
               disabled={isSaving}
             />
           </div>

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { createContext, useContext } from 'react'
 import { AdvancedSearchBar } from '../advanced-search-bar'
 
 const useNotesStoreMock = vi.fn()
@@ -70,12 +71,36 @@ vi.mock('@/components/ui/dialog', () => ({
   DialogTrigger: ({ children }: any) => <div>{children}</div>,
 }))
 
+const SelectMockContext = createContext<{
+  onValueChange?: (value: string) => void
+  value?: string
+}>({})
+
 vi.mock('@/components/ui/select', () => ({
-  Select: ({ children }: any) => <div>{children}</div>,
-  SelectTrigger: ({ children }: any) => <div>{children}</div>,
+  Select: ({ children, onValueChange, value }: any) => (
+    <SelectMockContext.Provider value={{ onValueChange, value }}>
+      <div data-testid="select">{children}</div>
+    </SelectMockContext.Provider>
+  ),
+  SelectTrigger: ({ children }: any) => <div role="button">{children}</div>,
   SelectContent: ({ children }: any) => <div>{children}</div>,
-  SelectItem: ({ children }: any) => <div>{children}</div>,
-  SelectValue: ({ placeholder }: any) => <span>{placeholder}</span>,
+  SelectItem: ({ children, value }: any) => {
+    const ctx = useContext(SelectMockContext)
+    const label = typeof children === 'string' ? children : String(value)
+    return (
+      <div
+        role="option"
+        data-testid={`select-item-${value}`}
+        onClick={() => ctx.onValueChange?.(value)}
+      >
+        {label}
+      </div>
+    )
+  },
+  SelectValue: ({ placeholder }: any) => {
+    const ctx = useContext(SelectMockContext)
+    return <span>{ctx.value || placeholder}</span>
+  },
 }))
 
 vi.mock('date-fns', () => ({
@@ -329,52 +354,33 @@ describe('AdvancedSearchBar', () => {
   })
 
   it('removes tag filter when X button is clicked', async () => {
-    useNotesStoreMock.mockReturnValue({
-      notes: sampleNotes,
-      folders: [
-        { id: 'folder-1', name: 'Projects' },
-        { id: 'folder-2', name: 'Archive' },
-      ],
-      tags: [
-        { id: 'tag-1', name: 'urgent' },
-        { id: 'tag-2', name: 'ideas' },
-      ],
-      selectNote: selectNoteMock,
-    })
+    setupDefaults()
 
     render(<AdvancedSearchBar />)
 
     openSearch()
     await waitFor(() => expect(screen.getByText(/results/i)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Meeting Notes')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Random Ideas')).toBeInTheDocument())
 
-    // Both notes should be visible initially
-    expect(screen.getByText('Meeting Notes')).toBeInTheDocument()
-    expect(screen.getByText('Random Ideas')).toBeInTheDocument()
-
-    // Click on the urgent tag filter
-    const tagButtons = screen.getAllByRole('button')
-    const urgentTagButton = tagButtons.find((btn) => btn.textContent?.includes('urgent'))
-    if (urgentTagButton) {
-      fireEvent.click(urgentTagButton)
-    }
-
-    // Now only notes with urgent tag should be visible
+    const tagOption = screen.getByTestId('select-item-urgent')
+    fireEvent.click(tagOption)
     await waitFor(() => {
       expect(screen.getByText('Meeting Notes')).toBeInTheDocument()
       expect(screen.queryByText('Random Ideas')).not.toBeInTheDocument()
     })
 
-    // Find and click the X button to remove the tag filter
-    const clearFilterButton = screen.getByRole('button', { name: /clear filters/i })
-    if (clearFilterButton) {
-      fireEvent.click(clearFilterButton)
+    const removableBadge = screen
+      .getAllByTestId('badge')
+      .find((badge) => within(badge).queryByRole('button'))
+    expect(removableBadge).toBeTruthy()
 
-      // Both notes should be visible again
-      await waitFor(() => {
-        expect(screen.getByText('Meeting Notes')).toBeInTheDocument()
-        expect(screen.getByText('Random Ideas')).toBeInTheDocument()
-      })
-    }
+    const removeButton = within(removableBadge!).getByRole('button')
+    fireEvent.click(removeButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Random Ideas')).toBeInTheDocument()
+    })
   })
 
   it('shows results count in results panel header', async () => {

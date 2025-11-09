@@ -312,7 +312,7 @@ describe('NoteList', () => {
   })
 
   it('should handle error when toggling pin fails', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const mockUpdateNote = vi.fn().mockRejectedValue(new Error('Failed to update'))
 
     vi.mocked(useNotesStore).mockReturnValue(
@@ -339,7 +339,7 @@ describe('NoteList', () => {
   })
 
   it('should handle error when deleting note fails', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const mockMoveToTrash = vi.fn().mockRejectedValue(new Error('Failed to delete'))
 
     vi.mocked(useNotesStore).mockReturnValue(

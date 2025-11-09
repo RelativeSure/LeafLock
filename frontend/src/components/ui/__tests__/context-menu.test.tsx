@@ -27,7 +27,7 @@ describe('ContextMenu component wrappers', () => {
           <ContextMenuLabel inset>Actions</ContextMenuLabel>
           <ContextMenuItem>Primary Action</ContextMenuItem>
           <ContextMenuCheckboxItem checked>Persistent toggle</ContextMenuCheckboxItem>
-          <ContextMenuRadioGroup value="a" onValueChange={() => {}}>
+          <ContextMenuRadioGroup value="a" onValueChange={() => undefined}>
             <ContextMenuRadioItem value="a">Choice A</ContextMenuRadioItem>
             <ContextMenuRadioItem value="b">Choice B</ContextMenuRadioItem>
           </ContextMenuRadioGroup>

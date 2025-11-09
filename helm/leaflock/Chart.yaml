@@ -20,13 +20,13 @@ kubeVersion: ">=1.24.0"
 
 dependencies:
   - name: postgresql
-    version: 18.1.5
+    version: 18.1.8
     repository: https://charts.bitnami.com/bitnami
     condition: postgresql.enabled
     tags:
       - database
   - name: redis
-    version: 23.2.11
+    version: 23.2.12
     repository: https://charts.bitnami.com/bitnami
     condition: redis.enabled
     tags:

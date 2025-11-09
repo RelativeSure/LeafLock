@@ -14,15 +14,19 @@ const prototype = Element.prototype as Element & {
   scrollIntoView?: (arg?: boolean | ScrollIntoViewOptions) => void
 }
 
+const noop = () => undefined
+
 if (!prototype.setPointerCapture) {
   prototype.setPointerCapture = () => {
     /* no-op polyfill for jsdom */
+    return undefined
   }
 }
 
 if (!prototype.releasePointerCapture) {
   prototype.releasePointerCapture = () => {
     /* no-op polyfill for jsdom */
+    return undefined
   }
 }
 
@@ -33,14 +37,32 @@ if (!prototype.hasPointerCapture) {
 if (!prototype.scrollIntoView) {
   prototype.scrollIntoView = () => {
     /* jsdom does not implement scrollIntoView */
+    return undefined
+  }
+}
+
+if (typeof File !== 'undefined' && typeof File.prototype.text !== 'function') {
+  ;(File.prototype as any).text = function (this: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = () => reject(reader.error)
+      reader.readAsText(this)
+    })
   }
 }
 
 // Polyfill for ResizeObserver (used by slider, tooltip components)
 global.ResizeObserver = class ResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  observe(): void {
+    return undefined
+  }
+  unobserve(): void {
+    return undefined
+  }
+  disconnect(): void {
+    return undefined
+  }
 }
 
 // Polyfill for IntersectionObserver (used by rolling-text component)
@@ -50,9 +72,15 @@ global.IntersectionObserver = class IntersectionObserver {
     this.rootMargin = ''
     this.thresholds = []
   }
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  observe(): void {
+    return undefined
+  }
+  unobserve(): void {
+    return undefined
+  }
+  disconnect(): void {
+    return undefined
+  }
   takeRecords() {
     return []
   }
@@ -68,10 +96,10 @@ Object.defineProperty(window, 'matchMedia', {
     matches: false,
     media: query,
     onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
+    addListener: noop,
+    removeListener: noop,
+    addEventListener: noop,
+    removeEventListener: noop,
     dispatchEvent: () => false,
   }),
 })

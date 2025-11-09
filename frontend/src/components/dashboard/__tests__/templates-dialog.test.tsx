@@ -557,7 +557,7 @@ describe('TemplatesDialog', () => {
   })
 
   it('handles apply template error gracefully', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     applyTemplateMock.mockRejectedValue(new Error('Apply failed'))
 
     mockTemplatesStore({
@@ -589,7 +589,7 @@ describe('TemplatesDialog', () => {
   })
 
   it('handles delete template error gracefully', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     deleteTemplateMock.mockRejectedValue(new Error('Delete failed'))
 
     mockTemplatesStore({
@@ -621,7 +621,7 @@ describe('TemplatesDialog', () => {
   })
 
   it('handles toggle share error gracefully', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     shareTemplateMock.mockRejectedValue(new Error('Share failed'))
 
     mockTemplatesStore({
