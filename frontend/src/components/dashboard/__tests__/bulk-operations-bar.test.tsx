@@ -328,7 +328,9 @@ describe('BulkOperationsBar', () => {
       render(<BulkOperationsBar selectedNotes={['note-1']} onClose={onClose} />)
 
       fireEvent.click(screen.getByRole('button', { name: /tags/i }))
-      await waitFor(() => expect(screen.getByRole('button', { name: /create/i })).toBeInTheDocument())
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /create/i })).toBeInTheDocument()
+      )
       const input = screen.getByPlaceholderText('Enter tag name...')
       fireEvent.change(input, { target: { value: 'custom-tag' } })
       fireEvent.click(screen.getByRole('button', { name: /create/i }))
@@ -411,7 +413,9 @@ describe('BulkOperationsBar', () => {
       render(<BulkOperationsBar selectedNotes={['note-1']} onClose={onClose} />)
 
       fireEvent.click(screen.getByRole('button', { name: /tags/i }))
-      await waitFor(() => expect(screen.getByRole('button', { name: /create/i })).toBeInTheDocument())
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /create/i })).toBeInTheDocument()
+      )
 
       // Try to create with empty input
       fireEvent.click(screen.getByRole('button', { name: /create/i }))

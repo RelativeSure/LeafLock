@@ -728,7 +728,6 @@ describe('AdminPage', () => {
       await waitFor(() => expect(fetch).toHaveBeenCalled())
     })
 
-
     it('should handle user status change error', async () => {
       vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
 
@@ -861,6 +860,5 @@ describe('AdminPage', () => {
 
       expect(searchInput.value).toBe('nonexistent')
     })
-
   })
 })

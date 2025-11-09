@@ -462,11 +462,9 @@ describe('SettingsPage', () => {
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
 
       if (fileInput) {
-        const mockFile = new File(
-          [JSON.stringify({ notes: [] })],
-          'backup.json',
-          { type: 'application/json' }
-        )
+        const mockFile = new File([JSON.stringify({ notes: [] })], 'backup.json', {
+          type: 'application/json',
+        })
 
         Object.defineProperty(fileInput, 'files', {
           value: [mockFile],
