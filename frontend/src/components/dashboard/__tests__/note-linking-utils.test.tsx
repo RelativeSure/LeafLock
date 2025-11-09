@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { BacklinksSection, NoteLinkPreview, NoteLinkingUtils } from '../note-linking-utils'
-import { useNotesStore } from '@/stores/notesStore'
 import { useDecryptedNotes } from '@/hooks/use-decrypted-notes'
 
 const useNotesStoreMock = vi.hoisted(() => vi.fn())
@@ -18,15 +17,14 @@ vi.mock('@/stores/notesStore', () => ({
 }))
 
 vi.mock('@/hooks/use-decrypted-notes', () => ({
-  useDecryptedNotes: (...args: unknown[]) => useDecryptedNotesMock(...args),
+  useDecryptedNotes: () => useDecryptedNotesMock(),
 }))
 
 vi.mock('@/components/ui/card', () => ({
   Card: ({ children }: any) => <div data-testid="card">{children}</div>,
   CardHeader: ({ children }: any) => <div>{children}</div>,
   CardTitle: ({ children }: any) => <h3>{children}</h3>,
-  CardDescription: ({ children, asChild }: any) =>
-    asChild ? <>{children}</> : <p>{children}</p>,
+  CardDescription: ({ children, asChild }: any) => (asChild ? <>{children}</> : <p>{children}</p>),
   CardContent: ({ children }: any) => <div>{children}</div>,
 }))
 
@@ -183,7 +181,7 @@ describe('note-linking-utils', () => {
       expect(container.firstChild).toBeNull()
     })
 
-   it('should handle notes without titles', async () => {
+    it('should handle notes without titles', async () => {
       setupNotesStore({
         notes: [
           { id: 'note-1', title: 'Target Note', content: '', createdAt: '', updatedAt: '' },
@@ -282,7 +280,11 @@ describe('note-linking-utils', () => {
       setupNotesStore({ notes: [baseNote] })
       setupDecryptedNotes({
         decryptedNotes: {
-          'note-123': { title: 'Decrypted Title', content: '<p>Hello world</p>' },
+          'note-123': {
+            title: 'Decrypted Title',
+            content: '<p>Hello world</p>',
+            timestamp: Date.now(),
+          },
         },
         isUnlocked: true,
         isDecrypting: false,
@@ -317,9 +319,7 @@ describe('note-linking-utils', () => {
       render(<NoteLinkPreview noteId="note-123" onClose={vi.fn()} onNavigate={vi.fn()} />)
 
       await waitFor(() => {
-        expect(
-          screen.getByText('Unlock your notes to preview linked content.')
-        ).toBeInTheDocument()
+        expect(screen.getByText('Unlock your notes to preview linked content.')).toBeInTheDocument()
       })
     })
 
@@ -377,7 +377,11 @@ describe('note-linking-utils', () => {
       setupNotesStore({ notes: overrideNotes })
       setupDecryptedNotes({
         decryptedNotes: {
-          'note-123': { title: 'Sample Note', content: '<p>Preview content</p>' },
+          'note-123': {
+            title: 'Sample Note',
+            content: '<p>Preview content</p>',
+            timestamp: Date.now(),
+          },
         },
         isUnlocked: true,
         isDecrypting: false,

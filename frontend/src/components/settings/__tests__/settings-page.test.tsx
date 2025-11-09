@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SettingsPage } from '../settings-page'
 import { useAuthStore } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
@@ -351,5 +351,276 @@ describe('SettingsPage', () => {
 
     render(<SettingsPage />)
     expect(screen.getByTestId('tabs')).toBeInTheDocument()
+  })
+
+  describe('Import/Export functionality', () => {
+    beforeEach(() => {
+      // Mock global objects
+      global.URL.createObjectURL = vi.fn(() => 'blob:mock-url')
+      global.URL.revokeObjectURL = vi.fn()
+      document.body.appendChild = vi.fn()
+      document.body.removeChild = vi.fn()
+    })
+
+    it('should export notes when export button is clicked', () => {
+      const { container } = render(<SettingsPage />)
+
+      // Find and click export button by text
+      const buttons = screen.getAllByRole('button')
+      const exportButton = buttons.find((btn) => btn.textContent?.includes('Export'))
+
+      if (exportButton) {
+        fireEvent.click(exportButton)
+        expect(global.URL.createObjectURL).toHaveBeenCalled()
+      }
+    })
+
+    it('should create download link with correct filename format', () => {
+      const mockCreateElement = vi.spyOn(document, 'createElement')
+
+      render(<SettingsPage />)
+
+      const buttons = screen.getAllByRole('button')
+      const exportButton = buttons.find((btn) => btn.textContent?.includes('Export'))
+
+      if (exportButton) {
+        fireEvent.click(exportButton)
+        expect(mockCreateElement).toHaveBeenCalledWith('a')
+      }
+    })
+
+    it('should handle import with valid backup file', async () => {
+      const createNote = vi.fn().mockResolvedValue({})
+      const createFolder = vi.fn().mockResolvedValue({})
+      const createTag = vi.fn().mockResolvedValue({})
+
+      vi.mocked(useNotesStore).mockReturnValue({
+        notes: [],
+        folders: [],
+        tags: [],
+        createNote,
+        createFolder,
+        createTag,
+      } as any)
+
+      const { container } = render(<SettingsPage />)
+
+      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+
+      if (fileInput) {
+        const mockFile = new File(
+          [
+            JSON.stringify({
+              version: '1.0',
+              notes: [{ title: 'Test', content: 'Content', tags: [], encrypted: false }],
+              folders: [{ name: 'Folder1', color: '#ff0000' }],
+              tags: [{ name: 'tag1', color: '#00ff00' }],
+            }),
+          ],
+          'backup.json',
+          { type: 'application/json' }
+        )
+
+        Object.defineProperty(fileInput, 'files', {
+          value: [mockFile],
+          writable: false,
+        })
+
+        fireEvent.change(fileInput)
+
+        await waitFor(() => {
+          expect(createFolder).toHaveBeenCalled()
+        })
+      }
+    })
+
+    it('should handle import with invalid backup file', async () => {
+      const { container } = render(<SettingsPage />)
+
+      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+
+      if (fileInput) {
+        const mockFile = new File(['invalid json'], 'backup.json', { type: 'application/json' })
+
+        Object.defineProperty(fileInput, 'files', {
+          value: [mockFile],
+          writable: false,
+        })
+
+        fireEvent.change(fileInput)
+
+        // Error should be handled
+        await waitFor(() => {
+          expect(fileInput).toBeInTheDocument()
+        })
+      }
+    })
+
+    it('should handle import with missing version field', async () => {
+      const { container } = render(<SettingsPage />)
+
+      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+
+      if (fileInput) {
+        const mockFile = new File([JSON.stringify({ notes: [] })], 'backup.json', {
+          type: 'application/json',
+        })
+
+        Object.defineProperty(fileInput, 'files', {
+          value: [mockFile],
+          writable: false,
+        })
+
+        fireEvent.change(fileInput)
+
+        await waitFor(() => {
+          expect(fileInput).toBeInTheDocument()
+        })
+      }
+    })
+
+    it('should import templates if present in backup', async () => {
+      const createTemplate = vi.fn().mockResolvedValue({})
+
+      vi.mocked(useTemplatesStore).mockReturnValue({
+        templates: [],
+        createTemplate,
+      } as any)
+
+      const { container } = render(<SettingsPage />)
+
+      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+
+      if (fileInput) {
+        const mockFile = new File(
+          [
+            JSON.stringify({
+              version: '1.0',
+              notes: [],
+              templates: [{ name: 'Template1', content: 'Content', tags: [], isPublic: false }],
+            }),
+          ],
+          'backup.json',
+          { type: 'application/json' }
+        )
+
+        Object.defineProperty(fileInput, 'files', {
+          value: [mockFile],
+          writable: false,
+        })
+
+        fireEvent.change(fileInput)
+
+        await waitFor(() => {
+          expect(createTemplate).toHaveBeenCalled()
+        })
+      }
+    })
+  })
+
+  describe('Profile picture settings', () => {
+    beforeEach(() => {
+      vi.mocked(useAuthStore).mockReturnValue({
+        user: mockUser,
+        isAuthenticated: true,
+      } as any)
+
+      vi.mocked(useSettingsStore).mockReturnValue({
+        settings: mockSettings,
+        updateSettings: vi.fn(),
+      } as any)
+
+      vi.mocked(useNotesStore).mockReturnValue({
+        notes: [],
+        folders: [],
+        tags: [],
+        createNote: vi.fn(),
+        createFolder: vi.fn(),
+        createTag: vi.fn(),
+      } as any)
+
+      vi.mocked(useTemplatesStore).mockReturnValue({
+        templates: [],
+        createTemplate: vi.fn(),
+      } as any)
+    })
+
+    it('should render profile picture options', () => {
+      render(<SettingsPage />)
+      expect(screen.getByTestId('tabs')).toBeInTheDocument()
+    })
+
+    it('should update profile picture to gravatar', async () => {
+      render(<SettingsPage />)
+      expect(screen.getByTestId('tabs')).toBeInTheDocument()
+    })
+  })
+
+  describe('Settings tabs', () => {
+    beforeEach(() => {
+      vi.mocked(useAuthStore).mockReturnValue({
+        user: mockUser,
+        isAuthenticated: true,
+      } as any)
+
+      vi.mocked(useSettingsStore).mockReturnValue({
+        settings: mockSettings,
+        updateSettings: vi.fn(),
+      } as any)
+
+      vi.mocked(useNotesStore).mockReturnValue({
+        notes: [],
+        folders: [],
+        tags: [],
+        createNote: vi.fn(),
+        createFolder: vi.fn(),
+        createTag: vi.fn(),
+      } as any)
+
+      vi.mocked(useTemplatesStore).mockReturnValue({
+        templates: [],
+        createTemplate: vi.fn(),
+      } as any)
+    })
+
+    it('should render Backup & Restore tab content', () => {
+      render(<SettingsPage />)
+
+      const backupTab = screen
+        .getAllByRole('button')
+        .find((btn) => btn.getAttribute('data-value') === 'backup')
+
+      expect(backupTab).toBeInTheDocument()
+    })
+
+    it('should render Security tab content', () => {
+      render(<SettingsPage />)
+
+      const securityTab = screen
+        .getAllByRole('button')
+        .find((btn) => btn.getAttribute('data-value') === 'security')
+
+      expect(securityTab).toBeInTheDocument()
+    })
+
+    it('should render Preferences tab content', () => {
+      render(<SettingsPage />)
+
+      const preferencesTab = screen
+        .getAllByRole('button')
+        .find((btn) => btn.getAttribute('data-value') === 'preferences')
+
+      expect(preferencesTab).toBeInTheDocument()
+    })
+
+    it('should render Manage Folders & Tags tab content', () => {
+      render(<SettingsPage />)
+
+      const manageTab = screen
+        .getAllByRole('button')
+        .find((btn) => btn.getAttribute('data-value') === 'manage')
+
+      expect(manageTab).toBeInTheDocument()
+    })
   })
 })

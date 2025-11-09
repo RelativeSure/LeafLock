@@ -48,16 +48,9 @@ export function WorkspaceManager() {
       await createWorkspace(newWorkspaceName)
       setNewWorkspaceName('')
       setIsCreateOpen(false)
-      toast({
-        title: 'Success',
-        description: 'Workspace created successfully',
-      })
+      toast.success('Workspace created successfully')
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create workspace',
-        variant: 'destructive',
-      })
+      toast.error('Failed to create workspace')
     }
   }
 
@@ -68,16 +61,9 @@ export function WorkspaceManager() {
       await updateWorkspace(editingWorkspace.id, editingWorkspace.name)
       setEditingWorkspace(null)
       setIsEditOpen(false)
-      toast({
-        title: 'Success',
-        description: 'Workspace updated successfully',
-      })
+      toast.success('Workspace updated successfully')
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update workspace',
-        variant: 'destructive',
-      })
+      toast.error('Failed to update workspace')
     }
   }
 
@@ -88,16 +74,9 @@ export function WorkspaceManager() {
       await deleteWorkspace(deletingWorkspaceId)
       setDeletingWorkspaceId(null)
       setIsDeleteOpen(false)
-      toast({
-        title: 'Success',
-        description: 'Workspace deleted successfully',
-      })
+      toast.success('Workspace deleted successfully')
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to delete workspace',
-        variant: 'destructive',
-      })
+      toast.error(error instanceof Error ? error.message : 'Failed to delete workspace')
     }
   }
 

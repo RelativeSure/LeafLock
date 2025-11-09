@@ -37,7 +37,6 @@ export const searchService = {
    * Note: Content search is performed client-side after decryption
    */
   searchNotes: async (filters: SearchFilters = {}): Promise<SearchResponse> => {
-    const response = await apiClient.post('/search', filters)
-    return response.data
+    return await apiClient.post<SearchResponse>('/search', filters)
   },
 }

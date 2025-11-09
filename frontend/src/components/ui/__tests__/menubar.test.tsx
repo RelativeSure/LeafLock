@@ -42,7 +42,7 @@ describe('Menubar UI primitives', () => {
             <MenubarShortcut>⌘N</MenubarShortcut>
           </MenubarContent>
         </MenubarMenu>
-      </Menubar>,
+      </Menubar>
     )
 
     await user.click(screen.getByText('File'))
@@ -69,7 +69,7 @@ describe('Menubar UI primitives', () => {
             <MenubarShortcut className="text-primary">⌘E</MenubarShortcut>
           </MenubarContent>
         </MenubarMenu>
-      </Menubar>,
+      </Menubar>
     )
 
     await user.click(screen.getByText('Edit'))

@@ -22,11 +22,7 @@ export function AdminAnalyticsDashboard() {
       const data = await analyticsService.getAdminAnalytics()
       setStats(data)
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load admin analytics',
-        variant: 'destructive',
-      })
+      toast.error('Failed to load admin analytics')
     } finally {
       setIsLoading(false)
     }

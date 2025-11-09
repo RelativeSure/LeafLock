@@ -101,8 +101,7 @@ vi.mock('@/components/ui/card', () => ({
   Card: ({ children }: any) => <div>{children}</div>,
   CardHeader: ({ children }: any) => <div>{children}</div>,
   CardTitle: ({ children }: any) => <h3>{children}</h3>,
-  CardDescription: ({ children, asChild }: any) =>
-    asChild ? <>{children}</> : <p>{children}</p>,
+  CardDescription: ({ children, asChild }: any) => (asChild ? <>{children}</> : <p>{children}</p>),
   CardContent: ({ children }: any) => <div>{children}</div>,
 }))
 

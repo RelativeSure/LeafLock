@@ -11,27 +11,32 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 -- UUIDv7 function for time-ordered UUIDs (PostgreSQL 18+ native or custom implementation)
 CREATE OR REPLACE FUNCTION uuid_generate_v7()
 RETURNS UUID AS $$
+DECLARE
+    unix_ts_ms BIGINT;
+    uuid_bytes BYTEA;
+    hex_string TEXT;
 BEGIN
-    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_uuidv7') THEN
-        -- Use native pg_uuidv7 if available
-        PERFORM uuid_generate_v7();
-    ELSE
-        -- Custom implementation for older PostgreSQL versions
-        DECLARE
-            unix_ts_ms BIGINT;
-            timestamp_bytes BYTEA;
-            random_bytes BYTEA;
-            combined BYTEA;
-        BEGIN
-            unix_ts_ms := EXTRACT(EPOCH FROM NOW()) * 1000;
-            timestamp_bytes := substring(int8send(unix_ts_ms::INT8) FROM 2 FOR 6);
-            random_bytes := gen_random_bytes(10);
+    -- Get current timestamp in milliseconds
+    unix_ts_ms := EXTRACT(EPOCH FROM NOW()) * 1000;
 
-            -- Construct UUIDv7 format: timestamp (48 bits) + version (4 bits) + random (62 bits)
-            combined := timestamp_bytes || substring(random_bytes FROM 1);
-            return combined::UUID;
-        END;
-    END IF;
+    -- Build 16-byte UUID:
+    -- 6 bytes: timestamp (48 bits)
+    -- 2 bytes: version (4 bits = 0x7) + random (12 bits)
+    -- 8 bytes: variant (2 bits = 0b10) + random (62 bits)
+    uuid_bytes :=
+        substring(int8send(unix_ts_ms::BIGINT) FROM 3 FOR 6) ||  -- 6 bytes timestamp
+        set_byte(gen_random_bytes(2), 0, (get_byte(gen_random_bytes(1), 0) & 15) | 112) || -- version byte (0x70 = version 7)
+        set_byte(gen_random_bytes(8), 0, (get_byte(gen_random_bytes(1), 0) & 63) | 128);   -- variant byte (0x80-0xBF)
+
+    -- Convert to hex and format as UUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+    hex_string := encode(uuid_bytes, 'hex');
+    RETURN (
+        substring(hex_string FROM 1 FOR 8) || '-' ||
+        substring(hex_string FROM 9 FOR 4) || '-' ||
+        substring(hex_string FROM 13 FOR 4) || '-' ||
+        substring(hex_string FROM 17 FOR 4) || '-' ||
+        substring(hex_string FROM 21 FOR 12)
+    )::UUID;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -187,7 +192,11 @@ CREATE TABLE IF NOT EXISTS notes (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
-    version INT DEFAULT 1
+    version INT DEFAULT 1,
+    is_pinned BOOLEAN DEFAULT FALSE,
+    pinned_order INT DEFAULT 0,
+    is_locked BOOLEAN DEFAULT FALSE,
+    locked_by UUID REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Note versions for history tracking
@@ -485,16 +494,45 @@ ALTER TABLE note_versions ADD COLUMN IF NOT EXISTS change_description TEXT;
 -- Add index on note_versions for performance (latest versions first)
 CREATE INDEX IF NOT EXISTS idx_note_versions_created_at ON note_versions(note_id, created_at DESC);
 
--- Add is_pinned column for pinned/favorite notes
-ALTER TABLE notes ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT false;
+-- Fix: Add missing columns with proper type checking
+-- This checks if columns exist and adds them only if missing
+DO $$
+BEGIN
+    -- Add is_pinned if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='notes' AND column_name='is_pinned') THEN
+        ALTER TABLE notes ADD COLUMN is_pinned BOOLEAN DEFAULT false;
+        RAISE NOTICE 'Added is_pinned column to notes table';
+    END IF;
 
--- Add is_locked column for read-only note protection
-ALTER TABLE notes ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT false;
-ALTER TABLE notes ADD COLUMN IF NOT EXISTS locked_by UUID REFERENCES users(id) ON DELETE SET NULL;
-ALTER TABLE notes ADD COLUMN IF NOT EXISTS locked_at TIMESTAMPTZ;
+    -- Add pinned_order if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='notes' AND column_name='pinned_order') THEN
+        ALTER TABLE notes ADD COLUMN pinned_order INT DEFAULT 0;
+        RAISE NOTICE 'Added pinned_order column to notes table';
+    END IF;
 
--- Add pinned_order column for custom ordering of pinned notes
-ALTER TABLE notes ADD COLUMN IF NOT EXISTS pinned_order INT DEFAULT 0;
+    -- Add is_locked if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='notes' AND column_name='is_locked') THEN
+        ALTER TABLE notes ADD COLUMN is_locked BOOLEAN DEFAULT false;
+        RAISE NOTICE 'Added is_locked column to notes table';
+    END IF;
+
+    -- Add locked_by if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='notes' AND column_name='locked_by') THEN
+        ALTER TABLE notes ADD COLUMN locked_by UUID REFERENCES users(id) ON DELETE SET NULL;
+        RAISE NOTICE 'Added locked_by column to notes table';
+    END IF;
+
+    -- Add locked_at if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='notes' AND column_name='locked_at') THEN
+        ALTER TABLE notes ADD COLUMN locked_at TIMESTAMPTZ;
+        RAISE NOTICE 'Added locked_at column to notes table';
+    END IF;
+END $$;
 
 -- Create index for efficient pinned notes queries
 CREATE INDEX IF NOT EXISTS idx_notes_pinned ON notes(is_pinned, pinned_order DESC, updated_at DESC) WHERE deleted_at IS NULL;

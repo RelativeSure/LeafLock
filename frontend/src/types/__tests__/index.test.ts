@@ -46,7 +46,11 @@ describe('Types', () => {
       color: '#3b82f6',
       userId: '123',
       parentId: null,
+      position: 0,
+      depth: 0,
+      path: '/My Folder',
       createdAt: '2024-01-01',
+      updatedAt: '2024-01-01',
     }
 
     expect(folder.id).toBe('folder-1')

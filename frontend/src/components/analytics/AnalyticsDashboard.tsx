@@ -31,11 +31,7 @@ export function AnalyticsDashboard() {
       const data = await analyticsService.getUserAnalytics()
       setStats(data)
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load analytics',
-        variant: 'destructive',
-      })
+      toast.error('Failed to load analytics')
     } finally {
       setIsLoading(false)
     }

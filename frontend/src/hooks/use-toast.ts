@@ -1,6 +1,6 @@
 import { toast as sonnerToast } from 'sonner'
 
-export function useToast() {
+export function useToast(): { toast: typeof sonnerToast } {
   return {
     toast: sonnerToast,
   }
