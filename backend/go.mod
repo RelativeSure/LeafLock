@@ -16,7 +16,7 @@ require (
 	github.com/redis/go-redis/v9 v9.13.0
 	github.com/stretchr/testify v1.11.1
 	github.com/swaggo/swag v1.16.6
-	github.com/valyala/fasthttp v1.65.0
+	github.com/valyala/fasthttp v1.68.0
 	golang.org/x/crypto v0.43.0
 )
 
