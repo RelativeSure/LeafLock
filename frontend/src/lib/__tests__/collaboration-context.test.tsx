@@ -249,7 +249,7 @@ describe('CollaborationContext', () => {
   })
 
   it('should handle API errors when loading collaborators', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     mockGetCollaborators.mockRejectedValue(new Error('API Error'))
 
     const { result } = renderHook(() => useCollaboration())

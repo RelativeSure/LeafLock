@@ -114,11 +114,15 @@ describe('templatesStore - Advanced Scenarios', () => {
     })
 
     it('should handle creation errors', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
       vi.mocked(contentService.createTemplate).mockRejectedValue(new Error('Creation failed'))
 
       await expect(
         useTemplatesStore.getState().createTemplate({ name: 'Test', content: '# Heading' })
       ).rejects.toThrow('Creation failed')
+
+      expect(consoleErrorSpy).toHaveBeenCalled()
+      consoleErrorSpy.mockRestore()
     })
 
     it('should increment usage count when template is used', async () => {
@@ -185,11 +189,15 @@ describe('templatesStore - Advanced Scenarios', () => {
     })
 
     it('should handle update errors', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
       vi.mocked(contentService.updateTemplate).mockRejectedValue(new Error('Update failed'))
 
       await expect(
         useTemplatesStore.getState().updateTemplate('tpl-1', { name: 'Test' })
       ).rejects.toThrow('Update failed')
+
+      expect(consoleErrorSpy).toHaveBeenCalled()
+      consoleErrorSpy.mockRestore()
     })
   })
 
@@ -208,6 +216,7 @@ describe('templatesStore - Advanced Scenarios', () => {
     })
 
     it('should handle delete errors', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
       vi.mocked(contentService.deleteTemplate).mockRejectedValue(new Error('Delete failed'))
 
       await expect(useTemplatesStore.getState().deleteTemplate('tpl-1')).rejects.toThrow(
@@ -215,6 +224,8 @@ describe('templatesStore - Advanced Scenarios', () => {
       )
 
       expect(useTemplatesStore.getState().templates).toHaveLength(1)
+      expect(consoleErrorSpy).toHaveBeenCalled()
+      consoleErrorSpy.mockRestore()
     })
   })
 

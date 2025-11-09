@@ -7,7 +7,7 @@ const mockRouter = {
       pathname: '/',
     },
   },
-  subscribe: vi.fn(() => () => {}),
+  subscribe: vi.fn(() => () => undefined),
 }
 
 // Mock the dynamic import of the router
