@@ -250,6 +250,8 @@ github.com/testcontainers/testcontainers-go/modules/redis v0.38.0 h1:289pn0BFmGq
 github.com/testcontainers/testcontainers-go/modules/redis v0.38.0/go.mod h1:EcKPWRzOglnQfYe+ekA8RPEIWSNJTGwaC5oE5bQV+D0=
 github.com/tinylib/msgp v1.4.0 h1:SYOeDRiydzOw9kSiwdYp9UcBgPFtLU2WDHaJXyHruf8=
 github.com/tinylib/msgp v1.4.0/go.mod h1:cvjFkb4RiC8qSBOPMGPSzSAx47nAsfhLVTCZZNuHv5o=
+github.com/tinylib/msgp v1.5.0 h1:GWnqAE54wmnlFazjq2+vgr736Akg58iiHImh+kPY2pc=
+github.com/tinylib/msgp v1.5.0/go.mod h1:cvjFkb4RiC8qSBOPMGPSzSAx47nAsfhLVTCZZNuHv5o=
 github.com/tklauser/go-sysconf v0.3.12 h1:0QaGUFOdQaIVdPgfITYzaTegZvdCjmYO52cSFAEVmqU=
 github.com/tklauser/go-sysconf v0.3.12/go.mod h1:Ho14jnntGE1fpdOqQEEaiKRpvIavV0hSfmBq8nJbHYI=
 github.com/tklauser/numcpus v0.6.1 h1:ng9scYS7az0Bk4OZLvrNXNSAO2Pxr1XXRAPyjhIx+Fk=
