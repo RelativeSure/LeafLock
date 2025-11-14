@@ -50,7 +50,7 @@ spec:
         # Wait for database to be ready
         {{- if .Values.postgresql.enabled }}
         - name: wait-for-postgres
-          image: postgres:18-alpine@sha256:48c8ad3a7284b82be4482a52076d47d879fd6fb084a1cbfccbd551f9331b0e40
+          image: postgres:18-alpine@sha256:655a411a84c1d7af7a21473c2eda3d8d24d7a9ff38ca279c897871b34acc0ce1
           command:
             - sh
             - -c
