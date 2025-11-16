@@ -97,42 +97,34 @@ export function Sidebar() {
 
   const sidebarContent = (
     <div className="w-full border-r border-border bg-card flex flex-col h-full overflow-hidden">
-      <div className="p-4 border-b border-border space-y-3 flex-shrink-0">
-        {/* Dynamic search - filters notes as you type */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search notes..."
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            className="pl-9"
-          />
-        </div>
+      <div className="p-4 border-b border-border space-y-2 flex-shrink-0">
+        {/* New Note button - prominent at top */}
+        <Button
+          onClick={handleCreateNote}
+          className="w-full transition-bounce hover-lift"
+          size="default"
+          disabled={isLoading}
+          data-testid="new-note-button"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          New Note
+        </Button>
 
+        {/* Action buttons row */}
         <div className="flex gap-2">
-          <Button
-            onClick={handleCreateNote}
-            className="flex-1 transition-bounce hover-lift"
-            size="sm"
-            disabled={isLoading}
-            data-testid="new-note-button"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            New Note
-          </Button>
-
           <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
             <DialogTrigger asChild>
               <Button
                 variant="outline"
                 size="sm"
-                className="transition-smooth hover-lift bg-transparent"
-                title="Create Folder"
+                className="flex-1 gap-1 bg-transparent"
+                title="New Folder"
               >
                 <FolderPlus className="h-4 w-4" />
+                <span className="text-xs">Folder</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="animate-scale-in">
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Create Folder</DialogTitle>
               </DialogHeader>
@@ -180,13 +172,27 @@ export function Sidebar() {
           <Button
             variant="outline"
             size="sm"
-            className="transition-smooth hover-lift bg-transparent"
-            title="Create Tag"
+            className="flex-1 gap-1 bg-transparent"
+            title="New Tag"
             onClick={() => {
               window.location.href = '/manage'
             }}
           >
             <Tag className="h-4 w-4" />
+            <span className="text-xs">Tag</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 gap-1 bg-transparent"
+            onClick={() => setIsTemplatesOpen(true)}
+            disabled={isLoading}
+            data-testid="templates-button"
+            title="Templates"
+          >
+            <Library className="h-4 w-4" />
+            <span className="text-xs">Template</span>
           </Button>
         </div>
       </div>
@@ -246,7 +252,20 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* Notes List - Now in middle, takes remaining space */}
+      {/* Search bar - above notes list */}
+      <div className="px-4 pt-3 pb-2 border-b border-border flex-shrink-0">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search notes..."
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
+      {/* Notes List - takes remaining space */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center h-32">
@@ -258,21 +277,8 @@ export function Sidebar() {
       </div>
 
       {/* Bottom Actions */}
-      <div className="p-4 border-t border-border space-y-2 flex-shrink-0">
-        <div className="flex gap-2">
-          <TrashDialog />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsTemplatesOpen(true)}
-            className="flex-1 gap-2 bg-transparent"
-            disabled={isLoading}
-            data-testid="templates-button"
-          >
-            <Library className="h-4 w-4" />
-            Templates
-          </Button>
-        </div>
+      <div className="p-4 border-t border-border flex-shrink-0">
+        <TrashDialog />
       </div>
 
       <TemplatesDialog open={isTemplatesOpen} onOpenChange={setIsTemplatesOpen} />
