@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { useNotesStore } from '../../stores/notesStore'
 // Encryption unlock dialog integration removed due to runtime error; rely on existing flows
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { FolderPlus, Plus, Menu, Library, Tag, TagIcon, Search } from 'lucide-react'
+import { FolderPlus, Plus, Menu, Library, Tag, TagIcon, Search, FolderTree } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,7 @@ import { NoteList } from './note-list'
 import { TrashDialog } from './trash-dialog'
 
 export function Sidebar() {
+  const navigate = useNavigate()
   const {
     selectedNote,
     createNote,
@@ -136,13 +138,24 @@ export function Sidebar() {
 
       {/* Bottom Actions */}
       <div className="p-3 border-t border-border flex-shrink-0">
-        <div className="flex gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <TrashDialog />
           <Button
             variant="outline"
             size="sm"
+            onClick={() => navigate({ to: '/manage' })}
+            className="gap-1 bg-transparent"
+            disabled={isLoading}
+            data-testid="manage-button"
+          >
+            <FolderTree className="h-4 w-4" />
+            Manage
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setIsTemplatesOpen(true)}
-            className="flex-1 gap-2 bg-transparent"
+            className="gap-1 bg-transparent"
             disabled={isLoading}
             data-testid="templates-button"
           >
