@@ -220,7 +220,7 @@ const DashboardComponent: React.FC = () => {
 
       {/* Main Content - Sidebar + conditional editor */}
       <div className="flex-1 flex overflow-hidden">
-        <div className="w-0 md:w-80 lg:w-96 md:flex-shrink-0">
+        <div className="w-0 md:w-[25vw] lg:w-[22vw] xl:w-[20vw] 2xl:w-[18vw] md:min-w-[320px] md:max-w-[480px] md:flex-shrink-0">
           {editorReady ? (
             <Sidebar />
           ) : (
