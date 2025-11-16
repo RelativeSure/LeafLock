@@ -9,7 +9,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/argon2"
 
 	"leaflock/crypto"
 	"leaflock/database"
@@ -386,45 +385,6 @@ func (h *TemplatesHandler) UseTemplate(c *fiber.Ctx) error {
 	}
 	content := string(contentBytes)
 
-	// Get user's default workspace
-	var workspaceID uuid.UUID
-	err = h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&workspaceID)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to get workspace"})
-	}
-
-	// Use provided title or template name
-	title := req.Title
-	if title == "" {
-		title = templateName
-	}
-
-	// Encrypt note data
-	titleEncrypted, err := h.crypto.Encrypt([]byte(title))
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt note title"})
-	}
-
-	contentEncryptedForNote, err := h.crypto.Encrypt([]byte(content))
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt note content"})
-	}
-
-	// Create content hash for integrity
-	contentHash := argon2.IDKey(contentEncryptedForNote, []byte("integrity"), 1, 64*1024, 4, 32)
-
-	// Create new note from template
-	var noteID uuid.UUID
-	var createdAt, updatedAt time.Time
-	err = h.db.QueryRow(ctx, `
-		INSERT INTO notes (workspace_id, title_encrypted, content_encrypted, content_hash, created_by, is_pinned, pinned_order)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, created_at, updated_at
-	`, workspaceID, titleEncrypted, contentEncryptedForNote, contentHash, userID, false, 0).Scan(&noteID, &createdAt, &updatedAt)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to create note from template"})
-	}
-
 	// Increment template usage count
 	_, err = h.db.Exec(ctx, `
 		UPDATE templates SET usage_count = usage_count + 1 WHERE id = $1
@@ -434,18 +394,10 @@ func (h *TemplatesHandler) UseTemplate(c *fiber.Ctx) error {
 		log.Printf("Failed to increment template usage count: %v", err)
 	}
 
-	// Return the created note with base64-encoded encrypted content
-	return c.Status(201).JSON(fiber.Map{
-		"note": fiber.Map{
-			"id":                 noteID,
-			"title_encrypted":    base64.StdEncoding.EncodeToString(titleEncrypted),
-			"content_encrypted":  base64.StdEncoding.EncodeToString(contentEncryptedForNote),
-			"created_at":         createdAt,
-			"updated_at":         updatedAt,
-			"encryption_version": 1,
-			"is_pinned":          false,
-			"pinned_order":       0,
-			"is_locked":          false,
-		},
+	// Return decrypted template content for client-side E2E encryption
+	// The frontend will create the note with proper E2E encryption
+	return c.JSON(fiber.Map{
+		"content": content,
+		"tags":    []string{},
 	})
 }

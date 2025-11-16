@@ -177,17 +177,16 @@ class ContentService extends ApiClient {
     })
   }
 
-  async useTemplate(id: string): Promise<Note> {
-    const response = await this.request<any>(`/templates/${id}/use`, {
+  async useTemplate(id: string): Promise<{ content: string; tags: string[] }> {
+    const response = await this.request<{ content: string; tags: string[] }>(`/templates/${id}/use`, {
       method: 'POST',
       body: JSON.stringify({}), // Backend expects request body
     })
 
-    if (response && typeof response === 'object' && 'note' in response) {
-      return normalizeNoteResponse(response.note)
+    return {
+      content: response.content || '',
+      tags: response.tags || [],
     }
-
-    return normalizeNoteResponse(response)
   }
 
   private buildTemplatePayload(template: Partial<Template>) {
