@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNotesStore } from '../../stores/notesStore'
+import { useEncryption } from '@/lib/encryption-context'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -25,20 +26,73 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 
+interface DecryptedNote {
+  id: string
+  title: string
+  content: string
+  trashedAt?: string
+}
+
 export function TrashDialog() {
   const { getTrashedNotes, restoreFromTrash, deleteNote, emptyTrash } = useNotesStore()
+  const { decryptText, isUnlocked } = useEncryption()
   const { toast } = useToast()
-  const [trashedNotes, setTrashedNotes] = useState<any[]>([])
+  const [trashedNotes, setTrashedNotes] = useState<DecryptedNote[]>([])
   const [_isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     loadTrashedNotes()
   }, [])
 
+  // Reload when encryption state changes
+  useEffect(() => {
+    loadTrashedNotes()
+  }, [isUnlocked])
+
   const loadTrashedNotes = async () => {
     try {
       const notes = await getTrashedNotes()
-      setTrashedNotes(Array.isArray(notes) ? notes : [])
+      if (!Array.isArray(notes)) {
+        setTrashedNotes([])
+        return
+      }
+
+      // Decrypt notes if encryption is unlocked
+      if (isUnlocked && decryptText) {
+        const decryptedNotes = await Promise.all(
+          notes.map(async (note) => {
+            try {
+              const title = note.title ? await decryptText(note.title) : 'Untitled'
+              const content = note.content ? await decryptText(note.content) : ''
+              return {
+                id: note.id,
+                title,
+                content,
+                trashedAt: note.trashedAt,
+              }
+            } catch (error) {
+              console.error('Failed to decrypt note:', error)
+              return {
+                id: note.id,
+                title: 'Untitled',
+                content: '',
+                trashedAt: note.trashedAt,
+              }
+            }
+          })
+        )
+        setTrashedNotes(decryptedNotes)
+      } else {
+        // If not unlocked, show placeholder text
+        setTrashedNotes(
+          notes.map((note) => ({
+            id: note.id,
+            title: 'Locked',
+            content: 'Unlock to view content',
+            trashedAt: note.trashedAt,
+          }))
+        )
+      }
     } catch (error) {
       console.error('Failed to load trashed notes:', error)
       setTrashedNotes([])
