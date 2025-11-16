@@ -96,9 +96,9 @@ export function TrashDialog() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2 bg-transparent">
+        <Button variant="outline" size="sm" className="gap-1 bg-transparent">
           <Trash2 className="h-4 w-4" />
-          Trash ({trashedNotes.length})
+          Trash
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl mx-auto">
