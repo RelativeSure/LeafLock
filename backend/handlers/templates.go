@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"log"
 	"time"
 
@@ -420,11 +421,12 @@ func (h *TemplatesHandler) UseTemplate(c *fiber.Ctx) error {
 
 	// Create new note from template
 	var noteID uuid.UUID
+	var createdAt, updatedAt time.Time
 	err = h.db.QueryRow(ctx, `
 		INSERT INTO notes (user_id, title_encrypted, content_encrypted, template_id, folder_id)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id
-	`, userID, titleEncrypted, contentEncryptedForNote, templateID, folderID).Scan(&noteID)
+		RETURNING id, created_at, updated_at
+	`, userID, titleEncrypted, contentEncryptedForNote, templateID, folderID).Scan(&noteID, &createdAt, &updatedAt)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create note from template"})
 	}
@@ -438,17 +440,19 @@ func (h *TemplatesHandler) UseTemplate(c *fiber.Ctx) error {
 		log.Printf("Failed to increment template usage count: %v", err)
 	}
 
-	// Return the created note with encrypted content
+	// Return the created note with base64-encoded encrypted content
 	return c.Status(201).JSON(fiber.Map{
 		"note": fiber.Map{
-			"id":               noteID,
-			"title_encrypted":  titleEncrypted,
-			"content_encrypted": contentEncryptedForNote,
-			"folder_id":        folderID,
-			"template_id":      templateID,
-			"tags":             []string{},
-			"pinned":           false,
-			"encrypted":        true,
+			"id":                noteID,
+			"title_encrypted":   base64.StdEncoding.EncodeToString(titleEncrypted),
+			"content_encrypted": base64.StdEncoding.EncodeToString(contentEncryptedForNote),
+			"folder_id":         folderID,
+			"template_id":       templateID,
+			"tags":              []string{},
+			"pinned":            false,
+			"encrypted":         true,
+			"created_at":        createdAt,
+			"updated_at":        updatedAt,
 		},
 	})
 }
