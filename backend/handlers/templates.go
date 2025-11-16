@@ -438,8 +438,17 @@ func (h *TemplatesHandler) UseTemplate(c *fiber.Ctx) error {
 		log.Printf("Failed to increment template usage count: %v", err)
 	}
 
+	// Return the created note with encrypted content
 	return c.Status(201).JSON(fiber.Map{
-		"id":      noteID,
-		"message": "Note created from template successfully",
+		"note": fiber.Map{
+			"id":               noteID,
+			"title_encrypted":  titleEncrypted,
+			"content_encrypted": contentEncryptedForNote,
+			"folder_id":        folderID,
+			"template_id":      templateID,
+			"tags":             []string{},
+			"pinned":           false,
+			"encrypted":        true,
+		},
 	})
 }
