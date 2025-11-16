@@ -147,6 +147,12 @@ const DashboardComponent: React.FC = () => {
   const isLoading = useAuthStore((state) => state.isLoading)
 
   const [editorReady, setEditorReady] = React.useState(false)
+  const [sidebarWidth, setSidebarWidth] = React.useState<number>(() => {
+    const saved = localStorage.getItem('sidebarWidth')
+    return saved ? parseInt(saved, 10) : 380 // Default 380px
+  })
+  const [isResizing, setIsResizing] = React.useState(false)
+
   React.useEffect(() => {
     if (!isLoading && !user) {
       if (typeof window === 'undefined' || !isOnAuthRoute()) {
@@ -191,6 +197,49 @@ const DashboardComponent: React.FC = () => {
     window.location.href = '/login'
   }
 
+  // Sidebar resize handlers
+  const startResizing = React.useCallback(() => {
+    setIsResizing(true)
+  }, [])
+
+  const stopResizing = React.useCallback(() => {
+    setIsResizing(false)
+  }, [])
+
+  const resize = React.useCallback(
+    (mouseMoveEvent: MouseEvent) => {
+      if (isResizing) {
+        const newWidth = mouseMoveEvent.clientX
+        // Min 280px, max 600px
+        const clampedWidth = Math.max(280, Math.min(newWidth, 600))
+        setSidebarWidth(clampedWidth)
+        localStorage.setItem('sidebarWidth', clampedWidth.toString())
+      }
+    },
+    [isResizing]
+  )
+
+  React.useEffect(() => {
+    if (isResizing) {
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
+      window.addEventListener('mousemove', resize)
+      window.addEventListener('mouseup', stopResizing)
+    } else {
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      window.removeEventListener('mousemove', resize)
+      window.removeEventListener('mouseup', stopResizing)
+    }
+
+    return () => {
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      window.removeEventListener('mousemove', resize)
+      window.removeEventListener('mouseup', stopResizing)
+    }
+  }, [isResizing, resize, stopResizing])
+
   return (
     <div className="h-screen flex flex-col animate-in fade-in-50 duration-700">
       {/* Header - Mobile optimized */}
@@ -220,7 +269,10 @@ const DashboardComponent: React.FC = () => {
 
       {/* Main Content - Sidebar + conditional editor */}
       <div className="flex-1 flex overflow-hidden">
-        <div className="w-0 md:w-[25vw] lg:w-[22vw] xl:w-[20vw] 2xl:w-[18vw] md:min-w-[320px] md:max-w-[480px] md:flex-shrink-0">
+        <div
+          className="w-0 md:flex-shrink-0 relative"
+          style={{ width: window.innerWidth >= 768 ? `${sidebarWidth}px` : '0' }}
+        >
           {editorReady ? (
             <Sidebar />
           ) : (
@@ -228,6 +280,23 @@ const DashboardComponent: React.FC = () => {
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
             </div>
           )}
+          {/* Resize Handle */}
+          <div
+            className="hidden md:block absolute top-0 right-0 w-1 h-full cursor-col-resize group z-10"
+            onMouseDown={startResizing}
+          >
+            <div
+              className="absolute inset-0 w-1 h-full transition-colors"
+              style={{
+                background: isResizing
+                  ? 'hsl(var(--primary) / 0.6)'
+                  : 'hsl(var(--border))',
+              }}
+            />
+            <div className="absolute top-0 right-0 w-4 h-full -mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="w-1 h-full mx-auto bg-primary/50" />
+            </div>
+          </div>
         </div>
         <div className="flex-1 flex flex-col min-w-0">
           {editorReady ? (
