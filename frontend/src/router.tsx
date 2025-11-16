@@ -180,24 +180,7 @@ const DashboardComponent: React.FC = () => {
     }
   }, [isLoading, user])
 
-  if (isLoading || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <p className="text-sm text-muted-foreground animate-pulse">Loading LeafLock...</p>
-        </div>
-      </div>
-    )
-  }
-
-  const handleLogout = async () => {
-    const { useAuthStore } = await import('./stores/authStore')
-    useAuthStore.getState().logout()
-    window.location.href = '/login'
-  }
-
-  // Sidebar resize handlers
+  // Sidebar resize handlers - MUST be before early return
   const startResizing = React.useCallback(() => {
     setIsResizing(true)
   }, [])
@@ -239,6 +222,23 @@ const DashboardComponent: React.FC = () => {
       window.removeEventListener('mouseup', stopResizing)
     }
   }, [isResizing, resize, stopResizing])
+
+  if (isLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center animate-in fade-in-50 duration-500">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-sm text-muted-foreground animate-pulse">Loading LeafLock...</p>
+        </div>
+      </div>
+    )
+  }
+
+  const handleLogout = async () => {
+    const { useAuthStore } = await import('./stores/authStore')
+    useAuthStore.getState().logout()
+    window.location.href = '/login'
+  }
 
   return (
     <div className="h-screen flex flex-col animate-in fade-in-50 duration-700">
