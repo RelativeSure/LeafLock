@@ -23,13 +23,18 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
 
   loadTemplates: async () => {
     const storedUser = localStorage.getItem('user')
-    if (!storedUser) return
+    if (!storedUser) {
+      console.log('📋 Templates: No user found in localStorage')
+      return
+    }
 
     const user = JSON.parse(storedUser)
 
     set({ isLoading: true })
     try {
       const templatesData = await contentService.getTemplates()
+      console.log('📋 Templates: Loaded', templatesData.length, 'templates from API')
+
       const isStarterTemplate = (template: Template) =>
         (template.tags || []).map((tag) => tag.toLowerCase()).includes('system')
 
@@ -39,13 +44,19 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
         (t) => t.isPublic && !isStarterTemplate(t) && t.userId !== user.id
       )
 
+      console.log('📋 Templates: Categorized -', {
+        user: userTemplates.length,
+        starter: starterTemplates.length,
+        community: communityTemplates.length,
+      })
+
       set({
         templates: userTemplates,
         starterTemplates,
         communityTemplates,
       })
     } catch (error) {
-      console.error('Failed to load templates:', error)
+      console.error('❌ Templates: Failed to load templates:', error)
     } finally {
       set({ isLoading: false })
     }
