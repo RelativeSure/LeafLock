@@ -335,8 +335,10 @@ Temporary solution (if any):
 }
 
 // SeedDefaultTemplates creates default public templates if they don't exist
-// Zero-knowledge: System templates stored in plaintext (they're public defaults, not user data)
-func SeedDefaultTemplates(db database.Database) error {
+// Templates are encrypted using the handler crypto service (derived from JWT_SECRET)
+func SeedDefaultTemplates(db database.Database, cryptoService interface {
+	Encrypt(data []byte) ([]byte, error)
+}) error {
 	ctx := context.Background()
 
 	// Check if we already have default templates
@@ -347,27 +349,41 @@ func SeedDefaultTemplates(db database.Database) error {
 	}
 
 	if count > 0 {
-		log.Println("Default templates already exist, skipping seed")
-		return nil
+		log.Println("⚠️  Deleting old system templates (migration to encrypted storage)...")
+		_, err = db.Exec(ctx, `DELETE FROM templates WHERE tags @> ARRAY['system']`)
+		if err != nil {
+			return fmt.Errorf("failed to delete old system templates: %w", err)
+		}
+		log.Println("✅ Old system templates deleted")
 	}
 
-	log.Println("Seeding default templates...")
+	log.Println("Seeding default templates with encryption...")
 
 	for _, template := range defaultTemplates {
-		// Zero-knowledge: System templates in plaintext (public defaults, visible to all)
-		// User-created templates should use user's master key (future enhancement)
-		nameBytes := []byte(template.Name)
-		descriptionBytes := []byte(template.Description)
-		contentBytes := []byte(template.Content)
+		// Encrypt template data using handler crypto
+		nameEncrypted, err := cryptoService.Encrypt([]byte(template.Name))
+		if err != nil {
+			return fmt.Errorf("failed to encrypt template name '%s': %w", template.Name, err)
+		}
+
+		descriptionEncrypted, err := cryptoService.Encrypt([]byte(template.Description))
+		if err != nil {
+			return fmt.Errorf("failed to encrypt template description '%s': %w", template.Name, err)
+		}
+
+		contentEncrypted, err := cryptoService.Encrypt([]byte(template.Content))
+		if err != nil {
+			return fmt.Errorf("failed to encrypt template content '%s': %w", template.Name, err)
+		}
 
 		// Add 'system' tag to identify default templates
 		tags := append(template.Tags, "system")
 
-		// Insert template
+		// Insert encrypted template
 		_, err = db.Exec(ctx, `
 			INSERT INTO templates (user_id, name_encrypted, description_encrypted, content_encrypted, tags, icon, is_public, usage_count)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		`, nil, nameBytes, descriptionBytes, contentBytes, tags, template.Icon, true, 0)
+		`, nil, nameEncrypted, descriptionEncrypted, contentEncrypted, tags, template.Icon, true, 0)
 		if err != nil {
 			return fmt.Errorf("failed to insert template '%s': %w", template.Name, err)
 		}
