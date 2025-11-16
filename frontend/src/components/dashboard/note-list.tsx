@@ -146,47 +146,51 @@ export function NoteList() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-4 py-2 border-b border-border flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <ArrowUpDown className="h-4 w-4" />
-                Sort by:{' '}
-                {sortBy === 'updated'
-                  ? 'Last Updated'
-                  : sortBy === 'created'
-                    ? 'Date Created'
-                    : 'Title'}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => setSortBy('updated')}>Last Updated</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy('created')}>Date Created</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy('title')}>Title</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
+      <div className="px-4 py-3 border-b border-border flex-shrink-0">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">Notes</h3>
           <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-1 h-8 px-2">
+                  <ArrowUpDown className="h-3 w-3" />
+                  <span className="text-xs">
+                    {sortBy === 'updated'
+                      ? 'Updated'
+                      : sortBy === 'created'
+                        ? 'Created'
+                        : 'Title'}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onClick={() => setSortBy('updated')}>
+                  Last Updated
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy('created')}>Date Created</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy('title')}>Title</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             {isBulkMode && (
               <>
-                <Button variant="outline" size="sm" onClick={selectAllNotes}>
-                  Select All
+                <Button variant="outline" size="sm" onClick={selectAllNotes} className="h-8 px-2 text-xs">
+                  All
                 </Button>
-                <Button variant="outline" size="sm" onClick={clearSelection}>
+                <Button variant="outline" size="sm" onClick={clearSelection} className="h-8 px-2 text-xs">
                   Clear
                 </Button>
               </>
             )}
-            <Button variant={isBulkMode ? 'default' : 'outline'} size="sm" onClick={toggleBulkMode}>
-              {isBulkMode ? 'Exit Bulk' : 'Bulk Select'}
+            <Button variant={isBulkMode ? 'default' : 'outline'} size="sm" onClick={toggleBulkMode} className="h-8 px-2 text-xs">
+              {isBulkMode ? 'Exit' : 'Bulk'}
             </Button>
           </div>
         </div>
       </div>
 
       <ScrollArea className="flex-1 min-h-0">
-        <div className="p-2 space-y-1">
+        <div className="p-3 space-y-2">
           {sortedNotes.map((note, index) => {
             const isSelected = selectedNote?.id === note.id
             const isBulkSelected = selectedNotes.includes(note.id)
@@ -195,11 +199,11 @@ export function NoteList() {
             return (
               <ContextMenu key={note.id}>
                 <ContextMenuTrigger
-                  className={`w-full p-3 rounded-lg transition-smooth hover-lift stagger-item cursor-pointer ${
+                  className={`w-full p-4 rounded-lg transition-all duration-200 cursor-pointer ${
                     isSelected
-                      ? 'bg-primary/10 border border-primary/20'
-                      : 'hover:bg-surface-hover border border-transparent'
-                  } ${isBulkSelected ? 'bg-primary/5 border-primary/10' : ''}`}
+                      ? 'bg-primary/10 border-2 border-primary/30 shadow-sm'
+                      : 'hover:bg-accent/50 border-2 border-transparent hover:border-accent/30'
+                  } ${isBulkSelected ? 'bg-primary/5 border-primary/20' : ''}`}
                   style={{ animationDelay: `${index * 0.05}s` }}
                   onClick={(e) => {
                     // Only select if not in bulk mode and click wasn't on checkbox
@@ -224,69 +228,72 @@ export function NoteList() {
                       </div>
                     )}
 
-                    <div className="flex-1 text-left">
-                      <div className="flex items-start justify-between gap-2 mb-1">
+                    <div className="flex-1 text-left min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           {note.pinned && (
-                            <Pin className="h-3 w-3 text-primary flex-shrink-0 mt-0.5" />
+                            <Pin className="h-4 w-4 text-primary flex-shrink-0" />
                           )}
                           {isUnlocked ? (
                             decrypted ? (
-                              <h3 className="font-medium text-sm line-clamp-1">
+                              <h3 className="font-semibold text-base line-clamp-1">
                                 {decrypted.title || 'Untitled'}
                               </h3>
                             ) : isDecrypting ? (
-                              <Skeleton className="h-4 w-32" />
+                              <Skeleton className="h-5 w-40" />
                             ) : (
-                              <h3 className="font-medium text-sm line-clamp-1">Untitled</h3>
+                              <h3 className="font-semibold text-base line-clamp-1">Untitled</h3>
                             )
                           ) : (
-                            <h3 className="font-medium text-sm line-clamp-1">Locked</h3>
+                            <h3 className="font-semibold text-base line-clamp-1 flex items-center gap-2">
+                              <Lock className="h-4 w-4" />
+                              Locked
+                            </h3>
                           )}
                         </div>
-                        {note.encrypted && (
-                          <Lock className="h-3 w-3 text-muted flex-shrink-0 mt-0.5 animate-pulse" />
+                        {note.encrypted && !isUnlocked && (
+                          <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                         )}
                       </div>
 
                       {isUnlocked ? (
                         decrypted ? (
-                          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-3 leading-relaxed">
                             {(decrypted.content || '')
                               .replace(/<[^>]*>/g, ' ')
                               .replace(/\s+/g, ' ')
                               .trim() || 'No content'}
                           </p>
                         ) : isDecrypting ? (
-                          <div className="space-y-1 mb-2">
-                            <Skeleton className="h-3 w-full" />
-                            <Skeleton className="h-3 w-3/4" />
+                          <div className="space-y-2 mb-3">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-3/4" />
                           </div>
                         ) : (
-                          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                             No content
                           </p>
                         )
                       ) : (
-                        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3 italic">
                           Unlock to preview content
                         </p>
                       )}
 
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1 flex-wrap">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           {(note.tags || []).slice(0, 2).map((tag) => (
                             <span
                               key={tag}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent/50 text-xs transition-smooth hover:bg-accent"
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-accent/60 text-xs font-medium"
                             >
-                              <TagIcon className="h-2.5 w-2.5" />
+                              <TagIcon className="h-3 w-3" />
                               {tag}
                             </span>
                           ))}
                           {(note.tags || []).length > 2 && (
-                            <span className="text-xs text-muted">
-                              +{(note.tags || []).length - 2}
+                            <span className="text-xs text-muted-foreground font-medium">
+                              +{(note.tags || []).length - 2} more
                             </span>
                           )}
                         </div>

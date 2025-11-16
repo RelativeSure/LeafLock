@@ -87,7 +87,7 @@ export function Sidebar() {
 
   const sidebarContent = (
     <div className="w-full border-r border-border bg-card flex flex-col h-full overflow-hidden">
-      <div className="p-4 border-b border-border space-y-3">
+      <div className="p-4 border-b border-border space-y-3 flex-shrink-0">
         {/* Replaced AdvancedSearchBar with a basic, non-reactive search input to avoid update-depth loop */}
         <div className="flex items-center gap-2">
           <Input
@@ -183,6 +183,62 @@ export function Sidebar() {
         </div>
       </div>
 
+      {/* Folders Section - Moved to top */}
+      <div className="px-4 pt-3 pb-2 border-b border-border flex-shrink-0">
+        <h3 className="text-sm font-semibold mb-2">Folders</h3>
+        <ScrollArea className="max-h-32">
+          <div className="space-y-1 pr-4">
+            <Button
+              variant={selectedFolder === null ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => selectFolder(null)}
+              className="w-full justify-start text-sm"
+            >
+              All Notes
+            </Button>
+            {folders.map((folder) => (
+              <Button
+                key={folder.id}
+                variant={selectedFolder === folder.id ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => selectFolder(folder.id)}
+                className="w-full justify-start text-sm"
+              >
+                <div
+                  className="w-2 h-2 rounded-full mr-2"
+                  style={{ backgroundColor: folder.color }}
+                />
+                {folder.name}
+              </Button>
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
+
+      {/* Tags Section - Moved to top */}
+      {tags.length > 0 && (
+        <div className="px-4 pt-3 pb-2 border-b border-border flex-shrink-0">
+          <h3 className="text-sm font-semibold mb-2">Tags</h3>
+          <ScrollArea className="max-h-32">
+            <div className="space-y-1 pr-4">
+              {tags.map((tag) => (
+                <Button
+                  key={tag.id}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => selectTag(tag.name)}
+                  className="w-full justify-start text-sm"
+                >
+                  <TagIcon className="w-3 h-3 mr-2" />
+                  {tag.name}
+                </Button>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+      )}
+
+      {/* Notes List - Now in middle, takes remaining space */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center h-32">
@@ -193,62 +249,8 @@ export function Sidebar() {
         )}
       </div>
 
-      <div className="border-b border-border flex-shrink-0">
-        <div className="space-y-3 p-4">
-          <div className="min-h-[80px] max-h-[120px] overflow-hidden">
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">Folders</h3>
-            <ScrollArea className="flex-1">
-              <div className="space-y-1 pr-4">
-                <Button
-                  variant={selectedFolder === null ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => selectFolder(null)}
-                  className="w-full justify-start text-xs"
-                >
-                  All Notes
-                </Button>
-                {folders.map((folder) => (
-                  <Button
-                    key={folder.id}
-                    variant={selectedFolder === folder.id ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => selectFolder(folder.id)}
-                    className="w-full justify-start text-xs"
-                  >
-                    <div
-                      className="w-2 h-2 rounded-full mr-2"
-                      style={{ backgroundColor: folder.color }}
-                    />
-                    {folder.name}
-                  </Button>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
-
-          <div className="min-h-[80px] max-h-[120px] overflow-hidden">
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">Tags</h3>
-            <ScrollArea className="flex-1">
-              <div className="space-y-1 pr-4">
-                {tags.map((tag) => (
-                  <Button
-                    key={tag.id}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => selectTag(tag.name)}
-                    className="w-full justify-start text-xs"
-                  >
-                    <TagIcon className="w-3 h-3 mr-2" />
-                    {tag.name}
-                  </Button>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
-        </div>
-      </div>
-
-      <div className="p-4 border-t border-border space-y-2">
+      {/* Bottom Actions */}
+      <div className="p-4 border-t border-border space-y-2 flex-shrink-0">
         <div className="flex gap-2">
           <TrashDialog />
           <Button
