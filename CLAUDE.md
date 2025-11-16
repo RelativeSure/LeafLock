@@ -157,17 +157,35 @@ Deploy: `helm install leaflock ./helm -f values-prod.yaml`
 - `backend/database/schema.go` - Any ALTER TABLE, CREATE TABLE, CREATE INDEX
 - Any file modifying database structure
 
-### 3. Verify After Complex Programming Tasks
+### 3. Testing Requirements - ALWAYS RUN AFTER CHANGES
 
-After completing complex features, **ALWAYS** run:
+**⚠️ CRITICAL**: After **EVERY** code change, you **MUST** run verification commands before committing.
+
+**Frontend Changes**:
 ```bash
-# Backend verification
-cd backend && golangci-lint run ./...
-
-# Frontend verification
-cd frontend && pnpm run lint
-# Or use megalinter for comprehensive check
+cd frontend
+pnpm run lint           # ESLint + check-no-jsx.sh (REQUIRED)
+pnpm test              # Run all tests (REQUIRED)
+pnpm run typecheck     # TypeScript type checking (REQUIRED)
+pnpm run build         # Verify build succeeds (REQUIRED for significant changes)
 ```
+
+**Backend Changes**:
+```bash
+cd backend
+go test -v ./...                # Run all tests (REQUIRED)
+golangci-lint run ./...         # Lint (REQUIRED after complex changes)
+go build -o /dev/null ./...     # Verify build succeeds (REQUIRED for significant changes)
+```
+
+**When to run**:
+- ✅ Before every commit
+- ✅ After modifying any component
+- ✅ After adding/updating dependencies
+- ✅ After refactoring code
+- ✅ After fixing bugs
+
+**DO NOT commit** if any verification command fails.
 
 ### 4. Docker Compose Sync
 

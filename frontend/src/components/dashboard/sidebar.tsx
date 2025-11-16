@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNotesStore } from '../../stores/notesStore'
 // Encryption unlock dialog integration removed due to runtime error; rely on existing flows
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { FolderPlus, Plus, Menu, Library, Tag, TagIcon } from 'lucide-react'
+import { FolderPlus, Plus, Menu, Library, Tag, TagIcon, Search } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -39,6 +39,7 @@ export function Sidebar() {
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false)
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
 
   // Mobile detection and responsive behavior
   useEffect(() => {
@@ -65,6 +66,15 @@ export function Sidebar() {
     return () => clearTimeout(timeoutId)
   }, [selectedNote, isMobile])
 
+  // Debounce search query to avoid excessive re-renders and performance issues
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 300) // 300ms debounce delay
+
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery])
+
   const handleCreateFolder = () => {
     if (newFolderName.trim()) {
       createFolder({ name: newFolderName, color: newFolderColor })
@@ -88,17 +98,15 @@ export function Sidebar() {
   const sidebarContent = (
     <div className="w-full border-r border-border bg-card flex flex-col h-full overflow-hidden">
       <div className="p-4 border-b border-border space-y-3 flex-shrink-0">
-        {/* Replaced AdvancedSearchBar with a basic, non-reactive search input to avoid update-depth loop */}
-        <div className="flex items-center gap-2">
+        {/* Dynamic search - filters notes as you type */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search notes..."
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            className="flex-1"
+            className="pl-9"
           />
-          <Button variant="outline" size="sm" className="bg-transparent">
-            Search
-          </Button>
         </div>
 
         <div className="flex gap-2">
@@ -245,7 +253,7 @@ export function Sidebar() {
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
           </div>
         ) : (
-          <NoteList />
+          <NoteList searchQuery={debouncedSearchQuery} />
         )}
       </div>
 

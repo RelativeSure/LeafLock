@@ -23,7 +23,11 @@ import { useDecryptedNotes } from '@/hooks/use-decrypted-notes'
 
 type SortOption = 'updated' | 'created' | 'title' | 'pinned'
 
-export function NoteList() {
+interface NoteListProps {
+  searchQuery?: string
+}
+
+export function NoteList({ searchQuery = '' }: NoteListProps) {
   const { notes, selectedNote, selectedFolder, selectNote, updateNote, moveToTrash } =
     useNotesStore()
   const [sortBy, setSortBy] = useState<SortOption>('updated')
@@ -60,9 +64,41 @@ export function NoteList() {
     }
   }
 
-  const filteredNotes = selectedFolder
+  // Filter by folder
+  const folderFilteredNotes = selectedFolder
     ? activeNotes.filter((note) => note.folderId === selectedFolder)
     : activeNotes
+
+  // Filter by search query (searches decrypted title and content)
+  const filteredNotes = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return folderFilteredNotes
+    }
+
+    const query = searchQuery.toLowerCase().trim()
+    return folderFilteredNotes.filter((note) => {
+      const decrypted = decryptedNotes[note.id]
+      if (!decrypted) {
+        // If not decrypted yet, include in results
+        return true
+      }
+
+      // Search in title
+      const titleMatch = (decrypted.title || '').toLowerCase().includes(query)
+
+      // Search in content (strip HTML tags first)
+      const plainContent = (decrypted.content || '')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .toLowerCase()
+      const contentMatch = plainContent.includes(query)
+
+      // Search in tags
+      const tagsMatch = (note.tags || []).some((tag) => tag.toLowerCase().includes(query))
+
+      return titleMatch || contentMatch || tagsMatch
+    })
+  }, [folderFilteredNotes, searchQuery, decryptedNotes])
 
   const sortedNotes = [...filteredNotes].sort((a, b) => {
     // Always show pinned notes first
