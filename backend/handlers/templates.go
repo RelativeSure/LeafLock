@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/argon2"
 
 	"leaflock/crypto"
 	"leaflock/database"
@@ -385,6 +386,13 @@ func (h *TemplatesHandler) UseTemplate(c *fiber.Ctx) error {
 	}
 	content := string(contentBytes)
 
+	// Get user's default workspace
+	var workspaceID uuid.UUID
+	err = h.db.QueryRow(ctx, `SELECT id FROM workspaces WHERE owner_id = $1 LIMIT 1`, userID).Scan(&workspaceID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to get workspace"})
+	}
+
 	// Use provided title or template name
 	title := req.Title
 	if title == "" {
@@ -402,31 +410,17 @@ func (h *TemplatesHandler) UseTemplate(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt note content"})
 	}
 
-	// Parse folder ID if provided
-	var folderID *uuid.UUID
-	if req.FolderID != nil && *req.FolderID != "" {
-		parsed, err := uuid.Parse(*req.FolderID)
-		if err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid folder ID"})
-		}
-		folderID = &parsed
-
-		// Verify folder exists and belongs to user
-		var exists bool
-		err = h.db.QueryRow(ctx, `SELECT true FROM folders WHERE id = $1 AND user_id = $2`, *folderID, userID).Scan(&exists)
-		if err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Folder not found"})
-		}
-	}
+	// Create content hash for integrity
+	contentHash := argon2.IDKey(contentEncryptedForNote, []byte("integrity"), 1, 64*1024, 4, 32)
 
 	// Create new note from template
 	var noteID uuid.UUID
 	var createdAt, updatedAt time.Time
 	err = h.db.QueryRow(ctx, `
-		INSERT INTO notes (user_id, title_encrypted, content_encrypted, template_id, folder_id)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO notes (workspace_id, title_encrypted, content_encrypted, content_hash, created_by, is_pinned, pinned_order)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, created_at, updated_at
-	`, userID, titleEncrypted, contentEncryptedForNote, templateID, folderID).Scan(&noteID, &createdAt, &updatedAt)
+	`, workspaceID, titleEncrypted, contentEncryptedForNote, contentHash, userID, false, 0).Scan(&noteID, &createdAt, &updatedAt)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create note from template"})
 	}
@@ -443,16 +437,15 @@ func (h *TemplatesHandler) UseTemplate(c *fiber.Ctx) error {
 	// Return the created note with base64-encoded encrypted content
 	return c.Status(201).JSON(fiber.Map{
 		"note": fiber.Map{
-			"id":                noteID,
-			"title_encrypted":   base64.StdEncoding.EncodeToString(titleEncrypted),
-			"content_encrypted": base64.StdEncoding.EncodeToString(contentEncryptedForNote),
-			"folder_id":         folderID,
-			"template_id":       templateID,
-			"tags":              []string{},
-			"pinned":            false,
-			"encrypted":         true,
-			"created_at":        createdAt,
-			"updated_at":        updatedAt,
+			"id":                 noteID,
+			"title_encrypted":    base64.StdEncoding.EncodeToString(titleEncrypted),
+			"content_encrypted":  base64.StdEncoding.EncodeToString(contentEncryptedForNote),
+			"created_at":         createdAt,
+			"updated_at":         updatedAt,
+			"encryption_version": 1,
+			"is_pinned":          false,
+			"pinned_order":       0,
+			"is_locked":          false,
 		},
 	})
 }
