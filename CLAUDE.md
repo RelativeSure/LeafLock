@@ -187,6 +187,12 @@ go build -o /dev/null ./...     # Verify build succeeds (REQUIRED for significan
 
 **DO NOT commit** if any verification command fails.
 
+**Note on Integration Tests**:
+- Backend integration tests require PostgreSQL (port 5433) and Redis (port 6380)
+- Unit tests that require services will skip gracefully if unavailable locally
+- GitHub Actions workflows automatically provide these services
+- To run integration tests locally: `make test-db-up` (requires Docker)
+
 ### 4. Docker Compose Sync
 
 When modifying `docker-compose.yml`, remember to sync:
