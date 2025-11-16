@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"log"
 	"time"
 
@@ -362,23 +361,16 @@ func (h *TemplatesHandler) UseTemplate(c *fiber.Ctx) error {
 
 	// Get template content
 	var contentEncrypted []byte
-	var nameEncrypted []byte
 	err = h.db.QueryRow(ctx, `
-		SELECT name_encrypted, content_encrypted
+		SELECT content_encrypted
 		FROM templates
 		WHERE id = $1 AND (user_id = $2 OR is_public = true)
-	`, templateID, userID).Scan(&nameEncrypted, &contentEncrypted)
+	`, templateID, userID).Scan(&contentEncrypted)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Template not found"})
 	}
 
-	// Decrypt template data
-	templateNameBytes, err := h.crypto.Decrypt(nameEncrypted)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to decrypt template name"})
-	}
-	templateName := string(templateNameBytes)
-
+	// Decrypt template content
 	contentBytes, err := h.crypto.Decrypt(contentEncrypted)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to decrypt template content"})
