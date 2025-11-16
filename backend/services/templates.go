@@ -251,84 +251,60 @@ Brief description of changes:
 	{
 		Name:        "Bug Report",
 		Description: "Template for documenting software bugs with all necessary details",
-		Content: `# Bug Report: ${bug_title}
-
-**Reporter:** ${person}
-**Date:** ${date}
-**Priority:** [ ] Low [ ] Medium [ ] High [ ] Critical
-**Status:** Open
-
-## Environment
-- **OS:**
-- **Browser/App Version:**
-- **Device:**
-- **Screen Resolution:**
-
-## Description
-Brief summary of the issue:
-
-
-## Steps to Reproduce
-1.
-2.
-3.
-4.
-
-## Expected Behavior
-What should happen:
-
-
-## Actual Behavior
-What actually happens:
-
-
-## Screenshots/Videos
-[Attach screenshots or screen recordings if applicable]
-
-## Error Messages
-` + "```" + `
-[Paste any error messages here]
-` + "```" + `
-
-## Console Logs
-` + "```" + `
-[Paste relevant console logs here]
-` + "```" + `
-
-## Additional Context
-Any other information that might be helpful:
-
-
-## Workaround
-Temporary solution (if any):
-
-
-## Related Issues
-- Issue #
-- Related to:
-
----
-
-## For Developers
-
-### Investigation Notes
--
-
-### Root Cause
--
-
-### Proposed Solution
--
-
-### Testing Requirements
-- [ ] Unit tests
-- [ ] Integration tests
-- [ ] Manual testing scenarios:
-  -
-  -
-
-### Deployment Notes
-- `,
+		Content: "# Bug Report: ${bug_title}\n\n" +
+			"**Reporter:** ${person}\n" +
+			"**Date:** ${date}\n" +
+			"**Priority:** [ ] Low [ ] Medium [ ] High [ ] Critical\n" +
+			"**Status:** Open\n\n" +
+			"## Environment\n" +
+			"- **OS:**\n" +
+			"- **Browser/App Version:**\n" +
+			"- **Device:**\n" +
+			"- **Screen Resolution:**\n\n" +
+			"## Description\n" +
+			"Brief summary of the issue:\n\n\n" +
+			"## Steps to Reproduce\n" +
+			"1.\n" +
+			"2.\n" +
+			"3.\n" +
+			"4.\n\n" +
+			"## Expected Behavior\n" +
+			"What should happen:\n\n\n" +
+			"## Actual Behavior\n" +
+			"What actually happens:\n\n\n" +
+			"## Screenshots/Videos\n" +
+			"[Attach screenshots or screen recordings if applicable]\n\n" +
+			"## Error Messages\n" +
+			"```\n" +
+			"[Paste any error messages here]\n" +
+			"```\n\n" +
+			"## Console Logs\n" +
+			"```\n" +
+			"[Paste relevant console logs here]\n" +
+			"```\n\n" +
+			"## Additional Context\n" +
+			"Any other information that might be helpful:\n\n\n" +
+			"## Workaround\n" +
+			"Temporary solution (if any):\n\n\n" +
+			"## Related Issues\n" +
+			"- Issue #\n" +
+			"- Related to:\n\n" +
+			"---\n\n" +
+			"## For Developers\n\n" +
+			"### Investigation Notes\n" +
+			"-\n\n" +
+			"### Root Cause\n" +
+			"-\n\n" +
+			"### Proposed Solution\n" +
+			"-\n\n" +
+			"### Testing Requirements\n" +
+			"- [ ] Unit tests\n" +
+			"- [ ] Integration tests\n" +
+			"- [ ] Manual testing scenarios:\n" +
+			"  -\n" +
+			"  -\n\n" +
+			"### Deployment Notes\n" +
+			"-",
 		Tags: []string{"bug-report", "development", "testing", "issue"},
 		Icon: "🐛",
 	},

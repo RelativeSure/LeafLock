@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -377,6 +378,18 @@ func (h *TemplatesHandler) UseTemplate(c *fiber.Ctx) error {
 	}
 	content := string(contentBytes)
 
+	// Get user email for variable substitution
+	var userEmail string
+	err = h.db.QueryRow(ctx, `SELECT email FROM users WHERE id = $1`, userID).Scan(&userEmail)
+	if err != nil {
+		// Don't fail if we can't get user email, just skip substitution
+		log.Printf("Failed to get user email for template variables: %v", err)
+		userEmail = ""
+	}
+
+	// Substitute template variables
+	content = substituteTemplateVariables(content, userEmail)
+
 	// Increment template usage count
 	_, err = h.db.Exec(ctx, `
 		UPDATE templates SET usage_count = usage_count + 1 WHERE id = $1
@@ -392,4 +405,29 @@ func (h *TemplatesHandler) UseTemplate(c *fiber.Ctx) error {
 		"content": content,
 		"tags":    []string{},
 	})
+}
+
+// substituteTemplateVariables replaces template variables with actual values
+func substituteTemplateVariables(content string, userEmail string) string {
+	now := time.Now()
+
+	// Date variables
+	content = strings.ReplaceAll(content, "${date}", now.Format("2006-01-02"))
+	content = strings.ReplaceAll(content, "${datetime}", now.Format("2006-01-02 15:04"))
+	content = strings.ReplaceAll(content, "${time}", now.Format("15:04"))
+	content = strings.ReplaceAll(content, "${year}", now.Format("2006"))
+	content = strings.ReplaceAll(content, "${month}", now.Format("January"))
+	content = strings.ReplaceAll(content, "${day}", now.Format("Monday"))
+
+	// User variables
+	if userEmail != "" {
+		content = strings.ReplaceAll(content, "${person}", userEmail)
+		content = strings.ReplaceAll(content, "${user}", userEmail)
+		content = strings.ReplaceAll(content, "${email}", userEmail)
+		content = strings.ReplaceAll(content, "${author}", userEmail)
+		content = strings.ReplaceAll(content, "${developer}", userEmail)
+		content = strings.ReplaceAll(content, "${reviewer}", userEmail)
+	}
+
+	return content
 }
