@@ -272,17 +272,17 @@ export function NoteList({ searchQuery = '' }: NoteListProps) {
                           )}
                           {isUnlocked ? (
                             decrypted ? (
-                              <h3 className="font-semibold text-base line-clamp-1">
+                              <h3 className="font-semibold text-base truncate">
                                 {decrypted.title || 'Untitled'}
                               </h3>
                             ) : isDecrypting ? (
                               <Skeleton className="h-5 w-40" />
                             ) : (
-                              <h3 className="font-semibold text-base line-clamp-1">Untitled</h3>
+                              <h3 className="font-semibold text-base truncate">Untitled</h3>
                             )
                           ) : (
-                            <h3 className="font-semibold text-base line-clamp-1 flex items-center gap-2">
-                              <Lock className="h-4 w-4" />
+                            <h3 className="font-semibold text-base truncate flex items-center gap-2">
+                              <Lock className="h-4 w-4 flex-shrink-0" />
                               Locked
                             </h3>
                           )}

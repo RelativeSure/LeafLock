@@ -193,8 +193,8 @@ const DashboardComponent: React.FC = () => {
     (mouseMoveEvent: MouseEvent) => {
       if (isResizing) {
         const newWidth = mouseMoveEvent.clientX
-        // Min 280px, max 600px
-        const clampedWidth = Math.max(280, Math.min(newWidth, 600))
+        // Min 200px, max 600px
+        const clampedWidth = Math.max(200, Math.min(newWidth, 600))
         setSidebarWidth(clampedWidth)
         localStorage.setItem('sidebarWidth', clampedWidth.toString())
       }
