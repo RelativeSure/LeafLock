@@ -106,7 +106,7 @@ describe('NoteList', () => {
   it('should render note list container', () => {
     render(<NoteList />)
     // When no notes, should show empty state
-    expect(screen.getByText('No notes yet')).toBeInTheDocument()
+    expect(screen.getByText('No notes found')).toBeInTheDocument()
   })
 
   it('should render with notes', () => {
@@ -124,7 +124,7 @@ describe('NoteList', () => {
     vi.mocked(useNotesStore).mockReturnValue(createMockStore({ notes: [] }) as any)
 
     render(<NoteList />)
-    expect(screen.getByText('No notes yet')).toBeInTheDocument()
+    expect(screen.getByText('No notes found')).toBeInTheDocument()
   })
 
   it('should filter out trashed notes', () => {
@@ -266,7 +266,7 @@ describe('NoteList', () => {
 
   it('should sort notes by updated date', () => {
     const oldNote = { ...mockNote, id: 'old', title: 'Old Note', updatedAt: '2023-01-01T00:00:00Z' }
-    const newNote = { ...mockNote, id: 'new', title: 'New Note', updatedAt: '2024-12-01T00:00:00Z' }
+    const newNote = { ...mockNote, id: 'new', title: 'Newest Note', updatedAt: '2024-12-01T00:00:00Z' }
 
     vi.mocked(useNotesStore).mockReturnValue(
       createMockStore({
@@ -278,7 +278,7 @@ describe('NoteList', () => {
 
     // Both notes should be rendered
     expect(screen.getByText('Old Note')).toBeInTheDocument()
-    expect(screen.getByText('New Note')).toBeInTheDocument()
+    expect(screen.getByText('Newest Note')).toBeInTheDocument()
   })
 
   it('should sort notes by title', () => {

@@ -161,33 +161,33 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
-      <div className="mb-8">
+    <div className="h-full flex flex-col p-6">
+      <div className="mb-6 shrink-0">
         <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground mt-2">Manage your account settings and preferences.</p>
+        <p className="text-muted-foreground mt-1">Manage your account settings and preferences.</p>
       </div>
 
-      <Tabs defaultValue="profile" className="flex gap-6 h-full">
+      <Tabs defaultValue="profile" className="flex flex-1 gap-6 overflow-hidden">
         {/* Vertical Tabs List - Sidebar */}
-        <div className="w-64 flex-shrink-0 border-r pr-4">
-          <TabsList className="flex-col h-fit w-full">
-            <TabsTrigger value="profile" className="w-full justify-start gap-2">
+        <div className="w-64 flex-shrink-0 border-r pr-4 overflow-y-auto">
+          <TabsList className="flex-col h-fit w-full bg-transparent p-0">
+            <TabsTrigger value="profile" className="w-full justify-start gap-2 data-[state=active]:bg-secondary data-[state=active]:shadow-none justify-items-start mb-1 px-3 py-2 h-10 rounded-md">
               <User className="h-4 w-4" />
               Profile
             </TabsTrigger>
-            <TabsTrigger value="backup" className="w-full justify-start gap-2">
+            <TabsTrigger value="backup" className="w-full justify-start gap-2 data-[state=active]:bg-secondary data-[state=active]:shadow-none justify-items-start mb-1 px-3 py-2 h-10 rounded-md">
               <Database className="h-4 w-4" />
               Backup & Restore
             </TabsTrigger>
-            <TabsTrigger value="security" className="w-full justify-start gap-2">
+            <TabsTrigger value="security" className="w-full justify-start gap-2 data-[state=active]:bg-secondary data-[state=active]:shadow-none justify-items-start mb-1 px-3 py-2 h-10 rounded-md">
               <Shield className="h-4 w-4" />
               Security
             </TabsTrigger>
-            <TabsTrigger value="preferences" className="w-full justify-start gap-2">
+            <TabsTrigger value="preferences" className="w-full justify-start gap-2 data-[state=active]:bg-secondary data-[state=active]:shadow-none justify-items-start mb-1 px-3 py-2 h-10 rounded-md">
               <SettingsIcon className="h-4 w-4" />
               Preferences
             </TabsTrigger>
-            <TabsTrigger value="manage" className="w-full justify-start gap-2">
+            <TabsTrigger value="manage" className="w-full justify-start gap-2 data-[state=active]:bg-secondary data-[state=active]:shadow-none justify-items-start mb-1 px-3 py-2 h-10 rounded-md">
               <FolderPlus className="h-4 w-4" />
               Manage Folders & Tags
             </TabsTrigger>
@@ -195,8 +195,8 @@ export function SettingsPage() {
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1">
-          <TabsContent value="profile" className="space-y-6">
+        <div className="flex-1 overflow-y-auto pr-2">
+          <TabsContent value="profile" className="space-y-6 mt-0">
             <Card>
               <CardHeader>
                 <CardTitle>Profile Information</CardTitle>
@@ -257,7 +257,7 @@ export function SettingsPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="backup" className="space-y-6">
+          <TabsContent value="backup" className="space-y-6 mt-0">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -331,7 +331,7 @@ export function SettingsPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="security" className="space-y-6">
+          <TabsContent value="security" className="space-y-6 mt-0">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -365,7 +365,7 @@ export function SettingsPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="preferences" className="space-y-6">
+          <TabsContent value="preferences" className="space-y-6 mt-0">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -424,7 +424,7 @@ export function SettingsPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="manage" className="space-y-6">
+          <TabsContent value="manage" className="space-y-6 mt-0">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
