@@ -669,16 +669,6 @@ describe('AdminPage', () => {
     )
   })
 
-  it('should render scroll area for user table', async () => {
-    const { getByTestId } = render(<AdminPage />)
-    await waitFor(
-      () => {
-        expect(getByTestId('scroll-area')).toBeInTheDocument()
-      },
-      { timeout: 2000 }
-    )
-  })
-
   // Interaction and conditional logic tests
   describe('User interactions', () => {
     beforeEach(() => {

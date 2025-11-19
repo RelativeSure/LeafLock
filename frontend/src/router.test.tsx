@@ -10,6 +10,7 @@ vi.mock('@tanstack/react-router', () => ({
   createRoute: vi.fn(() => ({
     useParams: vi.fn(),
     useSearch: vi.fn(),
+    addChildren: vi.fn(),
   })),
   createRootRoute: vi.fn(() => ({
     addChildren: vi.fn(),

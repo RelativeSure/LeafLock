@@ -4,7 +4,11 @@ import { useNotesStore } from '../../stores/notesStore'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { FileText, Lock, TagIcon, Pin, ArrowUpDown, Trash2, Copy } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { 
+  FileText, Lock, Pin, ArrowUpDown, Trash2, Copy, 
+  Search, Plus, X
+} from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import {
   DropdownMenu,
@@ -24,11 +28,14 @@ import { useDecryptedNotes } from '@/hooks/use-decrypted-notes'
 type SortOption = 'updated' | 'created' | 'title' | 'pinned'
 
 export function NoteList() {
-  const { notes, selectedNote, selectedFolder, selectNote, updateNote, moveToTrash } =
-    useNotesStore()
+  const { 
+    notes, selectedNote, selectedFolder, selectNote, updateNote, moveToTrash, createNote, isLoading 
+  } = useNotesStore()
+  
   const [sortBy, setSortBy] = useState<SortOption>('updated')
   const [selectedNotes, setSelectedNotes] = useState<string[]>([])
   const [isBulkMode, setIsBulkMode] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const activeNotes = useMemo(() => (notes || []).filter((note) => !note.isTrashed), [notes])
   const { decryptedNotes, isUnlocked, isDecrypting } = useDecryptedNotes(activeNotes)
@@ -44,7 +51,7 @@ export function NoteList() {
   const handleDuplicate = (noteId: string) => {
     const noteToDuplicate = notes.find((n) => n.id === noteId)
     if (noteToDuplicate) {
-      // Handle duplication - for now just select the note
+      // For now just select the note, true duplication logic should be in store or helper
       selectNote(noteId)
     }
   }
@@ -60,55 +67,81 @@ export function NoteList() {
     }
   }
 
-  const filteredNotes = selectedFolder
-    ? activeNotes.filter((note) => note.folderId === selectedFolder)
-    : activeNotes
-
-  const sortedNotes = [...filteredNotes].sort((a, b) => {
-    // Always show pinned notes first
-    if (a.pinned && !b.pinned) return -1
-    if (!a.pinned && b.pinned) return 1
-
-    switch (sortBy) {
-      case 'updated': {
-        const aUpdatedTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
-        const bUpdatedTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
-        return isNaN(bUpdatedTime)
-          ? isNaN(aUpdatedTime)
-            ? 0
-            : -1
-          : isNaN(aUpdatedTime)
-            ? 1
-            : bUpdatedTime - aUpdatedTime
+  const handleCreateNote = async () => {
+    try {
+      const note = await createNote({})
+      if (note?.id) {
+        selectNote(note.id)
       }
-      case 'created': {
-        const aCreatedTime = a.createdAt ? new Date(a.createdAt).getTime() : 0
-        const bCreatedTime = b.createdAt ? new Date(b.createdAt).getTime() : 0
-        return isNaN(bCreatedTime)
-          ? isNaN(aCreatedTime)
-            ? 0
-            : -1
-          : isNaN(aCreatedTime)
-            ? 1
-            : bCreatedTime - aCreatedTime
-      }
-      case 'title':
-        return (a.title || '').localeCompare(b.title || '')
-      default:
-        return 0
+    } catch (error) {
+      console.error('Failed to create note:', error)
     }
-  })
+  }
+
+  const filteredNotes = useMemo(() => {
+    let filtered = activeNotes
+
+    // Folder filter
+    if (selectedFolder) {
+      filtered = filtered.filter((note) => note.folderId === selectedFolder)
+    }
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(note => {
+        const decrypted = decryptedNotes[note.id]
+        const title = decrypted?.title || ''
+        const content = decrypted?.content || ''
+        // If not decrypted yet, we can't search content/title effectively.
+        // We can match if title matches (if partially decrypted?) or just show all if searching?
+        // Ideally we filter based on what we have.
+        return title.toLowerCase().includes(query) || 
+               content.toLowerCase().includes(query) ||
+               (note.tags && note.tags.some(t => t.toLowerCase().includes(query)))
+      })
+    }
+
+    return filtered
+  }, [activeNotes, selectedFolder, searchQuery, decryptedNotes])
+
+  const sortedNotes = useMemo(() => {
+    return [...filteredNotes].sort((a, b) => {
+      // Always show pinned notes first
+      if (a.pinned && !b.pinned) return -1
+      if (!a.pinned && b.pinned) return 1
+  
+      switch (sortBy) {
+        case 'updated': {
+          const aUpdatedTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
+          const bUpdatedTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
+          return bUpdatedTime - aUpdatedTime
+        }
+        case 'created': {
+          const aCreatedTime = a.createdAt ? new Date(a.createdAt).getTime() : 0
+          const bCreatedTime = b.createdAt ? new Date(b.createdAt).getTime() : 0
+          return bCreatedTime - aCreatedTime
+        }
+        case 'title': {
+           // Use decrypted title if available
+           const aTitle = decryptedNotes[a.id]?.title || a.title || ''
+           const bTitle = decryptedNotes[b.id]?.title || b.title || ''
+          return aTitle.localeCompare(bTitle)
+        }
+        default:
+          return 0
+      }
+    })
+  }, [filteredNotes, sortBy, decryptedNotes])
 
   const toggleBulkMode = () => {
     setIsBulkMode(!isBulkMode)
     setSelectedNotes([])
   }
 
+  // ... Bulk mode effects ...
   useEffect(() => {
-    const handleToggleBulkMode = () => {
-      toggleBulkMode()
-    }
-
+    const handleToggleBulkMode = () => toggleBulkMode()
     window.addEventListener('toggle-bulk-mode', handleToggleBulkMode)
     return () => window.removeEventListener('toggle-bulk-mode', handleToggleBulkMode)
   }, [isBulkMode])
@@ -119,40 +152,48 @@ export function NoteList() {
     )
   }
 
-  const selectAllNotes = () => {
-    setSelectedNotes(sortedNotes.map((note) => note.id))
-  }
-
-  const clearSelection = () => {
-    setSelectedNotes([])
-  }
-
+  const selectAllNotes = () => setSelectedNotes(sortedNotes.map((note) => note.id))
+  const clearSelection = () => setSelectedNotes([])
   const handleBulkClose = () => {
     setSelectedNotes([])
     setIsBulkMode(false)
   }
 
-  if (filteredNotes.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground">
-        <div className="text-center space-y-2 animate-fade-in">
-          <FileText className="h-12 w-12 mx-auto opacity-50 animate-float" />
-          <p>No notes yet</p>
-          <p className="text-sm">Create your first note to get started</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-4 py-2 border-b border-border flex-shrink-0">
+    <div className="flex flex-col h-full">
+      <div className="flex flex-col gap-2 p-4 border-b bg-background">
+        <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    placeholder="Search..." 
+                    className="pl-8 h-9" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute right-0 top-0 h-9 w-9"
+                        onClick={() => setSearchQuery('')}
+                    >
+                        <X className="h-4 w-4" />
+                    </Button>
+                )}
+            </div>
+             <Button size="icon" onClick={handleCreateNote} disabled={isLoading} className="shrink-0 h-9 w-9">
+                <Plus className="h-4 w-4" />
+                <span className="sr-only">New Note</span>
+             </Button>
+        </div>
+
         <div className="flex items-center justify-between">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <ArrowUpDown className="h-4 w-4" />
-                Sort by:{' '}
+              <Button variant="ghost" size="sm" className="gap-2 h-8 px-2 -ml-2 text-xs text-muted-foreground hover:text-foreground">
+                <ArrowUpDown className="h-3 w-3" />
+                Sort: {' '}
                 {sortBy === 'updated'
                   ? 'Last Updated'
                   : sortBy === 'created'
@@ -168,174 +209,154 @@ export function NoteList() {
           </DropdownMenu>
 
           <div className="flex items-center gap-2">
-            {isBulkMode && (
-              <>
-                <Button variant="outline" size="sm" onClick={selectAllNotes}>
-                  Select All
-                </Button>
-                <Button variant="outline" size="sm" onClick={clearSelection}>
-                  Clear
-                </Button>
-              </>
+            {isBulkMode ? (
+               <Button variant="ghost" size="sm" onClick={toggleBulkMode} className="h-8 text-xs">
+                Done
+               </Button>
+            ) : (
+               <Button variant="ghost" size="sm" onClick={toggleBulkMode} className="h-8 text-xs text-muted-foreground">
+                Select
+               </Button>
             )}
-            <Button variant={isBulkMode ? 'default' : 'outline'} size="sm" onClick={toggleBulkMode}>
-              {isBulkMode ? 'Exit Bulk' : 'Bulk Select'}
-            </Button>
           </div>
         </div>
+        
+        {isBulkMode && (
+            <div className="flex items-center gap-2 pb-2">
+                <Button variant="secondary" size="sm" onClick={selectAllNotes} className="h-7 text-xs">
+                  Select All
+                </Button>
+                <Button variant="outline" size="sm" onClick={clearSelection} className="h-7 text-xs">
+                  Clear
+                </Button>
+            </div>
+        )}
       </div>
 
-      <ScrollArea className="flex-1 min-h-0">
-        <div className="p-2 space-y-1">
-          {sortedNotes.map((note, index) => {
-            const isSelected = selectedNote?.id === note.id
-            const isBulkSelected = selectedNotes.includes(note.id)
-            const decrypted = decryptedNotes[note.id]
+      <ScrollArea className="flex-1">
+        <div className="p-3 space-y-2">
+          {filteredNotes.length === 0 ? (
+             <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                <div className="bg-muted/50 p-4 rounded-full mb-3">
+                    <FileText className="h-6 w-6 opacity-50" />
+                </div>
+                <p className="text-sm">No notes found</p>
+                <Button variant="link" size="sm" onClick={handleCreateNote}>Create one?</Button>
+             </div>
+          ) : (
+            sortedNotes.map((note) => {
+                const isSelected = selectedNote?.id === note.id
+                const isBulkSelected = selectedNotes.includes(note.id)
+                const decrypted = decryptedNotes[note.id]
+                
+                // Format content preview
+                const contentPreview = decrypted 
+                    ? (decrypted.content || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100)
+                    : ''
 
-            return (
-              <ContextMenu key={note.id}>
-                <ContextMenuTrigger
-                  className={`w-full p-3 rounded-lg transition-smooth hover-lift stagger-item cursor-pointer ${
-                    isSelected
-                      ? 'bg-primary/10 border border-primary/20'
-                      : 'hover:bg-surface-hover border border-transparent'
-                  } ${isBulkSelected ? 'bg-primary/5 border-primary/10' : ''}`}
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                  onClick={(e) => {
-                    // Only select if not in bulk mode and click wasn't on checkbox
-                    if (
-                      !isBulkMode &&
-                      !(e.target as HTMLElement).closest('input[type="checkbox"]')
-                    ) {
-                      selectNote(note.id)
-                    }
-                  }}
-                >
-                  <div className="flex items-start gap-3">
-                    {isBulkMode && (
-                      <div className="flex items-center mt-1">
-                        <input
-                          type="checkbox"
-                          checked={isBulkSelected}
-                          onChange={() => toggleNoteSelection(note.id)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                        />
-                      </div>
-                    )}
+                return (
+                <ContextMenu key={note.id}>
+                    <ContextMenuTrigger asChild>
+                        <div
+                        onClick={(e) => {
+                             if (!isBulkMode && !(e.target as HTMLElement).closest('input[type="checkbox"]')) {
+                                selectNote(note.id)
+                             }
+                        }}
+                        className={`
+                            group flex flex-col gap-2 p-3 rounded-lg border transition-all cursor-pointer
+                            ${isSelected 
+                                ? 'bg-accent text-accent-foreground border-primary/20 shadow-sm' 
+                                : 'bg-card hover:bg-accent/50 border-transparent hover:border-border'
+                            }
+                            ${isBulkSelected ? 'bg-primary/10 border-primary/20' : ''}
+                        `}
+                        >
+                            <div className="flex items-start gap-3">
+                                {isBulkMode && (
+                                    <div className="mt-1">
+                                        <input
+                                            type="checkbox"
+                                            checked={isBulkSelected}
+                                            onChange={() => toggleNoteSelection(note.id)}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                        />
+                                    </div>
+                                )}
+                                <div className="flex-1 min-w-0 space-y-1">
+                                    <div className="flex items-center justify-between gap-2">
+                                         <div className="flex items-center gap-2 min-w-0">
+                                            {note.pinned && <Pin className="h-3 w-3 fill-current text-primary shrink-0" />}
+                                            <h4 className={`font-semibold text-sm truncate ${!decrypted && isUnlocked && !isDecrypting ? 'opacity-50' : ''}`}>
+                                                {isUnlocked 
+                                                    ? (decrypted ? (decrypted.title || 'Untitled') : (isDecrypting ? <Skeleton className="h-4 w-24 inline-block" /> : 'Untitled'))
+                                                    : 'Locked Note'
+                                                }
+                                            </h4>
+                                         </div>
+                                         {note.encrypted && <Lock className="h-3 w-3 text-muted-foreground shrink-0" />}
+                                    </div>
+                                    
+                                    <p className="text-xs text-muted-foreground line-clamp-2 h-8">
+                                        {isUnlocked 
+                                            ? (decrypted ? (contentPreview || 'No content') : (isDecrypting ? <Skeleton className="h-3 w-full" /> : 'No content'))
+                                            : 'Unlock to preview content'
+                                        }
+                                    </p>
 
-                    <div className="flex-1 text-left">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          {note.pinned && (
-                            <Pin className="h-3 w-3 text-primary flex-shrink-0 mt-0.5" />
-                          )}
-                          {isUnlocked ? (
-                            decrypted ? (
-                              <h3 className="font-medium text-sm line-clamp-1">
-                                {decrypted.title || 'Untitled'}
-                              </h3>
-                            ) : isDecrypting ? (
-                              <Skeleton className="h-4 w-32" />
-                            ) : (
-                              <h3 className="font-medium text-sm line-clamp-1">Untitled</h3>
-                            )
-                          ) : (
-                            <h3 className="font-medium text-sm line-clamp-1">Locked</h3>
-                          )}
+                                    <div className="flex items-center justify-between pt-1">
+                                        <div className="flex gap-1 overflow-hidden">
+                                            {(note.tags || []).slice(0, 2).map(tag => (
+                                                <span key={tag} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-secondary text-secondary-foreground truncate max-w-[60px]">
+                                                    {tag}
+                                                </span>
+                                            ))}
+                                            {(note.tags || []).length > 2 && (
+                                                <span className="text-[10px] text-muted-foreground">+{note.tags!.length - 2}</span>
+                                            )}
+                                        </div>
+                                        <span className="text-[10px] text-muted-foreground shrink-0">
+                                            {note.updatedAt 
+                                                ? (() => {
+                                                    try {
+                                                        return formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })
+                                                    } catch (e) {
+                                                        return ''
+                                                    }
+                                                })()
+                                                : ''
+                                            }
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        {note.encrypted && (
-                          <Lock className="h-3 w-3 text-muted flex-shrink-0 mt-0.5 animate-pulse" />
-                        )}
-                      </div>
-
-                      {isUnlocked ? (
-                        decrypted ? (
-                          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                            {(decrypted.content || '')
-                              .replace(/<[^>]*>/g, ' ')
-                              .replace(/\s+/g, ' ')
-                              .trim() || 'No content'}
-                          </p>
-                        ) : isDecrypting ? (
-                          <div className="space-y-1 mb-2">
-                            <Skeleton className="h-3 w-full" />
-                            <Skeleton className="h-3 w-3/4" />
-                          </div>
-                        ) : (
-                          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                            No content
-                          </p>
-                        )
-                      ) : (
-                        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                          Unlock to preview content
-                        </p>
-                      )}
-
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1 flex-wrap">
-                          {(note.tags || []).slice(0, 2).map((tag) => (
-                            <span
-                              key={tag}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent/50 text-xs transition-smooth hover:bg-accent"
-                            >
-                              <TagIcon className="h-2.5 w-2.5" />
-                              {tag}
-                            </span>
-                          ))}
-                          {(note.tags || []).length > 2 && (
-                            <span className="text-xs text-muted">
-                              +{(note.tags || []).length - 2}
-                            </span>
-                          )}
-                        </div>
-
-                        <span className="text-xs text-muted-foreground flex-shrink-0">
-                          {note.updatedAt
-                            ? (() => {
-                                try {
-                                  const date = new Date(note.updatedAt)
-                                  return isNaN(date.getTime())
-                                    ? 'Unknown'
-                                    : formatDistanceToNow(date, { addSuffix: true })
-                                } catch {
-                                  return 'Unknown'
-                                }
-                              })()
-                            : 'Unknown'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </ContextMenuTrigger>
-                <ContextMenuContent>
-                  <ContextMenuItem onClick={() => selectNote(note.id)}>Open</ContextMenuItem>
-                  <ContextMenuSeparator />
-                  <ContextMenuItem onClick={() => handleTogglePin(note.id, Boolean(note.pinned))}>
-                    <Pin className="h-4 w-4 mr-2" />
-                    {note.pinned ? 'Unpin' : 'Pin'}
-                  </ContextMenuItem>
-                  <ContextMenuItem onClick={() => handleDuplicate(note.id)}>
-                    <Copy className="h-4 w-4 mr-2" />
-                    Duplicate
-                  </ContextMenuItem>
-                  <ContextMenuSeparator />
-                  <ContextMenuItem
-                    className="text-destructive"
-                    onClick={() => handleDelete(note.id)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </ContextMenuItem>
-                </ContextMenuContent>
-              </ContextMenu>
-            )
-          })}
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                         <ContextMenuItem onClick={() => selectNote(note.id)}>Open</ContextMenuItem>
+                         <ContextMenuSeparator />
+                         <ContextMenuItem onClick={() => handleTogglePin(note.id, Boolean(note.pinned))}>
+                            <Pin className="h-4 w-4 mr-2" />
+                            {note.pinned ? 'Unpin' : 'Pin'}
+                         </ContextMenuItem>
+                         <ContextMenuItem onClick={() => handleDuplicate(note.id)}>
+                            <Copy className="h-4 w-4 mr-2" />
+                            Duplicate
+                         </ContextMenuItem>
+                         <ContextMenuSeparator />
+                         <ContextMenuItem className="text-destructive" onClick={() => handleDelete(note.id)}>
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                         </ContextMenuItem>
+                    </ContextMenuContent>
+                </ContextMenu>
+                )
+            })
+          )}
         </div>
       </ScrollArea>
 
-      {/* Bulk Operations Bar */}
       <BulkOperationsBar selectedNotes={selectedNotes} onClose={handleBulkClose} />
     </div>
   )
