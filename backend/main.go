@@ -19,6 +19,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"log"
 	"os"
 	"strings"
@@ -26,6 +27,7 @@ import (
 
 	"leaflock/auth"
 	appconfig "leaflock/config"
+	appcrypto "leaflock/crypto"
 	appdb "leaflock/database"
 	_ "leaflock/docs"     // Import docs for Swagger
 	_ "leaflock/handlers" // Import handlers for Swagger
@@ -113,6 +115,9 @@ func main() {
 
 	// Crypto service removed - zero-knowledge architecture
 	// MFA and session encryption derived from JWT_SECRET internally in auth.NewService
+	// Handler crypto for templates and other server-managed encrypted data
+	handlerKey := sha256.Sum256(append([]byte(config.JWTSecret), []byte("-handler-encryption")...))
+	handlerCrypto := appcrypto.NewCryptoService(handlerKey[:])
 
 	// Initialize readiness state
 	readyState := appserver.NewReadyState(db, config, rdb)
@@ -154,7 +159,7 @@ func main() {
 
 	// Initialize templates
 	templateStart := time.Now()
-	if err := services.SeedDefaultTemplates(db); err != nil {
+	if err := services.SeedDefaultTemplates(db, handlerCrypto); err != nil {
 		log.Printf("Warning: Failed to seed default templates: %v", err)
 	}
 	log.Printf("⏱️  Template seeding completed in %v", time.Since(templateStart))

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -361,73 +362,33 @@ func (h *TemplatesHandler) UseTemplate(c *fiber.Ctx) error {
 
 	// Get template content
 	var contentEncrypted []byte
-	var nameEncrypted []byte
 	err = h.db.QueryRow(ctx, `
-		SELECT name_encrypted, content_encrypted
+		SELECT content_encrypted
 		FROM templates
 		WHERE id = $1 AND (user_id = $2 OR is_public = true)
-	`, templateID, userID).Scan(&nameEncrypted, &contentEncrypted)
+	`, templateID, userID).Scan(&contentEncrypted)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Template not found"})
 	}
 
-	// Decrypt template data
-	templateNameBytes, err := h.crypto.Decrypt(nameEncrypted)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to decrypt template name"})
-	}
-	templateName := string(templateNameBytes)
-
+	// Decrypt template content
 	contentBytes, err := h.crypto.Decrypt(contentEncrypted)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to decrypt template content"})
 	}
 	content := string(contentBytes)
 
-	// Use provided title or template name
-	title := req.Title
-	if title == "" {
-		title = templateName
-	}
-
-	// Encrypt note data
-	titleEncrypted, err := h.crypto.Encrypt([]byte(title))
+	// Get user email for variable substitution
+	var userEmail string
+	err = h.db.QueryRow(ctx, `SELECT email FROM users WHERE id = $1`, userID).Scan(&userEmail)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt note title"})
+		// Don't fail if we can't get user email, just skip substitution
+		log.Printf("Failed to get user email for template variables: %v", err)
+		userEmail = ""
 	}
 
-	contentEncryptedForNote, err := h.crypto.Encrypt([]byte(content))
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to encrypt note content"})
-	}
-
-	// Parse folder ID if provided
-	var folderID *uuid.UUID
-	if req.FolderID != nil && *req.FolderID != "" {
-		parsed, err := uuid.Parse(*req.FolderID)
-		if err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid folder ID"})
-		}
-		folderID = &parsed
-
-		// Verify folder exists and belongs to user
-		var exists bool
-		err = h.db.QueryRow(ctx, `SELECT true FROM folders WHERE id = $1 AND user_id = $2`, *folderID, userID).Scan(&exists)
-		if err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Folder not found"})
-		}
-	}
-
-	// Create new note from template
-	var noteID uuid.UUID
-	err = h.db.QueryRow(ctx, `
-		INSERT INTO notes (user_id, title_encrypted, content_encrypted, template_id, folder_id)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id
-	`, userID, titleEncrypted, contentEncryptedForNote, templateID, folderID).Scan(&noteID)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to create note from template"})
-	}
+	// Substitute template variables
+	content = substituteTemplateVariables(content, userEmail)
 
 	// Increment template usage count
 	_, err = h.db.Exec(ctx, `
@@ -438,8 +399,35 @@ func (h *TemplatesHandler) UseTemplate(c *fiber.Ctx) error {
 		log.Printf("Failed to increment template usage count: %v", err)
 	}
 
-	return c.Status(201).JSON(fiber.Map{
-		"id":      noteID,
-		"message": "Note created from template successfully",
+	// Return decrypted template content for client-side E2E encryption
+	// The frontend will create the note with proper E2E encryption
+	return c.JSON(fiber.Map{
+		"content": content,
+		"tags":    []string{},
 	})
+}
+
+// substituteTemplateVariables replaces template variables with actual values
+func substituteTemplateVariables(content string, userEmail string) string {
+	now := time.Now()
+
+	// Date variables
+	content = strings.ReplaceAll(content, "${date}", now.Format("2006-01-02"))
+	content = strings.ReplaceAll(content, "${datetime}", now.Format("2006-01-02 15:04"))
+	content = strings.ReplaceAll(content, "${time}", now.Format("15:04"))
+	content = strings.ReplaceAll(content, "${year}", now.Format("2006"))
+	content = strings.ReplaceAll(content, "${month}", now.Format("January"))
+	content = strings.ReplaceAll(content, "${day}", now.Format("Monday"))
+
+	// User variables
+	if userEmail != "" {
+		content = strings.ReplaceAll(content, "${person}", userEmail)
+		content = strings.ReplaceAll(content, "${user}", userEmail)
+		content = strings.ReplaceAll(content, "${email}", userEmail)
+		content = strings.ReplaceAll(content, "${author}", userEmail)
+		content = strings.ReplaceAll(content, "${developer}", userEmail)
+		content = strings.ReplaceAll(content, "${reviewer}", userEmail)
+	}
+
+	return content
 }
