@@ -93,11 +93,13 @@ export function NoteList() {
         const decrypted = decryptedNotes[note.id]
         const title = decrypted?.title || ''
         const content = decrypted?.content || ''
+        // Strip HTML tags from content before searching
+        const cleanContent = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').toLowerCase()
         // If not decrypted yet, we can't search content/title effectively.
         // We can match if title matches (if partially decrypted?) or just show all if searching?
         // Ideally we filter based on what we have.
-        return title.toLowerCase().includes(query) || 
-               content.toLowerCase().includes(query) ||
+        return title.toLowerCase().includes(query) ||
+               cleanContent.includes(query) ||
                (note.tags && note.tags.some(t => t.toLowerCase().includes(query)))
       })
     }
@@ -317,15 +319,16 @@ export function NoteList() {
                                             )}
                                         </div>
                                         <span className="text-[10px] text-muted-foreground shrink-0">
-                                            {note.updatedAt 
+                                            {note.updatedAt
                                                 ? (() => {
                                                     try {
-                                                        return formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })
+                                                        const date = new Date(note.updatedAt)
+                                                        return isNaN(date.getTime()) ? 'Unknown' : formatDistanceToNow(date, { addSuffix: true })
                                                     } catch (e) {
-                                                        return ''
+                                                        return 'Unknown'
                                                     }
                                                 })()
-                                                : ''
+                                                : 'Unknown'
                                             }
                                         </span>
                                     </div>

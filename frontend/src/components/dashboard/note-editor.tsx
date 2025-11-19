@@ -487,15 +487,6 @@ export function NoteEditor() {
 
       {/* Editor */}
       <div className="flex-1 flex flex-col p-6 overflow-auto">
-        {selectedNote.encrypted && (
-          <Alert className="mb-4">
-            <ShieldCheck className="h-4 w-4" />
-            <AlertDescription className="text-xs">
-              This note is end-to-end encrypted. Your content is secure and only you can read it.
-            </AlertDescription>
-          </Alert>
-        )}
-
         {decryptError && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription className="text-xs">{decryptError}</AlertDescription>

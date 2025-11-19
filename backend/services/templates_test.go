@@ -48,26 +48,53 @@ func (m *mockTemplatesRow) Scan(dest ...interface{}) error {
 	return ret.Error(0)
 }
 
+type mockCryptoService struct {
+	mock.Mock
+}
+
+func (m *mockCryptoService) Encrypt(data []byte) ([]byte, error) {
+	ret := m.Called(data)
+	if ret.Get(0) == nil {
+		return nil, ret.Error(1)
+	}
+	return ret.Get(0).([]byte), ret.Error(1)
+}
+
 func TestSeedDefaultTemplatesSkipWhenExisting(t *testing.T) {
 	db := &mockTemplatesDB{}
 	row := &mockTemplatesRow{}
+	crypto := &mockCryptoService{}
 	db.On("QueryRow", mock.Anything, mock.Anything, mock.Anything).Return(row)
 	row.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
 		*args[0].(*int) = 5
 	}).Return(nil)
 
-	err := SeedDefaultTemplates(db)
+	// Mock delete of old system templates
+	db.On("Exec", mock.Anything, "DELETE FROM templates WHERE tags @> ARRAY['system']").Return(int64(5), nil)
+
+	// Mock crypto service to return encrypted data
+	crypto.On("Encrypt", mock.Anything).Return([]byte("encrypted"), nil)
+
+	// Mock insert calls for new templates
+	db.On("Exec", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(int64(1), nil)
+
+	err := SeedDefaultTemplates(db, crypto)
 	assert.NoError(t, err)
-	db.AssertNumberOfCalls(t, "Exec", 0)
+	// Should have 1 delete + len(defaultTemplates) inserts
+	db.AssertNumberOfCalls(t, "Exec", 1+len(defaultTemplates))
 }
 
 func TestSeedDefaultTemplatesInsertsDefaults(t *testing.T) {
 	db := &mockTemplatesDB{}
 	row := &mockTemplatesRow{}
+	crypto := &mockCryptoService{}
 	db.On("QueryRow", mock.Anything, mock.Anything, mock.Anything).Return(row)
 	row.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
 		*args[0].(*int) = 0
 	}).Return(nil)
+
+	// Mock crypto service to return encrypted data
+	crypto.On("Encrypt", mock.Anything).Return([]byte("encrypted"), nil)
 
 	insertCalls := 0
 	db.On("Exec", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(
@@ -91,7 +118,7 @@ func TestSeedDefaultTemplatesInsertsDefaults(t *testing.T) {
 		},
 	).Return(int64(1), nil)
 
-	err := SeedDefaultTemplates(db)
+	err := SeedDefaultTemplates(db, crypto)
 	assert.NoError(t, err)
 	assert.Equal(t, len(defaultTemplates), insertCalls)
 }
@@ -99,10 +126,11 @@ func TestSeedDefaultTemplatesInsertsDefaults(t *testing.T) {
 func TestSeedDefaultTemplatesQueryError(t *testing.T) {
 	db := &mockTemplatesDB{}
 	row := &mockTemplatesRow{}
+	crypto := &mockCryptoService{}
 	db.On("QueryRow", mock.Anything, mock.Anything, mock.Anything).Return(row)
 	row.On("Scan", mock.Anything).Return(errors.New("db failure"))
 
-	err := SeedDefaultTemplates(db)
+	err := SeedDefaultTemplates(db, crypto)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check existing templates")
 }
@@ -110,14 +138,18 @@ func TestSeedDefaultTemplatesQueryError(t *testing.T) {
 func TestSeedDefaultTemplatesInsertError(t *testing.T) {
 	db := &mockTemplatesDB{}
 	row := &mockTemplatesRow{}
+	crypto := &mockCryptoService{}
 	db.On("QueryRow", mock.Anything, mock.Anything, mock.Anything).Return(row)
 	row.On("Scan", mock.Anything).Run(func(args mock.Arguments) {
 		*args[0].(*int) = 0
 	}).Return(nil)
 
+	// Mock crypto service to return encrypted data
+	crypto.On("Encrypt", mock.Anything).Return([]byte("encrypted"), nil)
+
 	db.On("Exec", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(int64(0), assert.AnError)
 
-	err := SeedDefaultTemplates(db)
+	err := SeedDefaultTemplates(db, crypto)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to insert template")
 }
