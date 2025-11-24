@@ -373,11 +373,9 @@ export function NoteEditor() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full">
-      {/* <CollaborationBar noteId={selectedNote.id} /> */}
-
+    <div className="flex-1 flex flex-col h-full bg-background">
       {/* Toolbar - Responsive */}
-      <div className="border-b border-border p-2 sm:p-4 flex items-center justify-between gap-2 sm:gap-4">
+      <div className="border-b border-border p-2 sm:p-4 flex items-center justify-between gap-2 sm:gap-4 flex-shrink-0 overflow-x-auto">
         <div className="flex items-center gap-2 flex-1 flex-wrap">
           <Button
             variant={selectedNote.pinned ? 'default' : 'outline'}
@@ -486,7 +484,7 @@ export function NoteEditor() {
       </div>
 
       {/* Editor */}
-      <div className="flex-1 flex flex-col p-6 overflow-auto">
+      <div className="flex-1 flex flex-col p-4 sm:p-6 overflow-auto min-h-0">
         {decryptError && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription className="text-xs">{decryptError}</AlertDescription>
@@ -499,7 +497,7 @@ export function NoteEditor() {
             setTitle(e.target.value)
           }}
           placeholder="Add Title"
-          className="text-3xl font-bold mb-4"
+          className="text-2xl sm:text-3xl font-bold mb-4 border-0 bg-transparent px-0 focus-visible:ring-0 focus-visible:ring-offset-0"
           disabled={isDecrypting}
         />
 

@@ -92,9 +92,9 @@ export function RichTextEditor({ content, onChange, placeholder, disabled }: Ric
   }
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden h-full flex flex-col">
+    <div className="rounded-lg overflow-hidden h-full flex flex-col bg-background">
       {/* Toolbar */}
-      <div className="border-b border-border bg-muted/30 p-1 sm:p-2 flex items-center gap-1 flex-wrap flex-shrink-0">
+      <div className="border-b border-border bg-muted/30 p-1 sm:p-2 flex items-center gap-1 overflow-x-auto flex-shrink-0">
         <Button
           variant="ghost"
           size="sm"

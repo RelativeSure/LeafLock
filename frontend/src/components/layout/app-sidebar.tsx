@@ -27,6 +27,7 @@ import {
   SidebarGroupContent,
   SidebarGroupAction,
 } from '@/components/ui/sidebar'
+import { SidebarNoteList } from './sidebar-note-list'
 import {
   Collapsible,
   CollapsibleContent,
@@ -59,7 +60,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuthStore()
-  const { folders, tags, selectFolder, selectTag, createFolder, selectedFolder } = useNotesStore()
+  const { folders, tags, selectFolder, selectTag, createFolder, createNote, selectedFolder, isLoading } = useNotesStore()
   const [isCreateFolderOpen, setIsCreateFolderOpen] = React.useState(false)
   const [newFolderName, setNewFolderName] = React.useState('')
   const [newFolderColor, setNewFolderColor] = React.useState('#3b82f6')
@@ -76,6 +77,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const handleLogout = () => {
     logout()
     navigate({ to: '/login' })
+  }
+
+  const handleCreateNote = async () => {
+    try {
+      const note = await createNote({})
+      if (note?.id) {
+        navigate({ to: '/' })
+      }
+    } catch (error) {
+      console.error('Failed to create note:', error)
+    }
   }
 
   return (
@@ -123,6 +135,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Notes</SidebarGroupLabel>
+          <SidebarGroupAction title="New Note" onClick={handleCreateNote} disabled={isLoading}>
+            <Plus /> <span className="sr-only">New Note</span>
+          </SidebarGroupAction>
+          <SidebarGroupContent>
+            <SidebarNoteList />
+          </SidebarGroupContent>
         </SidebarGroup>
 
         <SidebarSeparator />
