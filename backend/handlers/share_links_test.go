@@ -199,7 +199,9 @@ func (suite *ShareLinksHandlerTestSuite) TestCreateShareLink_Success() {
 	req := httptest.NewRequest("POST", "/notes/"+suite.noteID.String()+"/share-links", bytes.NewBufferString(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := app.Test(req)
+	// Use longer timeout to accommodate Redis connection retries when Redis is unavailable
+	// The handler gracefully handles Redis failures (logs warning but doesn't fail request)
+	resp, err := app.Test(req, 10000) // 10 second timeout
 	suite.NoError(err)
 	suite.Equal(201, resp.StatusCode)
 
@@ -599,7 +601,9 @@ func (suite *ShareLinksHandlerTestSuite) TestRevokeShareLink_Success() {
 	}), token, suite.userID).Return(int64(1), nil)
 
 	req := httptest.NewRequest("DELETE", "/share-links/"+token, nil)
-	resp, err := app.Test(req)
+	// Use longer timeout to accommodate Redis connection retries when Redis is unavailable
+	// The handler gracefully handles Redis failures (logs warning but doesn't fail request)
+	resp, err := app.Test(req, 10000) // 10 second timeout
 	suite.NoError(err)
 	suite.Equal(200, resp.StatusCode)
 
