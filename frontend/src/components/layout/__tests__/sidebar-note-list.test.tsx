@@ -395,6 +395,28 @@ describe('SidebarNoteList', () => {
       const firstNoteButton = noteButtons[0]
       expect(firstNoteButton).toHaveTextContent('First Note Decrypted')
     })
+
+    it('should handle sorting with created date', async () => {
+      render(<SidebarNoteList />)
+      const dateCreatedItems = screen.getAllByText('Date Created')
+      fireEvent.click(dateCreatedItems[0])
+
+      // Verify notes are still displayed after sorting
+      await waitFor(() => {
+        expect(screen.getByText('First Note Decrypted')).toBeInTheDocument()
+      })
+    })
+
+    it('should handle sorting with title', async () => {
+      render(<SidebarNoteList />)
+      const titleItems = screen.getAllByText('Title')
+      fireEvent.click(titleItems[0])
+
+      // Verify notes are still displayed after sorting
+      await waitFor(() => {
+        expect(screen.getByText('First Note Decrypted')).toBeInTheDocument()
+      })
+    })
   })
 
   describe('Context menu actions', () => {
@@ -606,6 +628,156 @@ describe('SidebarNoteList', () => {
 
       render(<SidebarNoteList />)
       expect(screen.getByText('Untitled')).toBeInTheDocument()
+    })
+  })
+
+  describe('Search with complex HTML content', () => {
+    it('should filter notes with complex HTML and special characters', () => {
+      vi.mocked(useDecryptedNotes).mockReturnValue({
+        decryptedNotes: {
+          'note-1': {
+            title: 'HTML Test',
+            content: '<p>Test <strong>bold</strong> <em>italic</em> content</p>',
+            timestamp: Date.now(),
+          },
+        },
+        isUnlocked: true,
+        isDecrypting: false,
+      })
+
+      vi.mocked(useNotesStore).mockReturnValue({
+        notes: [mockNotes[0]],
+        selectedNote: null,
+        selectedFolder: null,
+        selectNote: selectNoteMock,
+        updateNote: updateNoteMock,
+        moveToTrash: moveToTrashMock,
+      } as any)
+
+      render(<SidebarNoteList />)
+      const searchInput = screen.getByPlaceholderText('Search notes...')
+      fireEvent.change(searchInput, { target: { value: 'bold' } })
+
+      expect(screen.getByText('HTML Test')).toBeInTheDocument()
+    })
+
+    it('should filter notes with multiple consecutive spaces in content', () => {
+      vi.mocked(useDecryptedNotes).mockReturnValue({
+        decryptedNotes: {
+          'note-1': {
+            title: 'Spaces Test',
+            content: '<p>Test    multiple     spaces</p>',
+            timestamp: Date.now(),
+          },
+        },
+        isUnlocked: true,
+        isDecrypting: false,
+      })
+
+      vi.mocked(useNotesStore).mockReturnValue({
+        notes: [mockNotes[0]],
+        selectedNote: null,
+        selectedFolder: null,
+        selectNote: selectNoteMock,
+        updateNote: updateNoteMock,
+        moveToTrash: moveToTrashMock,
+      } as any)
+
+      render(<SidebarNoteList />)
+      const searchInput = screen.getByPlaceholderText('Search notes...')
+      fireEvent.change(searchInput, { target: { value: 'multiple' } })
+
+      expect(screen.getByText('Spaces Test')).toBeInTheDocument()
+    })
+
+    it('should filter notes by tags when content is empty', () => {
+      vi.mocked(useDecryptedNotes).mockReturnValue({
+        decryptedNotes: {
+          'note-1': {
+            title: 'Tagged Note',
+            content: '',
+            timestamp: Date.now(),
+          },
+        },
+        isUnlocked: true,
+        isDecrypting: false,
+      })
+
+      vi.mocked(useNotesStore).mockReturnValue({
+        notes: [mockNotes[0]],
+        selectedNote: null,
+        selectedFolder: null,
+        selectNote: selectNoteMock,
+        updateNote: updateNoteMock,
+        moveToTrash: moveToTrashMock,
+      } as any)
+
+      render(<SidebarNoteList />)
+      const searchInput = screen.getByPlaceholderText('Search notes...')
+      fireEvent.change(searchInput, { target: { value: 'important' } })
+
+      expect(screen.getByText('Tagged Note')).toBeInTheDocument()
+    })
+  })
+
+  describe('Date formatting edge cases', () => {
+    it('should render notes when updatedAt is null', () => {
+      vi.mocked(useNotesStore).mockReturnValue({
+        notes: [
+          {
+            id: 'note-null-date',
+            title: 'Null Date Note',
+            updatedAt: null,
+            isTrashed: false,
+          },
+        ],
+        selectedNote: null,
+        selectedFolder: null,
+        selectNote: selectNoteMock,
+        updateNote: updateNoteMock,
+        moveToTrash: moveToTrashMock,
+      } as any)
+
+      vi.mocked(useDecryptedNotes).mockReturnValue({
+        decryptedNotes: {
+          'note-null-date': { title: 'Null Date Note', content: '', timestamp: Date.now() },
+        },
+        isUnlocked: true,
+        isDecrypting: false,
+      })
+
+      render(<SidebarNoteList />)
+      expect(screen.getByText('Null Date Note')).toBeInTheDocument()
+    })
+  })
+
+  describe('Sort display text branches', () => {
+    it('should display "Date Created" when sorted by created', async () => {
+      render(<SidebarNoteList />)
+      const dateCreatedItems = screen.getAllByText('Date Created')
+      fireEvent.click(dateCreatedItems[0])
+
+      await waitFor(() => {
+        const sortButton = screen.getAllByText('Date Created')
+        expect(sortButton.length).toBeGreaterThan(1) // One in dropdown, one as label
+      })
+    })
+
+    it('should display "Title" when sorted by title', async () => {
+      render(<SidebarNoteList />)
+      const titleItems = screen.getAllByText('Title')
+      fireEvent.click(titleItems[0])
+
+      await waitFor(() => {
+        const sortButton = screen.getAllByText('Title')
+        expect(sortButton.length).toBeGreaterThan(1) // One in dropdown, one as label
+      })
+    })
+
+    it('should display "Last Updated" by default', () => {
+      render(<SidebarNoteList />)
+      const lastUpdatedItems = screen.getAllByText('Last Updated')
+      expect(lastUpdatedItems.length).toBeGreaterThan(1) // One in dropdown, one as label
     })
   })
 })

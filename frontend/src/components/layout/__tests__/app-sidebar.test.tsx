@@ -518,6 +518,37 @@ describe('AppSidebar', () => {
       expect(colorButtons.length).toBe(6)
     })
 
+    it('should change color when clicking a color picker button', async () => {
+      render(<AppSidebar />)
+      const colorButtons = screen.getAllByRole('button').filter((btn) => {
+        const style = btn.getAttribute('style')
+        return style && style.includes('background-color')
+      })
+
+      // Click a different color (purple - #8b5cf6)
+      const purpleButton = colorButtons.find((btn) =>
+        btn.getAttribute('style')?.includes('rgb(139, 92, 246)')
+      )
+      if (purpleButton) {
+        fireEvent.click(purpleButton)
+      }
+
+      // Now create a folder to verify the color was changed
+      const input = screen.getAllByTestId('input')[0]
+      fireEvent.change(input, { target: { value: 'Purple Folder' } })
+
+      const createButtons = screen.getAllByText('Create Folder')
+      const createButton = createButtons.find((btn) => btn.tagName === 'BUTTON')
+      fireEvent.click(createButton!)
+
+      await waitFor(() => {
+        expect(createFolderMock).toHaveBeenCalledWith({
+          name: 'Purple Folder',
+          color: '#8b5cf6',
+        })
+      })
+    })
+
     it('should call createFolder with name and color', async () => {
       render(<AppSidebar />)
 
@@ -572,6 +603,37 @@ describe('AppSidebar', () => {
       fireEvent.click(accountButton!)
 
       expect(mockNavigate).toHaveBeenCalledWith({ to: '/settings' })
+    })
+  })
+
+  describe('Trash button', () => {
+    it('should allow clicking Trash button without errors', () => {
+      render(<AppSidebar />)
+      const trashButton = screen.getByText('Trash').closest('button')
+
+      // Should not throw error when clicked (currently a placeholder/no-op)
+      expect(() => fireEvent.click(trashButton!)).not.toThrow()
+    })
+  })
+
+  describe('Empty folders array edge case', () => {
+    it('should show "No folders" with explicitly empty array', () => {
+      vi.mocked(useNotesStore).mockReturnValue({
+        notes: [],
+        folders: [], // Explicitly empty array
+        tags: [],
+        selectedNote: null,
+        selectedFolder: null,
+        selectNote: selectNoteMock,
+        selectFolder: selectFolderMock,
+        selectTag: selectTagMock,
+        createNote: createNoteMock,
+        createFolder: createFolderMock,
+        isLoading: false,
+      } as any)
+
+      render(<AppSidebar />)
+      expect(screen.getByText('No folders')).toBeInTheDocument()
     })
   })
 })
