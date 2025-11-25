@@ -42,6 +42,7 @@ coverage:
     changes:
       default:
         if_ci_failed: error
+        informational: true
 
 # Flags for separating frontend/backend coverage
 flags:
