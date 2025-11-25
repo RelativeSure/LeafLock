@@ -115,7 +115,7 @@
     "@typescript-eslint/eslint-plugin": "8.48.0",
     "@typescript-eslint/parser": "8.48.0",
     "@vitejs/plugin-react": "5.1.1",
-    "@vitest/coverage-v8": "4.0.13",
+    "@vitest/coverage-v8": "4.0.14",
     "autoprefixer": "10.4.22",
     "crypto-browserify": "3.12.1",
     "eslint": "9.39.1",
@@ -133,7 +133,7 @@
     "vite": "7.2.4",
     "vite-bundle-analyzer": "1.2.3",
     "vite-plugin-node-polyfills": "0.24.0",
-    "vitest": "4.0.13"
+    "vitest": "4.0.14"
   },
   "prettier": {
     "semi": false,
