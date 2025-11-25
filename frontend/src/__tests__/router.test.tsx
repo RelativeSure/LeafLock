@@ -59,18 +59,18 @@ vi.mock('@/stores/notesStore', () => {
     selectTag: vi.fn(),
     createFolder: vi.fn(),
   }
-  
+
   const useNotesStore = vi.fn((selector) => {
     if (typeof selector === 'function') {
       return selector(mockState)
     }
     return mockState
   })
-  
+
   // Add getState method for direct store access
   // @ts-expect-error - Adding getState for testing purposes
   useNotesStore.getState = () => mockState
-  
+
   return { useNotesStore }
 })
 
