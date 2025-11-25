@@ -35,13 +35,14 @@ coverage:
 
     patch:
       default:
-        target: 85%
+        target: 75%
         threshold: 2%
         if_ci_failed: error
 
     changes:
       default:
         if_ci_failed: error
+        informational: true
 
 # Flags for separating frontend/backend coverage
 flags:

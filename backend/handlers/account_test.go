@@ -228,7 +228,9 @@ func (suite *AccountHandlerTestSuite) TestDeleteAccount_Success() {
 	req := httptest.NewRequest("DELETE", "/account", bytes.NewBufferString(`{"password":"testpass"}`))
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := app.Test(req)
+	// Use longer timeout to accommodate Redis connection retries when Redis is unavailable
+	// The handler gracefully handles Redis failures after DB commit succeeds
+	resp, err := app.Test(req, 10000) // 10 second timeout
 	suite.NoError(err)
 	suite.Equal(200, resp.StatusCode)
 

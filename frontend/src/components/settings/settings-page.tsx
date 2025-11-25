@@ -171,23 +171,38 @@ export function SettingsPage() {
         {/* Vertical Tabs List - Sidebar */}
         <div className="w-64 flex-shrink-0 border-r pr-4 overflow-y-auto">
           <TabsList className="flex-col h-fit w-full bg-transparent p-0">
-            <TabsTrigger value="profile" className="w-full justify-start gap-2 data-[state=active]:bg-secondary data-[state=active]:shadow-none justify-items-start mb-1 px-3 py-2 h-10 rounded-md">
+            <TabsTrigger
+              value="profile"
+              className="w-full justify-start gap-2 data-[state=active]:bg-secondary data-[state=active]:shadow-none justify-items-start mb-1 px-3 py-2 h-10 rounded-md"
+            >
               <User className="h-4 w-4" />
               Profile
             </TabsTrigger>
-            <TabsTrigger value="backup" className="w-full justify-start gap-2 data-[state=active]:bg-secondary data-[state=active]:shadow-none justify-items-start mb-1 px-3 py-2 h-10 rounded-md">
+            <TabsTrigger
+              value="backup"
+              className="w-full justify-start gap-2 data-[state=active]:bg-secondary data-[state=active]:shadow-none justify-items-start mb-1 px-3 py-2 h-10 rounded-md"
+            >
               <Database className="h-4 w-4" />
               Backup & Restore
             </TabsTrigger>
-            <TabsTrigger value="security" className="w-full justify-start gap-2 data-[state=active]:bg-secondary data-[state=active]:shadow-none justify-items-start mb-1 px-3 py-2 h-10 rounded-md">
+            <TabsTrigger
+              value="security"
+              className="w-full justify-start gap-2 data-[state=active]:bg-secondary data-[state=active]:shadow-none justify-items-start mb-1 px-3 py-2 h-10 rounded-md"
+            >
               <Shield className="h-4 w-4" />
               Security
             </TabsTrigger>
-            <TabsTrigger value="preferences" className="w-full justify-start gap-2 data-[state=active]:bg-secondary data-[state=active]:shadow-none justify-items-start mb-1 px-3 py-2 h-10 rounded-md">
+            <TabsTrigger
+              value="preferences"
+              className="w-full justify-start gap-2 data-[state=active]:bg-secondary data-[state=active]:shadow-none justify-items-start mb-1 px-3 py-2 h-10 rounded-md"
+            >
               <SettingsIcon className="h-4 w-4" />
               Preferences
             </TabsTrigger>
-            <TabsTrigger value="manage" className="w-full justify-start gap-2 data-[state=active]:bg-secondary data-[state=active]:shadow-none justify-items-start mb-1 px-3 py-2 h-10 rounded-md">
+            <TabsTrigger
+              value="manage"
+              className="w-full justify-start gap-2 data-[state=active]:bg-secondary data-[state=active]:shadow-none justify-items-start mb-1 px-3 py-2 h-10 rounded-md"
+            >
               <FolderPlus className="h-4 w-4" />
               Manage Folders & Tags
             </TabsTrigger>

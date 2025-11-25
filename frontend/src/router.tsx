@@ -165,12 +165,7 @@ export const router = createRouter({
     loginRoute,
     registerRoute,
     forgotRoute,
-    protectedLayoutRoute.addChildren([
-      dashboardRoute,
-      settingsRoute,
-      manageRoute,
-      adminRoute,
-    ]),
+    protectedLayoutRoute.addChildren([dashboardRoute, settingsRoute, manageRoute, adminRoute]),
   ]),
 })
 

@@ -850,5 +850,41 @@ describe('AdminPage', () => {
 
       expect(searchInput.value).toBe('nonexistent')
     })
+
+    it('should render refresh button in header after loading', async () => {
+      render(<AdminPage />)
+
+      // Wait for component to finish loading
+      await waitFor(() => expect(screen.getByText('John Doe')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      // Now the Refresh button should be visible
+      const refreshButton = screen.getByText('Refresh')
+      expect(refreshButton).toBeInTheDocument()
+      expect(refreshButton.closest('button')).toBeInTheDocument()
+    })
+
+    it('should render export data button in header after loading', async () => {
+      render(<AdminPage />)
+
+      // Wait for component to finish loading
+      await waitFor(() => expect(screen.getByText('John Doe')).toBeInTheDocument(), {
+        timeout: 2000,
+      })
+
+      // Now the Export Data button should be visible
+      const exportButton = screen.getByText('Export Data')
+      expect(exportButton).toBeInTheDocument()
+      expect(exportButton.closest('button')).toBeInTheDocument()
+    })
+
+    it('should display loading spinner initially', () => {
+      const { container } = render(<AdminPage />)
+
+      // Loading state should show immediately - look for spinner animation
+      const spinner = container.querySelector('.animate-spin')
+      expect(spinner).toBeInTheDocument()
+    })
   })
 })

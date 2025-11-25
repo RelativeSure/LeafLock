@@ -12,6 +12,12 @@ const toastMock = vi.fn()
 
 vi.mock('@/stores/notesStore')
 vi.mock('@/hooks/use-toast')
+vi.mock('@/lib/encryption-context', () => ({
+  useEncryption: () => ({
+    decryptText: (text: string) => Promise.resolve(text),
+    isUnlocked: true,
+  }),
+}))
 
 vi.mock('@/components/ui/dialog', () => ({
   Dialog: ({ children }: any) => <div data-testid="dialog-root">{children}</div>,

@@ -62,12 +62,7 @@ func TestUseTemplateCreatesNote(t *testing.T) {
 	cryptoSvc := crypto.NewCryptoService(key)
 	userID := uuid.New()
 	templateID := uuid.New()
-	noteID := uuid.New()
 
-	nameEncrypted, err := cryptoSvc.Encrypt([]byte("Template Name"))
-	if err != nil {
-		t.Fatalf("failed to encrypt name: %v", err)
-	}
 	contentEncrypted, err := cryptoSvc.Encrypt([]byte("Template Content"))
 	if err != nil {
 		t.Fatalf("failed to encrypt content: %v", err)
@@ -75,29 +70,29 @@ func TestUseTemplateCreatesNote(t *testing.T) {
 
 	db := &templatesMockDB{
 		queryRowFuncs: []func(dest ...interface{}) error{
+			// First QueryRow: SELECT content_encrypted FROM templates
 			func(dest ...interface{}) error {
-				if len(dest) != 2 {
-					t.Fatalf("unexpected scan args count %d", len(dest))
+				if len(dest) != 1 {
+					t.Fatalf("unexpected scan args count for content query: %d", len(dest))
 				}
 				if v, ok := dest[0].(*[]byte); ok {
-					*v = nameEncrypted
-				}
-				if v, ok := dest[1].(*[]byte); ok {
 					*v = contentEncrypted
 				}
 				return nil
 			},
+			// Second QueryRow: SELECT email FROM users
 			func(dest ...interface{}) error {
 				if len(dest) != 1 {
-					t.Fatalf("unexpected insert scan args %d", len(dest))
+					t.Fatalf("unexpected scan args count for email query: %d", len(dest))
 				}
-				if v, ok := dest[0].(*uuid.UUID); ok {
-					*v = noteID
+				if v, ok := dest[0].(*string); ok {
+					*v = "user@example.com"
 				}
 				return nil
 			},
 		},
 		execFuncs: []func(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error){
+			// Exec: UPDATE templates SET usage_count = usage_count + 1
 			func(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error) {
 				return pgconn.NewCommandTag("UPDATE 1"), nil
 			},
@@ -120,15 +115,17 @@ func TestUseTemplateCreatesNote(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
-	if resp.StatusCode != 201 {
-		t.Fatalf("expected 201, got %d", resp.StatusCode)
+	// UseTemplate returns 200 with content and tags for client-side E2E encryption
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
 
 	var result map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
-	if result["id"].(string) != noteID.String() {
-		t.Fatalf("expected note ID %s, got %v", noteID, result["id"])
+	// Verify content is returned (decrypted)
+	if result["content"] != "Template Content" {
+		t.Fatalf("expected content 'Template Content', got %v", result["content"])
 	}
 }

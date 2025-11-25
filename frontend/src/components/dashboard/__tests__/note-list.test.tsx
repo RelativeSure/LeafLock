@@ -266,7 +266,12 @@ describe('NoteList', () => {
 
   it('should sort notes by updated date', () => {
     const oldNote = { ...mockNote, id: 'old', title: 'Old Note', updatedAt: '2023-01-01T00:00:00Z' }
-    const newNote = { ...mockNote, id: 'new', title: 'Newest Note', updatedAt: '2024-12-01T00:00:00Z' }
+    const newNote = {
+      ...mockNote,
+      id: 'new',
+      title: 'Newest Note',
+      updatedAt: '2024-12-01T00:00:00Z',
+    }
 
     vi.mocked(useNotesStore).mockReturnValue(
       createMockStore({

@@ -183,6 +183,9 @@ export default defineConfig({
         'src/components/dashboard/note-editor.tsx',
         'src/components/dashboard/note-list.tsx',
         'src/components/dashboard/rich-text-editor.tsx',
+        'src/mocks/handlers.ts',
+        '**/index.ts',
+        'src/index.css',
       ],
       thresholds: {
         // TODO(coverage): temporary relief while global coverage sits ~65%; once
