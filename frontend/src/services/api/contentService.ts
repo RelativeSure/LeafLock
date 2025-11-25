@@ -178,10 +178,13 @@ class ContentService extends ApiClient {
   }
 
   async useTemplate(id: string): Promise<{ content: string; tags: string[] }> {
-    const response = await this.request<{ content: string; tags: string[] }>(`/templates/${id}/use`, {
-      method: 'POST',
-      body: JSON.stringify({}), // Backend expects request body
-    })
+    const response = await this.request<{ content: string; tags: string[] }>(
+      `/templates/${id}/use`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}), // Backend expects request body
+      }
+    )
 
     return {
       content: response.content || '',

@@ -179,7 +179,10 @@ describe('templatesStore', () => {
       await useTemplatesStore.getState().loadTemplates()
 
       expect(useTemplatesStore.getState().isLoading).toBe(false)
-      expect(console.error).toHaveBeenCalledWith('❌ Templates: Failed to load templates:', expect.any(Error))
+      expect(console.error).toHaveBeenCalledWith(
+        '❌ Templates: Failed to load templates:',
+        expect.any(Error)
+      )
     })
 
     it('should separate user templates from community templates', async () => {
