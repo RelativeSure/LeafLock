@@ -94,7 +94,7 @@ importers:
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@tanstack/react-query':
         specifier: ^5.90.5
-        version: 5.90.10(react@19.2.0)
+        version: 5.90.11(react@19.2.0)
       '@tanstack/react-router':
         specifier: ^1.133.27
         version: 1.139.3(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -1709,11 +1709,11 @@ packages:
     resolution: {integrity: sha512-l6wcxwDBeh/7Dhles23U1O8lp9kNJmAb2yNjekR6olZwCRNAVA8TCXlVCrueELyFlYZqvQkh0ofxnzG62A1Kkg==}
     engines: {node: '>=12'}
 
-  '@tanstack/query-core@5.90.10':
-    resolution: {integrity: sha512-EhZVFu9rl7GfRNuJLJ3Y7wtbTnENsvzp+YpcAV7kCYiXni1v8qZh++lpw4ch4rrwC0u/EZRnBHIehzCGzwXDSQ==}
+  '@tanstack/query-core@5.90.11':
+    resolution: {integrity: sha512-f9z/nXhCgWDF4lHqgIE30jxLe4sYv15QodfdPDKYAk7nAEjNcndy4dHz3ezhdUaR23BpWa4I2EH4/DZ0//Uf8A==}
 
-  '@tanstack/react-query@5.90.10':
-    resolution: {integrity: sha512-BKLss9Y8PQ9IUjPYQiv3/Zmlx92uxffUOX8ZZNoQlCIZBJPT5M+GOMQj7xislvVQ6l1BstBjcX0XB/aHfFYVNw==}
+  '@tanstack/react-query@5.90.11':
+    resolution: {integrity: sha512-3uyzz01D1fkTLXuxF3JfoJoHQMU2fxsfJwE+6N5hHy0dVNoZOvwKP8Z2k7k1KDeD54N20apcJnG75TBAStIrBA==}
     peerDependencies:
       react: ^18 || ^19
 
@@ -4783,8 +4783,8 @@ packages:
   third-party-web@0.26.7:
     resolution: {integrity: sha512-buUzX4sXC4efFX6xg2bw6/eZsCUh8qQwSavC4D9HpONMFlRbcHhD8Je5qwYdCpViR6q0qla2wPP+t91a2vgolg==}
 
-  third-party-web@0.28.0:
-    resolution: {integrity: sha512-4P798O67JmIKRJfJ1HSOkIsZrx2+FuaN2jTQX+imHXFPbGp17KSMDabYxrRT011B3gBzaoHFhUkBlEkNZN8vuQ==}
+  third-party-web@0.29.0:
+    resolution: {integrity: sha512-nBDSJw5B7Sl1YfsATG2XkW5qgUPODbJhXw++BKygi9w6O/NKS98/uY/nR/DxDq2axEjL6halHW1v+jhm/j1DBQ==}
 
   through@2.3.8:
     resolution: {integrity: sha512-w89qg7PI8wAdvX60bMDP+bFoD5Dvhm9oLheFp5O4a2QF0cSBGsBX4qZmadPMvVqlLJBBci+WqGGOAPvcDeNSVg==}
@@ -5736,7 +5736,7 @@ snapshots:
   '@paulirish/trace_engine@0.0.53':
     dependencies:
       legacy-javascript: 0.0.1
-      third-party-web: 0.28.0
+      third-party-web: 0.29.0
 
   '@playwright/test@1.57.0':
     dependencies:
@@ -6657,11 +6657,11 @@ snapshots:
 
   '@tanstack/history@1.139.0': {}
 
-  '@tanstack/query-core@5.90.10': {}
+  '@tanstack/query-core@5.90.11': {}
 
-  '@tanstack/react-query@5.90.10(react@19.2.0)':
+  '@tanstack/react-query@5.90.11(react@19.2.0)':
     dependencies:
-      '@tanstack/query-core': 5.90.10
+      '@tanstack/query-core': 5.90.11
       react: 19.2.0
 
   '@tanstack/react-router@1.139.3(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
@@ -10205,7 +10205,7 @@ snapshots:
 
   third-party-web@0.26.7: {}
 
-  third-party-web@0.28.0: {}
+  third-party-web@0.29.0: {}
 
   through@2.3.8: {}
 
