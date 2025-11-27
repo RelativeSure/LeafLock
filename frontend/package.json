@@ -63,7 +63,7 @@
     "@tanstack/react-router": "^1.133.27",
     "@tiptap/extension-code-block-lowlight": "3.11.0",
     "@tiptap/extension-highlight": "3.11.1",
-    "@tiptap/extension-link": "3.11.0",
+    "@tiptap/extension-link": "3.11.1",
     "@tiptap/extension-placeholder": "3.11.1",
     "@tiptap/extension-task-item": "3.11.0",
     "@tiptap/extension-task-list": "3.11.0",
