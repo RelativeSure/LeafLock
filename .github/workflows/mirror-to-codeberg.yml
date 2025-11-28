@@ -29,8 +29,8 @@ jobs:
           set -e
           git remote remove codeberg 2>/dev/null || true
           git remote add codeberg "https://${CODEBERG_USERNAME}:${CODEBERG_TOKEN}@codeberg.org/${CODEBERG_USERNAME}/${CODEBERG_REPO}.git"
-          git push --all codeberg
-          git push --tags codeberg
+          git push --force --all codeberg
+          git push --force --tags codeberg
 
 # Required secrets:
 # - CODEBERG_USERNAME: Your Codeberg username
