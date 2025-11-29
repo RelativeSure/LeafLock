@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// ClerkMiddleware validates Clerk session tokens and sets user context
+// ClerkMiddleware validates Clerk session tokens and sets user context with enhanced functionality
 func (h *Handler) ClerkMiddleware(c *fiber.Ctx) error {
 	// Get Authorization header
 	authHeader := c.Get("Authorization")
@@ -33,9 +33,23 @@ func (h *Handler) ClerkMiddleware(c *fiber.Ctx) error {
 
 	token := parts[1]
 
-	// Validate Clerk session token
-	claims, err := h.validateClerkToken(c.Context(), token)
+	// Use enhanced session management with timing attack protection
+	sessionManager := NewClerkSessionManager(h)
+	
+	// Add timing attack protection
+	h.TimingAttackProtection()
+	
+	// Validate token with enhanced security
+	claims, err := sessionManager.ValidateAndRefreshSession(c, token)
 	if err != nil {
+		// Check if it's a token expiration issue
+		if isTokenExpired(err) {
+			return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
+				Error: "Session expired. Please sign in again.",
+				Code:  "SESSION_EXPIRED",
+			})
+		}
+		
 		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
 			Error: "Invalid or expired Clerk session token",
 			Code:  ErrCodeInvalidToken,
@@ -53,11 +67,13 @@ func (h *Handler) ClerkMiddleware(c *fiber.Ctx) error {
 
 	isAdmin := h.extractAdminStatusFromClerkClaims(claims)
 
-	// Set user context
+	// Set user context with enhanced information
 	c.Locals("user_id", userID)
 	c.Locals("is_admin", isAdmin)
 	c.Locals("clerk_user_id", claims.Subject) // Store original Clerk user ID
-	c.Locals("clerk_token", token)
+	c.Locals("auth_type", "clerk")
+	c.Locals("token", token)
+	c.Locals("clerk_claims", claims) // Store full claims for advanced usage
 
 	return c.Next()
 }
@@ -100,7 +116,7 @@ func (h *Handler) OptionalClerkMiddleware(c *fiber.Ctx) error {
 }
 
 // validateClerkToken validates a Clerk session token
-func (h *Handler) validateClerkToken(ctx context.Context, token string) (*jwt.Claims, error) {
+func (h *Handler) validateClerkToken(ctx context.Context, token string) (*clerk.SessionClaims, error) {
 	// Use Clerk SDK to verify the session token
 	claims, err := jwt.Verify(ctx, &jwt.VerifyParams{
 		Token: token,

@@ -52,7 +52,7 @@ func TestDebugLoginReturnsUserInfo(t *testing.T) {
 			session:   &mockSessionManager{},
 			password:  NewPasswordManager(db),
 			mfa:       NewMFAManager(db, crypto),
-			jwtSecret: "secret",
+			
 		}
 
 		salt, err := service.password.GenerateSalt()
@@ -139,7 +139,7 @@ func TestDebugAdminInfoDecryptsEmail(t *testing.T) {
 			session:   &mockSessionManager{},
 			password:  NewPasswordManager(db),
 			mfa:       NewMFAManager(db, crypto),
-			jwtSecret: "secret",
+			
 		}
 
 		email := "admin@example.com"
@@ -205,7 +205,7 @@ func TestDebugEncryptionKeyRoundTrip(t *testing.T) {
 			session:   &mockSessionManager{},
 			password:  NewPasswordManager(&mockServiceDB{}),
 			mfa:       NewMFAManager(&mockServiceDB{}, crypto),
-			jwtSecret: "secret",
+			
 		}
 		handler := NewHandler(service, &MockEmailService{})
 		app := fiber.New()

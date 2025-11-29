@@ -342,24 +342,24 @@ func TestPasswordHashing(t *testing.T) {
 // Configuration Tests
 func TestConfig(t *testing.T) {
 	// Store original environment
-	originalJWT := os.Getenv("JWT_SECRET")
+	// JWT_SECRET removed - Clerk-only authentication
 	originalDBURL := os.Getenv("DATABASE_URL")
 
 	defer func() {
 		// Restore environment
-		_ = os.Setenv("JWT_SECRET", originalJWT)     // Test cleanup
+		// JWT_SECRET removed - Clerk-only authentication
 		_ = os.Setenv("DATABASE_URL", originalDBURL) // Test cleanup
 	}()
 
 	t.Run("LoadConfigWithDefaults", func(t *testing.T) {
 		// Clear environment variables
-		_ = os.Unsetenv("JWT_SECRET")   // Test setup
+		// JWT_SECRET removed - Clerk-only authentication
 		_ = os.Unsetenv("DATABASE_URL") // Test setup
 
 		config := LoadConfig()
 
 		// Zero-knowledge: No global EncryptionKey, only JWT secret
-		assert.NotEmpty(t, config.JWTSecret)
+		// JWTSecret removed - Clerk-only authentication
 		assert.Equal(t, "postgres://postgres:postgres@localhost:5432/leaflock?sslmode=prefer", config.DatabaseURL) // secretlint-disable-line
 		assert.Equal(t, "8080", config.Port)
 		assert.Equal(t, 5, config.MaxLoginAttempts)
@@ -370,12 +370,12 @@ func TestConfig(t *testing.T) {
 		testJWT := "unit-test-jwt-secret-key-with-sufficient-length-1234567890"
 		testDBURL := "postgres://test:test@localhost:5432/testdb" // secretlint-disable-line
 
-		_ = os.Setenv("JWT_SECRET", testJWT)     // Test setup
+		// JWT_SECRET removed - Clerk-only authentication
 		_ = os.Setenv("DATABASE_URL", testDBURL) // Test setup
 
 		config := LoadConfig()
 
-		assert.Equal(t, testJWT, string(config.JWTSecret))
+		// JWTSecret removed - Clerk-only authentication
 		assert.Equal(t, testDBURL, config.DatabaseURL)
 	})
 }
@@ -928,8 +928,8 @@ func (suite *LockoutTestSuite) SetupTest() {
 	suite.T().Skip("Skipping LockoutTestSuite - incompatible with new auth system that requires real database connections")
 	// Test config
 	suite.config = &appconfig.Config{
-		JWTSecret: []byte("test-secret"),
-		// Zero-knowledge: No global EncryptionKey - derive from JWT_SECRET
+		// JWTSecret removed - Clerk-only authentication
+		// Zero-knowledge: No global EncryptionKey - derive from Clerk secret
 		MaxLoginAttempts:     3,
 		MaxIPLoginAttempts:   5,
 		IPLockoutDuration:    3 * time.Second, // Short duration for testing
@@ -944,8 +944,9 @@ func (suite *LockoutTestSuite) SetupTest() {
 	suite.db, suite.cleanupDB = setupTestDB(suite.T())
 	suite.rdb, suite.cleanupRedis = setupTestRedis(suite.T())
 
-	// Zero-knowledge: Derive test crypto key from JWT_SECRET
-	testKey := sha256.Sum256(append(suite.config.JWTSecret, []byte("-test-crypto")...))
+	// Zero-knowledge: Derive test crypto key from test secret
+	testSecret := []byte("test-clerk-secret-key-for-testing-only")
+	testKey := sha256.Sum256(append(testSecret, []byte("-test-crypto")...))
 	suite.crypto = appcrypto.NewCryptoService(testKey[:])
 
 	// Create app

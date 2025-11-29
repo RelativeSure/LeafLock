@@ -58,7 +58,7 @@ interface AuditLogState {
    * Used for personal activity review
    */
   userLogs: AuditLogEntry[]
-  
+
   /**
    * Total count of user logs available
    * @type {number} Total logs for pagination
@@ -66,7 +66,7 @@ interface AuditLogState {
    * May exceed loaded logs count
    */
   userTotal: number
-  
+
   /**
    * Pagination indicator for user logs
    * @type {boolean} true if more logs available
@@ -74,7 +74,7 @@ interface AuditLogState {
    * Indicates whether to show "load more" option
    */
   userHasMore: boolean
-  
+
   /**
    * Loading state for user logs
    * @type {boolean} true during user log fetch
@@ -82,7 +82,7 @@ interface AuditLogState {
    * Separate from admin log loading state
    */
   userLoading: boolean
-  
+
   /**
    * Error state for user logs
    * @type {string | null} Error message or null
@@ -98,7 +98,7 @@ interface AuditLogState {
    * Used for security monitoring and analysis
    */
   adminLogs: AuditLogEntry[]
-  
+
   /**
    * Total count of admin logs available
    * @type {number} Total system logs for pagination
@@ -106,7 +106,7 @@ interface AuditLogState {
    * May be larger than user logs count
    */
   adminTotal: number
-  
+
   /**
    * Pagination indicator for admin logs
    * @type {boolean} true if more admin logs available
@@ -114,7 +114,7 @@ interface AuditLogState {
    * Indicates whether to show "load more" option
    */
   adminHasMore: boolean
-  
+
   /**
    * Loading state for admin logs
    * @type {boolean} true during admin log fetch
@@ -122,7 +122,7 @@ interface AuditLogState {
    * Separate from user log loading state
    */
   adminLoading: boolean
-  
+
   /**
    * Error state for admin logs
    * @type {string | null} Error message or null
@@ -144,55 +144,55 @@ interface AuditLogState {
    * @param limit - Maximum logs to fetch (default: 50)
    * @param offset - Pagination offset (default: 0)
    * @throws {Error} On fetch failure
-   * 
+   *
    * @pagination
    * - Supports limit/offset based pagination
    * - Concatenates results for infinite scroll
    * - Resets list when offset is 0
-   * 
+   *
    * @user-scope
    * - Returns only current user's activity
    * - Personal activity history and review
    * - Privacy-respecting user-only view
-   * 
+   *
    * @data-integrity
    * - Maintains log immutability
    * - Preserves complete activity trail
    * - Timestamp-based ordering
    */
   fetchUserLogs: (limit?: number, offset?: number) => Promise<void>
-  
+
   /**
    * Fetch system-wide audit logs (admin only)
    * @param params - Optional filter parameters
    * @throws {Error} On fetch failure or permission denied
-   * 
+   *
    * @admin-access
    * - Requires administrative privileges
    * - Returns all user activities system-wide
    * - Used for security monitoring and analysis
-   * 
+   *
    * @filtering
    * - Applies current filters if not overridden
    * - Supports date, user, and action filtering
    * - Merges custom parameters with stored filters
-   * 
+   *
    * @security
    * - May fail with permission errors for non-admins
    * - Comprehensive system activity view
    * - Compliance and security analysis support
    */
   fetchAdminLogs: (params?: GetAuditLogsParams) => Promise<void>
-  
+
   /**
    * Set filters for admin log viewing
    * @param filters - Filter parameters to apply
-   * 
+   *
    * @filter-management
    * - Merges with existing filters
    * - Applied to subsequent admin log fetches
    * - Persistent during session
-   * 
+   *
    * @use-cases
    * - Date range filtering for time analysis
    * - User filtering for specific activity
@@ -200,16 +200,16 @@ interface AuditLogState {
    * - Combined filters for detailed analysis
    */
   setFilters: (filters: GetAuditLogsParams) => void
-  
+
   /**
    * Clear all filters to default state
    * @returns {void} Resets to default filter parameters
-   * 
+   *
    * @reset
    * - Returns to default filter settings
    * - Applied to subsequent fetches
    * - Does not trigger automatic refetch
-   * 
+   *
    * @defaults
    * - limit: 50 (default page size)
    * - offset: 0 (first page)

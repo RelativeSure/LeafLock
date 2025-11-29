@@ -61,7 +61,7 @@ type ExportDataResponse struct {
 // Security & Authentication:
 // - Requires current password confirmation before deletion
 // - Password verified against stored Argon2id hash
-// - JWT token validation ensures authenticated request
+// - Clerk session token validation ensures authenticated request
 // - Session invalidation prevents concurrent access
 // - Audit logging tracks all deletion attempts
 //
@@ -339,7 +339,7 @@ func (h *AccountHandler) DeleteAccount(c *fiber.Ctx) error {
 // - Format versioning for future compatibility
 //
 // Security & Privacy:
-// - Authentication required via JWT token
+// - Authentication required via Clerk session token
 // - User ID validation prevents unauthorized data access
 // - IP address and user agent logged for audit purposes
 // - Encrypted audit log entries for privacy compliance

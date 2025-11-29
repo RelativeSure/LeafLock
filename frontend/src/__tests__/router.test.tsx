@@ -46,6 +46,21 @@ vi.mock('@/stores/authStore', () => {
   }
 })
 
+vi.mock('@/stores/clerkAuthStore', () => ({
+  useClerkAuthStore: vi.fn(() => ({
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    isAdmin: false,
+    setUser: vi.fn(),
+    setLoading: vi.fn(),
+    logout: vi.fn(),
+    getAuthToken: vi.fn(),
+    getEncryptionKey: vi.fn(),
+  })),
+  useSyncClerkAuth: vi.fn(),
+}))
+
 vi.mock('@/stores/notesStore', () => {
   const mockState = {
     notes: [],
@@ -136,6 +151,18 @@ vi.mock('../components/ui/interactive-grid-pattern', () => ({
 vi.mock('../lib/navigation', () => ({
   isOnAuthRoute: vi.fn(() => false),
   safeRedirectToLogin: vi.fn(),
+}))
+
+vi.mock('@clerk/clerk-react', () => ({
+  ClerkProvider: ({ children }: any) => <div data-testid="clerk-provider">{children}</div>,
+  useAuth: vi.fn(() => ({ isSignedIn: false, isLoaded: true })),
+  useUser: vi.fn(() => ({ user: null })),
+  useSession: vi.fn(() => ({ session: null })),
+  useSignIn: vi.fn(() => ({ signIn: null, isLoaded: true })),
+  useSignUp: vi.fn(() => ({ signUp: null, isLoaded: true })),
+  useClerk: vi.fn(() => ({ setActive: vi.fn(), addListener: vi.fn() })),
+  SignIn: () => <div data-testid="sign-in">Sign In</div>,
+  SignUp: () => <div data-testid="sign-up">Sign Up</div>,
 }))
 
 vi.mock('../components/layout/app-sidebar', () => ({

@@ -177,7 +177,7 @@ func (h *Handler) Register(c *fiber.Ctx) error {
 // - Authenticates users with email/password credentials
 // - Supports Multi-Factor Authentication (MFA) workflow
 // - Implements account lockout protection against brute force attacks
-// - Provides secure session management with JWT tokens
+// - Provides secure session management with Clerk authentication
 //
 // Security Considerations & Threat Model:
 // - Protects against brute force attacks via account lockout mechanism
@@ -205,7 +205,7 @@ func (h *Handler) Register(c *fiber.Ctx) error {
 // - Fallback mechanisms for lost MFA devices
 //
 // Session Management:
-// - JWT tokens with configurable expiration
+// - Clerk session tokens with configurable expiration
 // - Refresh token mechanism for extended sessions
 // - Secure token storage in encrypted Redis cache
 // - Token blacklisting for logout functionality
@@ -1007,9 +1007,9 @@ func (h *Handler) DebugEncryptionKey(c *fiber.Ctx) error {
 	// MFA and session encryption are handled by dedicated managers with JWT-derived keys
 	return c.JSON(map[string]interface{}{
 		"encryption_architecture": "zero-knowledge",
-		"note":                    "Service-level crypto removed. Encryption is handled by MFA and session managers with JWT-derived keys.",
-		"mfa_encryption":          "Derived from JWT secret with '-mfa-encryption' suffix",
-		"session_encryption":      "Derived from JWT secret with '-session-encryption' suffix",
+		"note":                    "Service-level crypto removed. Encryption is handled by MFA and session managers with system-derived keys.",
+		"mfa_encryption":          "Derived from system secret with '-mfa-encryption' suffix",
+		"session_encryption":      "Derived from system secret with '-session-encryption' suffix",
 		"user_note_encryption":    "End-to-end encrypted with password-derived keys (client-side)",
 	})
 }

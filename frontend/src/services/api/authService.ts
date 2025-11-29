@@ -2,60 +2,8 @@ import { ApiClient } from './apiClient'
 import { LoginResponse, RegisterResponse, MFAStatusResponse } from './types'
 
 class AuthService extends ApiClient {
-  async login(email: string, password: string): Promise<LoginResponse> {
-    const response = await this.request<any>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    })
-
-    // Handle MFA-required response (no token yet)
-    if (response.mfa_required && !response.token) {
-      return {
-        token: '',
-        user: {
-          id: response.user_id || '',
-          email: email,
-          name: '',
-          role: response.is_admin ? 'admin' : 'user',
-          mfaEnabled: true,
-          createdAt: new Date().toISOString(),
-        },
-        requiresMFA: true,
-        mfaSession: response.session_token,
-        encryptionSalt: response.encryption_salt,
-        encryptionVersion: response.encryption_version,
-      }
-    }
-
-    // Handle successful login with token
-    if (response.token) {
-      this.setToken(response.token)
-
-      // Transform backend response to frontend format
-      const transformedResponse: LoginResponse = {
-        token: response.token,
-        user: {
-          id: response.user_id || '',
-          email: email, // Store the email we used for login
-          name: '', // We'll get the name from other endpoints or registration
-          role: response.is_admin ? 'admin' : 'user',
-          mfaEnabled: response.mfa_required || false,
-          createdAt: new Date().toISOString(),
-        },
-        requiresMFA: response.mfa_required,
-        encryptionSalt: response.encryption_salt,
-        encryptionVersion: response.encryption_version,
-      }
-
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('user', JSON.stringify(transformedResponse.user))
-      }
-
-      return transformedResponse
-    }
-
-    // Fallback for unexpected response format
-    return response
+  async login(_email: string, _password: string): Promise<LoginResponse> {
+    throw new Error('JWT authentication is deprecated. Use Clerk authentication instead.')
   }
 
   async register(email: string, password: string, name: string): Promise<RegisterResponse> {
@@ -71,55 +19,12 @@ class AuthService extends ApiClient {
     }
   }
 
-  async verifyMFA(code: string, sessionToken?: string): Promise<LoginResponse> {
-    const response = await this.request<any>('/auth/mfa/verify', {
-      method: 'POST',
-      body: JSON.stringify({
-        code,
-        session_token: sessionToken,
-      }),
-    })
-
-    if (response.token) {
-      this.setToken(response.token)
-
-      // Get the stored user data to preserve email and name
-      let storedUser: any = {}
-      if (typeof window !== 'undefined') {
-        const userStr = localStorage.getItem('user')
-        if (userStr) {
-          storedUser = JSON.parse(userStr)
-        }
-      }
-
-      // Transform backend response to frontend format
-      const transformedResponse: LoginResponse = {
-        token: response.token,
-        user: {
-          id: response.user_id || storedUser.id || '',
-          email: storedUser.email || '',
-          name: storedUser.name || '',
-          role: response.is_admin ? 'admin' : 'user',
-          mfaEnabled: true,
-          createdAt: storedUser.createdAt || new Date().toISOString(),
-        },
-        requiresMFA: false,
-        encryptionSalt: response.encryption_salt,
-        encryptionVersion: response.encryption_version,
-      }
-
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('user', JSON.stringify(transformedResponse.user))
-      }
-
-      return transformedResponse
-    }
-
-    return response
+  async verifyMFA(_code: string, _sessionToken?: string): Promise<LoginResponse> {
+    throw new Error('JWT authentication is deprecated. Use Clerk authentication instead.')
   }
 
   async logout(): Promise<void> {
-    this.clearToken()
+    throw new Error('JWT authentication is deprecated. Use Clerk authentication instead.')
   }
 
   async getMFAStatus(): Promise<MFAStatusResponse> {

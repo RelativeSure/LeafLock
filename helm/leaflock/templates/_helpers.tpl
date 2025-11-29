@@ -308,11 +308,7 @@ Generate backend environment variables
   value: {{ .Values.config.backend.corsOrigins | quote }}
 - name: FRONTEND_URL
   value: {{ .Values.config.backend.frontendUrl | default "https://leaflock.app" | quote }}
-- name: JWT_SECRET
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "leaflock.secretName" . }}
-      key: jwt-secret
+# JWT_SECRET removed - Clerk-only authentication
 - name: SERVER_ENCRYPTION_KEY
   valueFrom:
     secretKeyRef:

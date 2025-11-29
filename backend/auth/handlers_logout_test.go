@@ -24,7 +24,7 @@ func newTestService(t *testing.T) (*Service, *SessionManager, *miniredis.Minired
 
 	cryptoSvc := appcrypto.NewCryptoService(key)
 	session := NewSessionManager(redis.NewClient(&redis.Options{Addr: mr.Addr()}), cryptoSvc)
-	return &Service{session: session, jwtSecret: "unit-test-secret"}, session, mr
+	return &Service{session: session}, session, mr
 }
 
 func TestHandlerLogoutSuccess(t *testing.T) {
@@ -33,16 +33,15 @@ func TestHandlerLogoutSuccess(t *testing.T) {
 
 	ctx := context.Background()
 	userID := uuid.New()
-	_, _, err := session.CreateSession(ctx, userID, "127.0.0.1", "agent", true)
+	sessionData, sessionToken, err := session.CreateSession(ctx, userID, "127.0.0.1", "agent", true)
 	require.NoError(t, err)
-	jwtToken, err := service.GenerateJWT(userID, false)
-	require.NoError(t, err)
+	require.NotNil(t, sessionData)
 
 	app := fiber.New()
 	app.Post("/auth/logout", func(c *fiber.Ctx) error {
 		c.Locals("user_id", userID)
-		c.Locals("token", jwtToken)
-		c.Request().Header.Set("Authorization", "Bearer "+jwtToken)
+		c.Locals("token", sessionToken)
+		c.Request().Header.Set("Authorization", "Bearer "+sessionToken)
 		return handler.Logout(c)
 	})
 
@@ -50,9 +49,9 @@ func TestHandlerLogoutSuccess(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-	isBlacklisted, err := session.IsJWTBlacklisted(ctx, jwtToken)
-	require.NoError(t, err)
-	assert.True(t, isBlacklisted)
+	// Verify session was deleted
+	_, err = session.GetSession(ctx, sessionToken)
+	require.Error(t, err)
 }
 
 func TestHandlerLogoutMissingToken(t *testing.T) {
@@ -90,18 +89,17 @@ func TestHandlerLogoutInternalError(t *testing.T) {
 
 	ctx := context.Background()
 	userID := uuid.New()
-	_, _, err := session.CreateSession(ctx, userID, "127.0.0.1", "agent", true)
+	sessionData, sessionToken, err := session.CreateSession(ctx, userID, "127.0.0.1", "agent", true)
 	require.NoError(t, err)
-	jwtToken, err := service.GenerateJWT(userID, false)
-	require.NoError(t, err)
+	require.NotNil(t, sessionData)
 
 	require.NoError(t, session.redis.Close())
 	mr.Close()
 
 	app := fiber.New()
 	app.Post("/auth/logout", func(c *fiber.Ctx) error {
-		c.Locals("token", jwtToken)
-		c.Request().Header.Set("Authorization", "Bearer "+jwtToken)
+		c.Locals("token", sessionToken)
+		c.Request().Header.Set("Authorization", "Bearer "+sessionToken)
 		return handler.Logout(c)
 	})
 

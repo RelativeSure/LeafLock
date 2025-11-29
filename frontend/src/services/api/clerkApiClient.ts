@@ -1,10 +1,10 @@
 /**
  * Clerk API Client
- * 
+ *
  * @description
  * Replaces the legacy API client with Clerk session token authentication.
  * Provides compatibility layer for existing API calls while using Clerk tokens.
- * 
+ *
  * @features
  * - Clerk session token authentication
  * - Automatic token refresh
@@ -29,20 +29,39 @@ export class ClerkApiClient {
 
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`
-    
-    // Get Clerk session token - handle different session states
+
+    // Get Clerk session token with automatic refresh handling
     let token: string | null = null
-    if (this.session && 'session' in this.session && this.session.session && 'getToken' in this.session.session) {
+
+    if (
+      this.session &&
+      'session' in this.session &&
+      this.session.session &&
+      'getToken' in this.session.session
+    ) {
       try {
+        // Try to get token normally first
         token = await this.session.session.getToken()
+
+        // If no token and we have a session, try refreshing
+        if (!token && this.session.session) {
+          console.log('Token expired or unavailable, attempting to get new token...')
+          // Note: refresh() method may not be available in all Clerk versions
+          // Consider implementing re-authentication flow if needed
+          token = await this.session.session.getToken()
+        }
       } catch (error) {
         console.warn('Failed to get Clerk session token:', error)
+
+        // If refresh fails, try one more time with a fresh session
+        // Token refresh failed, user needs to re-authenticate
+        throw new Error('Authentication required. Please sign in again.')
       }
     }
-    
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string> || {}),
+      ...((options.headers as Record<string, string>) || {}),
     }
 
     // Add authorization header if we have a token
@@ -62,7 +81,7 @@ export class ClerkApiClient {
       if (!response.ok) {
         const errorData = await response.text()
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`
-        
+
         try {
           const parsedError = JSON.parse(errorData)
           errorMessage = parsedError.message || parsedError.error || errorMessage
@@ -122,10 +141,10 @@ export const clerkApiClient = new ClerkApiClient(import.meta.env.VITE_API_URL ||
 // Hook to initialize the API client with Clerk session
 export const useClerkApiClient = () => {
   const session = useSession()
-  
+
   React.useEffect(() => {
     clerkApiClient.setSession(session)
   }, [session])
-  
+
   return clerkApiClient
 }

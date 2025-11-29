@@ -1,23 +1,23 @@
 /**
  * Theme Toggle Component
- * 
+ *
  * @description
  * User interface component for switching between light, dark, and system themes.
  * Provides accessible theme selection with smooth icon transitions and dropdown menu.
- * 
+ *
  * @features
  * - Smooth animated transitions between sun and moon icons
  * - Dropdown menu with light, dark, and system options
  * - Accessible with screen reader support
  * - Responsive design with proper touch targets
  * - Integrates with ThemeContext for global theme management
- * 
+ *
  * @accessibility
  * - Screen reader announcement for theme changes
  * - Keyboard navigation support through dropdown
  * - High contrast icon visibility
  * - Proper ARIA labeling for assistive technologies
- * 
+ *
  * @usage
  * <ThemeToggle /> // Renders theme switcher in header or settings
  */

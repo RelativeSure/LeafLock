@@ -1,0 +1,184 @@
+/**
+ * Custom Clerk Authentication Styles
+ * 
+ * Enhances Clerk components with LeafLock-specific animations and interactions
+ */
+
+/* Custom animations for Clerk components */
+.cl-formFieldInput {
+  @apply transition-all duration-200 hover:border-border/80 focus:shadow-lg;
+}
+
+.cl-formButtonPrimary {
+  @apply transition-all duration-200 hover:shadow-md active:scale-[0.98] hover:-translate-y-0.5;
+}
+
+.cl-socialButtonsBlockButton {
+  @apply transition-all duration-200 hover:shadow-md active:scale-[0.98];
+}
+
+.cl-footerActionLink {
+  @apply transition-all duration-200 hover:scale-105;
+}
+
+/* Enhanced focus states */
+.cl-formFieldInput:focus {
+  @apply ring-2 ring-primary ring-offset-2 ring-offset-background;
+}
+
+/* Custom loading animations */
+.cl-spinner {
+  @apply animate-spin;
+}
+
+/* Social button hover effects */
+.cl-socialButtonsBlockButton:hover .cl-socialButtonsProviderIcon {
+  @apply scale-110 transition-transform duration-200;
+}
+
+/* Enhanced card hover effects */
+.cl-card:hover {
+  @apply shadow-xl transition-shadow duration-300;
+}
+
+/* Custom shimmer effect for loading states */
+@keyframes clerk-shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.cl-loading {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  background-size: 200px 100%;
+  animation: clerk-shimmer 1.5s infinite;
+}
+
+/* Custom transition for form elements */
+.cl-formField {
+  @apply transition-all duration-300;
+}
+
+.cl-formField:focus-within {
+  @apply transform scale-[1.01];
+}
+
+/* Enhanced error states */
+.cl-formFieldError {
+  @apply animate-in slide-in-from-left-2 duration-300;
+}
+
+/* Success state animations */
+.cl-formFieldSuccess {
+  @apply animate-in slide-in-from-left-2 duration-300;
+}
+
+/* Custom focus ring for accessibility */
+.cl-focusable:focus {
+  @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+}
+
+/* Hover effects for interactive elements */
+.cl-hoverable:hover {
+  @apply transition-all duration-200;
+}
+
+/* Custom active states */
+.cl-clickable:active {
+  @apply scale-[0.98] transition-transform duration-150;
+}
+
+/* Enhanced typography */
+.cl-headerTitle {
+  @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+}
+
+/* Custom scrollbar for long forms */
+.cl-form::-webkit-scrollbar {
+  @apply w-2;
+}
+
+.cl-form::-webkit-scrollbar-track {
+  @apply bg-background/50 rounded-full;
+}
+
+.cl-form::-webkit-scrollbar-thumb {
+  @apply bg-border rounded-full hover:bg-border/80;
+}
+
+/* Mobile-responsive adjustments */
+@media (max-width: 640px) {
+  .cl-card {
+    @apply mx-4 my-8;
+  }
+
+  .cl-formFieldInput {
+    @apply text-base; /* Prevent zoom on iOS */
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .cl-formFieldInput {
+    @apply border-2;
+  }
+
+  .cl-formButtonPrimary {
+    @apply border-2 border-primary;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .cl-card,
+  .cl-formFieldInput,
+  .cl-formButtonPrimary,
+  .cl-socialButtonsBlockButton {
+    @apply transition-none;
+  }
+}
+
+/* Print styles */
+@media print {
+  .cl-card {
+    @apply shadow-none border border-border;
+  }
+
+  .cl-formButtonPrimary {
+    @apply border-2 border-primary;
+  }
+}
+
+/* Custom focus visible for keyboard navigation */
+.cl-focus-visible:focus-visible {
+  @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+}
+
+/* Enhanced loading states */
+.cl-loading-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.cl-loading-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}

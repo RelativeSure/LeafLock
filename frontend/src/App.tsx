@@ -1,21 +1,21 @@
 /**
  * App Component - Root Application Wrapper
- * 
+ *
  * @description
  * Main application entry point that provides core providers and lazy-loads routing.
  * Handles encryption context, theme management, and application initialization.
- * 
+ *
  * @architecture
  * - Lazy loads router to prevent circular dependencies during build
  * - Provides ThemeProvider for consistent styling across components
  * - Wraps application with EncryptionProvider for client-side encryption
  * - Displays loading spinner during router initialization
- * 
+ *
  * @performance-considerations
  * - Router lazy loading reduces initial bundle size
  * - Dynamic import prevents circular dependency issues
  * - Minimal loading state prevents layout shift
- * 
+ *
  * @providers
  * - ThemeProvider: Manages light/dark theme switching
  * - EncryptionProvider: Handles client-side encryption keys and operations
@@ -27,6 +27,8 @@ import { ClerkProvider } from '@clerk/clerk-react'
 import { ThemeProvider } from './context/ThemeContext'
 import { EncryptionProvider } from './lib/encryption-context'
 import { useClerkApiClient } from './services/api/clerkApiClient'
+import { useEnhancedClerk } from './hooks/useEnhancedClerk'
+import './styles/clerk-auth.css'
 // import { ConfigDebug } from './components/debug/ConfigDebug'
 // Temporarily remove wrappers to isolate update loop
 
@@ -35,9 +37,23 @@ let routerInstance: any = null
 
 const App: React.FC = () => {
   const [router, setRouter] = React.useState<any>(null)
-  
+
   // Initialize Clerk API client with session
   useClerkApiClient()
+
+  // Use enhanced Clerk functionality
+  const { isExpiringSoon, timeUntilExpiry } = useEnhancedClerk()
+
+  // Monitor session expiration
+  React.useEffect(() => {
+    if (isExpiringSoon && timeUntilExpiry) {
+      console.log(`Clerk session expiring in ${Math.floor(timeUntilExpiry / 60000)} minutes`)
+
+      // Could show a notification to the user
+      // Could automatically refresh the session
+      // Could redirect to login when expired
+    }
+  }, [isExpiringSoon, timeUntilExpiry])
 
   React.useEffect(() => {
     // Dynamically import router to break circular dependency

@@ -8,7 +8,6 @@ vi.mock('@/lib/config', () => ({
 }))
 
 vi.mock('@/lib/navigation', () => ({
-  clearAuthStorage: vi.fn(),
   safeRedirectToLogin: vi.fn(),
   isOnAuthRoute: vi.fn(),
 }))
@@ -101,7 +100,7 @@ describe('ApiClient', () => {
       vi.mocked(navigationUtils.isOnAuthRoute).mockReturnValue(false)
 
       await expect(client.getNotes()).rejects.toThrow('Unauthorized')
-      expect(navigationUtils.clearAuthStorage).toHaveBeenCalled()
+      // JWT cleanup removed - Clerk handles authentication
     })
 
     it('does not redirect when already on auth route', async () => {

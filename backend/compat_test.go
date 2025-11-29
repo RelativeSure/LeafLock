@@ -75,11 +75,8 @@ func seedDefaultAdminUser(db appdb.Database, crypto *appcrypto.CryptoService, cf
 }
 
 func LoadConfig() *appconfig.Config {
-	jwtLower := strings.ToLower(os.Getenv("JWT_SECRET"))
-	if jwtLower == "" || strings.HasPrefix(jwtLower, "test") {
-		_ = os.Setenv("JWT_SECRET", "integration-jwt-secret-value-1234567890abcdef")
-	}
-	// Zero-knowledge: SERVER_ENCRYPTION_KEY no longer used (encryption keys derived from JWT_SECRET)
+	// JWT_SECRET removed - Clerk-only authentication
+	// Zero-knowledge: SERVER_ENCRYPTION_KEY no longer used (encryption keys derived from Clerk secret)
 	return appconfig.LoadConfig()
 }
 

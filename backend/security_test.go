@@ -31,13 +31,13 @@ type SecurityTestSuite struct {
 
 func (suite *SecurityTestSuite) SetupTest() {
 	// Generate test keys
-	jwtKey := make([]byte, 64)
+	systemSecret := make([]byte, 64)
 	encKey := make([]byte, 32)
-	_, _ = rand.Read(jwtKey) // Test setup
+	_, _ = rand.Read(systemSecret) // Test setup
 	_, _ = rand.Read(encKey) // Test setup
 
 	suite.config = &Config{
-		JWTSecret:        jwtKey,
+		// JWTSecret removed - Clerk-only authentication
 		MaxLoginAttempts: 3,
 		LockoutDuration:  5 * time.Minute,
 		SessionDuration:  24 * time.Hour,
@@ -78,7 +78,7 @@ func (suite *SecurityTestSuite) SetupTest() {
 		return c.JSON(fiber.Map{"email": req.Email})
 	})
 
-	suite.app.Get("/test-protected", JWTMiddleware(suite.config.JWTSecret, suite.rdb, suite.crypto), func(c *fiber.Ctx) error {
+	suite.app.Get("/test-protected", JWTMiddleware(systemSecret, suite.rdb, suite.crypto), func(c *fiber.Ctx) error {
 		userID := c.Locals("user_id").(uuid.UUID)
 		return c.JSON(fiber.Map{"user_id": userID.String()})
 	})
@@ -192,7 +192,7 @@ func (suite *SecurityTestSuite) TestJWTSecurity() {
 			"iat":     time.Now().Unix(),
 		}
 		token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-		tokenString, _ := token.SignedString(suite.config.JWTSecret)
+		tokenString, _ := token.SignedString(systemSecret)
 
 		req := httptest.NewRequest("GET", "/test-protected", nil)
 		req.Header.Set("Authorization", "Bearer "+tokenString)
@@ -210,7 +210,7 @@ func (suite *SecurityTestSuite) TestJWTSecurity() {
 			"iat":     time.Now().Add(-2 * time.Hour).Unix(),
 		}
 		token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-		tokenString, _ := token.SignedString(suite.config.JWTSecret)
+		tokenString, _ := token.SignedString(systemSecret)
 
 		req := httptest.NewRequest("GET", "/test-protected", nil)
 		req.Header.Set("Authorization", "Bearer "+tokenString)
@@ -228,7 +228,7 @@ func (suite *SecurityTestSuite) TestJWTSecurity() {
 			"iat":     time.Now().Unix(),
 		}
 		token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-		tokenString, _ := token.SignedString(suite.config.JWTSecret)
+		tokenString, _ := token.SignedString(systemSecret)
 
 		// Tamper with token
 		tamperedToken := tokenString[:len(tokenString)-10] + "tampered123"
@@ -269,7 +269,7 @@ func (suite *SecurityTestSuite) TestJWTSecurity() {
 			"iat": time.Now().Unix(),
 		}
 		token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-		tokenString, _ := token.SignedString(suite.config.JWTSecret)
+		tokenString, _ := token.SignedString(systemSecret)
 
 		req := httptest.NewRequest("GET", "/test-protected", nil)
 		req.Header.Set("Authorization", "Bearer "+tokenString)
@@ -590,7 +590,7 @@ func (suite *SecurityTestSuite) TestSecurityHeaders() {
 		"iat":     time.Now().Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-	tokenString, _ := token.SignedString(suite.config.JWTSecret)
+	tokenString, _ := token.SignedString(systemSecret)
 	req.Header.Set("Authorization", "Bearer "+tokenString)
 
 	resp, err := suite.app.Test(req)

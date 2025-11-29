@@ -1,27 +1,27 @@
 /**
  * RegisterForm Component
- * 
+ *
  * Purpose: Provides a comprehensive user registration interface with robust validation
  * and security features. Implements client-side validation for immediate feedback
  * and server-side integration for account creation.
- * 
+ *
  * User Experience Goals:
  * - Progressive validation with real-time feedback
  * - Clear password requirements with visual indicators
  * - Accessible form with proper labeling and ARIA support
  * - Graceful handling of registration disabled states
- * 
+ *
  * Security Considerations:
  * - Strong password requirements (8+ chars, mixed case, numbers, special chars)
  * - Input sanitization for name field (letters, spaces, hyphens, apostrophes only)
  * - Email format validation with RFC-compliant regex
  * - Registration status check to prevent unauthorized access
  * - Generic error messages to prevent user enumeration
- * 
+ *
  * Props Interface:
  * - onToggleMode: Callback to switch between registration and login forms
  * - animatedTitle: Optional animated branding element
- * 
+ *
  * State Management:
  * - Form field states with validation tracking
  * - Real-time password strength validation
@@ -74,10 +74,10 @@ export function RegisterForm({
 
   /**
    * Real-time Validation Rules
-   * 
+   *
    * Purpose: Provides immediate feedback on form field validity.
    * All validation rules are enforced both client-side and server-side.
-   * 
+   *
    * Name Validation:
    * - Minimum 2 characters for meaningful names
    * - Alphabetic characters, spaces, hyphens, and apostrophes only

@@ -10,7 +10,6 @@ import (
 	appcrypto "leaflock/crypto"
 	"leaflock/utils"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -168,13 +167,7 @@ func (m *mockSessionManager) DeleteSession(ctx context.Context, token string) er
 	return nil
 }
 
-func (m *mockSessionManager) BlacklistJWT(ctx context.Context, token string, expiresAt time.Time) error {
-	return nil
-}
 
-func (m *mockSessionManager) IsJWTBlacklisted(ctx context.Context, token string) (bool, error) {
-	return false, nil
-}
 
 func TestCreateAuthResponsePopulatesFields(t *testing.T) {
 	userID := uuid.New()
@@ -209,7 +202,7 @@ func TestCreateAuthResponsePopulatesFields(t *testing.T) {
 		session:   sessionMgr,
 		password:  NewPasswordManager(db),
 		mfa:       NewMFAManager(db, crypto),
-		jwtSecret: "unit-secret",
+
 	}
 
 	ctx := context.Background()
@@ -349,7 +342,7 @@ func TestEnsureDefaultAdminCreatesRecords(t *testing.T) {
 		session:   &mockSessionManager{},
 		password:  NewPasswordManager(db),
 		mfa:       NewMFAManager(db, crypto),
-		jwtSecret: "secret",
+
 	}
 
 	if err := service.EnsureDefaultAdmin(context.Background(), true, "admin@example.com", "ComplexPass123!"); err != nil {

@@ -34,7 +34,7 @@ type AuthHandlersTestSuite struct {
 	handler   *Handler
 	mockSvc   *MockAuthService
 	cryptoSvc *appcrypto.CryptoService
-	jwtSecret string
+	
 }
 
 func (suite *AuthHandlersTestSuite) SetupTest() {
@@ -51,7 +51,7 @@ func (suite *AuthHandlersTestSuite) SetupTest() {
 		suite.T().Fatalf("Failed to generate random key: %v", err)
 	}
 	suite.cryptoSvc = appcrypto.NewCryptoService(key)
-	suite.jwtSecret = "test-jwt-secret-key-for-testing-purposes-only"
+	
 }
 
 func TestAuthHandlersTestSuite(t *testing.T) {
@@ -275,7 +275,7 @@ func (suite *AuthHandlersTestSuite) TestLogin_Success() {
 	body, _ := json.Marshal(reqBody)
 
 	expectedResponse := &AuthResponse{
-		Token:   "mock-jwt-token",
+		Token:   "mock-session-token",
 		UserID:  uuid.New().String(),
 		IsAdmin: false,
 	}
@@ -389,7 +389,7 @@ func (suite *AuthHandlersTestSuite) TestVerifyMFA_Success() {
 	body, _ := json.Marshal(reqBody)
 
 	expectedResponse := &AuthResponse{
-		Token:   "full-jwt-token",
+		Token:   "full-session-token",
 		UserID:  uuid.New().String(),
 		IsAdmin: false,
 	}
@@ -469,10 +469,10 @@ func (suite *AuthHandlersTestSuite) TestLogout_Success() {
 	app := fiber.New()
 	app.Post("/auth/logout", suite.handler.Logout)
 
-	suite.mockSvc.On("Logout", mock.Anything, "Bearer valid-jwt-token").Return(nil)
+	suite.mockSvc.On("Logout", mock.Anything, "Bearer valid-session-token").Return(nil)
 
 	req := httptest.NewRequest("POST", "/auth/logout", nil)
-	req.Header.Set("Authorization", "Bearer valid-jwt-token")
+	req.Header.Set("Authorization", "Bearer valid-session-token")
 
 	resp, err := app.Test(req)
 	suite.NoError(err)

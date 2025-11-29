@@ -1,6 +1,6 @@
 /**
  * Clerk Integration Tests
- * 
+ *
  * @description
  * Tests for Clerk authentication integration to ensure compatibility
  * with existing authentication patterns.
@@ -16,7 +16,9 @@ const mockClerkPublishableKey = 'pk_test_mock_key_for_testing'
 
 // Mock the Clerk hooks
 vi.mock('@clerk/clerk-react', () => ({
-  ClerkProvider: ({ children }: { children: React.ReactNode }) => <div data-testid="clerk-provider">{children}</div>,
+  ClerkProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="clerk-provider">{children}</div>
+  ),
   useAuth: () => ({
     isSignedIn: false,
     isLoaded: true,
@@ -42,7 +44,7 @@ describe('Clerk Integration', () => {
         <div>Test Content</div>
       </ClerkProvider>
     )
-    
+
     expect(screen.getByTestId('clerk-provider')).toBeInTheDocument()
     expect(screen.getByText('Test Content')).toBeInTheDocument()
   })
@@ -55,12 +57,12 @@ describe('Clerk Integration', () => {
         appearance={{
           elements: {
             rootBox: 'mx-auto',
-            card: 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'
-          }
+            card: 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
+          },
         }}
       />
     )
-    
+
     expect(screen.getByTestId('sign-in')).toBeInTheDocument()
   })
 
@@ -72,12 +74,12 @@ describe('Clerk Integration', () => {
         appearance={{
           elements: {
             rootBox: 'mx-auto',
-            card: 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'
-          }
+            card: 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
+          },
         }}
       />
     )
-    
+
     expect(screen.getByTestId('sign-up')).toBeInTheDocument()
   })
 })

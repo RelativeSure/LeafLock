@@ -75,7 +75,7 @@ func TestAuthHandler_Register_InvalidJSON(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -105,7 +105,7 @@ func TestAuthHandler_Register_MissingEmail(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	// Enable registration for this test
@@ -144,7 +144,7 @@ func TestAuthHandler_Login_InvalidJSON(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -174,7 +174,7 @@ func TestAuthHandler_Login_MissingCredentials(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -209,7 +209,7 @@ func TestAuthHandler_BeginMFASetup_InvalidRequest(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -241,7 +241,7 @@ func TestAuthHandler_EnableMFA_MissingToken(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -277,7 +277,7 @@ func TestAuthHandler_DisableMFA_Request(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -309,7 +309,7 @@ func TestAuthHandler_VerifyMFA_InvalidJSON(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -339,7 +339,7 @@ func TestAuthHandler_RequestPasswordReset_InvalidEmail(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -374,7 +374,7 @@ func TestAuthHandler_ConfirmPasswordReset_InvalidToken(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -410,7 +410,7 @@ func TestAuthHandler_Logout_ValidRequest(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -443,7 +443,7 @@ func TestAuthHandler_GetMFAStatus_ValidRequest(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -477,7 +477,7 @@ func TestAuthHandler_GetRegistrationStatus_Check(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -506,7 +506,7 @@ func TestAuthHandler_RegenerateBackupCodes_Request(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -538,7 +538,7 @@ func TestAuthHandler_VerifyResetToken_InvalidToken(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -567,7 +567,7 @@ func TestAuthHandler_Register_WeakPassword(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	// Enable registration for this test
@@ -607,7 +607,7 @@ func TestAuthHandler_Login_InvalidEmail(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -643,7 +643,7 @@ func TestAuthHandler_VerifyMFA_MissingToken(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -678,7 +678,7 @@ func TestAuthHandler_EnableMFA_InvalidToken(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -716,7 +716,7 @@ func TestAuthHandler_RequestPasswordReset_MissingEmail(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -750,7 +750,7 @@ func TestAuthHandler_ConfirmPasswordReset_MissingNewPassword(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -787,7 +787,7 @@ func TestAuthHandler_Register_DuplicateEmail(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -831,7 +831,7 @@ func TestAuthHandler_Login_EmptyPassword(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -867,7 +867,7 @@ func TestAuthHandler_VerifyMFA_InvalidSessionID(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -903,7 +903,7 @@ func TestAuthHandler_BeginMFASetup_AlreadyEnabled(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -935,7 +935,7 @@ func TestAuthHandler_ConfirmPasswordReset_WeakNewPassword(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -971,7 +971,7 @@ func TestAuthHandler_Logout_MissingSessionID(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -1003,7 +1003,7 @@ func TestAuthHandler_Register_EmptyEmail(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()
@@ -1039,7 +1039,7 @@ func TestAuthHandler_VerifyMFA_EmptyToken(t *testing.T) {
 	_, err := rand.Read(key)
 	require.NoError(t, err)
 
-	service := NewService(pool, rdb, "test-jwt-secret")
+	service := NewService(pool, rdb, "test-system-secret")
 	handler := NewHandler(service, &MockEmailService{})
 
 	app := fiber.New()

@@ -1,10 +1,10 @@
 /**
  * Button Component - Radix UI Based Button System
- * 
+ *
  * @description
  * Flexible button component built on Radix UI primitives with extensive customization options.
  * Supports multiple variants, sizes, and asChild prop for polymorphic behavior.
- * 
+ *
  * @features
  * - Multiple visual variants (default, destructive, outline, secondary, ghost, link)
  * - Flexible sizing system (default, sm, lg, icon, icon-sm, icon-lg)
@@ -12,7 +12,7 @@
  * - Comprehensive focus states and accessibility
  * - Smooth transitions and hover effects
  * - Dark mode support with theme-aware styling
- * 
+ *
  * @variants
  * - default: Primary action button with brand colors
  * - destructive: Danger/critical action button (red)
@@ -20,7 +20,7 @@
  * - secondary: Subtle background for less prominent actions
  * - ghost: No background, text-only button
  * - link: Underlined text link appearance
- * 
+ *
  * @sizes
  * - default: Standard 9px height button
  * - sm: Compact 8px height for dense interfaces
@@ -28,7 +28,7 @@
  * - icon: Square 9px for icon-only buttons
  * - icon-sm: Square 8px for small icon buttons
  * - icon-lg: Square 10px for large icon buttons
- * 
+ *
  * @accessibility
  * - Full keyboard navigation support
  * - Focus-visible ring for keyboard users

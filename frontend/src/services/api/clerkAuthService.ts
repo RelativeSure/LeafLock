@@ -1,10 +1,10 @@
 /**
  * Clerk Authentication Service (Compatibility Layer)
- * 
+ *
  * @description
  * Provides compatibility layer for existing auth service interface using Clerk.
  * Maintains the same API surface while using Clerk authentication internally.
- * 
+ *
  * @features
  * - Clerk-based authentication
  * - MFA support via Clerk
@@ -19,14 +19,14 @@ import { useAuth, useUser, useSession } from '@clerk/clerk-react'
 import React from 'react'
 
 interface ClerkAuthServiceDeps {
-  apiClient: ClerkApiClient
+  apiClient: ReturnType<typeof useClerkApiClient>
   auth: ReturnType<typeof useAuth>
   user: ReturnType<typeof useUser>
   session: ReturnType<typeof useSession>
 }
 
 class ClerkAuthService {
-  private apiClient: ClerkApiClient
+  private apiClient: ReturnType<typeof useClerkApiClient>
   private auth: ReturnType<typeof useAuth>
   private user: ReturnType<typeof useUser>
   private session: ReturnType<typeof useSession>
@@ -36,6 +36,15 @@ class ClerkAuthService {
     this.auth = deps.auth
     this.user = deps.user
     this.session = deps.session
+  }
+
+  // Add missing method that was referenced
+  async get<T>(endpoint: string): Promise<T> {
+    return this.apiClient.get<T>(endpoint)
+  }
+
+  async post<T>(endpoint: string, data?: any): Promise<T> {
+    return this.apiClient.post<T>(endpoint, data)
   }
 
   // Legacy login method - now handled by Clerk
@@ -130,9 +139,14 @@ class ClerkAuthService {
       id: clerkUser.id,
       email: clerkUser.primaryEmailAddress?.emailAddress || '',
       name: clerkUser.fullName || '',
-      role: clerkUser.publicMetadata?.isAdmin === true || clerkUser.publicMetadata?.role === 'admin' ? 'admin' : 'user',
+      role:
+        clerkUser.publicMetadata?.isAdmin === true || clerkUser.publicMetadata?.role === 'admin'
+          ? 'admin'
+          : 'user',
       mfaEnabled: clerkUser.twoFactorEnabled === true,
-      createdAt: clerkUser.createdAt ? new Date(clerkUser.createdAt).toISOString() : new Date().toISOString(),
+      createdAt: clerkUser.createdAt
+        ? new Date(clerkUser.createdAt).toISOString()
+        : new Date().toISOString(),
     }
   }
 
@@ -160,7 +174,9 @@ class ClerkAuthService {
   // Check if user has admin role
   isAdmin(): boolean {
     const { user: clerkUser } = this.user
-    return clerkUser?.publicMetadata?.isAdmin === true || clerkUser?.publicMetadata?.role === 'admin'
+    return (
+      clerkUser?.publicMetadata?.isAdmin === true || clerkUser?.publicMetadata?.role === 'admin'
+    )
   }
 }
 
@@ -170,7 +186,7 @@ export const useClerkAuthService = () => {
   const user = useUser()
   const session = useSession()
   const apiClient = useClerkApiClient()
-  
+
   return React.useMemo(() => {
     return new ClerkAuthService({
       apiClient,

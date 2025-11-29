@@ -1,93 +1,9 @@
 package auth
 
 import (
-	"strings"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
-
-// JWTMiddleware validates JWT tokens and sets user context
-func (h *Handler) JWTMiddleware(c *fiber.Ctx) error {
-	// Get Authorization header
-	authHeader := c.Get("Authorization")
-	if authHeader == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
-			Error: "No authorization token provided",
-			Code:  ErrCodeInvalidToken,
-		})
-	}
-
-	// Extract token (format: "Bearer <token>")
-	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || parts[0] != "Bearer" {
-		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
-			Error: "Invalid authorization format",
-			Code:  ErrCodeInvalidToken,
-		})
-	}
-
-	token := parts[1]
-
-	// Check if token is blacklisted
-	blacklisted, err := h.service.session.IsJWTBlacklisted(c.Context(), token)
-	if err == nil && blacklisted {
-		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
-			Error: "Token has been revoked",
-			Code:  ErrCodeInvalidToken,
-		})
-	}
-
-	// Validate JWT
-	userID, isAdmin, err := h.service.ValidateJWT(token)
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
-			Error: "Invalid or expired token",
-			Code:  ErrCodeInvalidToken,
-		})
-	}
-
-	// Set user context
-	c.Locals("user_id", userID)
-	c.Locals("is_admin", isAdmin)
-	c.Locals("token", token)
-
-	return c.Next()
-}
-
-// OptionalJWTMiddleware validates JWT if present, but doesn't require it
-func (h *Handler) OptionalJWTMiddleware(c *fiber.Ctx) error {
-	authHeader := c.Get("Authorization")
-	if authHeader == "" {
-		return c.Next() // No token, continue without auth
-	}
-
-	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || parts[0] != "Bearer" {
-		return c.Next() // Invalid format, continue without auth
-	}
-
-	token := parts[1]
-
-	// Check if token is blacklisted
-	blacklisted, err := h.service.session.IsJWTBlacklisted(c.Context(), token)
-	if err == nil && blacklisted {
-		return c.Next() // Blacklisted token, continue without auth
-	}
-
-	// Try to validate JWT
-	userID, isAdmin, err := h.service.ValidateJWT(token)
-	if err != nil {
-		return c.Next() // Invalid token, continue without auth
-	}
-
-	// Set user context
-	c.Locals("user_id", userID)
-	c.Locals("is_admin", isAdmin)
-	c.Locals("token", token)
-
-	return c.Next()
-}
 
 // RequireAuthMiddleware ensures user is authenticated
 func (h *Handler) RequireAuthMiddleware(c *fiber.Ctx) error {

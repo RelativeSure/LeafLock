@@ -1,32 +1,30 @@
 import React from 'react'
-import { useAuthStore } from '@/stores/authStore'
+import { useAuth, useUser } from '@clerk/clerk-react'
 import { isOnAuthRoute, safeRedirectToLogin } from '@/lib/navigation'
 import AppLayout from './app-layout'
 
 export const ProtectedLayout: React.FC = () => {
-  // Initialize auth store on mount (guarded to run once)
-  const initializedRef = React.useRef(false)
-  React.useEffect(() => {
-    if (initializedRef.current) return
-    initializedRef.current = true
-    try {
-      useAuthStore.getState().initialize()
-    } catch (err) {
-      console.warn('Auth initialize failed:', err)
-    }
-  }, [])
-
-  const user = useAuthStore((state) => state.user)
-  const isLoading = useAuthStore((state) => state.isLoading)
+  const { isSignedIn, isLoaded } = useAuth()
+  const { user: clerkUser } = useUser()
+  
+  // Convert Clerk user to our expected format
+  const user = clerkUser ? {
+    id: clerkUser.id,
+    email: clerkUser.primaryEmailAddress?.emailAddress || '',
+    name: clerkUser.fullName || '',
+    isAdmin: clerkUser.publicMetadata?.isAdmin === true || clerkUser.publicMetadata?.role === 'admin'
+  } : null
+  
+  const isLoading = !isLoaded
   const [dataLoaded, setDataLoaded] = React.useState(false)
 
   React.useEffect(() => {
-    if (!isLoading && !user) {
+    if (isLoaded && !isSignedIn) {
       if (typeof window === 'undefined' || !isOnAuthRoute()) {
         safeRedirectToLogin()
       }
     }
-  }, [user, isLoading])
+  }, [isSignedIn, isLoaded])
 
   // Notes loading guarded to run once after auth is ready
   const notesLoadedRef = React.useRef(false)

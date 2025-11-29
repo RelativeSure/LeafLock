@@ -12,7 +12,7 @@
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
-// @description Type "Bearer" followed by a space and JWT token.
+// @description Type "Bearer" followed by a space and Clerk session token.
 //
 // main.go - Complete secure backend with automatic PostgreSQL setup
 package main
@@ -114,9 +114,9 @@ func main() {
 	log.Printf("⏱️  Redis client initialized in %v", time.Since(redisStart))
 
 	// Crypto service removed - zero-knowledge architecture
-	// MFA and session encryption derived from JWT_SECRET internally in auth.NewService
+	// MFA and session encryption derived from Clerk secret internally in auth.NewService
 	// Handler crypto for templates and other server-managed encrypted data
-	handlerKey := sha256.Sum256(append([]byte(config.JWTSecret), []byte("-handler-encryption")...))
+	handlerKey := sha256.Sum256(append([]byte(config.ClerkSecretKey), []byte("-handler-encryption")...))
 	handlerCrypto := appcrypto.NewCryptoService(handlerKey[:])
 
 	// Initialize Clerk if configured
@@ -124,7 +124,7 @@ func main() {
 		clerkStart := time.Now()
 		if err := auth.InitializeClerk(config.ClerkSecretKey); err != nil {
 			log.Printf("⚠️  Clerk initialization failed: %v", err)
-			log.Printf("⚠️  Continuing with JWT authentication only")
+			log.Printf("⚠️  Clerk authentication not available")
 		} else {
 			log.Printf("⏱️  Clerk SDK initialized in %v", time.Since(clerkStart))
 		}
@@ -162,7 +162,7 @@ func main() {
 
 	// Ensure default admin user from environment variables (idempotent)
 	adminStart := time.Now()
-	authService := auth.NewService(db, rdb, string(config.JWTSecret))
+	authService := auth.NewService(db, rdb, config.ClerkSecretKey)
 	if err := authService.EnsureDefaultAdminFromEnv(context.Background()); err != nil {
 		log.Printf("⚠️  Failed to ensure default admin user: %v", err)
 	} else {

@@ -1,12 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { useAuthStore, useNotesStore, useSettingsStore, useTemplatesStore } from '../index'
+import { useNotesStore, useSettingsStore, useTemplatesStore } from '../index'
 
 describe('stores/index', () => {
-  it('exports useAuthStore', () => {
-    expect(useAuthStore).toBeDefined()
-    expect(typeof useAuthStore).toBe('function')
-  })
-
   it('exports useNotesStore', () => {
     expect(useNotesStore).toBeDefined()
     expect(typeof useNotesStore).toBe('function')
@@ -20,11 +15,6 @@ describe('stores/index', () => {
   it('exports useTemplatesStore', () => {
     expect(useTemplatesStore).toBeDefined()
     expect(typeof useTemplatesStore).toBe('function')
-  })
-
-  it('re-exports from authStore module', async () => {
-    const { useAuthStore: DirectAuthStore } = await import('../authStore')
-    expect(useAuthStore).toBe(DirectAuthStore)
   })
 
   it('re-exports from notesStore module', async () => {
@@ -44,28 +34,19 @@ describe('stores/index', () => {
 
   it('maintains correct export order for dependency management', () => {
     // Verify all stores are exported
-    const exports = { useAuthStore, useNotesStore, useSettingsStore, useTemplatesStore }
-    expect(Object.keys(exports)).toHaveLength(4)
+    const exports = { useNotesStore, useSettingsStore, useTemplatesStore }
+    expect(Object.keys(exports)).toHaveLength(3)
     expect(Object.values(exports).every((fn) => typeof fn === 'function')).toBe(true)
   })
 
   it('all store hooks return store instances', () => {
-    const authState = useAuthStore.getState()
     const notesState = useNotesStore.getState()
     const settingsState = useSettingsStore.getState()
     const templatesState = useTemplatesStore.getState()
 
-    expect(authState).toBeDefined()
     expect(notesState).toBeDefined()
     expect(settingsState).toBeDefined()
     expect(templatesState).toBeDefined()
-  })
-
-  it('useAuthStore has expected initial state properties', () => {
-    const state = useAuthStore.getState()
-    expect(state).toHaveProperty('user')
-    expect(state).toHaveProperty('isLoading')
-    expect(state).toHaveProperty('pendingEncryption')
   })
 
   it('useNotesStore has expected initial state properties', () => {

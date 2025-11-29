@@ -182,7 +182,7 @@ func (h *NotesHandler) GetNote(c *fiber.Ctx) error {
 // Security Implementation:
 // - Encrypted content validated for proper base64 encoding
 // - Content hash generated for integrity verification (Argon2id)
-// - User authorization verified via JWT token
+// - User authorization verified via Clerk session token
 // - Workspace ownership validated before note creation
 // - SQL injection prevention through parameterized queries
 //
@@ -191,7 +191,7 @@ func (h *NotesHandler) GetNote(c *fiber.Ctx) error {
 // - Content hash prevents tampering during transmission
 // - Encrypted content length validated for reasonable bounds
 // - Workspace existence verified before note association
-// - User ID extracted from authenticated JWT context
+// - User ID extracted from authenticated Clerk session context
 //
 // Note Organization Features:
 // - Pinned notes support with custom ordering

@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -172,159 +171,21 @@ func TestSessionManager_HashToken(t *testing.T) {
 	}
 }
 
-func TestServiceValidateJWTSuccess(t *testing.T) {
-	svc := &Service{jwtSecret: "unit-test-secret"}
-	userID := uuid.New()
-	token, err := svc.GenerateJWT(userID, true)
-	if err != nil {
-		t.Fatalf("GenerateJWT failed: %v", err)
+	type logoutSessionStub struct {
+		deleteErr     error
+		deletedTokens []string
 	}
-
-	parsedID, isAdmin, err := svc.ValidateJWT(token)
-	if err != nil {
-		t.Fatalf("ValidateJWT returned error: %v", err)
-	}
-	if parsedID != userID {
-		t.Fatalf("expected user ID %s, got %s", userID, parsedID)
-	}
-	if !isAdmin {
-		t.Fatal("expected isAdmin to be true")
-	}
-}
-
-func TestServiceValidateJWTInvalidToken(t *testing.T) {
-	svc := &Service{jwtSecret: "unit-test-secret"}
-
-	if _, _, err := svc.ValidateJWT("not-a-token"); err == nil {
-		t.Fatal("expected error for invalid token string")
-	}
-}
-
-func TestServiceValidateJWTMissingUserID(t *testing.T) {
-	svc := &Service{jwtSecret: "unit-test-secret"}
-	claims := jwt.MapClaims{
-		"exp":      time.Now().Add(time.Hour).Unix(),
-		"is_admin": false,
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, err := token.SignedString([]byte(svc.jwtSecret))
-	if err != nil {
-		t.Fatalf("failed to sign token: %v", err)
-	}
-
-	if _, _, err := svc.ValidateJWT(signed); err == nil {
-		t.Fatal("expected error when user_id claim missing")
-	}
-}
-
-func TestServiceValidateJWTInvalidUserIDFormat(t *testing.T) {
-	svc := &Service{jwtSecret: "unit-test-secret"}
-	claims := jwt.MapClaims{
-		"user_id": 12345,
-		"exp":     time.Now().Add(time.Hour).Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, err := token.SignedString([]byte(svc.jwtSecret))
-	if err != nil {
-		t.Fatalf("failed to sign token: %v", err)
-	}
-
-	if _, _, err := svc.ValidateJWT(signed); err == nil {
-		t.Fatal("expected error for invalid user_id format")
-	}
-}
-
-func TestServiceValidateJWTExpiredToken(t *testing.T) {
-	svc := &Service{jwtSecret: "unit-test-secret"}
-	claims := jwt.MapClaims{
-		"user_id": uuid.New().String(),
-		"exp":     time.Now().Add(-time.Hour).Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, err := token.SignedString([]byte(svc.jwtSecret))
-	if err != nil {
-		t.Fatalf("failed to sign token: %v", err)
-	}
-
-	if _, _, err := svc.ValidateJWT(signed); err == nil {
-		t.Fatal("expected error for expired token")
-	}
-}
-
-func TestServiceLogout_BlacklistsAndDeletesToken(t *testing.T) {
-	stub := &logoutSessionStub{}
-	svc := &Service{session: stub, jwtSecret: "unit-test-secret"}
-
-	userID := uuid.New()
-	token, err := svc.GenerateJWT(userID, false)
-	require.NoError(t, err)
-
-	err = svc.Logout(context.Background(), token)
-	require.NoError(t, err)
-	require.Len(t, stub.blacklistCalls, 1)
-	require.Equal(t, token, stub.blacklistCalls[0].token)
-
-	parsed, err := jwt.Parse(token, func(tkn *jwt.Token) (interface{}, error) {
-		return []byte(svc.jwtSecret), nil
-	})
-	require.NoError(t, err)
-	claims, ok := parsed.Claims.(jwt.MapClaims)
-	require.True(t, ok)
-	expFloat, ok := claims["exp"].(float64)
-	require.True(t, ok)
-	expectedExpiry := time.Unix(int64(expFloat), 0)
-	require.WithinDuration(t, expectedExpiry, stub.blacklistCalls[0].expiresAt, time.Second)
-
-	require.Len(t, stub.deletedTokens, 1)
-	require.Equal(t, token, stub.deletedTokens[0])
-}
-
-func TestServiceLogout_BlacklistErrorPropagates(t *testing.T) {
-	stub := &logoutSessionStub{blacklistErr: errors.New("redis down")}
-	svc := &Service{session: stub, jwtSecret: "unit-test-secret"}
-
-	token, err := svc.GenerateJWT(uuid.New(), false)
-	require.NoError(t, err)
-
-	err = svc.Logout(context.Background(), token)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to revoke token")
-	require.Empty(t, stub.deletedTokens)
-}
-
-func TestServiceLogout_NonJWTTokenSkipsBlacklist(t *testing.T) {
-	stub := &logoutSessionStub{blacklistErr: errors.New("should not be called")}
-	svc := &Service{session: stub, jwtSecret: "unit-test-secret"}
-
-	err := svc.Logout(context.Background(), "not-a-jwt-token")
-	require.NoError(t, err)
-	require.Len(t, stub.blacklistCalls, 0)
-	require.Len(t, stub.deletedTokens, 1)
-	require.Equal(t, "not-a-jwt-token", stub.deletedTokens[0])
-}
-
-type blacklistCall struct {
-	token     string
-	expiresAt time.Time
-}
-
-type logoutSessionStub struct {
-	blacklistErr   error
-	deleteErr      error
-	blacklistCalls []blacklistCall
-	deletedTokens  []string
-}
 
 func (s *logoutSessionStub) CreateSession(ctx context.Context, userID uuid.UUID, ipAddress, userAgent string, mfaVerified bool) (*Session, string, error) {
-	return nil, "", nil
+	return &Session{}, "session-token", nil
 }
 
 func (s *logoutSessionStub) CreateMFASession(ctx context.Context, userID uuid.UUID, email, ipAddress, userAgent string, mfaEnabled bool) (string, error) {
-	return "", nil
+	return "mfa-token", nil
 }
 
 func (s *logoutSessionStub) GetMFASession(ctx context.Context, token string) (*MFASession, error) {
-	return nil, nil
+	return &MFASession{}, nil
 }
 
 func (s *logoutSessionStub) DeleteMFASession(ctx context.Context, token string) error {
@@ -337,18 +198,6 @@ func (s *logoutSessionStub) DeleteSession(ctx context.Context, token string) err
 		return s.deleteErr
 	}
 	return nil
-}
-
-func (s *logoutSessionStub) BlacklistJWT(ctx context.Context, token string, expiresAt time.Time) error {
-	s.blacklistCalls = append(s.blacklistCalls, blacklistCall{token: token, expiresAt: expiresAt})
-	if s.blacklistErr != nil {
-		return s.blacklistErr
-	}
-	return nil
-}
-
-func (s *logoutSessionStub) IsJWTBlacklisted(ctx context.Context, token string) (bool, error) {
-	return false, nil
 }
 
 // Note: These are basic unit tests. For comprehensive testing, you would need:

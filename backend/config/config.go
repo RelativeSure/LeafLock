@@ -21,7 +21,7 @@ type Config struct {
 	DatabaseURL   string
 	RedisURL      string
 	RedisPassword string
-	JWTSecret     []byte // Legacy JWT secret - will be phased out with Clerk
+
 	// EncryptionKey removed - zero-knowledge architecture (no global encryption key)
 	ClerkPublishableKey string
 	ClerkSecretKey      string
@@ -76,22 +76,7 @@ func LoadConfig() *Config {
 		logLevel = "info"
 	}
 
-	// Generate secure random keys if not provided
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		log.Fatalf("💥 [FATAL] JWT_SECRET environment variable is required and cannot be empty")
-	}
-	if len(jwtSecret) < 32 {
-		log.Fatalf("💥 [FATAL] JWT_SECRET must be at least 32 characters long for security")
-	}
-	// Check for common weak/default values and patterns
-	weakSecrets := []string{"default", "secret", "jwt_secret", "change_me", "insecure", "test", "development", "password", "admin", "your_"}
-	jwtLower := strings.ToLower(jwtSecret)
-	for _, weak := range weakSecrets {
-		if strings.HasPrefix(jwtLower, weak) || strings.EqualFold(jwtSecret, weak) {
-			log.Fatalf("💥 [FATAL] JWT_SECRET cannot start with or be a weak value: '%s'", weak)
-		}
-	}
+		// JWT_SECRET removed - Clerk-only authentication
 
 	// SERVER_ENCRYPTION_KEY removed - zero-knowledge architecture
 	// Emails stored in plaintext, sensitive data encrypted with password-derived keys only
@@ -147,7 +132,7 @@ func LoadConfig() *Config {
 		DatabaseURL:   dbURL,
 		RedisURL:      normalizeRedisAddress(GetEnvOrDefault("REDIS_URL", "localhost:6379")),
 		RedisPassword: resolveRedisPassword(os.Getenv("REDIS_URL"), os.Getenv("REDIS_PASSWORD")),
-		JWTSecret:     []byte(jwtSecret),
+
 		// EncryptionKey removed - zero-knowledge architecture
 		Port: GetEnvOrDefault("PORT", "8080"),
 		AllowedOrigins: func() []string {

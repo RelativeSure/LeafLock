@@ -1,26 +1,26 @@
 /**
  * LoginForm Component
- * 
+ *
  * Purpose: Provides a secure authentication interface for users to access their encrypted notes.
  * This component handles both standard login and multi-factor authentication (MFA) flows,
  * implementing security best practices for credential handling and user feedback.
- * 
+ *
  * User Experience Goals:
  * - Streamlined login process with clear visual feedback
  * - Seamless transition to MFA when required
  * - Informative error messages without exposing security details
  * - Accessible design with proper ARIA labels and keyboard navigation
- * 
+ *
  * Security Considerations:
  * - Passwords are handled securely through the auth store (never stored in component state)
  * - MFA codes are sanitized to prevent injection attacks
  * - Error messages are generic to prevent user enumeration
  * - Registration status is checked to prevent unauthorized access attempts
- * 
+ *
  * Props Interface:
  * - onToggleMode: Callback to switch between login and registration forms
  * - animatedTitle: Optional animated branding element for enhanced UX
- * 
+ *
  * State Management:
  * - Local form state for email, password, and MFA code
  * - Loading states for async operations
@@ -45,7 +45,7 @@ export function LoginForm({
   animatedTitle?: React.ReactNode
 }) {
   const { login, verifyMFA, user, checkRegistrationEnabled } = useAuthStore()
-  
+
   // Form state management
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -57,10 +57,10 @@ export function LoginForm({
 
   /**
    * Registration Status Check
-   * 
+   *
    * Purpose: Determines if new user registration is enabled on the server.
    * This prevents showing registration options when disabled by administrators.
-   * 
+   *
    * Security: Gracefully handles API failures by defaulting to disabled state
    * to prevent unauthorized access attempts.
    */
@@ -79,17 +79,16 @@ export function LoginForm({
 
   /**
    * Post-Login Redirect Handler
-   * 
+   *
    * Purpose: Automatically redirects authenticated users to the main dashboard.
    * Uses useRef to prevent multiple redirects and setTimeout for proper state cleanup.
-   * 
-   * Security: Validates both user object and token presence before redirect
-   * to ensure complete authentication state.
+   *
+   * Security: Validates user object before redirect to ensure complete authentication state.
+   * Note: JWT token validation is deprecated, Clerk handles authentication.
    */
   const hasRedirected = React.useRef(false)
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-    if (user && token && !hasRedirected.current) {
+    if (user && !hasRedirected.current) {
       hasRedirected.current = true
       console.log('User logged in, redirecting to dashboard...')
       // Use setTimeout to ensure state updates complete before redirect
@@ -101,13 +100,13 @@ export function LoginForm({
 
   /**
    * Standard Login Handler
-   * 
+   *
    * Purpose: Processes user credentials and initiates authentication flow.
    * Handles both successful logins and MFA challenges.
-   * 
+   *
    * Security: Clears previous errors, validates input, and provides generic
    * error messages to prevent user enumeration attacks.
-   * 
+   *
    * @param e - Form submission event
    */
   const handleLogin = async (e: React.FormEvent) => {
@@ -129,13 +128,13 @@ export function LoginForm({
 
   /**
    * MFA Verification Handler
-   * 
+   *
    * Purpose: Validates the 6-digit MFA code provided by the user.
    * Completes the two-factor authentication process.
-   * 
+   *
    * Security: Sanitizes input to accept only digits, limits to 6 characters,
    * and provides specific but secure error messaging.
-   * 
+   *
    * @param e - Form submission event
    */
   const handleMFAVerify = async (e: React.FormEvent) => {
