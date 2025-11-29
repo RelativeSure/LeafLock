@@ -104,5 +104,3 @@ func TestMFASessionLifecycle(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "MFA session not found")
 }
-
-

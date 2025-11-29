@@ -1,37 +1,72 @@
 ---
-title: MFA Backup Codes
-description: Understanding and managing MFA backup recovery codes
+title: MFA Backup Codes (Clerk)
+description: Understanding and managing Clerk's MFA backup recovery codes
 ---
 
-# MFA Backup Recovery Codes
+# MFA Backup Recovery Codes (Clerk)
 
-Backup codes are emergency access codes that allow you to log in when you don't have access to your authenticator device.
+Backup codes are emergency access codes that allow you to log in when you don't have access to your primary MFA method. Clerk provides enterprise-grade backup code management with enhanced security features.
 
 ## What Are Backup Codes?
 
-- **One-time use codes** that bypass MFA
-- Generated when you enable MFA
-- **16 characters** in format: `XXXX-XXXX-XXXX-XXXX`
+- **One-time use codes** that bypass MFA authentication
+- Generated automatically when you enable MFA with Clerk
+- **8-digit numeric codes** (Clerk's standard format)
 - **10 codes** provided by default
-- Stored as **Argon2id hashes** (cannot be viewed after initial generation)
+- Managed securely through Clerk's infrastructure
+- Synchronized across all Clerk-enabled applications
 
 ## When to Use Backup Codes
 
-Use a backup code when:
-- Your authentication device is lost, stolen, or broken
-- Your phone battery is dead
-- You can't access your authenticator app
-- You're switching to a new device
+Use a backup code when you:
+- Lost your phone with your authenticator app
+- Can't receive SMS verification codes
+- Your authenticator device is broken or unavailable
+- You're traveling and don't have access to your primary device
+- Need emergency access to your account
 
 ## How to Use a Backup Code
 
 1. Go to the LeafLock login page
 2. Enter your email and password
-3. On the MFA verification screen, click **Use Backup Code Instead**
-4. Enter one of your backup codes
-5. Click **Verify Backup Code**
+3. On the MFA verification screen, click **Try another method**
+4. Select **Backup code**
+5. Enter one of your saved backup codes
+6. Click **Continue**
 
 **Important**: Each code works only once and is then permanently invalidated.
+
+## Clerk's Backup Code Features
+
+### Automatic Management
+- **Secure Generation**: Cryptographically secure random codes
+- **Cloud Sync**: Available across all your Clerk-enabled apps
+- **Automatic Invalidation**: Used codes are immediately marked invalid
+- **Real-time Updates**: Status updates across all devices
+
+### Enhanced Security
+- **Rate Limiting**: Prevents brute force attacks on backup codes
+- **Audit Trail**: All backup code usage is logged
+- **Device Recognition**: Detects suspicious usage patterns
+- **Time Limits**: Codes expire if not used within reasonable timeframe
+
+## Accessing Your Backup Codes
+
+### During Initial MFA Setup:
+1. Clerk displays your backup codes after MFA verification
+2. **Save them immediately** - this is the only time they're shown
+3. Download as text file or copy to clipboard
+4. Store them securely before continuing
+
+### Viewing Backup Code Status:
+1. Log in to LeafLock
+2. Go to **Profile** → **Security** → **Two-Factor Authentication**
+3. View:
+   - Total backup codes: 10
+   - Remaining codes: (shows current count)
+   - Last regenerated: (timestamp)
+
+**Note**: You cannot view the actual codes after initial setup for security reasons.
 
 ## Storing Backup Codes Securely
 
@@ -41,158 +76,186 @@ Use a backup code when:
    - Store in 1Password, Bitwarden, LastPass, etc.
    - Automatically encrypted and backed up
    - Easy to access when needed
+   - Many support secure sharing with trusted contacts
 
 2. **Encrypted Note Apps**
    - Apple Notes (with encryption)
    - Standard Notes
    - Joplin
+   - Obsidian with encryption plugins
 
 3. **Physical Storage**
    - Write codes on paper
    - Store in a safe or lockbox
    - Keep in multiple secure locations
+   - Consider fireproof/waterproof storage
+
+4. **Encrypted Cloud Storage**
+   - VeraCrypt encrypted containers
+   - Cryptomator encrypted folders
+   - Boxcryptor encrypted files
 
 ### Not Recommended
 
-- Unencrypted text files on your computer
-- Email inbox
+- Plain text files on your computer
+- Regular email or unencrypted messaging
 - Unencrypted cloud storage (Google Drive, Dropbox)
 - Shared documents or notes
-- Photos on your phone
+- Photos or screenshots on your phone
+- Social media or public platforms
 
 ## Managing Your Backup Codes
-
-### Viewing Backup Code Status
-
-1. Log in to LeafLock
-2. Go to **Settings** → **Security** → **Multi-Factor Authentication**
-3. View:
-   - Total backup codes: 10
-   - Remaining codes: (varies based on usage)
-   - Used codes: (tracked automatically)
 
 ### Regenerating Backup Codes
 
 You can generate new backup codes at any time:
 
-1. Go to **Settings** → **Security** → **MFA**
+1. Go to **Profile** → **Security** → **Two-Factor Authentication**
 2. Click **Regenerate Backup Codes**
-3. Enter your password to confirm
+3. Verify your identity (may require MFA or password)
 4. New codes are generated and old ones are invalidated
 5. **Download or copy** the new codes immediately
+6. Store them securely and delete old copies
 
 **Warning**: Regenerating codes invalidates ALL previous codes, including unused ones.
 
-## When to Regenerate Codes
+### When to Regenerate Codes
 
 Consider generating new backup codes when:
-- You've used more than 7 of your 10 codes
+- You've used more than 5 of your 10 codes
 - You suspect codes may have been compromised
-- You've shared a code with someone (not recommended)
-- You want to refresh your security regularly (every 6-12 months)
+- You want to refresh your security regularly
+- You've shared a code (not recommended)
+- You need to update your storage method
 
-## Backup Code Security
+## Backup Code Recovery Scenarios
 
-### How They're Stored
+### Scenario 1: Lost Phone
 
-1. **Generation**: Created using cryptographically secure random bytes
-2. **Hashing**: Hashed with Argon2id before database storage
-   - 3 iterations
-   - 64MB memory
-   - 4 parallelism
-   - 32-byte hash output
-3. **Verification**: Your input is hashed and compared to stored hash
-4. **One-time use**: After use, marked as consumed (cannot be reused)
-
-### Security Best Practices
-
-1. **Never share** backup codes with anyone
-2. **Don't email** codes to yourself
-3. **Store securely** in encrypted password manager
-4. **Keep backup** in physical secure location
-5. **Regenerate** if you suspect compromise
-6. **Delete old copies** after regenerating
-
-## Backup Code Recovery Flow
-
-### Scenario: Lost Phone
-
-1. You lose your phone with your authenticator app
-2. Go to LeafLock login
-3. Enter email and password
-4. Click **Use Backup Code Instead**
+1. Go to LeafLock login page
+2. Enter email and password
+3. Click **Try another method**
+4. Select **Backup code**
 5. Enter one of your saved backup codes
 6. Successfully log in
 7. Immediately:
-   - Disable MFA
-   - Set up MFA on a new device
+   - Go to security settings
+   - Update your MFA methods
    - Generate new backup codes
-   - Securely store new codes
+   - Store them securely
 
-## Running Out of Backup Codes
+### Scenario 2: Traveling Without Primary Device
 
-### What Happens When You Use Your Last Code
+1. Use backup codes for login
+2. After trip, regenerate codes for security
+3. Update MFA setup on new/travel device if needed
 
-1. You'll see a warning: **"This is your last backup code"**
-2. After using it, you'll have 0 remaining codes
-3. You can still log in with your authenticator app
-4. **Immediately generate new backup codes** after logging in
+### Scenario 3: Running Low on Codes
 
-### If You Run Out Without Regenerating
+1. Check remaining codes in security settings
+2. If fewer than 3 remain, regenerate immediately
+3. Store new codes securely
+4. Delete old copies
 
-- You can still log in with your authenticator device
-- If you also lose your authenticator device, you'll need admin assistance
-- Admins can reset MFA to restore account access (see [Admin MFA Management](/authentication/admin-mfa-management))
+## Security Best Practices
 
-## Emergency Account Recovery
+### Code Management
+1. **Save immediately** during initial setup
+2. **Store securely** in encrypted password manager
+3. **Keep backups** in multiple secure locations
+4. **Regenerate regularly** (every 6-12 months)
+5. **Delete old copies** after regenerating
+6. **Never share** codes with anyone
 
-If you've lost both your authenticator device and backup codes:
+### Account Security
+1. **Monitor usage** - check if codes are being used unexpectedly
+2. **Review sessions** - regularly check active sessions
+3. **Update methods** - keep MFA methods current
+4. **Enable notifications** - get alerts for security events
 
-1. **Contact your system administrator**
-2. Verify your identity through official channels
-3. Admin will reset MFA on your account
-4. You can then log in with email and password only
-5. **Immediately re-enable MFA** and save new backup codes
+## Integration with Clerk Ecosystem
 
-For admin procedures, see [Admin MFA Management](/authentication/admin-mfa-management).
+### Cross-Application Benefits
+- **Single Management**: Manage backup codes once for all Clerk apps
+- **Consistent Security**: Same backup codes work across applications
+- **Centralized Recovery**: Unified account recovery process
+- **Synchronized Updates**: Changes reflect across all connected apps
+
+### Advanced Features
+- **Device Management**: View and manage trusted devices
+- **Security Alerts**: Get notified of suspicious activity
+- **Geographic Awareness**: Detect unusual login locations
+- **Time-based Security**: Automatic security timeouts
 
 ## Frequently Asked Questions
 
 ### Can I view my backup codes after initial setup?
-No. Backup codes are hashed and cannot be retrieved in plaintext. You must save them when first generated or regenerate new ones.
+No. For security reasons, Clerk does not display backup codes after the initial setup. You must save them when first generated or regenerate new ones.
 
 ### How many times can I regenerate codes?
-Unlimited. You can regenerate backup codes as many times as needed.
+Unlimited. You can regenerate backup codes as many times as needed through your security settings.
 
-### Do old codes still work after regenerating?
-No. Regenerating codes immediately invalidates all previous codes.
+### Do old codes work after regenerating?
+No. Regenerating codes immediately invalidates all previous codes across all Clerk-enabled applications.
 
 ### Can I have more than 10 backup codes?
-Currently, 10 codes are generated by default. This is sufficient for most users and aligns with security best practices.
-
-### What if I accidentally use a backup code?
-If you used a code accidentally, regenerate your codes immediately to get a fresh set.
+Currently, Clerk provides 10 codes by default. This is sufficient for most users and follows security best practices.
 
 ### Are backup codes encrypted?
-They're hashed (one-way encryption) using Argon2id, making them impossible to reverse-engineer from the database.
+Yes. Clerk encrypts backup codes both in transit and at rest using industry-standard encryption.
+
+### What if I lose all my MFA methods?
+Use the account recovery process:
+1. Click "Can't access your authentication methods?" on login
+2. Follow email verification steps
+3. Contact your administrator if additional help is needed
+
+### Can I use the same backup code multiple times?
+No. Each backup code can only be used once and is immediately invalidated after use.
+
+## Emergency Recovery
+
+If you've lost access to all MFA methods and backup codes:
+
+1. **Use Account Recovery**:
+   - Click "Can't access your authentication methods?"
+   - Follow email verification process
+   - Complete identity verification
+
+2. **Contact Administrator**:
+   - Reach out to your system administrator
+   - Provide identity verification
+   - Request MFA reset
+
+3. **After Recovery**:
+   - Immediately re-enable MFA
+   - Generate new backup codes
+   - Store them securely
+   - Review account security settings
 
 ## Best Practices Summary
 
 **Do:**
-1. Save codes immediately when generated
-2. Store in a password manager
-3. Keep a physical backup in a safe location
-4. Regenerate if more than 70% are used
-5. Regenerate if potentially compromised
-6. Delete old codes after regenerating
+✅ Save codes immediately when generated
+✅ Store in encrypted password manager
+✅ Keep physical backup in secure location
+✅ Regenerate if fewer than 3 codes remain
+✅ Regenerate if potentially compromised
+✅ Delete old copies after regenerating
+✅ Monitor account for unusual activity
 
 **Don't:**
-1. Never email codes to yourself
-2. Never store in unencrypted cloud storage
-3. Never share codes with others
+❌ Store in plain text files
+❌ Email codes to yourself
+❌ Share codes with others
+❌ Store in unencrypted cloud storage
+❌ Use the same code multiple times
+❌ Ignore low code warnings
 
 ## Related Resources
 
 - [MFA Setup Guide](/authentication/setup-guide)
+- [Managing MFA Settings](/authentication/managing-mfa)
+- [Admin User Management](/authentication/admin-mfa-management)
+- [Clerk Security Documentation](https://clerk.com/docs/authentication/configuration/session-options)
 - [Troubleshooting MFA Issues](/authentication/troubleshooting)
-- [Admin MFA Management](/authentication/admin-mfa-management)

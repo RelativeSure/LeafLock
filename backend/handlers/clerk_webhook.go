@@ -4,9 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"io"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -75,9 +73,9 @@ func (h *ClerkWebhookHandler) HandleClerkWebhook(c *fiber.Ctx) error {
 	case "email.created":
 		return h.handleEmailCreated(c, payload)
 	case "email.updated":
-		return h.handleEmailUpdated(c, payload)
+		return h.handleEmailUpdated(c, payload) // Use existing handler
 	case "email.deleted":
-		return h.handleEmailDeleted(c, payload)
+		return h.handleEmailDeleted(c, payload) // Use existing handler
 	default:
 		h.logger.LogSecurityEvent("unknown_webhook_event", "medium", map[string]interface{}{
 			"event_type": eventType,
@@ -107,11 +105,8 @@ func (h *ClerkWebhookHandler) verifyWebhookSignature(c *fiber.Ctx) error {
 		return fmt.Errorf("invalid timestamp: %w", err)
 	}
 
-	// Get request body
-	body, err := io.ReadAll(c.Request().Body)
-	if err != nil {
-		return fmt.Errorf("failed to read request body: %w", err)
-	}
+	// Get request body directly from Fiber context
+	body := c.Body()
 
 	// Reconstruct the signed payload
 	signedPayload := timestamp + "." + string(body)
@@ -136,7 +131,7 @@ func (h *ClerkWebhookHandler) verifyTimestamp(timestamp string) error {
 
 	// Check if timestamp is within 5 minutes (adjust as needed)
 	now := time.Now()
-	if timestampTime.Before(now.Add(-5 * time.Minute)) || timestampTime.After(now.Add(5 * time.Minute)) {
+	if timestampTime.Before(now.Add(-5*time.Minute)) || timestampTime.After(now.Add(5*time.Minute)) {
 		return fmt.Errorf("timestamp too old or too new")
 	}
 
@@ -164,10 +159,10 @@ func (h *ClerkWebhookHandler) handleUserCreated(c *fiber.Ctx, payload map[string
 
 	// Update local database with new user information
 	// This would integrate with your database layer
-	
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status": "processed",
-		"event": "user.created",
+		"event":  "user.created",
 	})
 }
 
@@ -183,10 +178,10 @@ func (h *ClerkWebhookHandler) handleUserUpdated(c *fiber.Ctx, payload map[string
 
 	// Update local database with user changes
 	// This would integrate with your database layer
-	
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status": "processed",
-		"event": "user.updated",
+		"event":  "user.updated",
 	})
 }
 
@@ -202,10 +197,10 @@ func (h *ClerkWebhookHandler) handleUserDeleted(c *fiber.Ctx, payload map[string
 
 	// Handle user deletion (soft delete, data cleanup, etc.)
 	// This would integrate with your database layer
-	
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status": "processed",
-		"event": "user.deleted",
+		"event":  "user.deleted",
 	})
 }
 
@@ -217,14 +212,14 @@ func (h *ClerkWebhookHandler) handleSessionCreated(c *fiber.Ctx, payload map[str
 
 	h.logger.LogSecurityEvent("session_created", "info", map[string]interface{}{
 		"session_id": sessionID,
-		"source": "webhook",
+		"source":     "webhook",
 	})
 
 	// Handle new session (could be used for analytics, notifications, etc.)
-	
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status": "processed",
-		"event": "session.created",
+		"event":  "session.created",
 	})
 }
 
@@ -236,40 +231,78 @@ func (h *ClerkWebhookHandler) handleSessionRevoked(c *fiber.Ctx, payload map[str
 
 	h.logger.LogSecurityEvent("session_revoked", "warning", map[string]interface{}{
 		"session_id": sessionID,
-		"source": "webhook",
+		"source":     "webhook",
 	})
 
 	// Handle session revocation (could be used for security monitoring)
-	
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status": "processed",
-		"event": "session.revoked",
+		"event":  "session.revoked",
 	})
 }
 
 func (h *ClerkWebhookHandler) handleEmailCreated(c *fiber.Ctx, payload map[string]interface{}) error {
-	emailAddress, ok := payload["data"].(map[string]interface{})["email_address"].(string)
+	_, ok := payload["data"].(map[string]interface{})["email_address"].(string)
 	if !ok {
 		return fmt.Errorf("missing email address")
 	}
 
 	h.logger.LogSecurityEvent("email_created", "info", map[string]interface{}{
-		"email": "[email]", // Don't log actual email
+		"email":  "[email]", // Don't log actual email
 		"source": "webhook",
 	})
 
 	// Handle email creation (verification workflows, etc.)
-	
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status": "processed",
-		"event": "email.created",
+		"event":  "email.created",
+	})
+}
+
+func (h *ClerkWebhookHandler) handleEmailUpdated(c *fiber.Ctx, payload map[string]interface{}) error {
+	_, ok := payload["data"].(map[string]interface{})["email_address"].(string)
+	if !ok {
+		return fmt.Errorf("missing email address")
+	}
+
+	h.logger.LogSecurityEvent("email_updated", "info", map[string]interface{}{
+		"email":  "[email]", // Don't log actual email
+		"source": "webhook",
+	})
+
+	// Handle email update (verification workflows, etc.)
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status": "processed",
+		"event":  "email.updated",
+	})
+}
+
+func (h *ClerkWebhookHandler) handleEmailDeleted(c *fiber.Ctx, payload map[string]interface{}) error {
+	_, ok := payload["data"].(map[string]interface{})["email_address"].(string)
+	if !ok {
+		return fmt.Errorf("missing email address")
+	}
+
+	h.logger.LogSecurityEvent("email_deleted", "warning", map[string]interface{}{
+		"email":  "[email]", // Don't log actual email
+		"source": "webhook",
+	})
+
+	// Handle email deletion (cleanup, notifications, etc.)
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status": "processed",
+		"event":  "email.deleted",
 	})
 }
 
 // SetupClerkWebhookRoutes sets up the webhook routes
 func SetupClerkWebhookRoutes(app *fiber.App, webhookSecret string) {
 	handler := NewClerkWebhookHandler(webhookSecret)
-	
+
 	// Webhook endpoint with security headers
 	app.Post("/api/webhooks/clerk", func(c *fiber.Ctx) error {
 		// Add security headers
@@ -277,7 +310,7 @@ func SetupClerkWebhookRoutes(app *fiber.App, webhookSecret string) {
 		c.Set("X-Frame-Options", "DENY")
 		c.Set("X-XSS-Protection", "1; mode=block")
 		c.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-		
+
 		return handler.HandleClerkWebhook(c)
 	})
 }

@@ -398,7 +398,7 @@ func SeedDefaultTemplates(db database.Database, cryptoService interface {
 	for _, template := range defaultTemplates {
 		// Encrypt all template fields for privacy consistency
 		// Even system templates are encrypted to maintain the zero-knowledge
-	 // architecture. This ensures that:
+		// architecture. This ensures that:
 		// 1. No plaintext content exists in the database
 		// 2. System templates have same security guarantees as user templates
 		// 3. Database backups remain encrypted

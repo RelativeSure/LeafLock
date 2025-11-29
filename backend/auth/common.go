@@ -6,23 +6,23 @@ func isTokenExpired(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	// Clerk typically returns specific error messages for expired tokens
 	errMsg := err.Error()
-	return contains(errMsg, "expired") || 
-	       contains(errMsg, "invalid") || 
-	       contains(errMsg, "exp") ||
-	       contains(errMsg, "token")
+	return contains(errMsg, "expired") ||
+		contains(errMsg, "invalid") ||
+		contains(errMsg, "exp") ||
+		contains(errMsg, "token")
 }
 
 // contains checks if a string contains a substring
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && 
-	       (s == substr || 
-	        (len(s) > len(substr) && 
-	         (s[:len(substr)] == substr || 
-	          s[len(s)-len(substr):] == substr ||
-	          containsSubstring(s, substr))))
+	return len(s) >= len(substr) &&
+		(s == substr ||
+			(len(s) > len(substr) &&
+				(s[:len(substr)] == substr ||
+					s[len(s)-len(substr):] == substr ||
+					containsSubstring(s, substr))))
 }
 
 func containsSubstring(s, substr string) bool {

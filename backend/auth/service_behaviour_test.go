@@ -167,8 +167,6 @@ func (m *mockSessionManager) DeleteSession(ctx context.Context, token string) er
 	return nil
 }
 
-
-
 func TestCreateAuthResponsePopulatesFields(t *testing.T) {
 	userID := uuid.New()
 	workspaceID := uuid.New()
@@ -198,11 +196,10 @@ func TestCreateAuthResponsePopulatesFields(t *testing.T) {
 	crypto := appcrypto.NewCryptoService(make([]byte, 32))
 	sessionMgr := &mockSessionManager{}
 	service := &Service{
-		db:        db,
-		session:   sessionMgr,
-		password:  NewPasswordManager(db),
-		mfa:       NewMFAManager(db, crypto),
-
+		db:       db,
+		session:  sessionMgr,
+		password: NewPasswordManager(db),
+		mfa:      NewMFAManager(db, crypto),
 	}
 
 	ctx := context.Background()
@@ -225,10 +222,12 @@ func TestCreateAuthResponsePopulatesFields(t *testing.T) {
 	if resp.EncryptionVersion != defaultEncryptionVersion {
 		t.Fatalf("expected encryption version %d, got %d", defaultEncryptionVersion, resp.EncryptionVersion)
 	}
-	if _, err := jwt.Parse(resp.Token, func(token *jwt.Token) (interface{}, error) {
-		return []byte(service.jwtSecret), nil
-	}); err != nil {
-		t.Fatalf("returned JWT is invalid: %v", err)
+	// Validate that the token is a valid base64-encoded string (session tokens are random bytes, not JWT)
+	if _, err := base64.URLEncoding.DecodeString(resp.Token); err != nil {
+		t.Fatalf("session token is not valid base64: %v", err)
+	}
+	if len(resp.Token) < 20 { // Session tokens should be reasonably long
+		t.Fatalf("session token too short: %d characters", len(resp.Token))
 	}
 }
 
@@ -338,11 +337,10 @@ func TestEnsureDefaultAdminCreatesRecords(t *testing.T) {
 	}
 
 	service := &Service{
-		db:        db,
-		session:   &mockSessionManager{},
-		password:  NewPasswordManager(db),
-		mfa:       NewMFAManager(db, crypto),
-
+		db:       db,
+		session:  &mockSessionManager{},
+		password: NewPasswordManager(db),
+		mfa:      NewMFAManager(db, crypto),
 	}
 
 	if err := service.EnsureDefaultAdmin(context.Background(), true, "admin@example.com", "ComplexPass123!"); err != nil {

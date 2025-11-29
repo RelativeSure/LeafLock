@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 )
 
 // ClerkAuthMiddleware validates Clerk session tokens and sets user context
@@ -29,10 +28,10 @@ func (h *Handler) ClerkAuthMiddleware(c *fiber.Ctx) error {
 
 	// Use enhanced session management with timing attack protection
 	sessionManager := NewClerkSessionManager(h)
-	
+
 	// Add timing attack protection
 	h.TimingAttackProtection()
-	
+
 	// Validate token with enhanced security
 	claims, err := sessionManager.ValidateAndRefreshSession(c, token)
 	if err != nil {
@@ -43,7 +42,7 @@ func (h *Handler) ClerkAuthMiddleware(c *fiber.Ctx) error {
 				Code:  "SESSION_EXPIRED",
 			})
 		}
-		
+
 		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
 			Error: "Invalid or expired Clerk session token",
 			Code:  ErrCodeInvalidToken,

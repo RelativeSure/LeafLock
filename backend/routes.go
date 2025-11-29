@@ -134,7 +134,8 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	// Derive handler encryption key from a secure source
 	// Used for share links, attachments, and other server-managed encrypted data
 	// Note: User notes remain E2E encrypted with password-derived keys
-	handlerKey := sha256.Sum256(append([]byte(config.AppSecret), []byte("-handler-encryption")...))
+	// Use Clerk secret key as the base for handler encryption key
+	handlerKey := sha256.Sum256(append([]byte(config.ClerkSecretKey), []byte("-handler-encryption")...))
 	handlerCrypto := appcrypto.NewCryptoService(handlerKey[:])
 
 	// Initialize modern auth package
@@ -327,19 +328,19 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	// Clerk-specific routes - Enhanced authentication features
 	// These routes leverage Clerk's advanced capabilities
 	clerkEnhanced := protected.Group("/clerk")
-	
+
 	// Session management - Get current Clerk session info
 	clerkEnhanced.Get("/session/info", rateLimits.LightweightLimiter, authHandler.GetClerkSessionInfo)
-	
+
 	// User profile - Get enhanced Clerk user information
 	clerkEnhanced.Get("/user/profile", rateLimits.LightweightLimiter, authHandler.GetClerkUserProfile)
-	
+
 	// Device management - List active sessions/devices
 	clerkEnhanced.Get("/sessions", rateLimits.LightweightLimiter, authHandler.GetClerkSessions)
-	
+
 	// Revoke specific session
 	clerkEnhanced.Post("/sessions/:sessionId/revoke", rateLimits.AuthLimiter, authHandler.RevokeClerkSession)
-	
+
 	// Organization management (when organizations are enabled)
 	clerkEnhanced.Get("/organizations", rateLimits.LightweightLimiter, authHandler.GetClerkOrganizations)
 	clerkEnhanced.Post("/organizations", rateLimits.StandardCRUDLimiter, authHandler.CreateClerkOrganization)

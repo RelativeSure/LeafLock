@@ -45,7 +45,7 @@ func TestListenWithIPv6Fallback_InvalidPort(t *testing.T) {
 
 func TestListenWithIPv6Fallback_StartupTiming(t *testing.T) {
 	startupStart := time.Now()
-	
+
 	// Just verify the timing parameter is used
 	app := fiber.New(fiber.Config{
 		DisableStartupMessage: true,
@@ -99,7 +99,7 @@ func TestListenWithIPv6Fallback_PortInUse(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	assert.NoError(t, err)
 	defer func() { _ = listener.Close() }()
-	
+
 	port := listener.Addr().(*net.TCPAddr).Port
 
 	app := fiber.New(fiber.Config{
@@ -113,7 +113,7 @@ func TestListenWithIPv6Fallback_PortInUse(t *testing.T) {
 
 func TestReadyState_NewReadyState(t *testing.T) {
 	rs := NewReadyState(nil, nil, nil)
-	
+
 	assert.NotNil(t, rs)
 	assert.False(t, rs.IsAdminReady())
 	assert.False(t, rs.IsTemplatesReady())
@@ -124,7 +124,7 @@ func TestReadyState_NewReadyState(t *testing.T) {
 
 func TestReadyState_MarkAdminReady(t *testing.T) {
 	rs := NewReadyState(nil, nil, nil)
-	
+
 	assert.False(t, rs.IsAdminReady())
 	rs.MarkAdminReady()
 	assert.True(t, rs.IsAdminReady())
@@ -132,7 +132,7 @@ func TestReadyState_MarkAdminReady(t *testing.T) {
 
 func TestReadyState_MarkTemplatesReady(t *testing.T) {
 	rs := NewReadyState(nil, nil, nil)
-	
+
 	assert.False(t, rs.IsTemplatesReady())
 	rs.MarkTemplatesReady()
 	assert.True(t, rs.IsTemplatesReady())
@@ -140,7 +140,7 @@ func TestReadyState_MarkTemplatesReady(t *testing.T) {
 
 func TestReadyState_MarkAllowlistReady(t *testing.T) {
 	rs := NewReadyState(nil, nil, nil)
-	
+
 	assert.False(t, rs.IsAllowlistReady())
 	rs.MarkAllowlistReady()
 	assert.True(t, rs.IsAllowlistReady())
@@ -148,7 +148,7 @@ func TestReadyState_MarkAllowlistReady(t *testing.T) {
 
 func TestReadyState_MarkRedisReady(t *testing.T) {
 	rs := NewReadyState(nil, nil, nil)
-	
+
 	assert.False(t, rs.IsRedisReady())
 	rs.MarkRedisReady()
 	assert.True(t, rs.IsRedisReady())
@@ -156,18 +156,18 @@ func TestReadyState_MarkRedisReady(t *testing.T) {
 
 func TestReadyState_IsFullyReady(t *testing.T) {
 	rs := NewReadyState(nil, nil, nil)
-	
+
 	assert.False(t, rs.IsFullyReady())
-	
+
 	rs.MarkAdminReady()
 	assert.False(t, rs.IsFullyReady())
-	
+
 	rs.MarkTemplatesReady()
 	assert.False(t, rs.IsFullyReady())
-	
+
 	rs.MarkAllowlistReady()
 	assert.False(t, rs.IsFullyReady())
-	
+
 	rs.MarkRedisReady()
 	assert.True(t, rs.IsFullyReady())
 }
@@ -182,10 +182,10 @@ func TestReadyState_GetMethods(t *testing.T) {
 
 func TestReadyState_ConcurrentAccess(t *testing.T) {
 	rs := NewReadyState(nil, nil, nil)
-	
+
 	// Test concurrent reads and writes
 	done := make(chan bool)
-	
+
 	go func() {
 		for i := 0; i < 100; i++ {
 			rs.MarkAdminReady()
@@ -193,7 +193,7 @@ func TestReadyState_ConcurrentAccess(t *testing.T) {
 		}
 		done <- true
 	}()
-	
+
 	go func() {
 		for i := 0; i < 100; i++ {
 			rs.MarkTemplatesReady()
@@ -201,7 +201,7 @@ func TestReadyState_ConcurrentAccess(t *testing.T) {
 		}
 		done <- true
 	}()
-	
+
 	go func() {
 		for i := 0; i < 100; i++ {
 			rs.MarkAllowlistReady()
@@ -209,7 +209,7 @@ func TestReadyState_ConcurrentAccess(t *testing.T) {
 		}
 		done <- true
 	}()
-	
+
 	go func() {
 		for i := 0; i < 100; i++ {
 			rs.MarkRedisReady()
@@ -217,23 +217,23 @@ func TestReadyState_ConcurrentAccess(t *testing.T) {
 		}
 		done <- true
 	}()
-	
+
 	// Wait for all goroutines
 	for i := 0; i < 4; i++ {
 		<-done
 	}
-	
+
 	// All should be ready
 	assert.True(t, rs.IsFullyReady())
 }
 
 func TestReadyState_PartialReady(t *testing.T) {
 	rs := NewReadyState(nil, nil, nil)
-	
+
 	// Mark only some as ready
 	rs.MarkAdminReady()
 	rs.MarkTemplatesReady()
-	
+
 	assert.True(t, rs.IsAdminReady())
 	assert.True(t, rs.IsTemplatesReady())
 	assert.False(t, rs.IsAllowlistReady())

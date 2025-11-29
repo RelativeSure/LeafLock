@@ -23,14 +23,14 @@ func NewSecurityLogger() *SecurityLogger {
 func (sl *SecurityLogger) LogAuthEvent(event string, userID uuid.UUID, success bool, metadata map[string]interface{}) {
 	// Redact user ID for privacy
 	redactedUserID := redactUUID(userID)
-	
+
 	// Create safe metadata copy
 	safeMetadata := make(map[string]interface{})
 	for key, value := range metadata {
-		safeMetadata[key] = sanitizeValue(value)
+		safeMetadata[key] = SanitizeValue(value)
 	}
-	
-	sl.logger.Printf("AUTH_EVENT: %s user=%s success=%v metadata=%v", 
+
+	sl.logger.Printf("AUTH_EVENT: %s user=%s success=%v metadata=%v",
 		event, redactedUserID, success, safeMetadata)
 }
 
@@ -39,10 +39,10 @@ func (sl *SecurityLogger) LogSecurityEvent(event string, severity string, detail
 	// Sanitize details to remove PII
 	safeDetails := make(map[string]interface{})
 	for key, value := range details {
-		safeDetails[key] = sanitizeValue(value)
+		safeDetails[key] = SanitizeValue(value)
 	}
-	
-	sl.logger.Printf("SECURITY_EVENT: %s severity=%s details=%v", 
+
+	sl.logger.Printf("SECURITY_EVENT: %s severity=%s details=%v",
 		event, severity, safeDetails)
 }
 
@@ -51,17 +51,17 @@ func (sl *SecurityLogger) LogError(operation string, err error, context map[stri
 	// Sanitize context
 	safeContext := make(map[string]interface{})
 	for key, value := range context {
-		safeContext[key] = sanitizeValue(value)
+		safeContext[key] = SanitizeValue(value)
 	}
-	
-	sl.logger.Printf("ERROR: operation=%s error=%v context=%v", 
+
+	sl.logger.Printf("ERROR: operation=%s error=%v context=%v",
 		operation, err.Error(), safeContext)
 }
 
 // LogTokenEvent logs token-related events (with redaction)
 func (sl *SecurityLogger) LogTokenEvent(event string, tokenHash string, userID uuid.UUID) {
 	redactedUserID := redactUUID(userID)
-	sl.logger.Printf("TOKEN_EVENT: %s token_hash=%s user=%s", 
+	sl.logger.Printf("TOKEN_EVENT: %s token_hash=%s user=%s",
 		event, tokenHash, redactedUserID)
 }
 
@@ -69,34 +69,9 @@ func (sl *SecurityLogger) LogTokenEvent(event string, tokenHash string, userID u
 func (sl *SecurityLogger) LogSessionEvent(event string, sessionID string, userID uuid.UUID) {
 	redactedUserID := redactUUID(userID)
 	redactedSessionID := redactSessionID(sessionID)
-	
-	sl.logger.Printf("SESSION_EVENT: %s session=%s user=%s", 
-		event, redactedSessionID, redactedUserID)
-}
 
-// sanitizeValue removes or redacts sensitive values
-func sanitizeValue(value interface{}) interface{} {
-	switch v := value.(type) {
-	case string:
-		return sanitizeString(v)
-	case uuid.UUID:
-		return redactUUID(v)
-	case []string:
-		result := make([]string, len(v))
-		for i, s := range v {
-			result[i] = sanitizeString(s)
-		}
-		return result
-	case map[string]interface{}:
-		result := make(map[string]interface{})
-		for key, val := range v {
-			result[key] = sanitizeValue(val)
-		}
-		return result
-	default:
-		// For other types, return as-is (assumed safe)
-		return value
-	}
+	sl.logger.Printf("SESSION_EVENT: %s session=%s user=%s",
+		event, redactedSessionID, redactedUserID)
 }
 
 // sanitizeString removes sensitive information from strings
@@ -108,22 +83,22 @@ func sanitizeString(s string) string {
 			return redactEmail(parts[0]) + "@" + redactDomain(parts[1])
 		}
 	}
-	
+
 	// Remove phone numbers (basic pattern)
 	if isPhoneNumber(s) {
 		return redactPhoneNumber(s)
 	}
-	
+
 	// Remove credit card numbers (basic pattern)
 	if isCreditCard(s) {
 		return redactCreditCard(s)
 	}
-	
+
 	// Remove tokens/secrets (basic pattern)
 	if isTokenOrSecret(s) {
 		return redactToken(s)
 	}
-	
+
 	return s
 }
 
@@ -175,7 +150,7 @@ func redactPhoneNumber(phone string) string {
 		}
 		return -1
 	}, phone)
-	
+
 	if len(cleaned) >= 10 {
 		return "+" + cleaned[:len(cleaned)-4] + "****"
 	}
@@ -191,7 +166,7 @@ func isCreditCard(s string) bool {
 		}
 		return -1
 	}, s)
-	
+
 	return len(cleaned) >= 13 && len(cleaned) <= 19
 }
 
@@ -203,7 +178,7 @@ func redactCreditCard(card string) string {
 		}
 		return -1
 	}, card)
-	
+
 	if len(cleaned) >= 13 {
 		return "****" + cleaned[len(cleaned)-4:]
 	}
@@ -216,12 +191,12 @@ func isTokenOrSecret(s string) bool {
 	if len(s) >= 20 && strings.ContainsAny(s, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789") {
 		return true
 	}
-	
+
 	// Check for JWT-like patterns
 	if strings.Count(s, ".") >= 2 && len(s) > 20 {
 		return true
 	}
-	
+
 	return false
 }
 
@@ -238,6 +213,6 @@ func StructuredSecurityLog(event string, severity string, userID uuid.UUID, deta
 	logger := NewSecurityLogger()
 	logger.LogSecurityEvent(event, severity, map[string]interface{}{
 		"user_id": redactUUID(userID),
-		"details": sanitizeValue(details),
+		"details": SanitizeValue(details),
 	})
 }

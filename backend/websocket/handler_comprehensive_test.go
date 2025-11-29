@@ -179,7 +179,7 @@ func TestHandleWebSocket_DatabaseAccessDenied(t *testing.T) {
 	ctx := context.Background()
 	var hasAccess bool
 	err := mockDB.QueryRow(ctx, "SELECT EXISTS(...)", noteID, userID).Scan(&hasAccess)
-	
+
 	assert.NoError(t, err)
 	assert.False(t, hasAccess, "User should not have access")
 }
@@ -202,7 +202,7 @@ func TestHandleWebSocket_DatabaseQueryError(t *testing.T) {
 	ctx := context.Background()
 	var hasAccess bool
 	err := mockDB.QueryRow(ctx, "SELECT EXISTS(...)", noteID, userID).Scan(&hasAccess)
-	
+
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "database connection failed")
 }
@@ -281,7 +281,7 @@ func TestHandleWebSocket_AccessCheck_OwnerAccess(t *testing.T) {
 
 	ctx := context.Background()
 	var hasAccess bool
-	
+
 	// Simulate the access check query from HandleWebSocket
 	err := mockDB.QueryRow(ctx, `
 		SELECT EXISTS(
@@ -332,9 +332,9 @@ func TestBroadcastToNote_MessageFormat(t *testing.T) {
 	userID := uuid.New()
 
 	msg := WSMessage{
-		Type:    "edit",
-		NoteID:  noteID.String(),
-		UserID:  userID.String(),
+		Type:   "edit",
+		NoteID: noteID.String(),
+		UserID: userID.String(),
 		Content: map[string]interface{}{
 			"delta": []map[string]interface{}{
 				{"insert": "Hello"},

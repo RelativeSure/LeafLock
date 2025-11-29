@@ -25,17 +25,17 @@ type Config struct {
 	// EncryptionKey removed - zero-knowledge architecture (no global encryption key)
 	ClerkPublishableKey string
 	ClerkSecretKey      string
-	Port               string
-	AllowedOrigins     []string
-	MaxLoginAttempts   int
-	LockoutDuration    time.Duration
-	IPLockoutDuration  time.Duration
-	MaxIPLoginAttempts int
-	SessionDuration    time.Duration
-	Environment        string
-	TrustProxyHeaders  bool
-	RateLimitMode      string
-	LogLevel           string
+	Port                string
+	AllowedOrigins      []string
+	MaxLoginAttempts    int
+	LockoutDuration     time.Duration
+	IPLockoutDuration   time.Duration
+	MaxIPLoginAttempts  int
+	SessionDuration     time.Duration
+	Environment         string
+	TrustProxyHeaders   bool
+	RateLimitMode       string
+	LogLevel            string
 	// Default admin settings
 	DefaultAdminEnabled  bool
 	DefaultAdminEmail    string
@@ -76,7 +76,7 @@ func LoadConfig() *Config {
 		logLevel = "info"
 	}
 
-		// JWT_SECRET removed - Clerk-only authentication
+	// JWT_SECRET removed - Clerk-only authentication
 
 	// SERVER_ENCRYPTION_KEY removed - zero-knowledge architecture
 	// Emails stored in plaintext, sensitive data encrypted with password-derived keys only

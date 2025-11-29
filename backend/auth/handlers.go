@@ -37,7 +37,7 @@ func NewHandler(service *Service, emailService EmailService) *Handler {
 }
 
 // Register handles user registration with comprehensive security measures
-// 
+//
 // Business Purpose:
 // - Enables new user account creation with email/password authentication
 // - Implements zero-knowledge architecture where server never sees plaintext user data

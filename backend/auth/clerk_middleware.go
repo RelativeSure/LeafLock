@@ -35,10 +35,10 @@ func (h *Handler) ClerkMiddleware(c *fiber.Ctx) error {
 
 	// Use enhanced session management with timing attack protection
 	sessionManager := NewClerkSessionManager(h)
-	
+
 	// Add timing attack protection
 	h.TimingAttackProtection()
-	
+
 	// Validate token with enhanced security
 	claims, err := sessionManager.ValidateAndRefreshSession(c, token)
 	if err != nil {
@@ -49,7 +49,7 @@ func (h *Handler) ClerkMiddleware(c *fiber.Ctx) error {
 				Code:  "SESSION_EXPIRED",
 			})
 		}
-		
+
 		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
 			Error: "Invalid or expired Clerk session token",
 			Code:  ErrCodeInvalidToken,
@@ -129,7 +129,7 @@ func (h *Handler) validateClerkToken(ctx context.Context, token string) (*clerk.
 }
 
 // extractUserIDFromClerkClaims extracts the internal user ID from Clerk claims
-func (h *Handler) extractUserIDFromClerkClaims(claims *jwt.Claims) (uuid.UUID, error) {
+func (h *Handler) extractUserIDFromClerkClaims(claims *clerk.SessionClaims) (uuid.UUID, error) {
 	// The Subject claim contains the Clerk user ID
 	clerkUserID := claims.Subject
 	if clerkUserID == "" {
@@ -139,7 +139,7 @@ func (h *Handler) extractUserIDFromClerkClaims(claims *jwt.Claims) (uuid.UUID, e
 	// For now, we'll use the Clerk user ID directly
 	// In a full migration, you might want to map Clerk user IDs to internal user IDs
 	// This would require a database table to maintain the mapping
-	
+
 	// Convert Clerk user ID string to UUID
 	// Clerk user IDs are already in UUID format
 	userID, err := uuid.Parse(clerkUserID)
@@ -151,27 +151,24 @@ func (h *Handler) extractUserIDFromClerkClaims(claims *jwt.Claims) (uuid.UUID, e
 }
 
 // extractAdminStatusFromClerkClaims determines if user is admin from Clerk claims
-func (h *Handler) extractAdminStatusFromClerkClaims(claims *jwt.Claims) bool {
-	// Check for admin role in Clerk's public metadata
-	if claims.PublicMetaData != nil {
-		// Check for isAdmin flag
-		if isAdmin, ok := claims.PublicMetaData["isAdmin"].(bool); ok && isAdmin {
-			return true
-		}
-		// Check for role field
-		if role, ok := claims.PublicMetaData["role"].(string); ok && role == "admin" {
-			return true
-		}
+func (h *Handler) extractAdminStatusFromClerkClaims(claims *clerk.SessionClaims) bool {
+	// Check for admin role in Clerk's metadata
+	// In a real implementation, you would check the user's role/permissions
+	// This is a placeholder implementation
+
+	// Check if user has admin role or permissions
+	if claims.HasRole("admin") {
+		return true
 	}
-	
-	// Check for admin role in Clerk's private metadata (if available)
-	if claims.PrivateMetaData != nil {
-		if isAdmin, ok := claims.PrivateMetaData["isAdmin"].(bool); ok && isAdmin {
-			return true
-		}
-		if role, ok := claims.PrivateMetaData["role"].(string); ok && role == "admin" {
-			return true
-		}
+
+	// Check for admin permissions
+	if claims.HasPermission("admin") {
+		return true
+	}
+
+	// Check organization role if in organization context
+	if claims.ActiveOrganizationRole == "admin" {
+		return true
 	}
 
 	return false
@@ -185,6 +182,6 @@ func InitializeClerk(secretKey string) error {
 
 	// Initialize Clerk client
 	clerk.SetKey(secretKey)
-	
+
 	return nil
 }

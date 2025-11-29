@@ -34,7 +34,6 @@ type AuthHandlersTestSuite struct {
 	handler   *Handler
 	mockSvc   *MockAuthService
 	cryptoSvc *appcrypto.CryptoService
-	
 }
 
 func (suite *AuthHandlersTestSuite) SetupTest() {
@@ -51,7 +50,7 @@ func (suite *AuthHandlersTestSuite) SetupTest() {
 		suite.T().Fatalf("Failed to generate random key: %v", err)
 	}
 	suite.cryptoSvc = appcrypto.NewCryptoService(key)
-	
+
 }
 
 func TestAuthHandlersTestSuite(t *testing.T) {

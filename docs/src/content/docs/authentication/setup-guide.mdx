@@ -1,141 +1,238 @@
 ---
 title: MFA Setup Guide
-description: Step-by-step guide to enable Multi-Factor Authentication
+description: Step-by-step guide to enable Multi-Factor Authentication with Clerk
 ---
 
 # Multi-Factor Authentication Setup Guide
 
-This guide will help you set up Two-Factor Authentication (2FA/MFA) on your LeafLock account.
+This guide will help you set up Two-Factor Authentication (2FA/MFA) on your LeafLock account using Clerk's built-in MFA features.
 
 ## Prerequisites
 
-- An active LeafLock account
+- An active LeafLock account with Clerk authentication
 - A smartphone or tablet
-- An authenticator app installed (see [supported apps](/authentication#supported-authenticator-apps))
+- An authenticator app installed (see [supported apps](#supported-authenticator-apps))
+- Access to your email for verification
+
+## How Clerk MFA Works
+
+LeafLock uses Clerk's enterprise-grade MFA system which provides:
+
+- **Multiple Methods**: TOTP (Time-based One-Time Password), SMS codes, backup codes
+- **Automatic Backup**: Cloud-synced across your Clerk-enabled applications  
+- **Advanced Security**: Breach detection, rate limiting, device management
+- **Easy Recovery**: Multiple recovery options if you lose access
 
 ## Step 1: Access Security Settings
 
 1. Log in to your LeafLock account
-2. Click on your profile icon or settings gear
-3. Navigate to **Settings** → **Security** → **Multi-Factor Authentication**
+2. Click on your profile icon in the top navigation
+3. Navigate to **Profile** → **Security** → **Two-Factor Authentication**
+4. Or use Clerk's user button component which provides direct access
 
 ## Step 2: Begin MFA Setup
 
-1. Click the **Enable MFA** button
-2. You'll be presented with a QR code and a text secret
+1. Click the **Enable Two-Factor Authentication** button
+2. Clerk will present you with authentication method options:
+   - **Authenticator App** (Recommended) - TOTP codes
+   - **SMS/Text Message** - Codes sent to your phone
+   - **Backup Codes** - One-time use recovery codes
 
-## Step 3: Scan QR Code
+## Step 3: Set Up Authenticator App (Recommended)
 
-### Using Your Authenticator App:
+### Choose Your Authenticator App:
 
-1. Open your authenticator app
-2. Tap the **+** or **Add** button
-3. Select **Scan QR Code** or **Scan Barcode**
-4. Point your camera at the QR code on screen
-5. The app will automatically add a LeafLock entry
+**Recommended apps:**
+- **Google Authenticator** - Simple and widely supported
+- **Authy** - Multi-device sync and cloud backup
+- **1Password** - Password manager with TOTP support
+- **Microsoft Authenticator** - Good for Microsoft ecosystems
+
+### Scan QR Code:
+
+1. Select **Authenticator App** as your method
+2. Clerk will display a QR code
+3. Open your authenticator app
+4. Tap the **+** or **Add** button
+5. Select **Scan QR Code**
+6. Point your camera at the QR code on screen
+7. The app will automatically add a LeafLock entry
 
 ### Alternative: Manual Entry
 
 If you can't scan the QR code:
 
-1. In your authenticator app, select **Enter a setup key** or **Manual entry**
-2. Enter the following details:
-   - **Account name**: Your email address
-   - **Secret key**: The text code shown below the QR code
-   - **Type of key**: Time-based
+1. In your authenticator app, select **Enter a setup key**
+2. Enter the details shown below the QR code:
+   - **Account name**: Your email address (pre-filled)
+   - **Secret key**: The text code provided
+   - **Type of key**: Time-based (TOTP)
 3. Save the entry
 
-## Step 4: Verify Your Code
+## Step 4: Verify Your Setup
 
 1. Your authenticator app will display a 6-digit code
 2. Enter this code in the verification field on LeafLock
-3. Click **Verify & Enable**
+3. Click **Verify & Continue**
+4. Clerk will confirm your authenticator is working correctly
 
-## Step 5: Save Backup Codes
+## Step 5: Set Up Backup Methods
 
-**IMPORTANT:** After verification, you'll be shown 10 backup recovery codes.
+Clerk will prompt you to set up additional backup methods:
 
-### What to Do:
+### Backup Codes (Required)
 
-1. **Download** the codes as a text file, or
-2. **Copy** the codes to a secure location
+1. Clerk will generate 10 backup recovery codes
+2. **Save these codes immediately** - they won't be shown again
+3. Store them securely (see [storage recommendations](#backup-code-storage))
 
-### Where to Store Backup Codes:
+### SMS Backup (Optional)
+
+1. Add your phone number for SMS backup codes
+2. Verify your phone number with a test code
+3. SMS codes will be sent if your authenticator app is unavailable
+
+## Step 6: Complete Setup
+
+1. Review your backup methods
+2. Click **Finish Setup**
+3. MFA is now enabled on your account
+
+## Testing Your Setup
+
+**Before relying on MFA, test it:**
+
+1. While still logged in, open an incognito/private browser window
+2. Try logging in to verify MFA works correctly
+3. Test your authenticator app code
+4. Test a backup code (remember: each can only be used once)
+
+## Using MFA to Log In
+
+### Normal Login:
+
+1. Enter your email and password
+2. You'll be prompted for your MFA code
+3. Open your authenticator app
+4. Enter the 6-digit code for LeafLock
+5. Click **Verify**
+
+### Using Backup Methods:
+
+If you don't have your authenticator app:
+
+1. Click **Try another method** on the MFA screen
+2. Choose from:
+   - **SMS/Text Message** (if configured)
+   - **Backup Code** (one-time use)
+   - **Email Code** (if available)
+3. Enter the code you receive
+4. Click **Verify**
+
+## Backup Code Storage
 
 **Recommended storage locations:**
 - Password manager (1Password, Bitwarden, etc.)
 - Encrypted note-taking app
 - Physical paper in a secure location (safe, lockbox)
+- Secure cloud storage with encryption
 
 **Not recommended:**
-- Unencrypted text file on your computer
-- Email or cloud storage without encryption
+- Unencrypted text files
+- Regular email
 - Shared documents
+- Screenshots on your phone
 
-### Backup Code Format:
-```
-A1B2-C3D4-E5F6-G7H8
-I9J0-K1L2-M3N4-O5P6
-...
-```
+## Managing Your MFA Settings
 
-Each code is 16 characters and can only be used **once**.
+### Adding/Removing Methods:
 
-## Step 6: Complete Setup
+1. Go to **Profile** → **Security** → **Two-Factor Authentication**
+2. Click **Manage Authentication Methods**
+3. Add new methods or remove existing ones
+4. Verify changes with your current MFA method
 
-1. Check the box confirming you've saved your backup codes
-2. Click **I've Saved My Backup Codes**
-3. MFA is now enabled
+### Viewing Active Sessions:
 
-## Logging In with MFA
+1. Navigate to **Profile** → **Security** → **Active Sessions**
+2. See all devices logged into your account
+3. Revoke any suspicious sessions
+4. Review login history for security
 
-From now on, when you log in:
+## Recovery Options
 
-1. Enter your email and password
-2. You'll be prompted for your 6-digit MFA code
-3. Open your authenticator app
-4. Enter the current code for LeafLock
-5. Click **Verify**
+If you lose access to your MFA methods:
 
-### Using a Backup Code
+### Primary Recovery:
+1. Use a backup code (each can only be used once)
+2. Use SMS backup if configured
+3. Use email verification if available
 
-If you don't have access to your authenticator app:
+### Account Recovery:
+1. Click **Can't access your authentication methods?**
+2. Follow the account recovery process
+3. Verify your identity through email
+4. Contact support if needed
 
-1. On the MFA verification screen, click **Use Backup Code Instead**
-2. Enter one of your backup recovery codes
-3. Click **Verify Backup Code**
+## Security Features
 
-**Note**: Each backup code can only be used once. After using one, you'll have one less code available.
+Clerk's MFA includes advanced security:
 
-## Testing Your Setup
-
-It's recommended to test MFA before fully relying on it:
-
-1. While still logged in, open an incognito/private browser window
-2. Try logging in to verify MFA works correctly
-3. Test both authenticator code and a backup code
+- **Rate Limiting**: Prevents brute force attacks
+- **Device Recognition**: Remembers trusted devices
+- **Suspicious Activity Detection**: Alerts for unusual login patterns
+- **Automatic Backup**: Syncs across Clerk-enabled applications
+- **Time Synchronization**: Handles clock drift automatically
 
 ## Troubleshooting
 
-### "Invalid MFA code" error
-- Ensure your device's clock is accurate (TOTP requires time synchronization)
-- Wait for a new code to generate (codes expire every 30 seconds)
-- Check that you're looking at the correct account in your authenticator app
+### "Invalid MFA code" error:
+- Wait for a new code (codes refresh every 30 seconds)
+- Check you're using the correct authenticator app entry
+- Ensure your device has accurate time (enable automatic time)
+- Try a backup code to verify your account
 
-### Can't scan QR code
-- Try increasing screen brightness
-- Use manual entry instead (see Step 3)
-- Try a different authenticator app
+### Lost authenticator app:
+- Use SMS backup codes if configured
+- Use backup recovery codes
+- Contact support for account recovery
 
-### Lost access to authenticator app
-- Use a backup code to log in
-- Consider setting up MFA on a new device
-- Generate new backup codes from security settings
+### Can't receive SMS codes:
+- Check phone signal and airplane mode
+- Verify correct phone number in settings
+- Use backup codes or authenticator app
 
-For more issues, see the [Troubleshooting Guide](/authentication/troubleshooting).
+### Time synchronization issues:
+- Enable automatic date/time on your device
+- Most authenticator apps handle this automatically
+- Clerk's system allows for reasonable time drift
+
+## Supported Authenticator Apps
+
+**Recommended:**
+- Google Authenticator
+- Authy (with multi-device sync)
+- 1Password (integrated password + TOTP)
+- Microsoft Authenticator
+- LastPass Authenticator
+
+**All TOTP-compatible apps work with Clerk.**
 
 ## Next Steps
 
-- [Learn about backup codes →](/authentication/backup-codes)
-- [Understand admin MFA management →](/authentication/admin-mfa-management)
+- [Learn about backup codes management →](/authentication/backup-codes)
+- [Understand admin user management →](/authentication/admin-mfa-management)
 - [Read troubleshooting tips →](/authentication/troubleshooting)
+- [Explore Clerk's security features →](https://clerk.com/docs/authentication/configuration/session-options)
+
+## Need Help?
+
+**Clerk Support:**
+- [Clerk Documentation](https://clerk.com/docs)
+- [Clerk Discord Community](https://clerk.com/discord)
+- [Clerk Support](https://clerk.com/support)
+
+**LeafLock Support:**
+- Check our [troubleshooting guide](/authentication/troubleshooting)
+- Review [common issues](/authentication/troubleshooting#common-issues)
+- Contact your system administrator

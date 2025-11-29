@@ -41,9 +41,9 @@ func TestEmailValidation(t *testing.T) {
 					hasDot = true
 				}
 			}
-			
+
 			basicValid := hasAt && hasDot && len(tt.email) > 0
-			
+
 			if tt.valid {
 				assert.True(t, basicValid || len(tt.email) > 5, "Email should be valid: %s", tt.email)
 			} else {
@@ -139,7 +139,7 @@ func TestMapOperations(t *testing.T) {
 		val, ok := m["exists"]
 		assert.True(t, ok)
 		assert.Equal(t, 1, val)
-		
+
 		_, ok = m["notexists"]
 		assert.False(t, ok)
 	})

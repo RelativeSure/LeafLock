@@ -3,9 +3,7 @@ package auth
 import (
 	"context"
 	"crypto/rand"
-	"errors"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -171,10 +169,10 @@ func TestSessionManager_HashToken(t *testing.T) {
 	}
 }
 
-	type logoutSessionStub struct {
-		deleteErr     error
-		deletedTokens []string
-	}
+type logoutSessionStub struct {
+	deleteErr     error
+	deletedTokens []string
+}
 
 func (s *logoutSessionStub) CreateSession(ctx context.Context, userID uuid.UUID, ipAddress, userAgent string, mfaVerified bool) (*Session, string, error) {
 	return &Session{}, "session-token", nil

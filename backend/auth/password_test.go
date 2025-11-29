@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -802,10 +801,7 @@ func (suite *PasswordManagerTestSuite) TestCleanupExpiredTokens_DatabaseError() 
 // Helper Functions for Tests
 // =====================================
 
-// contains checks if a string contains a substring (case-insensitive helper)
-func contains(s, substr string) bool {
-	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
-}
+
 
 // Mock implementations (reuse from handlers_test.go)
 type MockDB struct {

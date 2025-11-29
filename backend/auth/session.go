@@ -131,7 +131,6 @@ func (sm *SessionManager) DeleteSession(ctx context.Context, token string) error
 	return nil
 }
 
-
 // CreateMFASession creates a temporary MFA verification session
 func (sm *SessionManager) CreateMFASession(ctx context.Context, userID uuid.UUID, email, ipAddress, userAgent string, mfaEnabled bool) (string, error) {
 	// Generate MFA session token

@@ -104,8 +104,8 @@ func (s *NotificationService) SendCollaborationInvite(ctx context.Context, recip
 // SendPasswordResetEmail sends a password reset email
 func (s *NotificationService) SendPasswordResetEmail(ctx context.Context, userEmail, userName, resetURL string) error {
 	variables := map[string]string{
-		"user_name":  userName,
-		"reset_url":  resetURL,
+		"user_name": userName,
+		"reset_url": resetURL,
 	}
 	return s.SendNotificationEmail(ctx, userEmail, "password_reset", variables)
 }

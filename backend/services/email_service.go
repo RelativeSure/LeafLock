@@ -43,25 +43,25 @@ type EmailData struct {
 // critical features for production reliability:
 //
 // 1. Configuration-Aware Operation:
-//    - Respects SMTP_ENABLED environment variable for development/testing
-//    - Provides detailed logging when emails are disabled
-//    - Prevents accidental email sending in non-production environments
+//   - Respects SMTP_ENABLED environment variable for development/testing
+//   - Provides detailed logging when emails are disabled
+//   - Prevents accidental email sending in non-production environments
 //
 // 2. Production-Grade Email Delivery:
-//    - Supports both TLS and non-TLS SMTP connections
-//    - Configurable authentication (PlainAuth)
-//    - Proper email formatting (HTML + text multipart)
-//    - From address validation and formatting
+//   - Supports both TLS and non-TLS SMTP connections
+//   - Configurable authentication (PlainAuth)
+//   - Proper email formatting (HTML + text multipart)
+//   - From address validation and formatting
 //
 // 3. Reliability Features:
-//    - 3-attempt retry mechanism with exponential backoff
-//    - Detailed error logging for debugging delivery issues
-//    - Success/failure logging for monitoring
+//   - 3-attempt retry mechanism with exponential backoff
+//   - Detailed error logging for debugging delivery issues
+//   - Success/failure logging for monitoring
 //
 // 4. Security Considerations:
-//    - TLS configuration with server name verification
-//    - Optional insecure mode for development (with warnings)
-//    - No email content logging (privacy protection)
+//   - TLS configuration with server name verification
+//   - Optional insecure mode for development (with warnings)
+//   - No email content logging (privacy protection)
 //
 // Error Handling:
 // - Returns error after 3 failed attempts

@@ -46,19 +46,19 @@ func StartCleanupService(db database.Database) {
 // This function implements the core cleanup logic with specific focus on:
 //
 // 1. Security Management:
-//    - Unlocks user accounts after lockout period expires
-//    - Prevents permanent account lockout scenarios
-//    - Reduces support burden from locked-out users
+//   - Unlocks user accounts after lockout period expires
+//   - Prevents permanent account lockout scenarios
+//   - Reduces support burden from locked-out users
 //
 // 2. Storage Optimization:
-//    - Permanently deletes notes deleted >30 days ago
-//    - Frees up database storage space
-//    - Implements data retention policy (30-day grace period)
+//   - Permanently deletes notes deleted >30 days ago
+//   - Frees up database storage space
+//   - Implements data retention policy (30-day grace period)
 //
 // 3. System Hygiene:
-//    - Prevents database bloat from soft-deleted records
-//    - Maintains query performance over time
-//    - Provides audit trail through detailed logging
+//   - Prevents database bloat from soft-deleted records
+//   - Maintains query performance over time
+//   - Provides audit trail through detailed logging
 //
 // Error Handling Strategy:
 // - Individual cleanup tasks are independent (failure of one doesn't affect others)

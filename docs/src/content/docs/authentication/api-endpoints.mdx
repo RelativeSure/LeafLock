@@ -1,18 +1,322 @@
 ---
 title: Authentication API Reference
-description: Complete API reference for LeafLock authentication endpoints
 sidebar:
   order: 2
 ---
 
 import { Code, Tabs, TabItem } from '@astrojs/starlight/components';
 
-Complete API reference for all authentication endpoints in LeafLock. Implementation: `backend/auth/handlers.go`
+Complete API reference for LeafLock authentication endpoints. Supports both **Clerk authentication** (recommended) and **legacy JWT authentication** during migration.
 
-## Core Authentication
+## Authentication Methods
+
+LeafLock supports dual authentication during migration:
+
+1. **Clerk Authentication** (Recommended) - Modern, secure authentication
+2. **Legacy JWT Authentication** - For existing users during transition
+
+## Clerk Authentication Endpoints
 
 <Tabs>
-  <TabItem label="Register">
+  <TabItem label="Session Info">
+<Code code={`GET /api/v1/clerk/session/info
+Authorization: Bearer <clerk_session_token>
+
+Response (200):
+{
+  "session": {
+    "session_id": "sess_2mPXg5...",
+    "user_id": "user_2mPXg5...",
+    "status": "active",
+    "created_at": "2025-01-15T10:30:00Z",
+    "expires_at": "2025-01-16T10:30:00Z",
+    "last_active": "2025-01-15T14:30:00Z",
+    "user_agent": "Mozilla/5.0...",
+    "ip_address": "192.168.1.1",
+    "device_info": "Chrome on Windows",
+    "is_current": true
+  },
+  "user": {
+    "clerk_user_id": "user_2mPXg5...",
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "avatar_url": "https://example.com/avatar.jpg",
+    "is_admin": false,
+    "email_verified": true,
+    "two_factor_enabled": true,
+    "created_at": "2025-01-01T00:00:00Z",
+    "updated_at": "2025-01-15T10:30:00Z"
+  }
+}
+
+Errors:
+- 401 INVALID_TOKEN - Invalid or expired Clerk session token
+- 401 SESSION_INVALID - Session validation failed
+- 500 USER_INFO_ERROR - Failed to retrieve user information
+
+Notes:
+- Requires valid Clerk session token
+- Provides comprehensive session and user details
+- Includes security information (IP, user agent, device info)
+- Admin status determined from Clerk metadata
+
+Implementation: backend/auth/clerk_functions.go:64`} language="json" />
+  </TabItem>
+  
+  <TabItem label="User Profile">
+<Code code={`GET /api/v1/clerk/user/profile
+Authorization: Bearer <clerk_session_token>
+
+Response (200):
+{
+  "user": {
+    "clerk_user_id": "user_2mPXg5...",
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "avatar_url": "https://example.com/avatar.jpg",
+    "is_admin": false,
+    "public_metadata": {
+      "role": "user",
+      "department": "engineering"
+    },
+    "email_verified": true,
+    "phone_verified": false,
+    "two_factor_enabled": true,
+    "created_at": "2025-01-01T00:00:00Z",
+    "updated_at": "2025-01-15T10:30:00Z"
+  }
+}
+
+Errors:
+- 401 INVALID_TOKEN - Invalid or expired Clerk session token
+- 401 SESSION_INVALID - Session validation failed
+- 500 USER_INFO_ERROR - Failed to retrieve user information
+
+Notes:
+- Enhanced user profile with Clerk metadata
+- Admin status from Clerk private metadata
+- Includes verification status for email/phone
+- Compatible with existing user management
+
+Implementation: backend/auth/clerk_functions.go:120`} language="json" />
+  </TabItem>
+  
+  <TabItem label="List Sessions">
+<Code code={`GET /api/v1/clerk/sessions
+Authorization: Bearer <clerk_session_token>
+
+Response (200):
+{
+  "sessions": [
+    {
+      "session_id": "sess_2mPXg5...",
+      "user_id": "user_2mPXg5...",
+      "status": "active",
+      "created_at": "2025-01-15T10:30:00Z",
+      "expires_at": "2025-01-16T10:30:00Z",
+      "last_active": "2025-01-15T14:30:00Z",
+      "user_agent": "Mozilla/5.0...",
+      "ip_address": "192.168.1.1",
+      "device_info": "Chrome on Windows",
+      "is_current": true
+    },
+    {
+      "session_id": "sess_abc123...",
+      "user_id": "user_2mPXg5...",
+      "status": "active",
+      "created_at": "2025-01-14T08:00:00Z",
+      "expires_at": "2025-01-15T08:00:00Z",
+      "last_active": "2025-01-15T12:00:00Z",
+      "user_agent": "Mozilla/5.0...",
+      "ip_address": "192.168.1.2",
+      "device_info": "Safari on iPhone",
+      "is_current": false
+    }
+  ]
+}
+
+Errors:
+- 401 INVALID_TOKEN - Invalid or expired Clerk session token
+- 401 SESSION_INVALID - Session validation failed
+- 500 SESSIONS_ERROR - Failed to retrieve sessions
+
+Notes:
+- Lists all active sessions for the authenticated user
+- Identifies current session with "is_current" flag
+- Includes device and location information
+- Useful for security monitoring and session management
+
+Implementation: backend/auth/clerk_functions.go:157`} language="json" />
+  </TabItem>
+  
+  <TabItem label="Revoke Session">
+<Code code={`POST /api/v1/clerk/sessions/{sessionId}/revoke
+Authorization: Bearer <clerk_session_token>
+
+Response (200):
+{
+  "message": "Session revoked successfully"
+}
+
+Errors:
+- 400 INVALID_SESSION_ID - Missing or invalid session ID
+- 401 INVALID_TOKEN - Invalid or expired Clerk session token
+- 401 SESSION_INVALID - Session validation failed
+- 500 SESSION_REVOKE_ERROR - Failed to revoke session
+
+Notes:
+- Revokes a specific Clerk session
+- Cannot revoke current session (security protection)
+- Invalidates session immediately
+- Logs security event for audit trail
+- Useful for "log out of other devices" functionality
+
+Implementation: backend/auth/clerk_functions.go:194`} language="json" />
+  </TabItem>
+</Tabs>
+
+## Organization Management (Clerk)
+
+<Tabs>
+  <TabItem label="List Organizations">
+<Code code={`GET /api/v1/clerk/organizations
+Authorization: Bearer <clerk_session_token>
+
+Response (200):
+{
+  "organizations": [
+    {
+      "id": "org_abc123...",
+      "name": "Acme Corporation",
+      "description": "Main company organization",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-15T10:30:00Z"
+    }
+  ]
+}
+
+Errors:
+- 401 INVALID_TOKEN - Invalid or expired Clerk session token
+- 401 SESSION_INVALID - Session validation failed
+- 500 ORGANIZATIONS_ERROR - Failed to retrieve organizations
+
+Notes:
+- Returns organizations the user belongs to
+- Managed through Clerk's organization features
+- Supports multi-tenant applications
+- Role-based access within organizations
+
+Implementation: backend/auth/clerk_functions.go:244`} language="json" />
+  </TabItem>
+  
+  <TabItem label="Create Organization">
+<Code code={`POST /api/v1/clerk/organizations
+Authorization: Bearer <clerk_session_token>
+
+Request:
+{
+  "name": "New Organization",
+  "description": "A new organization for team collaboration"
+}
+
+Response (200):
+{
+  "message": "Organization created successfully",
+  "organization": {
+    "id": "org_xyz789...",
+    "name": "New Organization",
+    "description": "A new organization for team collaboration"
+  }
+}
+
+Errors:
+- 400 INVALID_REQUEST - Invalid request body
+- 401 INVALID_TOKEN - Invalid or expired Clerk session token
+- 401 SESSION_INVALID - Session validation failed
+- 500 ORGANIZATION_CREATE_ERROR - Failed to create organization
+
+Notes:
+- Creates new Clerk organization
+- User becomes organization admin
+- Supports team collaboration features
+- Organization ID returned for future references
+
+Implementation: backend/auth/clerk_functions.go:281`} language="json" />
+  </TabItem>
+  
+  <TabItem label="Get Organization">
+<Code code={`GET /api/v1/clerk/organizations/{orgId}
+Authorization: Bearer <clerk_session_token>
+
+Response (200):
+{
+  "organization": {
+    "id": "org_abc123...",
+    "name": "Acme Corporation",
+    "description": "Main company organization",
+    "created_at": "2025-01-01T00:00:00Z",
+    "updated_at": "2025-01-15T10:30:00Z"
+  }
+}
+
+Errors:
+- 400 INVALID_ORGANIZATION_ID - Missing or invalid organization ID
+- 401 INVALID_TOKEN - Invalid or expired Clerk session token
+- 401 SESSION_INVALID - Session validation failed
+- 500 ORGANIZATION_ERROR - Failed to retrieve organization
+
+Notes:
+- Returns detailed organization information
+- User must be member of organization
+- Includes creation and update timestamps
+- Useful for organization management UIs
+
+Implementation: backend/auth/clerk_functions.go:343`} language="json" />
+  </TabItem>
+  
+  <TabItem label="Update Organization">
+<Code code={`PUT /api/v1/clerk/organizations/{orgId}
+Authorization: Bearer <clerk_session_token>
+
+Request:
+{
+  "name": "Updated Organization Name",
+  "description": "Updated description"
+}
+
+Response (200):
+{
+  "message": "Organization updated successfully",
+  "organization": {
+    "id": "org_abc123...",
+    "name": "Updated Organization Name",
+    "description": "Updated description"
+  }
+}
+
+Errors:
+- 400 INVALID_ORGANIZATION_ID - Missing or invalid organization ID
+- 400 INVALID_REQUEST - Invalid request body
+- 401 INVALID_TOKEN - Invalid or expired Clerk session token
+- 401 SESSION_INVALID - Session validation failed
+- 500 ORGANIZATION_UPDATE_ERROR - Failed to update organization
+
+Notes:
+- Updates organization name and description
+- User must have admin permissions
+- All organization members see changes
+- Audit log entry created
+
+Implementation: backend/auth/clerk_functions.go:388`} language="json" />
+  </TabItem>
+</Tabs>
+
+## Core Authentication (Legacy + Clerk Support)
+
+<Tabs>
+  <TabItem label="Registration">
 <Code code={`POST /api/v1/auth/register
 
 Request:
@@ -36,9 +340,15 @@ Password Requirements:
 - At least one digit
 - At least one special character
 
-Implementation: backend/auth/handlers.go:34
-Validation: backend/auth/password.go:101`} language="json" />
+Notes:
+- Works with both Clerk and legacy authentication
+- Clerk users receive email verification
+- Legacy users get JWT tokens
+- Registration controlled by VITE_ENABLE_REGISTRATION
+
+Implementation: backend/auth/handlers.go:34`} language="json" />
   </TabItem>
+  
   <TabItem label="Login">
 <Code code={`POST /api/v1/auth/login
 
@@ -46,23 +356,27 @@ Request:
 {
   "email": "user@example.com",
   "password": "SecureP@ss123",
-  "mfa_code": ""  # Optional, for single-step login
+  "mfa_code": ""  # Optional, for legacy MFA
 }
 
-Response (200) - No MFA:
+Response (200) - Clerk User:
+{
+  "message": "Authentication successful",
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "workspace_id": "660e8400-e29b-41d4-a716-446655440000",
+  "is_admin": false,
+  "auth_type": "clerk",
+  "clerk_user_id": "user_2mPXg5..."
+}
+
+Response (200) - Legacy User:
 {
   "token": "eyJhbGc...",
   "user_id": "550e8400-e29b-41d4-a716-446655440000",
   "workspace_id": "660e8400-e29b-41d4-a716-446655440000",
   "is_admin": false,
-  "expires_at": "2025-10-22T10:00:00Z"
-}
-
-Response (200) - MFA Required:
-{
-  "mfa_required": true,
-  "session_token": "mfa_session_xxx",
-  "user_id": "550e8400-e29b-41d4-a716-446655440000"
+  "expires_at": "2025-10-22T10:00:00Z",
+  "auth_type": "jwt"
 }
 
 Errors:
@@ -78,9 +392,10 @@ Account Locking:
 Implementation: backend/auth/handlers.go:88
 Rate Limit: 10 requests/5 minutes`} language="json" />
   </TabItem>
+  
   <TabItem label="Logout">
 <Code code={`POST /api/v1/auth/logout
-Authorization: Bearer <jwt_token>
+Authorization: Bearer <token>
 
 Response (200):
 {
@@ -88,12 +403,14 @@ Response (200):
 }
 
 Behavior:
-- Deletes session from Redis
-- Invalidates JWT token
+- Clerk: Revokes Clerk session token
+- Legacy: Deletes session from Redis
+- Invalidates authentication token
 - Client must discard token
 
 Implementation: backend/auth/handlers.go:168`} language="json" />
   </TabItem>
+  
   <TabItem label="Registration Status">
 <Code code={`GET /api/v1/auth/registration
 
@@ -104,257 +421,77 @@ Response (200):
 
 Notes:
 - Public endpoint
-- Controlled by ENABLE_REGISTRATION env var (default: false)
+- Controlled by VITE_ENABLE_REGISTRATION env var
 - Returns current registration policy
+- Useful for UI state management
 
 Implementation: backend/auth/handlers.go:486`} language="json" />
   </TabItem>
 </Tabs>
 
-## Multi-Factor Authentication
+## Multi-Factor Authentication (Clerk Managed)
 
 <Tabs>
-  <TabItem label="Verify MFA">
-<Code code={`POST /api/v1/auth/mfa/verify
-
-Request:
-{
-  "session_token": "mfa_session_xxx",
-  "code": "123456"  # TOTP code or backup code (XXXX-XXXX-XXXX)
-}
-
-Response (200):
-{
-  "token": "eyJhbGc...",
-  "user_id": "550e8400-e29b-41d4-a716-446655440000",
-  "workspace_id": "660e8400-e29b-41d4-a716-446655440000",
-  "is_admin": false,
-  "expires_at": "2025-10-22T10:00:00Z"
-}
-
-Errors:
-- 401 INVALID_MFA_CODE - Wrong TOTP/backup code
-- 401 EXPIRED_TOKEN - MFA session expired (5min window)
-
-Notes:
-- Public endpoint (no JWT required)
-- Accepts both TOTP codes (6 digits) and backup codes (12 chars)
-- MFA session token valid for 5 minutes
-- TOTP valid for ±30 seconds (90-second window)
-- Backup codes are single-use, constant-time verified
-
-Implementation: backend/auth/handlers.go:134
-MFA Logic: backend/auth/mfa.go:65
-Rate Limit: 10 requests/5 minutes`} language="json" />
-  </TabItem>
-  <TabItem label="Get Status">
+  <TabItem label="MFA Status">
 <Code code={`GET /api/v1/auth/mfa/status
-Authorization: Bearer <jwt_token>
+Authorization: Bearer <token>
 
 Response (200):
 {
   "mfa_enabled": true,
-  "backup_codes_remaining": 7
+  "backup_codes_remaining": 7,
+  "two_factor_enabled": true,
+  "methods": ["totp", "backup_codes"]
 }
+
+Notes:
+- Returns MFA status from Clerk
+- Includes backup codes count
+- Works with both authentication types
+- Clerk manages all MFA logic
 
 Implementation: backend/auth/handlers.go:210`} language="json" />
   </TabItem>
-  <TabItem label="Setup">
-<Code code={`POST /api/v1/auth/mfa/setup
-Authorization: Bearer <jwt_token>
-
-Response (200):
-{
-  "secret": "JBSWY3DPEHPK3PXP",
-  "qr_code_url": "otpauth://totp/LeafLock:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=LeafLock"
-}
-
-Notes:
-- Generates new TOTP secret (32 random bytes, base32 encoded)
-- QR code URL for authenticator apps
-- Secret not stored until /enable is called
-- User must verify code via /enable to activate
-
-TOTP Configuration:
-- Algorithm: SHA-1 (RFC 6238 standard)
-- Period: 30 seconds
-- Digits: 6
-- Issuer: LeafLock
-
-Implementation: backend/auth/handlers.go:235
-TOTP Generation: backend/auth/mfa.go:35
-Rate Limit: 10 requests/5 minutes`} language="json" />
-  </TabItem>
-  <TabItem label="Enable">
-<Code code={`POST /api/v1/auth/mfa/enable
-Authorization: Bearer <jwt_token>
-
-Request:
-{
-  "secret": "JBSWY3DPEHPK3PXP",
-  "code": "123456"
-}
-
-Response (200):
-{
-  "backup_codes": [
-    "A1B2-C3D4-E5F6",
-    "G7H8-I9J0-K1L2",
-    "M3N4-O5P6-Q7R8",
-    "S9T0-U1V2-W3X4",
-    "Y5Z6-A7B8-C9D0",
-    "E1F2-G3H4-I5J6",
-    "K7L8-M9N0-O1P2",
-    "Q3R4-S5T6-U7V8",
-    "W9X0-Y1Z2-A3B4",
-    "C5D6-E7F8-G9H0"
-  ]
-}
-
-Notes:
-- Verifies TOTP code before enabling
-- Encrypts secret with XChaCha20-Poly1305
-- Generates 10 backup codes (12 chars each, Argon2id hashed)
-- Backup codes must be saved by user (one-time display)
-- Sets mfa_enabled = true in database
-
-Implementation: backend/auth/handlers.go:285
-Backup Code Generation: backend/auth/mfa.go:89
-Rate Limit: 10 requests/5 minutes`} language="json" />
-  </TabItem>
-  <TabItem label="Disable">
-<Code code={`POST /api/v1/auth/mfa/disable
-Authorization: Bearer <jwt_token>
-
-Request:
-{
-  "code": "123456"  # TOTP code or backup code
-}
-
-Response (200):
-{
-  "message": "MFA disabled successfully"
-}
-
-Errors:
-- 400 INVALID_MFA_CODE - Wrong code
-
-Notes:
-- Requires valid TOTP or backup code
-- Deletes encrypted secret and backup codes
-- Sets mfa_enabled = false
-
-Implementation: backend/auth/handlers.go:322
-Rate Limit: 10 requests/5 minutes`} language="json" />
-  </TabItem>
-  <TabItem label="Regenerate Codes">
-<Code code={`POST /api/v1/auth/mfa/backup-codes/regenerate
-Authorization: Bearer <jwt_token>
-
-Request:
-{
-  "password": "user_password"
-}
-
-Response (200):
-{
-  "backup_codes": [
-    "A1B2-C3D4-E5F6",
-    ...
-  ]
-}
-
-Errors:
-- 401 INVALID_CREDENTIALS - Wrong password
-
-Notes:
-- Requires password verification
-- Generates new set of 10 codes
-- Invalidates all old backup codes
-- Used codes list is reset
-
-Implementation: backend/auth/handlers.go:355
-Rate Limit: 10 requests/5 minutes`} language="json" />
-  </TabItem>
 </Tabs>
 
-## Password Reset
+## Webhook Endpoints
 
 <Tabs>
-  <TabItem label="Request Reset">
-<Code code={`POST /api/v1/auth/password/reset-request
+  <TabItem label="Clerk Webhooks">
+<Code code={`POST /api/v1/webhooks/clerk
+Content-Type: application/json
+Clerk-Signature: <signature>
 
 Request:
 {
-  "email": "user@example.com"
+  "type": "user.created",
+  "data": {
+    "id": "user_2mPXg5...",
+    "email_addresses": [{"email_address": "user@example.com"}],
+    "created_at": 1640995200000
+  }
 }
 
 Response (200):
 {
-  "message": "If the email exists, a password reset link has been sent"
+  "message": "Webhook processed successfully"
 }
 
-Notes:
-- Public endpoint
-- Always returns success (prevents email enumeration)
-- TODO: Email sending not implemented
-- Token valid for 15 minutes
-- Token stored as SHA-256 hash in database
+Supported Events:
+- user.created - New user registered
+- user.updated - User profile updated
+- user.deleted - User account deleted
+- session.created - New session created
+- session.ended - Session terminated
+- email.created - Email verification sent
 
-Implementation: backend/auth/handlers.go:390
-Rate Limit: 10 requests/5 minutes`} language="json" />
-  </TabItem>
-  <TabItem label="Verify Token">
-<Code code={`GET /api/v1/auth/password/reset-verify?token=<reset_token>
+Security:
+- Signature verification using webhook secret
+- Replay attack protection
+- Event validation and filtering
+- Comprehensive audit logging
 
-Response (200):
-{
-  "valid": true
-}
-
-Response (400):
-{
-  "valid": false,
-  "error": "Invalid or expired reset token"
-}
-
-Notes:
-- Public endpoint
-- Checks token exists, not expired, not used
-- Rate limit: 10 verification attempts per token every 15 minutes
-- Does not consume token
-
-Implementation: backend/auth/handlers.go:421
-Password Service: backend/auth/password.go:146`} language="json" />
-  </TabItem>
-  <TabItem label="Confirm Reset">
-<Code code={`POST /api/v1/auth/password/reset-confirm
-
-Request:
-{
-  "token": "<reset_token>",
-  "new_password": "NewSecureP@ss123"
-}
-
-Response (200):
-{
-  "message": "Password reset successfully"
-}
-
-Errors:
-- 400 VALIDATION_FAILED - Weak password
-- 400 INVALID_TOKEN - Invalid/expired/used token
-
-Notes:
-- Public endpoint
-- Validates new password strength
-- Marks token as used (prevents reuse)
-- Invalidates all active sessions for user
-- Resets failed_attempts counter
-
-Implementation: backend/auth/handlers.go:452
-Password Service: backend/auth/password.go:177
-Rate Limit: 10 requests/5 minutes`} language="json" />
+Implementation: backend/handlers/clerk_webhook.go`} language="json" />
   </TabItem>
 </Tabs>
 
@@ -366,16 +503,15 @@ All errors include structured `code` field for client-side handling:
 |------|-------------|-------------|----------|
 | `INVALID_CREDENTIALS` | 401 | Wrong email/password | Show error, allow retry |
 | `ACCOUNT_LOCKED` | 403 | 5+ failed attempts | Show 15min lockout message |
-| `MFA_REQUIRED` | 200 | MFA verification needed | Redirect to MFA input |
-| `INVALID_MFA_CODE` | 401 | Wrong TOTP/backup code | Show error, allow retry |
-| `INVALID_TOKEN` | 401 | Invalid/missing JWT | Redirect to login |
-| `EXPIRED_TOKEN` | 401 | Token expired | Redirect to login |
+| `INVALID_TOKEN` | 401 | Invalid/missing token | Redirect to login |
+| `SESSION_INVALID` | 401 | Session validation failed | Redirect to login |
+| `SESSION_EXPIRED` | 401 | Session expired | Redirect to login |
 | `USER_NOT_FOUND` | 404 | User doesn't exist | Generic error (security) |
 | `EMAIL_EXISTS` | 409 | Duplicate registration | Show "email taken" |
 | `VALIDATION_FAILED` | 400 | Input validation error | Show field-specific errors |
 | `REGISTRATION_DISABLED` | 403 | Registration not allowed | Show "registration closed" |
-
-**Implementation**: `backend/auth/models.go:97-110`
+| `SESSION_REVOKE_ERROR` | 500 | Session revocation failed | Show generic error |
+| `ORGANIZATION_ERROR` | 500 | Organization operation failed | Show generic error |
 
 ## Rate Limiting
 
@@ -384,9 +520,9 @@ Redis-based distributed rate limiting using fixed window algorithm:
 | Endpoint Group | Limit | Window | Key Format |
 |----------------|-------|--------|------------|
 | Login | 10 requests | 5 minutes | `limiter:{ip}:/api/v1/auth/login` |
-| MFA Verify | 10 requests | 5 minutes | `limiter:{ip}:/api/v1/auth/mfa/verify` |
-| MFA Setup/Enable/Disable | 10 requests | 5 minutes | `limiter:{ip}:/api/v1/auth/mfa/*` |
-| Password Reset | 10 requests | 5 minutes | `limiter:{ip}:/api/v1/auth/password/*` |
+| Registration | 10 requests | 5 minutes | `limiter:{ip}:/api/v1/auth/register` |
+| Clerk Session Management | 30 requests | 5 minutes | `limiter:{user_id}:/api/v1/clerk/*` |
+| Organization Management | 30 requests | 5 minutes | `limiter:{user_id}:/api/v1/clerk/organizations/*` |
 
 **Rate Limit Response (429)**:
 ```json
@@ -395,164 +531,118 @@ Redis-based distributed rate limiting using fixed window algorithm:
 }
 ```
 
-**Implementation**: `backend/middleware/rate_limit.go:45`
-**IP Detection**: `backend/utils/network.go:34` (supports X-Forwarded-For, CF-Connecting-IP)
+**Implementation**: `backend/middleware/rate_limit.go`
+**IP Detection**: `backend/utils/network.go` (supports X-Forwarded-For, CF-Connecting-IP)
 
-## JWT Token Details
+## Authentication Examples
 
-**Token Structure**:
-- Signing: HS256 (HMAC-SHA256)
-- Expiration: 24 hours
-- Claims: `user_id`, `is_admin`, `exp`
+<Tabs>
+  <TabItem label="Clerk Authentication">
+<Code code={`// Modern Clerk authentication flow
+async function clerkLogin(email, password) {
+  // Use Clerk's pre-built components for sign-in
+  // Session token automatically included in API calls
+  
+  const response = await fetch('/api/v1/clerk/session/info', {
+    headers: {
+      'Authorization': `Bearer ${clerkSessionToken}`
+    }
+  });
+  
+  const data = await response.json();
+  return data.user;
+}
 
-**Storage**:
-- Redis key: `session:<token_hash>` (Argon2id hash)
-- Session data: XChaCha20-Poly1305 encrypted
-- Contains: user_id, ip_address, user_agent, mfa_verified, created_at
+// Get user sessions
+async function getClerkSessions() {
+  const response = await fetch('/api/v1/clerk/sessions', {
+    headers: {
+      'Authorization': `Bearer ${clerkSessionToken}`
+    }
+  });
+  
+  const data = await response.json();
+  return data.sessions;
+}
 
-**Validation Flow**:
-1. Extract from `Authorization: Bearer <token>` header
-2. Verify JWT signature and expiration
-3. Check session exists in Redis
-4. Decrypt session data
-5. Set `user_id`, `is_admin` in Fiber context
-
-**Implementation**: `backend/auth/service.go:89` (GenerateJWT), `backend/auth/service.go:137` (ValidateJWT)
-
-## Integration Example
-
-<Code code={`// Complete login flow with MFA
-async function loginWithMFA(email, password) {
-  // Step 1: Initial login
-  const loginRes = await fetch('/api/v1/auth/login', {
+// Revoke a session (log out other device)
+async function revokeSession(sessionId) {
+  const response = await fetch(\`/api/v1/clerk/sessions/\${sessionId}/revoke\`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${clerkSessionToken}`
+    }
+  });
+  
+  return response.json();
+}`} language="javascript" />
+  </TabItem>
+  
+  <TabItem label="Dual Authentication">
+<Code code={`// Support both authentication types during migration
+async function universalLogin(email, password) {
+  const response = await fetch('/api/v1/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
-  })
-
-  const loginData = await loginRes.json()
-
-  if (loginRes.status === 401 && loginData.code === 'INVALID_CREDENTIALS') {
-    throw new Error('Invalid email or password')
+  });
+  
+  const data = await response.json();
+  
+  if (data.auth_type === 'clerk') {
+    // Modern Clerk user
+    console.log('Logged in with Clerk');
+    return { type: 'clerk', userId: data.user_id };
+  } else if (data.auth_type === 'jwt') {
+    // Legacy JWT user
+    console.log('Logged in with JWT');
+    return { type: 'jwt', token: data.token, userId: data.user_id };
   }
+  
+  throw new Error('Login failed');
+}
 
-  if (loginRes.status === 403 && loginData.code === 'ACCOUNT_LOCKED') {
-    throw new Error('Account locked. Try again in 15 minutes.')
-  }
-
-  // Step 2: Handle MFA if required
-  if (loginData.mfa_required) {
-    const mfaCode = await promptUserForMfaCode()
-
-    const mfaRes = await fetch('/api/v1/auth/mfa/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        session_token: loginData.session_token,
-        code: mfaCode
-      })
-    })
-
-    if (!mfaRes.ok) {
-      const error = await mfaRes.json()
-      throw new Error(error.error)
+// Universal logout
+async function universalLogout(token) {
+  await fetch('/api/v1/auth/logout', {
+    method: 'POST',
+    headers: { 
+      'Authorization': `Bearer ${token}`
     }
-
-    const { token, user_id, workspace_id } = await mfaRes.json()
-    return { token, user_id, workspace_id }
-  }
-
-  // No MFA required
-  return loginData
-}
-
-// Setup MFA
-async function setupMFA(jwtToken) {
-  // Step 1: Begin setup (get QR code)
-  const setupRes = await fetch('/api/v1/auth/mfa/setup', {
-    method: 'POST',
-    headers: { 'Authorization': \`Bearer \${jwtToken}\` }
-  })
-
-  const { secret, qr_code_url } = await setupRes.json()
-
-  // Show QR code to user
-  displayQRCode(qr_code_url)
-
-  // Step 2: User scans QR, enters verification code
-  const verificationCode = await promptUserForCode()
-
-  // Step 3: Enable MFA
-  const enableRes = await fetch('/api/v1/auth/mfa/enable', {
-    method: 'POST',
-    headers: {
-      'Authorization': \`Bearer \${jwtToken}\`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ secret, code: verificationCode })
-  })
-
-  const { backup_codes } = await enableRes.json()
-
-  // IMPORTANT: Show backup codes to user (one-time display)
-  displayBackupCodes(backup_codes)
-}
-
-// Password reset flow
-async function resetPassword(email) {
-  // Step 1: Request reset
-  await fetch('/api/v1/auth/password/reset-request', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email })
-  })
-
-  // Step 2: User receives email with token (TODO: email not implemented)
-  // Step 3: User clicks link, verify token
-  const token = new URLSearchParams(window.location.search).get('token')
-
-  const verifyRes = await fetch(\`/api/v1/auth/password/reset-verify?token=\${token}\`)
-  const { valid } = await verifyRes.json()
-
-  if (!valid) {
-    throw new Error('Invalid or expired reset link')
-  }
-
-  // Step 4: Set new password
-  const newPassword = await promptUserForNewPassword()
-
-  await fetch('/api/v1/auth/password/reset-confirm', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token, new_password: newPassword })
-  })
+  });
 }`} language="javascript" />
+  </TabItem>
+</Tabs>
 
 ## Security Notes
 
-**Encryption**:
-- MFA secrets: XChaCha20-Poly1305 with `SERVER_ENCRYPTION_KEY`
-- Sessions: XChaCha20-Poly1305 encrypted in Redis
-- Passwords: Argon2id (3 iterations, 64MB memory, 4 threads)
-- Backup codes: Argon2id with deterministic salt (for verification)
+**Clerk Authentication**:
+- Session tokens validated using Clerk SDK
+- Zero-knowledge architecture preserved
+- Server never sees plaintext user data
+- Automatic token refresh handled by Clerk
 
-**Constant-Time Operations**:
-- TOTP code comparison: `backend/auth/mfa.go:65`
-- Backup code comparison: `backend/auth/mfa.go:124`
-- Prevents timing attacks
+**Legacy JWT Authentication**:
+- 24-hour token expiration
+- Redis-backed session validation
+- Encrypted session data with XChaCha20-Poly1305
+- Argon2id password hashing
 
-**Token Security**:
-- Reset tokens: SHA-256 hashed, 1-hour expiration, single-use
-- MFA sessions: 5-minute expiration, deleted after verification
-- JWT tokens: 24-hour expiration, Redis-backed validation
+**Rate Limiting**:
+- Clerk endpoints use user-based rate limiting (more generous)
+- Legacy endpoints use IP-based rate limiting
+- Distributed across all application instances
+- Automatic cleanup of expired entries
 
-**Account Protection**:
-- Failed attempts tracked per user
-- Auto-lock after 5 failures (15min duration)
-- Counter resets on successful login
-- All sessions invalidated on password change
+**Audit Logging**:
+- All authentication events logged
+- Security events include IP and user agent
+- Failed attempts tracked for account protection
+- Webhook events for external monitoring
 
 **Implementation Files**:
-- Crypto service: `backend/crypto/crypto.go`
-- Session management: `backend/auth/session.go`
-- Password handling: `backend/auth/password.go`
+- Clerk functions: `backend/auth/clerk_functions.go`
+- Clerk middleware: `backend/auth/clerk_middleware.go`
+- Session management: `backend/auth/clerk_session.go`
+- Webhook handling: `backend/handlers/clerk_webhook.go`
+- Rate limiting: `backend/middleware/rate_limit.go`

@@ -1,203 +1,184 @@
 ---
-title: Admin MFA Management
-description: Administrative guide for managing MFA and user account recovery
+title: Admin MFA Management (Clerk)
+description: Administrative guide for managing MFA and user account recovery with Clerk
 ---
 
-# Admin MFA Management
+# Admin MFA Management (Clerk)
 
-This guide is for system administrators who need to manage MFA settings or assist users with account access issues.
+This guide is for system administrators who need to manage MFA settings or assist users with account access issues when using Clerk authentication.
 
-## Database-Level MFA Reset
+## Understanding Clerk MFA Management
 
-If a user loses access to both their authenticator device and backup codes, administrators can reset MFA directly via the database.
+With Clerk, MFA management is primarily handled through:
 
-### Emergency MFA Reset Procedure
+1. **Clerk Dashboard** - Web interface for user management
+2. **Clerk API** - Programmatic access for automation
+3. **LeafLock Admin Interface** - Custom admin features
+4. **Database-level** - For emergency access and reporting
 
-#### Prerequisites
-- Database admin access (PostgreSQL)
-- User's account identifier (user ID or email)
+## Clerk Dashboard Management
 
-#### Reset Script Location
-```
-backend/scripts/reset-mfa.sql
-```
+### Accessing the Clerk Dashboard
 
-### Option 1: Reset by User ID
+1. Log in to [Clerk Dashboard](https://dashboard.clerk.com)
+2. Select your LeafLock application
+3. Navigate to **Users** section
 
-If you know the user's UUID:
+### User MFA Management via Dashboard
 
-```sql
-UPDATE users
-SET mfa_enabled = false,
-    mfa_secret_encrypted = NULL,
-    mfa_backup_codes = NULL,
-    mfa_backup_codes_used = NULL
-WHERE id = '550e8400-e29b-41d4-a716-446655440000';
-```
+#### View User MFA Status
+1. Search for the user by email or user ID
+2. Click on the user profile
+3. Go to **Security** tab
+4. View MFA status and methods
 
-### Option 2: Reset by Email (Advanced)
+#### Reset User MFA
+1. Find the user in the dashboard
+2. Click **More Actions** → **Reset MFA**
+3. Confirm the reset operation
+4. User will receive notification about the reset
 
-**Note**: Emails are stored encrypted. You need the `email_search_hash` for this query.
+#### Disable MFA for User
+1. Navigate to user profile
+2. Go to **Security** settings
+3. Toggle **Two-factor authentication** to **Off**
+4. Confirm the change
 
-1. First, locate the user:
-```sql
-SELECT id, mfa_enabled
-FROM users
-WHERE email_search_hash = E'\\xYOUR_HASH_HERE';
-```
+### Bulk Operations via Dashboard
 
-2. Then reset MFA:
-```sql
-UPDATE users
-SET mfa_enabled = false,
-    mfa_secret_encrypted = NULL,
-    mfa_backup_codes = NULL,
-    mfa_backup_codes_used = NULL
-WHERE email_search_hash = E'\\xYOUR_HASH_HERE';
-```
+Clerk dashboard supports bulk operations:
+1. Select multiple users with checkboxes
+2. Use **Bulk Actions** menu
+3. Apply MFA settings to selected users
 
-### Verify Reset Success
+## API-Based MFA Management
 
-```sql
-SELECT
-  id,
-  mfa_enabled,
-  CASE
-    WHEN mfa_secret_encrypted IS NOT NULL THEN 'has_secret'
-    ELSE 'no_secret'
-  END as secret_status,
-  CASE
-    WHEN mfa_backup_codes IS NOT NULL THEN array_length(mfa_backup_codes, 1)
-    ELSE 0
-  END as backup_codes_count
-FROM users
-WHERE id = '550e8400-e29b-41d4-a716-446655440000';
+### Using Clerk API for Automation
+
+#### Reset MFA via API
+
+```bash
+# Reset MFA for a specific user
+curl -X POST \
+  "https://api.clerk.com/v1/users/{USER_ID}/mfa" \
+  -H "Authorization: Bearer {CLERK_SECRET_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "disabled": true
+  }'
 ```
 
-Expected result after reset:
+#### Get User MFA Status
+
+```bash
+# Get user MFA information
+curl -X GET \
+  "https://api.clerk.com/v1/users/{USER_ID}/mfa" \
+  -H "Authorization: Bearer {CLERK_SECRET_KEY}"
 ```
-mfa_enabled: false
-secret_status: no_secret
-backup_codes_count: 0
+
+#### List Users with MFA Enabled
+
+```bash
+# Get all users with MFA enabled
+curl -X GET \
+  "https://api.clerk.com/v1/users?query=mfa_enabled:true" \
+  -H "Authorization: Bearer {CLERK_SECRET_KEY}"
 ```
 
-## User Recovery Process
+### LeafLock Admin API Integration
 
-After resetting MFA for a user:
+#### Emergency MFA Reset Endpoint
 
-1. **Notify the user** that their MFA has been reset
-2. User can now **log in with email and password only** (no MFA required)
-3. **Recommend** the user re-enable MFA from Security Settings
-4. User should set up MFA again following the [Setup Guide](/authentication/setup-guide)
+LeafLock provides admin endpoints for MFA management:
 
-## Advanced SQL Queries for Admins
+```bash
+# Reset user MFA (admin only)
+POST /api/v1/admin/users/{userId}/mfa/reset
+Authorization: Bearer {ADMIN_TOKEN}
+
+Response (200):
+{
+  "message": "MFA reset successfully",
+  "user_id": "user_2mPXg5...",
+  "reset_at": "2025-01-15T10:30:00Z"
+}
+```
+
+#### Get User Security Status
+
+```bash
+# Get comprehensive user security information
+GET /api/v1/admin/users/{userId}/security
+Authorization: Bearer {ADMIN_TOKEN}
+
+Response (200):
+{
+  "user": {
+    "id": "user_2mPXg5...",
+    "email": "user@example.com",
+    "mfa_enabled": true,
+    "mfa_methods": ["totp", "sms", "backup_codes"],
+    "backup_codes_remaining": 7,
+    "last_mfa_use": "2025-01-14T15:30:00Z",
+    "security_events": [...]
+  }
+}
+```
+
+## Database-Level MFA Reporting
+
+While Clerk manages MFA state, you can query the database for reporting and analytics.
 
 ### User MFA Status Queries
 
-#### Find All Users with MFA Enabled
+#### Find All Users with MFA Enabled (Clerk)
 
 ```sql
--- Simple list
-SELECT id, email_encrypted, mfa_enabled, created_at, last_login
-FROM users
-WHERE mfa_enabled = true
-ORDER BY last_login DESC NULLS LAST;
-
--- With backup code counts
+-- Users with Clerk MFA enabled (via metadata)
 SELECT
-  id,
-  email_encrypted,
-  mfa_enabled,
-  CASE
-    WHEN mfa_backup_codes IS NOT NULL
-    THEN array_length(mfa_backup_codes, 1)
-    ELSE 0
-  END as total_backup_codes,
-  CASE
-    WHEN mfa_backup_codes_used IS NOT NULL
-    THEN array_length(mfa_backup_codes_used, 1)
-    ELSE 0
-  END as used_backup_codes,
-  (CASE
-    WHEN mfa_backup_codes IS NOT NULL
-    THEN array_length(mfa_backup_codes, 1)
-    ELSE 0
-  END -
-  CASE
-    WHEN mfa_backup_codes_used IS NOT NULL
-    THEN array_length(mfa_backup_codes_used, 1)
-    ELSE 0
-  END) as remaining_codes
-FROM users
-WHERE mfa_enabled = true;
+  u.id,
+  u.email_encrypted,
+  u.is_admin,
+  u.created_at,
+  u.last_login,
+  CASE 
+    WHEN u.clerk_user_id IS NOT NULL THEN 'clerk'
+    ELSE 'legacy'
+  END as auth_type
+FROM users u
+WHERE u.clerk_user_id IS NOT NULL
+  AND u.deleted_at IS NULL
+ORDER BY u.last_login DESC NULLS LAST;
 ```
 
 #### MFA Adoption Statistics
 
 ```sql
--- Overall MFA adoption rate
+-- Overall authentication method distribution
 SELECT
-  COUNT(*) as total_users,
-  COUNT(*) FILTER (WHERE mfa_enabled = true) as mfa_enabled_count,
-  COUNT(*) FILTER (WHERE mfa_enabled = false) as mfa_disabled_count,
-  ROUND(
-    100.0 * COUNT(*) FILTER (WHERE mfa_enabled = true) / NULLIF(COUNT(*), 0),
-    2
-  ) as mfa_adoption_percentage
-FROM users
-WHERE deleted_at IS NULL;
-
--- MFA adoption by admin status
-SELECT
-  is_admin,
+  CASE 
+    WHEN clerk_user_id IS NOT NULL THEN 'Clerk'
+    ELSE 'Legacy JWT'
+  END as auth_method,
   COUNT(*) as user_count,
-  COUNT(*) FILTER (WHERE mfa_enabled = true) as mfa_enabled,
-  ROUND(
-    100.0 * COUNT(*) FILTER (WHERE mfa_enabled = true) / NULLIF(COUNT(*), 0),
-    2
-  ) as mfa_percentage
+  ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 2) as percentage
 FROM users
 WHERE deleted_at IS NULL
-GROUP BY is_admin;
-```
+GROUP BY auth_method
+ORDER BY user_count DESC;
 
-### Backup Code Management Queries
-
-#### Users Running Low on Backup Codes
-
-```sql
--- Users with less than 3 remaining backup codes
+-- Admin users by authentication method
 SELECT
-  id,
-  email_encrypted,
-  last_login,
-  array_length(mfa_backup_codes, 1) as total_codes,
-  COALESCE(array_length(mfa_backup_codes_used, 1), 0) as used_codes,
-  (array_length(mfa_backup_codes, 1) -
-   COALESCE(array_length(mfa_backup_codes_used, 1), 0)) as remaining_codes
+  CASE 
+    WHEN clerk_user_id IS NOT NULL THEN 'Clerk'
+    ELSE 'Legacy JWT'
+  END as auth_method,
+  COUNT(*) as admin_count
 FROM users
-WHERE mfa_enabled = true
-  AND mfa_backup_codes IS NOT NULL
-  AND (array_length(mfa_backup_codes, 1) -
-       COALESCE(array_length(mfa_backup_codes_used, 1), 0)) < 3
-ORDER BY remaining_codes ASC;
-```
-
-#### Users Who Exhausted All Backup Codes
-
-```sql
--- Users with 0 remaining backup codes (high risk)
-SELECT
-  id,
-  email_encrypted,
-  last_login,
-  created_at
-FROM users
-WHERE mfa_enabled = true
-  AND mfa_backup_codes IS NOT NULL
-  AND array_length(mfa_backup_codes, 1) =
-      COALESCE(array_length(mfa_backup_codes_used, 1), 0)
-ORDER BY last_login DESC;
+WHERE is_admin = true
+  AND deleted_at IS NULL
+GROUP BY auth_method;
 ```
 
 ### Security Monitoring Queries
@@ -205,423 +186,327 @@ ORDER BY last_login DESC;
 #### Find Admin Users Without MFA (Security Risk)
 
 ```sql
--- Admin accounts without MFA enabled
-SELECT
-  id,
-  email_encrypted,
-  is_admin,
-  mfa_enabled,
-  last_login,
-  created_at
-FROM users
-WHERE is_admin = true
-  AND mfa_enabled = false
-  AND deleted_at IS NULL
-ORDER BY last_login DESC NULLS LAST;
-```
-
-#### Recently Enabled/Disabled MFA
-
-```sql
--- Users who enabled MFA in last 7 days
-SELECT
-  user_id,
-  created_at as enabled_at
-FROM audit_log
-WHERE action = 'mfa.enabled'
-  AND created_at > NOW() - INTERVAL '7 days'
-ORDER BY created_at DESC;
-
--- Users who disabled MFA recently (potential security concern)
-SELECT
-  user_id,
-  created_at as disabled_at
-FROM audit_log
-WHERE action = 'mfa.disabled'
-  AND created_at > NOW() - INTERVAL '30 days'
-ORDER BY created_at DESC;
-```
-
-#### Users with MFA Enabled But Never Used
-
-```sql
--- Users who enabled MFA but haven't logged in since
+-- Admin accounts that may need MFA enforcement
 SELECT
   u.id,
   u.email_encrypted,
-  al.created_at as mfa_enabled_at,
+  u.is_admin,
+  u.clerk_user_id,
   u.last_login,
-  EXTRACT(DAY FROM NOW() - al.created_at) as days_since_enabled
+  u.created_at,
+  CASE 
+    WHEN u.clerk_user_id IS NOT NULL THEN 'Check Clerk dashboard'
+    ELSE 'Legacy system'
+  END as mfa_check_method
 FROM users u
-JOIN audit_log al ON u.id = al.user_id
-WHERE u.mfa_enabled = true
-  AND al.action = 'mfa.enabled'
-  AND (u.last_login IS NULL OR u.last_login < al.created_at)
-ORDER BY al.created_at ASC;
+WHERE u.is_admin = true
+  AND u.deleted_at IS NULL
+ORDER BY u.last_login DESC NULLS LAST;
 ```
 
-### Bulk Operations (Use with Caution)
-
-#### Reset MFA for Multiple Specific Users
+#### Recently Active Users (For MFA Audit)
 
 ```sql
--- REQUIRES AUTHORIZATION - Reset MFA for specific user list
-BEGIN;
-
-UPDATE users
-SET mfa_enabled = false,
-    mfa_secret_encrypted = NULL,
-    mfa_backup_codes = NULL,
-    mfa_backup_codes_used = NULL
-WHERE id IN (
-  '550e8400-e29b-41d4-a716-446655440001',
-  '550e8400-e29b-41d4-a716-446655440002',
-  '550e8400-e29b-41d4-a716-446655440003'
-);
-
--- Log the bulk reset for audit trail
-INSERT INTO audit_log (user_id, action, metadata_encrypted)
+-- Users active in last 30 days with auth type
 SELECT
-  id,
-  'admin.mfa_reset',
-  'Bulk MFA reset performed by admin'::bytea
-FROM users
-WHERE id IN (
-  '550e8400-e29b-41d4-a716-446655440001',
-  '550e8400-e29b-41d4-a716-446655440002',
-  '550e8400-e29b-41d4-a716-446655440003'
-);
-
-COMMIT;
+  u.id,
+  u.email_encrypted,
+  u.last_login,
+  CASE 
+    WHEN u.clerk_user_id IS NOT NULL THEN 'Clerk'
+    ELSE 'Legacy JWT'
+  END as auth_method,
+  EXTRACT(DAY FROM NOW() - u.last_login) as days_since_login
+FROM users u
+WHERE u.last_login > NOW() - INTERVAL '30 days'
+  AND u.deleted_at IS NULL
+ORDER BY u.last_login DESC;
 ```
 
-#### Emergency: Disable MFA for All Users
+## Emergency User Recovery
 
-```sql
--- EXTREME CAUTION - Only for security incidents or system migration
--- DO NOT RUN WITHOUT EXPLICIT AUTHORIZATION
+### Complete Account Recovery Process
 
-BEGIN;
+#### Step 1: Verify User Identity
+Before performing any recovery operations:
 
--- Count affected users first
-SELECT COUNT(*) as users_affected FROM users WHERE mfa_enabled = true;
+1. **Official Communication**: Verify request through company email/phone
+2. **Personal Verification**: Ask security questions
+3. **Manager Approval**: Get approval from user's manager (for corporate accounts)
+4. **Document Everything**: Record the recovery request and approval
 
--- Uncomment below ONLY if authorized:
-/*
-UPDATE users
-SET mfa_enabled = false,
-    mfa_secret_encrypted = NULL,
-    mfa_backup_codes = NULL,
-    mfa_backup_codes_used = NULL
-WHERE mfa_enabled = true;
+#### Step 2: Reset MFA via Clerk Dashboard
+1. Log into Clerk Dashboard
+2. Find the user by email
+3. Go to **Security** tab
+4. Click **Reset MFA**
+5. Confirm the operation
+6. Note the timestamp for audit log
 
--- Log mass reset
-INSERT INTO audit_log (user_id, action, metadata_encrypted)
-SELECT
-  id,
-  'admin.mass_mfa_reset',
-  'Emergency mass MFA reset - [REASON HERE]'::bytea
-FROM users
-WHERE mfa_enabled = false;  -- Now false after update
-*/
+#### Step 3: Alternative - API Reset
+For automated systems or bulk operations:
 
-ROLLBACK;  -- Change to COMMIT only when ready
+```bash
+# Reset MFA for user
+curl -X POST \
+  "https://api.clerk.com/v1/users/{USER_ID}/mfa" \
+  -H "Authorization: Bearer {CLERK_SECRET_KEY}" \
+  -d '{"disabled": true}'
+
+# Force password reset (recommended)
+curl -X POST \
+  "https://api.clerk.com/v1/users/{USER_ID}/password" \
+  -H "Authorization: Bearer {CLERK_SECRET_KEY}" \
+  -d '{"password": "temporary_password_123", "require_password_change": true}'
 ```
 
-## Audit Trail
+#### Step 4: Notify User
+Send comprehensive instructions:
 
-All MFA operations are logged in the `audit_log` table:
+```
+Subject: MFA Reset Complete - Action Required
 
-### View MFA-Related Events
+Your MFA has been reset for security reasons.
 
-```sql
-SELECT
-  created_at,
-  user_id,
-  action,
-  ip_address_encrypted,
-  user_agent_encrypted
-FROM audit_log
-WHERE action LIKE 'mfa.%'
-ORDER BY created_at DESC
-LIMIT 50;
+Next Steps:
+1. Log in with your email and password only
+2. Immediately re-enable MFA in your profile settings
+3. Set up your preferred authentication method
+4. Generate and save new backup codes
+5. Review your recent account activity
+
+Security Recommendations:
+- Use a different authenticator app/device
+- Update your backup code storage
+- Consider enabling additional security features
+
+If you didn't request this reset, contact support immediately.
 ```
 
-### MFA Event Types
+### Account Lockout Recovery
 
-| Event | Description |
-|-------|-------------|
-| `mfa.setup_started` | User began MFA setup process |
-| `mfa.enabled` | MFA successfully enabled |
-| `mfa.enable_failed` | MFA enable attempt failed (invalid code) |
-| `mfa.disabled` | User disabled MFA |
-| `mfa.disable_failed` | MFA disable attempt failed |
-| `mfa.verification_success` | Successful TOTP verification during login |
-| `mfa.verification_failed` | Failed TOTP verification |
-| `mfa.backup_code_used` | User logged in with backup code |
-| `mfa.backup_code_failed` | Invalid backup code attempt |
-| `mfa.backup_code_reuse_attempt` | Attempt to reuse a backup code |
-| `mfa.backup_codes_viewed` | User viewed backup codes info |
-| `mfa.backup_codes_regenerated` | User generated new backup codes |
-| `login.mfa_required` | User passed password check, MFA required |
+#### Check Lockout Status
+```sql
+-- Check if user is locked out (Clerk manages this, but check audit logs)
+SELECT
+  al.created_at,
+  al.action,
+  al.ip_address_encrypted,
+  al.metadata_encrypted
+FROM audit_log al
+WHERE al.user_id = 'USER_ID_HERE'
+  AND al.action IN ('login.failed', 'account.locked', 'account.unlocked')
+ORDER BY al.created_at DESC
+LIMIT 10;
+```
 
-### Investigate Suspicious Activity
+#### Unlock Account (if needed)
+```bash
+# Unlock user account via Clerk API
+curl -X POST \
+  "https://api.clerk.com/v1/users/{USER_ID}/unlock" \
+  -H "Authorization: Bearer {CLERK_SECRET_KEY}"
+```
 
-Find users with multiple failed MFA attempts:
+## Bulk Operations and Automation
+
+### Batch User MFA Status Check
+
+```python
+import requests
+import os
+
+CLERK_SECRET_KEY = os.getenv('CLERK_SECRET_KEY')
+CLERK_API_URL = "https://api.clerk.com/v1"
+
+def check_user_mfa_status(user_id):
+    """Check MFA status for a single user"""
+    headers = {"Authorization": f"Bearer {CLERK_SECRET_KEY}"}
+    
+    response = requests.get(
+        f"{CLERK_API_URL}/users/{user_id}/mfa",
+        headers=headers
+    )
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return None
+
+def get_users_with_mfa():
+    """Get all users with MFA enabled"""
+    headers = {"Authorization": f"Bearer {CLERK_SECRET_KEY}"}
+    
+    response = requests.get(
+        f"{CLERK_API_URL}/users?limit=500",
+        headers=headers
+    )
+    
+    users_with_mfa = []
+    if response.status_code == 200:
+        users = response.json().get('data', [])
+        for user in users:
+            if user.get('two_factor_enabled'):
+                users_with_mfa.append(user)
+    
+    return users_with_mfa
+
+# Example usage
+users_with_mfa = get_users_with_mfa()
+print(f"Found {len(users_with_mfa)} users with MFA enabled")
+```
+
+### Automated MFA Compliance Report
 
 ```sql
--- Failed attempts in last hour (potential brute force)
+-- Generate MFA compliance report
 SELECT
-  user_id,
+  DATE(u.created_at) as registration_date,
+  COUNT(*) as total_users,
+  COUNT(*) FILTER (WHERE u.clerk_user_id IS NOT NULL) as clerk_users,
+  COUNT(*) FILTER (WHERE u.clerk_user_id IS NULL) as legacy_users,
+  COUNT(*) FILTER (WHERE u.is_admin = true) as admin_users,
+  COUNT(*) FILTER (WHERE u.last_login > NOW() - INTERVAL '30 days') as active_users
+FROM users u
+WHERE u.deleted_at IS NULL
+GROUP BY DATE(u.created_at)
+ORDER BY registration_date DESC
+LIMIT 30;
+```
+
+## Security Monitoring and Alerts
+
+### Suspicious Activity Detection
+
+```sql
+-- Users with multiple failed login attempts (potential attack)
+SELECT
+  al.user_id,
   COUNT(*) as failed_attempts,
-  MAX(created_at) as last_attempt,
-  array_agg(created_at ORDER BY created_at DESC) as attempt_times
-FROM audit_log
-WHERE action IN ('mfa.verification_failed', 'mfa.backup_code_failed')
-  AND created_at > NOW() - INTERVAL '1 hour'
-GROUP BY user_id
+  MAX(al.created_at) as last_attempt,
+  al.ip_address_encrypted
+FROM audit_log al
+WHERE al.action = 'login.failed'
+  AND al.created_at > NOW() - INTERVAL '1 hour'
+GROUP BY al.user_id, al.ip_address_encrypted
 HAVING COUNT(*) >= 5
 ORDER BY failed_attempts DESC;
-
--- Failed attempts in last 24 hours with IP addresses
-SELECT
-  user_id,
-  COUNT(*) as failed_attempts,
-  COUNT(DISTINCT ip_address_encrypted) as unique_ips,
-  MIN(created_at) as first_attempt,
-  MAX(created_at) as last_attempt
-FROM audit_log
-WHERE action IN ('mfa.verification_failed', 'mfa.backup_code_failed')
-  AND created_at > NOW() - INTERVAL '24 hours'
-GROUP BY user_id
-HAVING COUNT(*) >= 3
-ORDER BY failed_attempts DESC;
 ```
 
-### Most Active MFA Users
+### Admin Activity Monitoring
 
 ```sql
--- Users with most successful MFA logins (last 30 days)
+-- Recent admin actions
 SELECT
-  user_id,
-  COUNT(*) as successful_mfa_logins,
-  MAX(created_at) as last_mfa_login,
-  MIN(created_at) as first_mfa_login
-FROM audit_log
-WHERE action = 'mfa.verification_success'
-  AND created_at > NOW() - INTERVAL '30 days'
-GROUP BY user_id
-ORDER BY successful_mfa_logins DESC
-LIMIT 20;
+  al.created_at,
+  al.user_id,
+  al.action,
+  al.metadata_encrypted,
+  al.ip_address_encrypted
+FROM audit_log al
+WHERE al.action LIKE 'admin.%'
+  AND al.created_at > NOW() - INTERVAL '24 hours'
+ORDER BY al.created_at DESC;
 ```
 
-### Backup Code Usage Patterns
+## Emergency Procedures
+
+### Mass Security Incident Response
+
+In case of security breach affecting MFA:
+
+1. **Immediate Assessment**
+   ```sql
+   -- Check for unusual MFA activity
+   SELECT COUNT(*) as suspicious_events
+   FROM audit_log
+   WHERE action IN ('mfa.verification_failed', 'mfa.backup_code_failed')
+     AND created_at > NOW() - INTERVAL '1 hour';
+   ```
+
+2. **Communication**
+   - Notify security team
+   - Prepare user communications
+   - Document incident timeline
+
+3. **Selective Response**
+   - Reset MFA for affected users
+   - Force password resets
+   - Review access logs
+
+### System-Wide MFA Reset (Nuclear Option)
+
+Only use in extreme emergencies:
 
 ```sql
--- Users who've used backup codes recently (might need help)
-SELECT
-  user_id,
-  COUNT(*) as backup_codes_used_count,
-  MAX(created_at) as last_backup_code_use,
-  EXTRACT(DAY FROM NOW() - MAX(created_at)) as days_since_last_use
-FROM audit_log
-WHERE action = 'mfa.backup_code_used'
-  AND created_at > NOW() - INTERVAL '30 days'
-GROUP BY user_id
-ORDER BY backup_codes_used_count DESC;
-
--- Suspicious: Multiple backup codes used in short time (lost device?)
-SELECT
-  user_id,
-  COUNT(*) as codes_used,
-  MIN(created_at) as first_use,
-  MAX(created_at) as last_use,
-  MAX(created_at) - MIN(created_at) as time_span
-FROM audit_log
-WHERE action = 'mfa.backup_code_used'
-  AND created_at > NOW() - INTERVAL '7 days'
-GROUP BY user_id
-HAVING COUNT(*) >= 3
-ORDER BY codes_used DESC;
-```
-
-## Backup Code Management
-
-### View Backup Code Status
-
-```sql
-SELECT
-  id,
-  email_encrypted,
-  mfa_enabled,
-  CASE
-    WHEN mfa_backup_codes IS NOT NULL
-    THEN array_length(mfa_backup_codes, 1)
-    ELSE 0
-  END as total_backup_codes,
-  CASE
-    WHEN mfa_backup_codes_used IS NOT NULL
-    THEN array_length(mfa_backup_codes_used, 1)
-    ELSE 0
-  END as used_backup_codes
-FROM users
-WHERE mfa_enabled = true;
-```
-
-### Users Running Low on Backup Codes
-
-```sql
-SELECT
-  id,
-  mfa_enabled,
-  array_length(mfa_backup_codes, 1) -
-    COALESCE(array_length(mfa_backup_codes_used, 1), 0) as remaining_codes
-FROM users
-WHERE mfa_enabled = true
-  AND (
-    array_length(mfa_backup_codes, 1) -
-    COALESCE(array_length(mfa_backup_codes_used, 1), 0)
-  ) <= 2;
-```
-
-## Security Best Practices
-
-### 1. MFA Reset Verification
-Always verify the user's identity before resetting MFA:
-- Confirm via official communication channels
-- Verify personal information
-- Document the reset request and approval
-
-### 2. Reset Logging
-Log all manual MFA resets:
-```sql
-INSERT INTO audit_log (user_id, action, resource_type, resource_id, metadata_encrypted)
-VALUES (
-  '550e8400-e29b-41d4-a716-446655440000',
-  'admin.mfa_reset',
-  'user',
-  '550e8400-e29b-41d4-a716-446655440000',
-  'Manual MFA reset by admin due to lost device'::bytea
-);
-```
-
-### 3. Recommend MFA Re-enablement
-Always recommend users re-enable MFA after recovery:
-- Send follow-up email with setup instructions
-- Link to [MFA Setup Guide](/authentication/setup-guide)
-- Explain the security benefits
-
-## Monitoring & Alerts
-
-### Set Up Alerts For:
-
-1. **Multiple failed MFA attempts** (potential brute force)
-2. **MFA disabled** on admin accounts
-3. **High volume of backup code usage** (unusual pattern)
-4. **Backup code exhaustion** (user has 0 remaining)
-
-### Example Alert Query (5+ failed attempts in 15 minutes):
-
-```sql
-SELECT
-  user_id,
-  COUNT(*) as failures,
-  array_agg(created_at ORDER BY created_at DESC) as attempt_times
-FROM audit_log
-WHERE action IN ('mfa.verification_failed', 'mfa.backup_code_failed')
-  AND created_at > NOW() - INTERVAL '15 minutes'
-GROUP BY user_id
-HAVING COUNT(*) >= 5;
-```
-
-## Rate Limiting
-
-MFA verification is rate-limited at the application level (Redis):
-
-- **TOTP codes**: 5 attempts per 15 minutes
-- **Backup codes**: 3 attempts per 15 minutes
-
-### Check Rate Limit Status (Redis)
-
-```bash
-# In Redis CLI
-redis-cli
-
-# Check rate limit keys for a user
-KEYS mfa_rate_limit:*:USER_ID
-
-# View remaining attempts
-GET mfa_rate_limit:totp:USER_ID
-TTL mfa_rate_limit:totp:USER_ID
-```
-
-### Reset Rate Limit (Emergency)
-
-```bash
-# In Redis CLI
-DEL mfa_rate_limit:totp:USER_ID
-DEL mfa_rate_limit:backup:USER_ID
-```
-
-## Common Admin Tasks
-
-### Bulk MFA Status Report
-
-```sql
-SELECT
-  COUNT(*) FILTER (WHERE mfa_enabled = true) as mfa_enabled_count,
-  COUNT(*) FILTER (WHERE mfa_enabled = false) as mfa_disabled_count,
-  ROUND(
-    100.0 * COUNT(*) FILTER (WHERE mfa_enabled = true) / COUNT(*),
-    2
-  ) as mfa_adoption_percentage
-FROM users
-WHERE deleted_at IS NULL;
-```
-
-### Recently Enabled MFA
-
-```sql
-SELECT
-  user_id,
-  created_at as enabled_at
-FROM audit_log
-WHERE action = 'mfa.enabled'
-  AND created_at > NOW() - INTERVAL '7 days'
-ORDER BY created_at DESC;
-```
-
-## Emergency Mass MFA Reset
-
-⚠️ **USE WITH EXTREME CAUTION** - This disables MFA for all users:
-
-```sql
--- DO NOT RUN WITHOUT AUTHORIZATION
-UPDATE users
-SET mfa_enabled = false,
-    mfa_secret_encrypted = NULL,
-    mfa_backup_codes = NULL,
-    mfa_backup_codes_used = NULL
-WHERE mfa_enabled = true;
-
--- Log the mass reset
+-- Document the incident first
 INSERT INTO audit_log (user_id, action, metadata_encrypted)
-SELECT
-  id,
-  'admin.mass_mfa_reset',
-  'Emergency mass MFA reset performed'::bytea
-FROM users
-WHERE mfa_enabled = false;
+VALUES (
+  'ADMIN_USER_ID',
+  'admin.emergency_mfa_reset',
+  'Mass MFA reset due to security incident'::bytea
+);
+
+-- This would require coordination with Clerk API
+-- to reset MFA for all users in the application
 ```
 
-Only use this in case of:
-- Security breach requiring immediate MFA reset
-- Critical system failure affecting MFA infrastructure
-- Migration/upgrade requiring MFA reconfiguration
+## Best Practices for Admins
+
+### 1. Verification Protocol
+Always verify user identity before MFA resets:
+- Official company email verification
+- Manager approval for corporate accounts
+- Multi-channel confirmation (email + phone)
+
+### 2. Documentation
+- Log all manual interventions
+- Document reason for reset
+- Maintain audit trail
+- Send confirmation to user
+
+### 3. Follow-up
+- Ensure user re-enables MFA
+- Provide setup assistance if needed
+- Monitor for successful re-enablement
+- Check for any suspicious activity
+
+### 4. Automation
+- Use Clerk API for bulk operations
+- Implement automated compliance checking
+- Set up monitoring and alerts
+- Regular security reports
+
+## Clerk-Specific Considerations
+
+### Dashboard vs API
+- **Dashboard**: Best for individual user management
+- **API**: Best for automation and bulk operations
+- **Both**: Require proper authentication and authorization
+
+### User Privacy
+- Clerk manages user data securely
+- Admins can see metadata but not sensitive data
+- All actions are logged for compliance
+- Follow data protection regulations
+
+### Cross-Application Consistency
+- MFA settings apply to all Clerk-enabled apps
+- Changes affect user's entire Clerk ecosystem
+- Consider impact before making changes
 
 ## Support Resources
 
+- [Clerk Admin Dashboard](https://dashboard.clerk.com)
+- [Clerk API Documentation](https://clerk.com/docs/reference/backend-api)
 - [User Setup Guide](/authentication/setup-guide)
 - [Troubleshooting Guide](/authentication/troubleshooting)
-- [API Documentation](/authentication/api-endpoints)
-- [Database Schema Reference](/reference/database-schema)
+- [Clerk Support](https://clerk.com/support)
+
+## Emergency Contacts
+
+**For urgent security incidents:**
+1. Check Clerk system status: https://status.clerk.com
+2. Contact Clerk support for API issues
+3. Review LeafLock security procedures
+4. Follow incident response protocols

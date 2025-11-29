@@ -1,157 +1,248 @@
 ---
-title: MFA Quick Reference
-description: Quick reference guide for MFA operations and SQL queries
+title: MFA Quick Reference (Clerk)
+description: Quick reference guide for Clerk MFA operations and management
 ---
 
-# MFA Quick Reference
+# MFA Quick Reference (Clerk)
 
-Quick reference for administrators and developers working with LeafLock MFA.
+Quick reference for administrators and developers working with LeafLock's Clerk-based MFA system.
 
-## Common Admin SQL Queries
+## Authentication Methods Comparison
 
-### Quick Reset MFA by User ID
+| Method | Security Level | Convenience | Backup Option |
+|--------|---------------|-------------|---------------|
+| **Authenticator App** | ⭐⭐⭐⭐⭐ High | ⭐⭐⭐ Good | No |
+| **SMS/Text** | ⭐⭐⭐ Medium | ⭐⭐⭐⭐⭐ Excellent | Yes |
+| **Email Codes** | ⭐⭐⭐ Medium | ⭐⭐⭐⭐ Good | Yes |
+| **Backup Codes** | ⭐⭐⭐⭐ High | ⭐⭐ Poor | N/A |
 
-```sql
--- Copy-paste ready - just replace the UUID
-UPDATE users
-SET mfa_enabled = false,
-    mfa_secret_encrypted = NULL,
-    mfa_backup_codes = NULL,
-    mfa_backup_codes_used = NULL
-WHERE id = 'PASTE_UUID_HERE';
+## Clerk API Quick Reference
+
+### Authentication Endpoints
+
+| Method | Endpoint | Purpose | Auth Required |
+|--------|----------|---------|---------------|
+| **Clerk Authentication** |
+| GET | `/api/v1/clerk/session/info` | Current session info | Bearer token |
+| GET | `/api/v1/clerk/user/profile` | User profile data | Bearer token |
+| GET | `/api/v1/clerk/sessions` | List all sessions | Bearer token |
+| POST | `/api/v1/clerk/sessions/{id}/revoke` | Revoke session | Bearer token |
+| **Core Authentication** |
+| POST | `/api/v1/auth/login` | Login (dual auth) | None |
+| POST | `/api/v1/auth/logout` | Logout | Bearer token |
+| GET | `/api/v1/auth/mfa/status` | MFA status | Bearer token |
+| **Webhooks** |
+| POST | `/api/v1/webhooks/clerk` | Clerk events | Signature verify |
+
+### Clerk Dashboard URLs
+
+```
+Production: https://dashboard.clerk.com/apps/{APP_ID}/users
+Development: https://dashboard.clerk.com/apps/{APP_ID}/users
+User Profile: https://dashboard.clerk.com/apps/{APP_ID}/users/{USER_ID}
 ```
 
-### Find User by Email (Admin CLI Helper)
+## Common Admin Operations
 
-Since emails are encrypted, you need to search via the application or use:
+### Reset User MFA via Clerk Dashboard
+
+1. Go to [Clerk Dashboard](https://dashboard.clerk.com)
+2. Find user by email or ID
+3. Click user profile → **Security** → **Reset MFA**
+4. Confirm operation
+5. Notify user
+
+### Reset User MFA via API
 
 ```bash
-# In your backend, create a helper script or use existing admin tools
-# Example: node scripts/find-user-by-email.js user@example.com
+# Disable MFA for user
+curl -X POST \
+  "https://api.clerk.com/v1/users/{USER_ID}/mfa" \
+  -H "Authorization: Bearer {CLERK_SECRET_KEY}" \
+  -d '{"disabled": true}'
+
+# Force password reset
+curl -X POST \
+  "https://api.clerk.com/v1/users/{USER_ID}/password" \
+  -H "Authorization: Bearer {CLERK_SECRET_KEY}" \
+  -d '{"password": "temp_password", "require_password_change": true}'
 ```
 
-### Check MFA Status for Specific User
+### Check User MFA Status
+
+```bash
+# Get user MFA information
+curl -X GET \
+  "https://api.clerk.com/v1/users/{USER_ID}/mfa" \
+  -H "Authorization: Bearer {CLERK_SECRET_KEY}"
+```
+
+## Database Queries (Reporting Only)
+
+### Authentication Method Distribution
 
 ```sql
+-- Users by authentication type
 SELECT
-  id,
-  mfa_enabled,
-  CASE WHEN mfa_secret_encrypted IS NOT NULL THEN 'yes' ELSE 'no' END as has_secret,
-  CASE WHEN mfa_backup_codes IS NOT NULL
-       THEN array_length(mfa_backup_codes, 1)
-       ELSE 0 END as backup_codes_total,
-  CASE WHEN mfa_backup_codes_used IS NOT NULL
-       THEN array_length(mfa_backup_codes_used, 1)
-       ELSE 0 END as backup_codes_used
+  CASE 
+    WHEN clerk_user_id IS NOT NULL THEN 'Clerk'
+    ELSE 'Legacy JWT'
+  END as auth_method,
+  COUNT(*) as user_count,
+  ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 2) as percentage
 FROM users
-WHERE id = 'USER_UUID_HERE';
+WHERE deleted_at IS NULL
+GROUP BY auth_method
+ORDER BY user_count DESC;
 ```
 
-### MFA Adoption Rate
+### Admin Users by Authentication Type
 
 ```sql
+-- Security check: Admin authentication methods
 SELECT
-  COUNT(*) FILTER (WHERE mfa_enabled = true) * 100.0 / COUNT(*) as percentage
+  CASE 
+    WHEN clerk_user_id IS NOT NULL THEN 'Clerk'
+    ELSE 'Legacy JWT'
+  END as auth_method,
+  COUNT(*) as admin_count
 FROM users
-WHERE deleted_at IS NULL;
-```
-
-### Users Without MFA
-
-```sql
-SELECT id, email_encrypted, last_login
-FROM users
-WHERE mfa_enabled = false
+WHERE is_admin = true
   AND deleted_at IS NULL
-ORDER BY last_login DESC NULLS LAST
-LIMIT 20;
+GROUP BY auth_method;
 ```
 
-### Recent Failed MFA Attempts
+### Recent User Activity
 
 ```sql
-SELECT user_id, COUNT(*) as failures, MAX(created_at) as last_fail
-FROM audit_log
-WHERE action IN ('mfa.verification_failed', 'mfa.backup_code_failed')
-  AND created_at > NOW() - INTERVAL '1 hour'
-GROUP BY user_id
-HAVING COUNT(*) >= 3;
+-- Active users in last 30 days
+SELECT
+  u.id,
+  u.email_encrypted,
+  u.last_login,
+  CASE 
+    WHEN u.clerk_user_id IS NOT NULL THEN 'Clerk'
+    ELSE 'Legacy JWT'
+  END as auth_method,
+  EXTRACT(DAY FROM NOW() - u.last_login) as days_since_login
+FROM users u
+WHERE u.last_login > NOW() - INTERVAL '30 days'
+  AND u.deleted_at IS NULL
+ORDER BY u.last_login DESC;
 ```
 
-## API Endpoints Cheat Sheet
+## Clerk Configuration Quick Setup
 
-### Public Endpoints
+### Environment Variables
 
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| POST | `/api/v1/auth/login` | Login (returns MFA requirement) |
-| POST | `/api/v1/auth/mfa/verify` | Verify TOTP/backup code |
+```bash
+# Required
+CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
 
-### Protected Endpoints (Require JWT)
+# Optional
+VITE_ENABLE_REGISTRATION=true
+CLERK_SIGN_IN_URL=/login
+CLERK_SIGN_UP_URL=/register
+```
 
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| GET | `/api/v1/auth/mfa/status` | Get user's MFA status |
-| POST | `/api/v1/auth/mfa/begin` | Start MFA setup (get QR) |
-| POST | `/api/v1/auth/mfa/enable` | Enable MFA (verify code) |
-| POST | `/api/v1/auth/mfa/disable` | Disable MFA (verify code) |
-| GET | `/api/v1/auth/mfa/backup-codes` | Get backup codes info |
-| POST | `/api/v1/auth/mfa/backup-codes/regenerate` | Generate new codes |
+### Rate Limits (Clerk Managed)
+
+| Operation | Limit | Window | Managed By |
+|-----------|-------|--------|------------|
+| Login attempts | 10 | 5 minutes | Clerk |
+| MFA verification | 5 | 15 minutes | Clerk |
+| Session creation | 30 | 5 minutes | Clerk |
+| API requests | 100 | 1 minute | Clerk |
 
 ## User Workflow Diagrams
 
-### Setup Flow
+### Clerk Authentication Flow
 
 ```
-User Login → Settings → Security → Enable MFA
+User visits LeafLock
     ↓
-Show QR Code
+Already signed in with Clerk?
+    ├─ Yes → Access granted
+    └─ No
+        ↓
+Redirect to /login
     ↓
-User Scans with App
+Clerk Sign-In Component
     ↓
-User Enters 6-Digit Code
+User authenticates
     ↓
-Verify Code → Generate 10 Backup Codes
+Clerk session created
     ↓
-User Saves Backup Codes
+Session token sent to backend
     ↓
-MFA Enabled ✓
+Backend validates token
+    ↓
+User context established
+    ↓
+Access granted ✓
 ```
 
-### Login Flow with MFA
+### MFA Setup Flow (Clerk)
 
 ```
-Enter Email/Password
+User goes to Security settings
     ↓
-Password Correct?
-    ├─ No → Error
+Click "Enable two-factor authentication"
+    ↓
+Choose authentication method
+    ├─ Authenticator App
+    │   ↓
+    │   Scan QR code
+    │   ↓
+    │   Enter verification code
+    │   ↓
+    │   Method added ✓
+    ├─ SMS/Text
+    │   ↓
+    │   Enter phone number
+    │   ↓
+    │   Enter verification code
+    │   ↓
+    │   Method added ✓
+    └─ Email codes
+        ↓
+        Verify email address
+        ↓
+        Enter verification code
+        ↓
+        Method added ✓
+    ↓
+Backup codes generated automatically
+    ↓
+Save backup codes
+    ↓
+MFA enabled ✓
+```
+
+### Login with MFA (Clerk)
+
+```
+Enter email and password
+    ↓
+Clerk validates credentials
+    ↓
+MFA required?
+    ├─ No → Login success
     └─ Yes
         ↓
-    MFA Enabled?
-        ├─ No → Login Success
-        └─ Yes
-            ↓
-        Show MFA Prompt
-            ↓
-        User Enters Code (TOTP or Backup)
-            ↓
-        Code Valid?
-            ├─ No → Error (Rate Limited)
-            └─ Yes → Login Success
-```
-
-### Disable Flow
-
-```
-Settings → Security → Disable MFA Button
+Show MFA challenge
     ↓
-Enter TOTP Code (from authenticator app)
+User completes MFA
+    ├─ TOTP code
+    ├─ SMS code
+    ├─ Email code
+    └─ Backup code
     ↓
-Verify Code
+MFA verification successful
     ↓
-Delete MFA Secret + All Backup Codes
-    ↓
-MFA Disabled ✓
+Login success ✓
 ```
 
 ## Troubleshooting Decision Tree
@@ -159,234 +250,245 @@ MFA Disabled ✓
 ```
 User Can't Log In
     ↓
-Has MFA Enabled?
-    ├─ No → Check password
+Clerk authentication working?
+    ├─ No → Check Clerk status/dashboard
     └─ Yes
         ↓
-    Has Authenticator App?
-        ├─ Yes
-        │   ↓
-        │   Code Not Working?
-        │       ├─ Check device time sync
-        │       ├─ Wait for new code
-        │       └─ Verify correct account
-        └─ No
+MFA required?
+        ├─ No → Check other auth issues
+        └─ Yes
             ↓
-        Has Backup Codes?
-            ├─ Yes → Use Backup Code
-            └─ No → Contact Admin for Reset
+Has working MFA method?
+            ├─ Yes
+            │   ↓
+            │   Code not working?
+            │       ├─ Check device time sync
+            │       ├─ Try different method
+            │       ├─ Use backup code
+            │       └─ Wait for new code
+            └─ No
+                ↓
+            Has backup codes?
+                ├─ Yes → Use backup code
+                └─ No → Use account recovery
 ```
 
-## Rate Limiting Reference
+## Security Monitoring Queries
 
-| Operation | Limit | Window | Storage |
-|-----------|-------|--------|---------|
-| TOTP Verification | 5 attempts | 15 min | Redis |
-| Backup Code Verification | 3 attempts | 15 min | Redis |
-| MFA Setup | 10 attempts | 1 hour | Redis |
-
-### Check Rate Limit (Redis CLI)
-
-```bash
-# TOTP rate limit
-redis-cli GET "mfa_rate_limit:totp:USER_ID"
-redis-cli TTL "mfa_rate_limit:totp:USER_ID"
-
-# Backup code rate limit
-redis-cli GET "mfa_rate_limit:backup:USER_ID"
-
-# Reset rate limit (emergency)
-redis-cli DEL "mfa_rate_limit:totp:USER_ID"
-redis-cli DEL "mfa_rate_limit:backup:USER_ID"
-```
-
-## MFA Event Types
-
-Quick reference for audit log queries:
-
-| Action | When It Happens |
-|--------|-----------------|
-| `mfa.setup_started` | User begins MFA setup |
-| `mfa.enabled` | MFA successfully enabled |
-| `mfa.enable_failed` | Invalid code during setup |
-| `mfa.disabled` | User disables MFA |
-| `mfa.disable_failed` | Invalid code when disabling |
-| `mfa.verification_success` | Successful TOTP login |
-| `mfa.verification_failed` | Failed TOTP attempt |
-| `mfa.backup_code_used` | User logs in with backup code |
-| `mfa.backup_code_failed` | Invalid backup code |
-| `mfa.backup_code_reuse_attempt` | Tried to reuse a code |
-| `mfa.backup_codes_viewed` | User checked backup status |
-| `mfa.backup_codes_regenerated` | New codes generated |
-| `login.mfa_required` | Password OK, MFA needed |
-
-## Security Checklist
-
-### For Admins
-
-- [ ] Monitor MFA adoption rate weekly
-- [ ] Check for admin accounts without MFA
-- [ ] Review failed MFA attempts daily
-- [ ] Audit users with exhausted backup codes
-- [ ] Verify MFA reset requests properly
-- [ ] Log all manual MFA resets
-- [ ] Set up alerts for suspicious patterns
-
-### For Users
-
-- [ ] Enable MFA on your account
-- [ ] Save backup codes in password manager
-- [ ] Keep one physical backup in safe location
-- [ ] Test MFA before fully relying on it
-- [ ] Regenerate codes when running low
-- [ ] Use authenticator app for daily logins
-- [ ] Only use backup codes in emergencies
-
-## Database Table Reference
-
-### Users Table (MFA Columns)
-
-| Column | Type | Purpose |
-|--------|------|---------|
-| `mfa_enabled` | BOOLEAN | Is MFA active? |
-| `mfa_secret_encrypted` | BYTEA | Encrypted TOTP secret |
-| `mfa_backup_codes` | BYTEA[] | Hashed backup codes |
-| `mfa_backup_codes_used` | BYTEA[] | Used backup code hashes |
-
-### Audit Log Table
-
-| Column | Purpose |
-|--------|---------|
-| `user_id` | UUID of user |
-| `action` | Event type (see above) |
-| `created_at` | Timestamp |
-| `ip_address_encrypted` | Encrypted IP |
-| `user_agent_encrypted` | Encrypted user agent |
-
-## Common Admin Tasks
-
-### Task: User Lost Phone
-
-1. Verify user identity
-2. Run SQL reset: `UPDATE users SET mfa_enabled = false... WHERE id = 'UUID'`
-3. Notify user MFA is reset
-4. User logs in with password only
-5. User re-enables MFA with new device
-6. User saves new backup codes
-
-### Task: Check MFA Adoption
+### Failed Login Attempts (Clerk Events)
 
 ```sql
+-- Check for suspicious activity (Clerk users)
 SELECT
-  ROUND(COUNT(*) FILTER (WHERE mfa_enabled = true) * 100.0 / COUNT(*), 2) as pct
-FROM users
-WHERE deleted_at IS NULL;
+  al.created_at,
+  al.user_id,
+  al.action,
+  al.ip_address_encrypted,
+  al.metadata_encrypted
+FROM audit_log al
+WHERE al.action IN ('login.failed', 'clerk.auth_failed')
+  AND al.created_at > NOW() - INTERVAL '1 hour'
+ORDER BY al.created_at DESC;
 ```
 
-### Task: Find Suspicious Failed Attempts
+### Admin Activity Monitoring
 
 ```sql
-SELECT user_id, COUNT(*) as fails
-FROM audit_log
-WHERE action LIKE 'mfa.%_failed'
-  AND created_at > NOW() - INTERVAL '24 hours'
-GROUP BY user_id
-HAVING COUNT(*) >= 5;
+-- Recent admin actions
+SELECT
+  al.created_at,
+  al.user_id,
+  al.action,
+  al.metadata_encrypted
+FROM audit_log al
+WHERE al.action LIKE 'admin.%'
+  OR al.action LIKE 'clerk.%'
+  AND al.created_at > NOW() - INTERVAL '24 hours'
+ORDER BY al.created_at DESC;
 ```
 
-### Task: Users Running Low on Backup Codes
+## Clerk API Quick Reference
 
-```sql
-SELECT id, (
-  array_length(mfa_backup_codes, 1) -
-  COALESCE(array_length(mfa_backup_codes_used, 1), 0)
-) as remaining
-FROM users
-WHERE mfa_enabled = true
-HAVING remaining < 3;
-```
-
-## Response Code Reference
-
-### Success Responses
-
-| Code | Meaning |
-|------|---------|
-| 200 | MFA verification successful |
-| 200 | MFA status retrieved |
-| 201 | MFA enabled successfully |
-
-### Error Responses
-
-| Code | Meaning | Action |
-|------|---------|--------|
-| 401 | Invalid MFA code | User should retry |
-| 401 | Invalid backup code | Check code format |
-| 423 | Rate limited | Wait 15 minutes |
-| 400 | MFA not enabled | User needs to enable first |
-| 500 | Server error | Check logs |
-
-## Environment Variables
+### User Management
 
 ```bash
-# Backend
-JWT_SECRET=your-jwt-secret-64-chars
-SERVER_ENCRYPTION_KEY=your-32-char-key
-REDIS_PASSWORD=your-redis-password
+# Get user by ID
+curl -X GET \
+  "https://api.clerk.com/v1/users/{USER_ID}" \
+  -H "Authorization: Bearer {CLERK_SECRET_KEY}"
 
-# Rate limiting (optional overrides)
-MFA_TOTP_RATE_LIMIT=5
-MFA_BACKUP_RATE_LIMIT=3
-MFA_RATE_WINDOW_MINUTES=15
+# Get user by email
+curl -X GET \
+  "https://api.clerk.com/v1/users?email_address={EMAIL}" \
+  -H "Authorization: Bearer {CLERK_SECRET_KEY}"
+
+# List all users
+curl -X GET \
+  "https://api.clerk.com/v1/users?limit=100" \
+  -H "Authorization: Bearer {CLERK_SECRET_KEY}"
 ```
 
-## Monitoring Queries for Alerts
+### Session Management
 
-### Alert: 5+ Failed Attempts (Last 15 Min)
+```bash
+# Get user sessions
+curl -X GET \
+  "https://api.clerk.com/v1/users/{USER_ID}/sessions" \
+  -H "Authorization: Bearer {CLERK_SECRET_KEY}"
+
+# Revoke specific session
+curl -X DELETE \
+  "https://api.clerk.com/v1/sessions/{SESSION_ID}" \
+  -H "Authorization: Bearer {CLERK_SECRET_KEY}"
+```
+
+### Webhook Verification
+
+```bash
+# Test webhook signature verification
+curl -X POST \
+  "https://api.clerk.com/v1/webhooks/{WEBHOOK_ID}/verify" \
+  -H "Authorization: Bearer {CLERK_SECRET_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"payload": "test"}'
+```
+
+## Environment Variables Checklist
+
+### Production Setup
+
+```bash
+# Required
+CLERK_PUBLISHABLE_KEY=pk_live_...
+CLERK_SECRET_KEY=sk_live_...
+VITE_CLERK_PUBLISHABLE_KEY=pk_live_...
+
+# Security
+CORS_ORIGINS=https://yourdomain.com
+APP_ENV=production
+
+# Optional
+VITE_ENABLE_REGISTRATION=false  # Disable for production
+ENABLE_METRICS=true
+TRUST_PROXY_HEADERS=true
+```
+
+### Development Setup
+
+```bash
+# Required
+CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
+
+# Development
+APP_ENV=development
+CORS_ORIGINS=http://localhost:3000
+VITE_ENABLE_REGISTRATION=true
+```
+
+## Common Issues & Solutions
+
+### Issue: "Invalid Clerk token"
+**Cause**: Wrong secret key or token expired
+**Solution**: Check `CLERK_SECRET_KEY` environment variable
+
+### Issue: "User not found"
+**Cause**: Clerk user ID doesn't exist
+**Solution**: Verify user exists in Clerk dashboard
+
+### Issue: "MFA not working"
+**Cause**: Time sync or wrong method
+**Solution**: Check device time, try backup method
+
+### Issue: "Webhook verification failed"
+**Cause**: Invalid signature
+**Solution**: Verify webhook secret and signature calculation
+
+### Issue: "Rate limited"
+**Cause**: Too many requests
+**Solution**: Wait for rate limit to reset, check Clerk dashboard
+
+## Monitoring & Alerts
+
+### Key Metrics to Monitor
+
+1. **Authentication Success Rate**
+2. **MFA Adoption Rate**
+3. **Failed Login Attempts**
+4. **Session Creation Rate**
+5. **Webhook Delivery Success**
+
+### Alert Conditions
 
 ```sql
-SELECT user_id, COUNT(*)
+-- High failed login rate (Clerk users)
+SELECT COUNT(*)
 FROM audit_log
-WHERE action IN ('mfa.verification_failed', 'mfa.backup_code_failed')
-  AND created_at > NOW() - INTERVAL '15 minutes'
-GROUP BY user_id
+WHERE action = 'clerk.auth_failed'
+  AND created_at > NOW() - INTERVAL '5 minutes'
+HAVING COUNT(*) >= 10;
+
+-- Suspicious admin activity
+SELECT COUNT(*)
+FROM audit_log
+WHERE action LIKE 'admin.clerk_%'
+  AND created_at > NOW() - INTERVAL '1 hour'
 HAVING COUNT(*) >= 5;
 ```
 
-### Alert: Admin Without MFA
+## Quick Commands
 
-```sql
-SELECT id
-FROM users
-WHERE is_admin = true
-  AND mfa_enabled = false;
+### Check Clerk Status
+```bash
+# Check if Clerk API is accessible
+curl -X GET \
+  "https://api.clerk.com/v1/health" \
+  -H "Authorization: Bearer {CLERK_SECRET_KEY}"
 ```
 
-### Alert: User Exhausted All Backup Codes
-
-```sql
-SELECT id
-FROM users
-WHERE mfa_enabled = true
-  AND array_length(mfa_backup_codes, 1) =
-      COALESCE(array_length(mfa_backup_codes_used, 1), 0);
+### Test Webhook Locally
+```bash
+# Forward Clerk webhooks to local development
+# Use ngrok or similar service
+ngrok http 8080
+# Set webhook URL in Clerk dashboard to ngrok URL + /api/v1/webhooks/clerk
 ```
 
-## Quick Links
+### Verify Environment Variables
+```bash
+# Check if Clerk keys are set
+echo $CLERK_PUBLISHABLE_KEY
+echo $CLERK_SECRET_KEY
+echo $VITE_CLERK_PUBLISHABLE_KEY
+```
 
-- [Setup Guide](/authentication/setup-guide) - For users enabling MFA
-- [Managing MFA](/authentication/managing-mfa) - User management guide
-- [Admin Guide](/authentication/admin-mfa-management) - Full admin documentation
-- [API Reference](/authentication/api-endpoints) - Complete API docs
-- [Troubleshooting](/authentication/troubleshooting) - Common issues
+## Support Resources
 
-## Emergency Contacts
+- **Clerk Status**: https://status.clerk.com
+- **Clerk Docs**: https://clerk.com/docs
+- **Clerk API**: https://clerk.com/docs/reference/backend-api
+- **Clerk Dashboard**: https://dashboard.clerk.com
+- **Clerk Community**: https://clerk.com/discord
 
-**For Users:**
-- Can't log in? Contact your system administrator
-- Lost device? Use backup codes or request MFA reset
+## Emergency Procedures
 
-**For Admins:**
-- Database access required for manual resets
-- Check audit logs for suspicious activity
-- Follow MFA reset verification procedures
+### Clerk API Down
+1. Check https://status.clerk.com
+2. Enable maintenance mode if available
+3. Notify users of authentication issues
+4. Monitor for resolution
+
+### Security Incident
+1. Check Clerk dashboard for unusual activity
+2. Reset affected user MFA via dashboard
+3. Force password resets for compromised accounts
+4. Review audit logs
+5. Document incident
+
+### Mass MFA Reset Needed
+1. Use Clerk dashboard bulk operations
+2. Or use API script for automation
+3. Notify all affected users
+4. Provide new setup instructions
+5. Monitor re-enablement rates

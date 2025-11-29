@@ -48,11 +48,10 @@ func TestDebugLoginReturnsUserInfo(t *testing.T) {
 		crypto := appcrypto.NewCryptoService(make([]byte, 32))
 		db := &mockServiceDB{}
 		service := &Service{
-			db:        db,
-			session:   &mockSessionManager{},
-			password:  NewPasswordManager(db),
-			mfa:       NewMFAManager(db, crypto),
-			
+			db:       db,
+			session:  &mockSessionManager{},
+			password: NewPasswordManager(db),
+			mfa:      NewMFAManager(db, crypto),
 		}
 
 		salt, err := service.password.GenerateSalt()
@@ -135,11 +134,10 @@ func TestDebugAdminInfoDecryptsEmail(t *testing.T) {
 		crypto := appcrypto.NewCryptoService(make([]byte, 32))
 		db := &mockServiceDB{}
 		service := &Service{
-			db:        db,
-			session:   &mockSessionManager{},
-			password:  NewPasswordManager(db),
-			mfa:       NewMFAManager(db, crypto),
-			
+			db:       db,
+			session:  &mockSessionManager{},
+			password: NewPasswordManager(db),
+			mfa:      NewMFAManager(db, crypto),
 		}
 
 		email := "admin@example.com"
@@ -201,11 +199,10 @@ func TestDebugEncryptionKeyRoundTrip(t *testing.T) {
 	withDebugEnv(t, "dev-token", func() {
 		crypto := appcrypto.NewCryptoService(make([]byte, 32))
 		service := &Service{
-			db:        &mockServiceDB{},
-			session:   &mockSessionManager{},
-			password:  NewPasswordManager(&mockServiceDB{}),
-			mfa:       NewMFAManager(&mockServiceDB{}, crypto),
-			
+			db:       &mockServiceDB{},
+			session:  &mockSessionManager{},
+			password: NewPasswordManager(&mockServiceDB{}),
+			mfa:      NewMFAManager(&mockServiceDB{}, crypto),
 		}
 		handler := NewHandler(service, &MockEmailService{})
 		app := fiber.New()

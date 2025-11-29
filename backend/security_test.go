@@ -34,7 +34,7 @@ func (suite *SecurityTestSuite) SetupTest() {
 	systemSecret := make([]byte, 64)
 	encKey := make([]byte, 32)
 	_, _ = rand.Read(systemSecret) // Test setup
-	_, _ = rand.Read(encKey) // Test setup
+	_, _ = rand.Read(encKey)       // Test setup
 
 	suite.config = &Config{
 		// JWTSecret removed - Clerk-only authentication

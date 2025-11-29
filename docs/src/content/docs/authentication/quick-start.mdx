@@ -1,12 +1,12 @@
 ---
 title: Quick Start - Clerk Authentication
-description: Get Clerk authentication running in 5 minutes
+description: Get Clerk authentication running in 5 minutes with advanced features
 tableOfContents: { maxHeadingLevel: 3 }
 ---
 
-import { Steps } from '@astrojs/starlight/components';
+import { Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
-Get Clerk authentication running on your LeafLock instance in just 5 minutes!
+Get Clerk authentication running on your LeafLock instance in just 5 minutes with advanced features!
 
 ## Prerequisites
 
@@ -90,93 +90,333 @@ Get Clerk authentication running on your LeafLock instance in just 5 minutes!
    - Settings page should show your user info
    - Admin panel (if admin) should be accessible
 
-### Check Backend Integration
+### Check Advanced Features
 
-1. **API Calls Include Tokens**
-   - Open browser dev tools
-   - Go to Network tab
-   - Make any API call
-   - Verify `Authorization: Bearer <token>` header is present
+1. **Session Management**
+   ```bash
+   # Test session info endpoint
+   curl -X GET \
+     "http://localhost:8080/api/v1/clerk/session/info" \
+     -H "Authorization: Bearer $(get_clerk_token)"
+   ```
 
-2. **Backend Validates Tokens**
-   - Check backend logs for authentication success
-   - Verify user context is properly set
-   - Test both Clerk and JWT tokens work
+2. **Multi-Device Sessions**
+   - Login from different browsers/devices
+   - Check session list in user settings
+   - Test "Log out of other devices" feature
 
-## 🎨 Customization
+3. **MFA Setup**
+   - Go to Profile → Security → Two-Factor Authentication
+   - Add authenticator app or phone number
+   - Test backup codes functionality
 
-### Basic Theming
-The default setup includes LeafLock's theme. To customize:
+## 🎨 Advanced Customization
 
+### Enhanced Theming
+The default setup includes LeafLock's theme. For advanced customization:
+
+<Tabs>
+  <TabItem label="Basic Customization">
 ```tsx title="src/router.tsx"
 appearance={{
   elements: {
-    // Your custom styles here
-    card: 'bg-your-background border-your-border',
-    headerTitle: 'text-your-primary',
-    formButtonPrimary: 'bg-your-accent hover:bg-your-accent-hover',
+    // Layout and cards
+    card: 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
+    headerTitle: 'text-foreground text-2xl font-bold',
+    headerSubtitle: 'text-muted-foreground',
+    
+    // Form elements
+    formFieldLabel: 'text-foreground font-medium',
+    formFieldInput: 'bg-background border-border text-foreground placeholder:text-muted-foreground',
+    
+    // Buttons
+    formButtonPrimary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+    socialButtonsBlockButton: 'bg-background border-border hover:bg-accent',
+    
+    // Links and text
+    footerActionText: 'text-muted-foreground',
+    footerActionLink: 'text-primary hover:text-primary/90',
+  },
+  variables: {
+    colorPrimary: '#3b82f6',
+    colorBackground: '#0f172a',
+    colorText: '#f8fafc',
   }
 }}
 ```
-
-### Environment-Specific Settings
-
-<Tabs>
-<TabItem label="Development">
-```bash
-VITE_ENABLE_REGISTRATION=true
-VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
+  </TabItem>
+  
+  <TabItem label="Advanced Features">
+```tsx title="src/App.tsx"
+// Enable advanced Clerk features
+<ClerkProvider
+  publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
+  afterSignOutUrl="/login"
+  signInUrl="/login"
+  signUpUrl="/register"
+  // Advanced configuration
+  appearance={{
+    // Custom layout
+    layout: {
+      socialButtonsPlacement: 'bottom',
+      socialButtonsVariant: 'blockButton',
+      helpPageUrl: '/help',
+      privacyPageUrl: '/privacy',
+      termsPageUrl: '/terms',
+    },
+    // Advanced theming
+    elements: {
+      // Custom animations
+      card: 'animate-in fade-in-0 slide-in-from-bottom-48 duration-500',
+      // Responsive design
+      rootBox: 'w-full max-w-md mx-auto',
+      // Custom branding
+      logoBox: 'mb-6',
+      logoImage: 'https://yourdomain.com/logo.png',
+    }
+  }}
+  // Enable additional features
+  {...{
+    // Session management
+    sessionOptions: {
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      // Custom session handling
+    },
+    // Organization support
+    organizationOptions: {
+      maxAllowedMemberships: 100,
+    }
+  }}
+>
 ```
-</TabItem>
-
-<TabItem label="Production">
-```bash
-VITE_ENABLE_REGISTRATION=false  # Disable registration in production
-VITE_CLERK_PUBLISHABLE_KEY=pk_live_...
-```
-</TabItem>
+  </TabItem>
 </Tabs>
 
-## 🔧 Common Issues
+### Social Login Configuration
 
-### "Clerk keys not found"
-- Make sure you've added all three Clerk variables to `.env`
-- Restart your development server after adding keys
-- Check for typos in variable names
+Enable social logins through Clerk dashboard:
 
-### "Authentication not working"
-- Verify your Clerk application is active
-- Check browser console for Clerk-specific errors
-- Ensure backend can reach Clerk API (check CORS)
+<Tabs>
+  <TabItem label="Google OAuth">
+1. Go to Clerk Dashboard → Your App → Social Connections
+2. Click "Add Connection" → Google
+3. Follow Google's OAuth setup guide
+4. Add Client ID and Client Secret
+5. Configure redirect URI: `https://yourdomain.com/sso-callback/google`
+6. Enable for your application
+  </TabItem>
+  
+  <TabItem label="GitHub OAuth">
+1. Go to Clerk Dashboard → Your App → Social Connections
+2. Click "Add Connection" → GitHub
+3. Create GitHub OAuth App
+4. Add Client ID and Client Secret
+5. Configure callback URL
+6. Enable for your application
+  </TabItem>
+  
+  <TabItem label="Microsoft/Azure">
+1. Go to Clerk Dashboard → Your App → Social Connections
+2. Click "Add Connection" → Microsoft
+3. Set up Azure AD application
+4. Add Application ID and Secret
+5. Configure redirect URIs
+6. Enable for your application
+  </TabItem>
+</Tabs>
 
-### "Build fails"
-- Make sure you removed old `@clerk/tanstack-react-start` package
-- Verify all imports use `@clerk/clerk-react`
-- Run `pnpm install` to ensure clean dependencies
+### Multi-Factor Authentication Setup
 
-### "Theme not applied"
-- Check that Clerk components are using the `appearance` prop
-- Verify your theme variables are correctly set
-- Test in both light and dark modes
+Enable advanced MFA features:
 
-## 🚀 Next Steps
+1. **Go to Clerk Dashboard** → Your App → Email, Phone, Username
+2. **Enable 2-Step Verification**
+3. **Configure MFA Methods**:
+   - Authenticator applications (TOTP)
+   - SMS verification
+   - Backup codes
+   - Email codes
+4. **Set MFA Policy**:
+   - Optional (recommended for migration)
+   - Required for specific roles
+   - Required for all users
 
-Now that you have basic authentication working:
+### Organization Management
 
-1. **[Configure Social Logins](./social-logins.mdx)** - Add Google, GitHub, etc.
-2. **[Customize Appearance](./customization.mdx)** - Match your brand perfectly
-3. **[Set Up Admin Users](./admin-setup.mdx)** - Create admin accounts
-4. **[Plan User Migration](./migration.mdx)** - Migrate existing users
+If you need multi-tenant support:
 
-## 📚 Learn More
+1. **Enable Organizations** in Clerk Dashboard
+2. **Configure Organization Settings**:
+   ```tsx
+   // In your App.tsx
+   <ClerkProvider
+     // ... other props
+     organizationSettings={{
+       maxAllowedMemberships: 100,
+       adminDeleteEnabled: true,
+       domains: {
+         enrollmentModes: ['manual_invitation'],
+         defaultRole: 'basic_member'
+       }
+     }}
+   >
+   ```
 
-- [Clerk React Documentation](https://clerk.com/docs/quickstarts/react)
-- [LeafLock Authentication Guide](./index.mdx)
-- [Implementation Details](./implementation.mdx)
-- [Troubleshooting Guide](./troubleshooting.mdx)
+3. **Use Organization Components**:
+   ```tsx
+   import { OrganizationSwitcher, OrganizationProfile } from '@clerk/clerk-react'
+   
+   // Organization switcher
+   <OrganizationSwitcher />
+   
+   // Organization profile management
+   <OrganizationProfile />
+   ```
+
+### Advanced Session Management
+
+LeafLock provides enhanced session management:
+
+```tsx
+// View all sessions
+const sessions = await clerkApiClient.get('/clerk/sessions')
+
+// Revoke specific session
+await clerkApiClient.post(`/clerk/sessions/${sessionId}/revoke`)
+
+// Get detailed session info
+const sessionInfo = await clerkApiClient.get('/clerk/session/info')
+```
+
+## 🔧 Common Issues & Advanced Solutions
+
+### Issue: "Social login not working"
+**Advanced Solution**:
+1. Check redirect URI configuration
+2. Verify OAuth app settings
+3. Test with different social providers
+4. Check CORS settings for OAuth callbacks
+
+### Issue: "MFA not prompting"
+**Advanced Solution**:
+1. Check MFA policy in Clerk dashboard
+2. Verify user has verified email/phone
+3. Test with different MFA methods
+4. Check MFA rate limiting
+
+### Issue: "Organization features not available"
+**Advanced Solution**:
+1. Enable organizations in Clerk dashboard
+2. Check organization limits
+3. Verify user permissions
+4. Test organization creation flow
+
+### Issue: "Session management not working"
+**Advanced Solution**:
+1. Check session token validation
+2. Verify Clerk session endpoints
+3. Test session revocation
+4. Monitor session creation/deletion
+
+## 🚀 Next Steps - Advanced Features
+
+Now that you have basic authentication working, explore these advanced features:
+
+### 1. **Advanced Security Features**
+- **[Configure Social Logins](./social-logins.mdx)** - Add Google, GitHub, Microsoft
+- **[Set Up MFA Policies](./mfa-policies.mdx)** - Enforce MFA for specific roles
+- **[Configure Risk-Based Authentication](./risk-based.mdx)** - Adaptive security
+- **[Set Up Security Monitoring](./security-monitoring.mdx)** - Monitor threats
+
+### 2. **User Experience Enhancements**
+- **[Customize User Onboarding](./onboarding.mdx)** - Personalized setup flows
+- **[Configure Email Templates](./email-templates.mdx)** - Branded communications
+- **[Set Up User Impersonation](./impersonation.mdx)** - Admin user support
+- **[Create Custom Flows](./custom-flows.mdx)** - Tailored authentication
+
+### 3. **Enterprise Features**
+- **[Configure Organizations](./organizations.mdx)** - Multi-tenant support
+- **[Set Up SSO/SAML](./sso-saml.mdx)** - Enterprise authentication
+- **[Configure SCIM Provisioning](./scim.mdx)** - Automated user management
+- **[Set Up Audit Logging](./audit-logging.mdx)** - Compliance requirements
+
+### 4. **Integration & Migration**
+- **[Plan User Migration](./migration.mdx)** - Migrate existing users
+- **[Set Up Admin Users](./admin-setup.mdx)** - Create admin accounts
+- **[Configure Webhooks](./webhooks.mdx)** - Real-time events
+- **[Integrate with External Systems](./integrations.mdx)** - Third-party tools
+
+### 5. **Performance & Monitoring**
+- **[Optimize Performance](./performance.mdx)** - Speed improvements
+- **[Set Up Monitoring](./monitoring.mdx)** - Health checks and alerts
+- **[Configure Rate Limiting](./rate-limiting.mdx)** - Abuse prevention
+- **[Set Up Analytics](./analytics.mdx)** - Usage insights
+
+## 📊 Advanced Verification
+
+### Performance Testing
+```bash
+# Test authentication performance
+ab -n 1000 -c 10 http://localhost:3000/login
+
+# Test API authentication
+ab -n 1000 -c 10 -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/api/v1/clerk/session/info
+```
+
+### Security Testing
+```bash
+# Test rate limiting
+for i in {1..20}; do
+  curl -X POST http://localhost:8080/api/v1/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{"email":"test@example.com","password":"wrong"}'
+done
+```
+
+### Load Testing
+```bash
+# Test under load
+artillery run auth-load-test.yml
+```
+
+## 📚 Advanced Documentation
+
+- **[Clerk React Documentation](https://clerk.com/docs/quickstarts/react)**
+- **[Clerk Backend API Reference](https://clerk.com/docs/reference/backend-api)**
+- **[Clerk Organizations Guide](https://clerk.com/docs/organizations/overview)**
+- **[Clerk Security Best Practices](https://clerk.com/docs/security/overview)**
+- **[LeafLock Authentication Architecture](./implementation.mdx)**
+
+## 🛠️ Advanced Tools
+
+### Clerk CLI Tools
+```bash
+# Install Clerk CLI
+npm install -g @clerk/clerk-cli
+
+# Test authentication
+clerk users list
+clerk users get {USER_ID}
+clerk users disable-mfa {USER_ID}
+```
+
+### Development Helpers
+```bash
+# Generate test users
+node scripts/create-test-users.js
+
+# Test webhook locally
+node scripts/test-webhook.js
+
+# Check authentication health
+node scripts/auth-health-check.js
+```
 
 ---
 
-**🎉 Congratulations!** You now have modern, secure authentication running on LeafLock. The integration supports both existing JWT users and new Clerk users during the migration period.
+**🎉 Congratulations!** You now have enterprise-grade authentication with advanced features running on LeafLock. The system supports modern authentication patterns, multi-factor security, organization management, and comprehensive monitoring.
 
-Need help? Check the [troubleshooting guide](./troubleshooting.mdx) or join our [Discord community](https://discord.gg/leaflock).
+**Ready for production?** Check out our [deployment guide](./deployment.mdx) and [security checklist](./security-checklist.mdx).
+
+Need advanced help? Check the [enterprise documentation](./enterprise.mdx) or contact [Clerk Support](https://clerk.com/support).

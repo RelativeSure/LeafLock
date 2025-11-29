@@ -1,277 +1,405 @@
 ---
-title: Managing MFA
-description: User guide for managing Multi-Factor Authentication settings
+title: Managing MFA (Clerk)
+description: User guide for managing Multi-Factor Authentication settings with Clerk
 ---
 
-# Managing Your MFA Settings
+# Managing Your MFA Settings (Clerk)
 
-This guide covers how to manage your Multi-Factor Authentication (MFA) after you've enabled it.
+This guide covers how to manage your Multi-Factor Authentication (MFA) after you've enabled it with Clerk's enterprise-grade authentication system.
+
+## Understanding Clerk MFA Management
+
+Clerk provides a unified MFA experience across all applications. Changes you make in LeafLock will apply to other Clerk-enabled apps you use.
 
 ## Accessing MFA Settings
 
+### Method 1: Through LeafLock Settings
 1. Log in to your LeafLock account
-2. Click on **Settings** or your profile icon
-3. Navigate to **Security** → **Multi-Factor Authentication**
+2. Click on your **profile icon** in the top navigation
+3. Navigate to **Profile** → **Security** → **Two-Factor Authentication**
 
-You'll see your current MFA status and management options.
+### Method 2: Through Clerk User Button
+1. Click the **User Button** (profile icon) in the navigation
+2. Select **Manage account**
+3. Navigate to **Security** → **Two-Factor Authentication**
+
+### Method 3: Direct Clerk Portal
+1. Visit your [Clerk user portal](https://accounts.clerk.com)
+2. Sign in with your credentials
+3. Navigate to **Security** settings
+
+## Managing Authentication Methods
+
+Clerk supports multiple authentication methods that you can manage:
+
+### Primary Methods
+- **Authenticator App** (TOTP) - Most secure
+- **SMS/Text Message** - Convenient backup
+- **Email Codes** - Additional backup option
+
+### Backup Methods
+- **Backup Codes** - One-time use emergency codes
+- **Recovery Phone** - Alternative phone number
+- **Trusted Devices** - Device-based authentication
+
+## Adding/Removing Authentication Methods
+
+### Adding a New Method
+
+<Tabs>
+  <TabItem label="Authenticator App">
+1. Go to **Security** → **Two-Factor Authentication**
+2. Click **Add authentication method**
+3. Select **Authenticator app**
+4. Scan the QR code with your authenticator app
+5. Enter the 6-digit verification code
+6. Name your device (e.g., "iPhone 14", "Google Pixel")
+7. Click **Continue** to complete setup
+
+**Supported Apps:**
+- Google Authenticator
+- Authy
+- 1Password
+- Microsoft Authenticator
+- Any TOTP-compatible app
+  </TabItem>
+  
+  <TabItem label="SMS/Text Message">
+1. Go to **Security** → **Two-Factor Authentication**
+2. Click **Add authentication method**
+3. Select **Phone number**
+4. Enter your phone number with country code
+5. Choose **Text message (SMS)**
+6. Enter the verification code sent to your phone
+7. Click **Continue** to complete setup
+
+**Note:** SMS rates may apply depending on your carrier.
+  </TabItem>
+  
+  <TabItem label="Email Codes">
+1. Go to **Security** → **Two-Factor Authentication**
+2. Click **Add authentication method**
+3. Select **Email codes**
+4. Verify your email address
+5. Enter the verification code sent to your email
+6. Click **Continue** to complete setup
+
+**Note:** Make sure you have access to this email account.
+  </TabItem>
+</Tabs>
+
+### Removing a Method
+
+1. Go to **Security** → **Two-Factor Authentication**
+2. Find the method you want to remove
+3. Click **Remove** or the trash icon
+4. Verify your identity with another method
+5. Confirm the removal
+
+**Important**: You must have at least one backup method enabled. Clerk won't let you remove your last backup method.
+
+## Managing Backup Codes
+
+### Understanding Clerk Backup Codes
+
+- **8-digit numeric codes** (Clerk standard)
+- **10 codes** provided automatically
+- **One-time use** only
+- **Cross-application**: Work across all Clerk-enabled apps
+- **Automatically regenerated** when you add/remove MFA methods
+
+### Viewing Backup Code Status
+
+1. Go to **Security** → **Two-Factor Authentication**
+2. Look for **Backup codes** section
+3. You'll see:
+   - **Remaining codes**: Number of unused codes
+   - **Total codes**: Always 10
+   - **Last regenerated**: When codes were last updated
+
+**Note**: You cannot view the actual codes after initial setup for security reasons.
+
+### When Codes Are Automatically Regenerated
+
+Clerk automatically creates new backup codes when you:
+- Add a new authentication method
+- Remove an authentication method
+- Reset your MFA settings
+
+### Manual Regeneration
+
+If you need new backup codes:
+
+1. Go to **Security** → **Two-Factor Authentication**
+2. Find **Backup codes** section
+3. Click **Regenerate codes**
+4. Verify your identity with an existing method
+5. **Save the new codes immediately**
+6. Store them securely and delete old copies
+
+**Warning**: This invalidates all previous backup codes.
+
+## Managing Trusted Devices
+
+Clerk remembers devices you've successfully used for MFA:
+
+### Viewing Trusted Devices
+1. Go to **Security** → **Trusted devices**
+2. See all devices where you're currently logged in
+3. View details: device type, browser, location, last active
+
+### Managing Devices
+- **Trust this device**: Skip MFA for 30 days on this device
+- **Remove device**: Log out and remove from trusted list
+- **Remove all devices**: Force logout from everywhere except current session
+
+### Device Security
+- **Automatic removal**: Devices are removed after 30 days of inactivity
+- **Suspicious activity**: Clerk may remove devices if suspicious login detected
+- **Location tracking**: Shows approximate location of device usage
 
 ## Disabling MFA
 
-If you need to disable two-factor authentication:
+**⚠️ Security Warning**: Disabling MFA reduces your account security significantly. You'll only need your password to sign in.
 
-### Security Warning
+### When You Might Disable MFA
+- Switching to a new primary authentication method
+- Troubleshooting authentication issues
+- Temporarily for device migration
 
-Disabling MFA makes your account less secure. You'll only need your password to sign in, which is less protected than MFA. Only disable if absolutely necessary.
+### How to Disable MFA
 
-### Step-by-Step: Disable MFA
-
-1. Go to **Settings** → **Security** → **MFA**
-2. Click the **Disable MFA** button
-3. You'll be prompted to enter a verification code
-4. Open your authenticator app
-5. Enter the current 6-digit code for LeafLock
-6. Click **Disable MFA**
+1. Go to **Security** → **Two-Factor Authentication**
+2. Click **Disable two-factor authentication**
+3. Verify your identity using any active method:
+   - Enter TOTP code from authenticator app
+   - Use SMS verification code
+   - Use backup code
+   - Use email verification
+4. Confirm you understand the security implications
+5. Click **Disable** to complete
 
 ### What Happens After Disabling
 
-When you disable MFA:
-- You can log in with just your email and password
-- Your TOTP secret is deleted
-- All backup codes are invalidated and deleted
-- Your account is less secure
+- You can log in with email and password only
+- All MFA methods are disabled
+- Backup codes are invalidated
+- Your account security is reduced
+- You'll see security warnings when logging in
 
-### Can't Access Your Authenticator?
+### Re-enabling MFA
 
-If you can't get a code from your authenticator app:
-1. Use a [backup code](/authentication/backup-codes) instead
-2. Or contact your administrator for [MFA reset](/authentication/admin-mfa-management)
+**Strongly recommended** to re-enable MFA immediately:
 
----
-
-## Regenerating Backup Codes
-
-Backup codes are one-time use codes for emergency access. You should regenerate them periodically or when needed.
-
-### When to Regenerate
-
-Consider regenerating backup codes when:
-- You've used more than 7 of your 10 codes
-- You suspect codes may have been compromised
-- You want to refresh your security (every 6-12 months)
-- You've shared a code (not recommended, but it happens)
-
-### Step-by-Step: Regenerate Backup Codes
-
-1. Go to **Settings** → **Security** → **MFA**
-2. In the **Backup Recovery Codes** section, click **Regenerate Backup Codes**
-3. Enter your **password** to confirm (not your TOTP code)
-4. Click **Generate New Codes**
-5. You'll see 10 new backup codes
-6. **Important**: Download or copy these codes immediately
-7. Store them securely (password manager, encrypted storage)
-8. Click **I've Saved My Backup Codes**
-
-### Important Notes
-
-- **Old codes are invalidated**: All previous backup codes (including unused ones) stop working immediately
-- **No recovery**: You cannot view backup codes after this screen closes
-- **Password required**: You need your account password, not a TOTP code
-
-### Storing Your New Codes
-
-**Recommended storage locations**:
-- Password manager (1Password, Bitwarden, LastPass)
-- Encrypted note-taking app
-- Physical paper in a secure location
-
-**DO NOT store in**:
-- Unencrypted text files
-- Email or unencrypted cloud storage
-- Shared documents
-
----
-
-## Checking Backup Code Status
-
-You can check how many backup codes you have remaining without viewing the actual codes.
-
-### View Backup Code Status
-
-1. Go to **Settings** → **Security** → **MFA**
-2. Click **View Backup Code Status**
-3. You'll see:
-   - **Total codes**: 10 (always)
-   - **Remaining codes**: Number of unused codes
-   - **Used codes**: Number already consumed
-
-### Understanding the Numbers
-
-| Remaining | Status | Recommendation |
-|-----------|--------|----------------|
-| 10 | All codes available | No action needed |
-| 7-9 | A few codes used | Still plenty |
-| 4-6 | Half used | Consider regenerating soon |
-| 1-3 | Running low | Regenerate backup codes |
-| 0 | All codes used | Regenerate immediately |
-
-### If You Run Out of Backup Codes
-
-- You can still log in with your authenticator app (no problem)
-- But you have **no emergency backup** if you lose your device
-- **Immediately regenerate** new codes after logging in
-
----
-
-## MFA Lifecycle Management
-
-### The Complete MFA Journey
-
-```
-Enable MFA
-    ↓
-Save Backup Codes
-    ↓
-Use MFA Daily (authenticator app)
-    ↓
-Monitor Backup Code Usage
-    ↓
-Regenerate Codes (when needed)
-    ↓
-Continue Using MFA
-```
-
-### Best Practices for Ongoing Use
-
-#### Daily Usage
-1. Keep your authenticator app installed and backed up
-2. Use TOTP codes (not backup codes) for normal logins
-3. Ensure your device clock is accurate (for TOTP)
-
-#### Regular Maintenance
-1. Check backup code status monthly
-2. Regenerate codes if you've used more than 6
-3. Update your stored codes after regenerating
-
-#### Device Management
-1. Set up MFA on multiple devices (if your authenticator supports it)
-2. Keep backup codes accessible but secure
-3. Update MFA if you get a new phone
-
----
+1. Go to **Security** → **Two-Factor Authentication**
+2. Click **Enable two-factor authentication**
+3. Set up your preferred method
+4. Save new backup codes
 
 ## Switching to a New Device
 
-If you're getting a new phone or tablet:
+### Option 1: Multi-Device Setup (Recommended)
 
-### Option 1: Transfer Authenticator App (Recommended)
+Many authenticator apps support multiple devices:
 
-Most authenticator apps support cloud backup or transfer:
+**Authy**: Automatically syncs across devices
+**1Password**: Syncs to all your devices
+**Microsoft Authenticator**: Cloud backup available
 
-**Google Authenticator**:
-1. On old device: Settings → Transfer accounts → Export accounts
-2. Scan QR code with new device
-3. Verify MFA still works
+### Option 2: Manual Transfer
 
-**Authy**:
-- Automatically syncs across devices with your Authy account
+If your app doesn't support multi-device sync:
 
-**1Password/Bitwarden**:
-- Syncs automatically to all devices
+1. **Before switching devices**:
+   - Ensure you have working backup codes
+   - Log into LeafLock on a computer
+   
+2. **On new device**:
+   - Install authenticator app
+   - Go to LeafLock security settings
+   - Add new device as authentication method
+   - Remove old device after verification
 
-### Option 2: Re-setup MFA
+### Option 3: Temporary Disable/Re-enable
 
-If you can't transfer:
-1. Log in on your computer (using your authenticator app from old device)
-2. Disable MFA (using old device for verification)
-3. Enable MFA again (scan QR with new device)
-4. Save new backup codes
+1. Use backup codes to log in on new device
+2. Disable MFA temporarily
+3. Re-enable MFA with new device
+4. Generate and save new backup codes
 
-### Option 3: Use Backup Code (Emergency)
+## Advanced MFA Features
 
-If you already lost your old device:
-1. Log in with email and password
-2. Use a backup code when prompted for MFA
-3. After logging in, disable MFA
-4. Re-enable MFA with your new device
-5. Generate and save new backup codes
+### Custom MFA Rules
 
----
+Clerk supports custom MFA policies:
+
+- **Conditional MFA**: Only require for sensitive operations
+- **Risk-based MFA**: Trigger based on login patterns
+- **Location-based**: Different requirements by geographic location
+
+### MFA for Organizations
+
+If your LeafLock instance uses Clerk Organizations:
+
+- **Organization-level MFA**: Required for all org members
+- **Role-based requirements**: Different MFA for different roles
+- **Admin enforcement**: Organization admins can require MFA
+
+## Security Monitoring
+
+### Viewing Security Activity
+
+1. Go to **Security** → **Security activity**
+2. See recent login attempts and security events
+3. View:
+   - Successful logins
+   - Failed login attempts
+   - MFA usage
+   - Device additions/removals
+   - Password changes
+
+### Security Alerts
+
+Clerk automatically alerts you about:
+- Login from new device/location
+- Multiple failed login attempts
+- MFA method changes
+- Password changes
+- Suspicious activity patterns
+
+### Responding to Security Alerts
+
+If you receive a security alert:
+1. **Verify the activity**: Check if it was you
+2. **If legitimate**: No action needed
+3. **If suspicious**:
+   - Change your password immediately
+   - Review and remove unfamiliar devices
+   - Regenerate backup codes
+   - Contact your administrator
 
 ## Troubleshooting Common Issues
 
-### "Invalid code" when trying to disable MFA
+### "Can't access your authentication methods?"
 
-**Possible causes**:
-- Time synchronization issue
-- Looking at wrong account in authenticator
-- Code expired (30-second window)
+**Use account recovery**:
+1. Click "Can't access your authentication methods?" on login
+2. Follow email verification process
+3. Complete identity verification
+4. Set up new MFA methods
 
+### Time synchronization issues
+
+**Symptoms**: TOTP codes don't work
 **Solutions**:
-1. Check device time is accurate (enable auto-sync)
-2. Wait for a new code to generate
-3. Verify you're using the LeafLock entry in your app
+- Enable automatic date/time on your device
+- Most authenticator apps handle this automatically
+- Clerk allows reasonable time drift
 
-### Can't regenerate backup codes
+### Lost access to all MFA methods
 
-**Cause**: Wrong password entered
+**Recovery options**:
+1. Use account recovery process
+2. Contact your system administrator
+3. Use emergency contact if configured
+4. Verify identity through alternative channels
 
-**Solution**:
-- Make sure you're entering your **account password**, not a TOTP code
-- Check caps lock is off
-- Try resetting your password if you've forgotten it
+### Backup codes not working
 
-### Lost both authenticator and backup codes
+**Check**:
+- Entering code correctly (no typos)
+- Code hasn't been used before
+- You're using current codes (not old ones)
+- Try a different code
 
-**Solution**: Contact your system administrator
-- See [Admin MFA Management](/authentication/admin-mfa-management) for reset procedures
-- You'll need to verify your identity
-- Admin can reset MFA, allowing password-only login
-- Re-enable MFA immediately after regaining access
+### SMS codes not arriving
 
----
+**Check**:
+- Phone has signal
+- Correct phone number in profile
+- Not in airplane mode
+- Carrier supports SMS
+- Try alternative method
 
-## Security Recommendations
+## Best Practices
 
-### Best Practices
+### Security Recommendations
 
-- Keep your authenticator app backed up (if supported)
-- Store backup codes in a password manager
-- Use MFA on all accounts that support it
-- Keep one physical backup of codes in a secure location
-- Regenerate codes periodically
-- Use strong, unique password alongside MFA
+✅ **Do**:
+- Enable multiple authentication methods
+- Keep backup codes in secure password manager
+- Use authenticator app as primary method
+- Enable security notifications
+- Regularly review trusted devices
+- Update MFA when switching devices
 
-### What to Avoid
+❌ **Don't**:
+- Rely solely on SMS (less secure)
+- Share MFA codes with anyone
+- Store backup codes in plain text
+- Ignore security alerts
+- Use the same password across sites
+- Disable MFA without immediate re-enabling
 
-- Never share your TOTP codes with anyone
-- Don't take screenshots of backup codes
-- Don't store codes in unencrypted cloud storage
-- Don't use the same password on multiple sites
-- Don't disable MFA unless absolutely necessary
-- Don't ignore low backup code warnings
+### Regular Maintenance
 
----
+**Monthly**:
+- Check security activity log
+- Review trusted devices
+- Verify contact information
+
+**Quarterly**:
+- Regenerate backup codes
+- Update recovery information
+- Review security settings
+
+**Annually**:
+- Audit all authentication methods
+- Update emergency contacts
+- Review organization security policies
 
 ## Quick Reference
 
-### Enable MFA
-Settings → Security → MFA → **Enable MFA**
+### Common Tasks
 
-### Disable MFA
-Settings → Security → MFA → **Disable MFA** (requires TOTP code)
+| Task | Location | Requirements |
+|------|----------|--------------|
+| Add authenticator | Security → 2FA | Current MFA method |
+| Add phone number | Security → 2FA | SMS verification |
+| View backup status | Security → 2FA | None |
+| Regenerate codes | Security → 2FA | Current MFA method |
+| Remove device | Security → Trusted devices | None |
+| Disable MFA | Security → 2FA | Current MFA method |
+| View activity | Security → Security activity | None |
 
-### Check Backup Codes
-Settings → Security → MFA → **View Backup Code Status**
+### Emergency Access
 
-### Regenerate Backup Codes
-Settings → Security → MFA → **Regenerate Backup Codes** (requires password)
-
----
+- **Backup codes**: Use when primary method unavailable
+- **Account recovery**: Click "Can't access your authentication methods?"
+- **Admin contact**: System administrator can assist
+- **Trusted devices**: May allow access without MFA
 
 ## Related Resources
 
-- [Initial MFA Setup Guide](/authentication/setup-guide)
+- [Initial MFA Setup](/authentication/setup-guide)
 - [Understanding Backup Codes](/authentication/backup-codes)
-- [Troubleshooting MFA Issues](/authentication/troubleshooting)
 - [Admin MFA Management](/authentication/admin-mfa-management)
-- [API Documentation](/authentication/api-endpoints)
+- [Troubleshooting Guide](/authentication/troubleshooting)
+- [Clerk Security Documentation](https://clerk.com/docs/authentication/configuration/session-options)
+
+## Getting Help
+
+**Self-Service**:
+- Account recovery process
+- Security activity review
+- Backup code usage
+
+**Admin Support**:
+- Contact system administrator
+- Identity verification required
+- Emergency access procedures
+
+**Clerk Support**:
+- [Clerk Documentation](https://clerk.com/docs)
+- [Clerk Community](https://clerk.com/discord)
+- [Clerk Support](https://clerk.com/support)

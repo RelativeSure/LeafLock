@@ -80,4 +80,3 @@ func TestRecordBackupMetrics(t *testing.T) {
 		t.Fatalf("backupSize gauge expected 1024, got %v", got)
 	}
 }
-

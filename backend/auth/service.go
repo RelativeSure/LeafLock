@@ -41,9 +41,9 @@ func shouldSkipAutoLogin(ctx context.Context) bool {
 type Service struct {
 	db database.Database
 	// crypto removed - zero-knowledge architecture (no server-wide encryption key)
-	session   sessionManager
-	password  *PasswordManager
-	mfa       *MFAManager
+	session  sessionManager
+	password *PasswordManager
+	mfa      *MFAManager
 }
 
 type sessionManager interface {
@@ -68,10 +68,10 @@ func NewService(db database.Database, rdb *redis.Client, systemSecret string) *S
 	sessionCrypto := appcrypto.NewCryptoService(sessionKey[:])
 
 	return &Service{
-		db:        db,
-		session:   NewSessionManager(rdb, sessionCrypto),
-		password:  NewPasswordManager(db),
-		mfa:       NewMFAManager(db, mfaCrypto),
+		db:       db,
+		session:  NewSessionManager(rdb, sessionCrypto),
+		password: NewPasswordManager(db),
+		mfa:      NewMFAManager(db, mfaCrypto),
 	}
 }
 
@@ -422,7 +422,6 @@ func (s *Service) Logout(ctx context.Context, token string) error {
 
 	return nil
 }
-
 
 // Helper functions
 
