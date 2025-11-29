@@ -36,7 +36,59 @@ func NewHandler(service *Service, emailService EmailService) *Handler {
 	}
 }
 
-// Register handles user registration
+// Register handles user registration with comprehensive security measures
+// 
+// Business Purpose:
+// - Enables new user account creation with email/password authentication
+// - Implements zero-knowledge architecture where server never sees plaintext user data
+// - Provides secure onboarding flow with email verification
+//
+// Security Considerations & Threat Model:
+// - Prevents email enumeration by returning same response regardless of email existence
+// - Implements dual-layer registration control (env var + database setting)
+// - Uses timing attack resistant email lookup via search hash
+// - Sanitizes and validates email format to prevent injection attacks
+// - Rate limiting applied at middleware level to prevent brute force registration
+//
+// Zero-Knowledge Architecture:
+// - User email stored as search hash (SHA256 with salt) for lookup purposes
+// - User password hashed with Argon2id (memory-hard, GPU-resistant)
+// - All user content encrypted client-side before reaching server
+// - Server never has access to encryption keys or plaintext content
+//
+// Data Validation & Sanitization:
+// - Email validated for basic format compliance (contains @ symbol)
+// - Email normalized (lowercase, trimmed) before processing
+// - Registration disabled flag checked at both config and database levels
+// - Request body parsed with strict JSON validation
+//
+// User Workflow:
+// 1. Client submits registration request with email/password
+// 2. Server validates registration is enabled (env + database)
+// 3. Email format validated and normalized
+// 4. Email existence checked via search hash (prevents enumeration)
+// 5. If email exists, success response returned (no information disclosure)
+// 6. If new email, account created with hashed password
+// 7. Email verification sent separately (not handled in this handler)
+//
+// Error Handling Strategy:
+// - Generic success message prevents email enumeration attacks
+// - Specific validation errors returned for malformed requests
+// - Internal errors logged but not exposed to client
+// - Consistent response format maintains security posture
+//
+// API Design Decisions:
+// - POST method for resource creation
+// - Returns 202 Accepted (not 201) since email verification required
+// - Same response for success/existing email prevents information leakage
+// - Error responses include specific codes for client-side handling
+//
+// Integration Points:
+// - Calls auth service for actual user creation logic
+// - Database transactions ensure atomic registration operations
+// - Email service triggered separately for verification workflow
+// - Audit logging tracks registration attempts for security monitoring
+//
 // @Summary Register a new user
 // @Description Create a new user account
 // @Tags Authentication
@@ -119,7 +171,70 @@ func (h *Handler) Register(c *fiber.Ctx) error {
 	})
 }
 
-// Login handles user login
+// Login handles user authentication with comprehensive security measures
+//
+// Business Purpose:
+// - Authenticates users with email/password credentials
+// - Supports Multi-Factor Authentication (MFA) workflow
+// - Implements account lockout protection against brute force attacks
+// - Provides secure session management with JWT tokens
+//
+// Security Considerations & Threat Model:
+// - Protects against brute force attacks via account lockout mechanism
+// - Implements timing attack resistance in authentication flow
+// - MFA support prevents unauthorized access even with compromised passwords
+// - Session tokens encrypted and stored securely in Redis
+// - Failed login attempts tracked and logged for security monitoring
+//
+// Authentication Flow:
+// 1. Standard Login: Email + Password → JWT Token (if MFA disabled)
+// 2. MFA Login: Email + Password → MFA Session → MFA Code → JWT Token
+// 3. Account Lockout: Multiple failed attempts → Temporary account suspension
+//
+// Account Security Features:
+// - Progressive account lockout after failed attempts
+// - Lockout duration increases with consecutive failures
+// - Admin intervention required for persistent lockouts
+// - IP-based rate limiting at middleware level
+// - Suspicious activity detection and logging
+//
+// MFA Integration:
+// - TOTP (Time-based One-Time Password) support
+// - Backup codes for account recovery
+// - Grace period for MFA setup completion
+// - Fallback mechanisms for lost MFA devices
+//
+// Session Management:
+// - JWT tokens with configurable expiration
+// - Refresh token mechanism for extended sessions
+// - Secure token storage in encrypted Redis cache
+// - Token blacklisting for logout functionality
+// - Multi-device session support
+//
+// Data Privacy & Zero-Knowledge:
+// - Client IP and User-Agent logged for security (encrypted)
+// - No plaintext passwords stored or logged
+// - Authentication events audited for compliance
+// - GDPR-compliant data handling practices
+//
+// Error Handling & User Experience:
+// - Generic "Invalid credentials" prevents username enumeration
+// - Specific MFA errors guide user through 2FA process
+// - Account lockout messages include unlock instructions
+// - Graceful degradation when MFA services unavailable
+//
+// Performance Considerations:
+// - Redis caching for session management
+// - Database connection pooling for auth queries
+// - Efficient password hashing with Argon2id
+// - Minimal database queries per authentication attempt
+//
+// Compliance & Audit:
+// - All login attempts logged with timestamp and IP
+// - Failed authentication events trigger security alerts
+// - MFA enrollment status tracked for compliance reporting
+// - Session lifecycle events audited for forensics
+//
 // @Summary Login
 // @Description Authenticate a user with email and password
 // @Tags Authentication
@@ -429,7 +544,84 @@ func (h *Handler) RegenerateBackupCodes(c *fiber.Ctx) error {
 	})
 }
 
-// RequestPasswordReset initiates password reset
+// RequestPasswordReset initiates secure password reset workflow with anti-enumeration measures
+//
+// Business Purpose:
+// - Enables users to reset forgotten passwords via email verification
+// - Implements secure token-based password reset mechanism
+// - Provides account recovery while maintaining security posture
+// - Supports audit logging for security incident tracking
+//
+// Security Architecture & Threat Model:
+// - Prevents email enumeration attacks via consistent response messages
+// - Implements time-limited, single-use reset tokens
+// - Tokens stored as salted hashes to prevent database compromise
+// - Rate limiting prevents brute force token generation
+// - IP address tracking for suspicious activity detection
+//
+// Anti-Enumeration Strategy:
+// - Same success response regardless of email existence
+// - Consistent timing for all email lookup operations
+// - No distinction between "email not found" and "reset sent"
+// - Generic success message prevents user enumeration
+// - Failed attempts logged but not exposed to client
+//
+// Token Security Implementation:
+// - Cryptographically secure random token generation
+// - Tokens hashed with Argon2id before database storage
+// - 15-minute expiration time for reset tokens
+// - Single-use tokens invalidated after consumption
+// - Tokens bound to specific IP address and user agent
+//
+// Email Security Features:
+// - Reset emails include IP address and timestamp for user awareness
+// - Links use HTTPS with secure token parameters
+// - Email content sanitized to prevent injection attacks
+// - Rate limiting prevents email bombing attacks
+// - Audit trail tracks all reset request attempts
+//
+// User Experience Workflow:
+// 1. User submits email address for password reset
+// 2. System validates email format and checks existence
+// 3. Secure token generated and stored with expiration
+// 4. Reset email sent with secure link
+// 5. User clicks link and enters new password
+// 6. Token validated and password updated atomically
+//
+// Database Operations:
+// - Email lookup via search hash (SHA256 with salt)
+// - Token creation with user binding and expiration
+// - Audit log entry for security tracking
+// - Transactional integrity for token operations
+//
+// Error Handling Strategy:
+// - Generic success responses prevent information disclosure
+// - Internal errors logged but not exposed
+// - Email delivery failures handled gracefully
+// - Token generation failures trigger security alerts
+// - Rate limit violations return appropriate HTTP status
+//
+// Integration with Email Service:
+// - Asynchronous email delivery to prevent timing attacks
+// - Email content includes security context (IP, timestamp)
+// - Delivery status tracked for audit purposes
+// - Fallback mechanisms for email service failures
+// - Template-based emails with security best practices
+//
+// Compliance & Audit:
+// - All reset attempts logged with IP and timestamp
+// - Failed requests tracked for security analysis
+// - GDPR-compliant data handling for EU users
+// - Data retention policies enforced for reset tokens
+// - Security incident response integration
+//
+// Performance Considerations:
+// - Efficient email lookup via indexed search hash
+// - Minimal database queries per reset request
+// - Asynchronous email processing
+// - Redis caching for rate limiting
+// - Connection pooling for database operations
+//
 // @Summary Request password reset
 // @Description Send password reset email
 // @Tags Authentication

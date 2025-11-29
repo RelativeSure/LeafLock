@@ -87,15 +87,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="group-data-[collapsible=icon]:px-1">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
+            <SidebarMenuButton size="lg" asChild className="group-data-[collapsible=icon]:!p-2 group-data-[collapsible=icon]:justify-center">
               <Link to="/">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                   <Leaf className="size-4" />
                 </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
+                <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="truncate font-semibold">LeafLock</span>
                   <span className="truncate text-xs">Secure Notes</span>
                 </div>
@@ -116,9 +116,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   selectFolder(null)
                   navigate({ to: '/' })
                 }}
+                className="group-data-[collapsible=icon]:justify-center"
               >
                 <Home />
-                <span>All Notes</span>
+                <span className="group-data-[collapsible=icon]:hidden">All Notes</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
@@ -127,9 +128,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 onClick={() => {
                   // Placeholder for trash
                 }}
+                className="group-data-[collapsible=icon]:justify-center"
               >
                 <Trash2 />
-                <span>Trash</span>
+                <span className="group-data-[collapsible=icon]:hidden">Trash</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -150,11 +152,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarSeparator />
 
         <Collapsible defaultOpen className="group/collapsible">
-          <SidebarGroup>
+          <SidebarGroup className="group-data-[collapsible=icon]:px-1">
             <SidebarGroupLabel asChild>
-              <CollapsibleTrigger>
-                Folders
-                <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+              <CollapsibleTrigger className="group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
+                <span className="group-data-[collapsible=icon]:hidden">Folders</span>
+                <span className="hidden group-data-[collapsible=icon]:block text-xs">F</span>
+                <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden" />
               </CollapsibleTrigger>
             </SidebarGroupLabel>
 
@@ -217,12 +220,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           navigate({ to: '/' })
                         }}
                         isActive={selectedFolder === folder.id}
+                        className="group-data-[collapsible=icon]:justify-center"
                       >
                         <div
                           className="h-2 w-2 rounded-full"
                           style={{ backgroundColor: folder.color }}
                         />
-                        <span>{folder.name}</span>
+                        <span className="group-data-[collapsible=icon]:hidden">{folder.name}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
@@ -238,11 +242,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </Collapsible>
 
         <Collapsible defaultOpen className="group/collapsible">
-          <SidebarGroup>
+          <SidebarGroup className="group-data-[collapsible=icon]:px-1">
             <SidebarGroupLabel asChild>
-              <CollapsibleTrigger>
-                Tags
-                <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+              <CollapsibleTrigger className="group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
+                <span className="group-data-[collapsible=icon]:hidden">Tags</span>
+                <span className="hidden group-data-[collapsible=icon]:block text-xs">T</span>
+                <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden" />
               </CollapsibleTrigger>
             </SidebarGroupLabel>
             <CollapsibleContent>
@@ -255,9 +260,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           selectTag(tag.name)
                           navigate({ to: '/' })
                         }}
+                        className="group-data-[collapsible=icon]:justify-center"
                       >
                         <Tag />
-                        <span>{tag.name}</span>
+                        <span className="group-data-[collapsible=icon]:hidden">{tag.name}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
@@ -276,19 +282,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupLabel>Settings</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Settings">
+              <SidebarMenuButton asChild tooltip="Settings" className="group-data-[collapsible=icon]:justify-center">
                 <Link to="/settings">
                   <Settings />
-                  <span>Settings</span>
+                  <span className="group-data-[collapsible=icon]:hidden">Settings</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             {user?.isAdmin && (
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Admin Console">
+                <SidebarMenuButton asChild tooltip="Admin Console" className="group-data-[collapsible=icon]:justify-center">
                   <Link to="/admin">
                     <Shield />
-                    <span>Admin Console</span>
+                    <span className="group-data-[collapsible=icon]:hidden">Admin Console</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -296,21 +302,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="group-data-[collapsible=icon]:px-1">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:!p-2 group-data-[collapsible=icon]:justify-center"
                 >
                   <UserAvatar user={user} size={32} />
-                  <div className="grid flex-1 text-left text-sm leading-tight">
+                  <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                     <span className="truncate font-semibold">{user?.name || 'User'}</span>
                     <span className="truncate text-xs">{user?.email || ''}</span>
                   </div>
-                  <ChevronRight className="ml-auto size-4" />
+                  <ChevronRight className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent

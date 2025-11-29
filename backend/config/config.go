@@ -1,3 +1,6 @@
+// Package config manages application configuration from environment variables.
+// Provides centralized configuration loading with validation and security considerations.
+// Supports zero-knowledge architecture by avoiding server-side encryption key storage.
 package config
 
 import (
@@ -11,7 +14,9 @@ import (
 	"time"
 )
 
-// Config holds application configuration
+// Config holds application configuration loaded from environment variables
+// Thread-safe configuration with atomic operations for dynamic settings
+// Zero-knowledge: intentionally excludes server-side encryption keys
 type Config struct {
 	DatabaseURL   string
 	RedisURL      string

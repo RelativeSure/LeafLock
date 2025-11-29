@@ -1,3 +1,45 @@
+/**
+ * MainNavigation Component
+ * 
+ * Purpose: Provides the primary navigation interface for the LeafLock application.
+ * Implements a hierarchical menu system with role-based access control, organizing
+ * tools, resources, and administrative functions in an accessible, responsive layout.
+ * 
+ * User Experience Goals:
+ * - Intuitive dropdown navigation with clear categorization
+ * - Visual icons for quick recognition of menu items
+ * - Responsive design that adapts to different screen sizes
+ * - Smooth animations and hover effects for better feedback
+ * - External link indicators for off-site resources
+ * 
+ * Security Considerations:
+ * - Role-based menu visibility (admin items only shown to administrators)
+ * - External links open in new tabs with proper security attributes
+ * - No sensitive information exposed in navigation structure
+ * - Menu items reflect actual user permissions
+ * 
+ * Accessibility Features:
+ * - Semantic HTML structure with proper ARIA labeling
+ * - Keyboard navigation support throughout
+ * - Screen reader friendly descriptions
+ * - High contrast indicators and focus management
+ * 
+ * Architecture:
+ * - Modular menu item definitions for easy maintenance
+ * - Conditional rendering based on user roles
+ * - External link handling with security best practices
+ * - Responsive grid layout for different screen sizes
+ * 
+ * Integration Points:
+ * - useAuthStore: Provides user role information for menu filtering
+ * - NavigationMenu components: Implements accessible dropdown behavior
+ * - Lucide icons: Consistent iconography throughout the interface
+ * 
+ * State Management:
+ * - User authentication state for role-based rendering
+ * - No local component state (stateless navigation component)
+ */
+
 'use client'
 
 import * as React from 'react'

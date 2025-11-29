@@ -1,3 +1,26 @@
+/**
+ * App Component - Root Application Wrapper
+ * 
+ * @description
+ * Main application entry point that provides core providers and lazy-loads routing.
+ * Handles encryption context, theme management, and application initialization.
+ * 
+ * @architecture
+ * - Lazy loads router to prevent circular dependencies during build
+ * - Provides ThemeProvider for consistent styling across components
+ * - Wraps application with EncryptionProvider for client-side encryption
+ * - Displays loading spinner during router initialization
+ * 
+ * @performance-considerations
+ * - Router lazy loading reduces initial bundle size
+ * - Dynamic import prevents circular dependency issues
+ * - Minimal loading state prevents layout shift
+ * 
+ * @providers
+ * - ThemeProvider: Manages light/dark theme switching
+ * - EncryptionProvider: Handles client-side encryption keys and operations
+ * - RouterProvider: Manages application routing and navigation
+ */
 import React from 'react'
 import { RouterProvider } from '@tanstack/react-router'
 import { ThemeProvider } from './context/ThemeContext'

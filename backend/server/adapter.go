@@ -1,3 +1,5 @@
+// Package server provides HTTP server functionality and middleware adapters.
+// It includes Fiber framework integration, response writers, and server lifecycle management.
 package server
 
 import (

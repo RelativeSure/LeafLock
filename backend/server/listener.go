@@ -1,3 +1,5 @@
+// Package server provides HTTP server functionality and network binding utilities.
+// Includes IPv6/IPv4 dual-stack support with automatic fallback for optimal deployment compatibility.
 package server
 
 import (

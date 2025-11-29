@@ -114,7 +114,7 @@ export function SidebarNoteList() {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="relative px-2">
+      <div className="relative px-2 group-data-[collapsible=icon]:hidden">
         <Search className="absolute left-4 top-2 h-4 w-4 text-muted-foreground" />
         <SidebarInput
           placeholder="Search notes..."
@@ -134,7 +134,7 @@ export function SidebarNoteList() {
         )}
       </div>
 
-      <div className="px-2">
+      <div className="px-2 group-data-[collapsible=icon]:hidden">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -159,6 +159,11 @@ export function SidebarNoteList() {
       </div>
 
       <ScrollArea className="flex-1 max-h-[40vh]">
+        {/* Compact note count for collapsed state */}
+        <div className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:py-2 group-data-[collapsible=icon]:text-xs group-data-[collapsible=icon]:text-muted-foreground hidden">
+          <FileText className="h-3 w-3 mr-1" />
+          {sortedNotes.length}
+        </div>
         <SidebarMenu>
           {sortedNotes.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground px-2">

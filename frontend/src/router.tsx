@@ -1,3 +1,40 @@
+/**
+ * Application Router Configuration
+ * 
+ * @description
+ * Defines all application routes using TanStack Router with lazy loading and code splitting.
+ * Implements authentication flow, protected routes, and role-based access control.
+ * 
+ * @architecture
+ * - Root layout provides ThemeProvider and EncryptionProvider to all routes
+ * - Auth routes handle login, registration, and password recovery
+ * - Protected routes require authentication and wrap with ProtectedLayout
+ * - Admin route requires admin role with dynamic store loading
+ * - Lazy loading reduces initial bundle size and improves performance
+ * 
+ * @route-structure
+ * / (root) - Theme and encryption providers
+ * ├── /login - Authentication component (login mode)
+ * ├── /register - Authentication component (register mode) with registration check
+ * ├── /forgot - Authentication component (password recovery mode)
+ * └── / (protected layout) - Requires authentication
+ *     ├── / - Dashboard view (default route)
+ *     ├── /settings - User settings page
+ *     ├── /manage - Folder and tag management
+ *     └── /admin - Admin panel (requires admin role)
+ * 
+ * @performance-features
+ * - Component lazy loading with React.Suspense fallback
+ * - Route-based code splitting
+ * - Dynamic imports for heavy components
+ * - Registration availability check before load
+ * 
+ * @security-features
+ * - Protected routes with authentication requirements
+ * - Role-based access control for admin routes
+ * - Registration disabled check prevents unauthorized signups
+ * - Automatic redirects for unauthorized access
+ */
 import React from 'react'
 import { Outlet, createRoute, createRouter, createRootRoute } from '@tanstack/react-router'
 

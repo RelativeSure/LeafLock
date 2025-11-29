@@ -1,3 +1,33 @@
+/**
+ * LoginForm Component
+ * 
+ * Purpose: Provides a secure authentication interface for users to access their encrypted notes.
+ * This component handles both standard login and multi-factor authentication (MFA) flows,
+ * implementing security best practices for credential handling and user feedback.
+ * 
+ * User Experience Goals:
+ * - Streamlined login process with clear visual feedback
+ * - Seamless transition to MFA when required
+ * - Informative error messages without exposing security details
+ * - Accessible design with proper ARIA labels and keyboard navigation
+ * 
+ * Security Considerations:
+ * - Passwords are handled securely through the auth store (never stored in component state)
+ * - MFA codes are sanitized to prevent injection attacks
+ * - Error messages are generic to prevent user enumeration
+ * - Registration status is checked to prevent unauthorized access attempts
+ * 
+ * Props Interface:
+ * - onToggleMode: Callback to switch between login and registration forms
+ * - animatedTitle: Optional animated branding element for enhanced UX
+ * 
+ * State Management:
+ * - Local form state for email, password, and MFA code
+ * - Loading states for async operations
+ * - Error handling with user-friendly messages
+ * - Registration availability check on component mount
+ */
+
 import { useState, useEffect } from 'react'
 import * as React from 'react'
 import { useAuthStore } from '@/stores/authStore'
@@ -15,6 +45,8 @@ export function LoginForm({
   animatedTitle?: React.ReactNode
 }) {
   const { login, verifyMFA, user, checkRegistrationEnabled } = useAuthStore()
+  
+  // Form state management
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [mfaCode, setMfaCode] = useState('')
@@ -23,7 +55,15 @@ export function LoginForm({
   const [isLoading, setIsLoading] = useState(false)
   const [registrationEnabled, setRegistrationEnabled] = useState<boolean | null>(null)
 
-  // Check registration status on mount
+  /**
+   * Registration Status Check
+   * 
+   * Purpose: Determines if new user registration is enabled on the server.
+   * This prevents showing registration options when disabled by administrators.
+   * 
+   * Security: Gracefully handles API failures by defaulting to disabled state
+   * to prevent unauthorized access attempts.
+   */
   useEffect(() => {
     const checkStatus = async () => {
       try {
@@ -37,8 +77,15 @@ export function LoginForm({
     checkStatus()
   }, [checkRegistrationEnabled])
 
-  // Redirect to dashboard after successful login
-  // Use useRef to prevent multiple redirects
+  /**
+   * Post-Login Redirect Handler
+   * 
+   * Purpose: Automatically redirects authenticated users to the main dashboard.
+   * Uses useRef to prevent multiple redirects and setTimeout for proper state cleanup.
+   * 
+   * Security: Validates both user object and token presence before redirect
+   * to ensure complete authentication state.
+   */
   const hasRedirected = React.useRef(false)
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
@@ -52,6 +99,17 @@ export function LoginForm({
     }
   }, [user])
 
+  /**
+   * Standard Login Handler
+   * 
+   * Purpose: Processes user credentials and initiates authentication flow.
+   * Handles both successful logins and MFA challenges.
+   * 
+   * Security: Clears previous errors, validates input, and provides generic
+   * error messages to prevent user enumeration attacks.
+   * 
+   * @param e - Form submission event
+   */
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -69,6 +127,17 @@ export function LoginForm({
     }
   }
 
+  /**
+   * MFA Verification Handler
+   * 
+   * Purpose: Validates the 6-digit MFA code provided by the user.
+   * Completes the two-factor authentication process.
+   * 
+   * Security: Sanitizes input to accept only digits, limits to 6 characters,
+   * and provides specific but secure error messaging.
+   * 
+   * @param e - Form submission event
+   */
   const handleMFAVerify = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')

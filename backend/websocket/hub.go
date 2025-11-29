@@ -1,3 +1,5 @@
+// Package websocket provides real-time collaboration functionality through WebSocket connections.
+// Manages user presence, note synchronization, and multi-user editing capabilities.
 package websocket
 
 import (
@@ -9,6 +11,7 @@ import (
 )
 
 // Connection represents a WebSocket connection for a user collaborating on a note
+// Manages bidirectional communication channel for real-time collaboration features
 type Connection struct {
 	ID     string
 	UserID uuid.UUID
@@ -18,6 +21,7 @@ type Connection struct {
 }
 
 // Hub manages WebSocket connections and message broadcasting for real-time collaboration
+// Thread-safe connection registry with channel-based event processing for scalable multi-user editing
 type Hub struct {
 	connections map[string]*Connection
 	noteUsers   map[uuid.UUID]map[uuid.UUID]*Connection // noteID -> userID -> connection
