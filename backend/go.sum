@@ -100,6 +100,8 @@ github.com/gofiber/fiber/v2 v2.52.10 h1:jRHROi2BuNti6NYXmZ6gbNSfT3zj/8c0xy94GOU5
 github.com/gofiber/fiber/v2 v2.52.10/go.mod h1:YEcBbO/FB+5M1IZNBP9FO3J9281zgPAreiI1oqg8nDw=
 github.com/gofiber/storage/redis/v3 v3.4.1 h1:feZc1xv1UuW+a1qnpISPaak7r/r0SkNVFHmg9R7PJ/c=
 github.com/gofiber/storage/redis/v3 v3.4.1/go.mod h1:rbycYIeewyFZ1uMf9I6t/C3RHZWIOmSRortjvyErhyA=
+github.com/gofiber/storage/redis/v3 v3.4.2 h1:JIK14/UdIZu+RnkZ14yUo4kXrt5bESCVgNlElP9007E=
+github.com/gofiber/storage/redis/v3 v3.4.2/go.mod h1:PX1k4wo8NbRqWi7OVpm28Jktlxpi2BFdBKCHxFzdCtk=
 github.com/gofiber/storage/testhelpers/redis v0.0.0-20250822074218-ba2347199921 h1:32Fh8t9QK2u2y8WnitCxIhf1AxKXBFFYk9tousVn/Fo=
 github.com/gofiber/storage/testhelpers/redis v0.0.0-20250822074218-ba2347199921/go.mod h1:PU9dj9E5K6+TLw7pF87y4yOf5HUH6S9uxTlhuRAVMEY=
 github.com/gogo/protobuf v1.3.2 h1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=
