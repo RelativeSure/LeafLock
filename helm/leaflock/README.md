@@ -67,7 +67,7 @@ kubectl create namespace leaflock
 helm install leaflock ./helm/leaflock \
   --namespace leaflock \
   --values ./helm/leaflock/values-dev.yaml \
-  --set secrets.jwtSecret="$(openssl rand -base64 64)" \
+  --set secrets.clerkSecretKey="$(openssl rand -base64 64)" \
   --set secrets.serverEncryptionKey="$(openssl rand -base64 32)"
 ```
 
@@ -76,7 +76,7 @@ helm install leaflock ./helm/leaflock \
 ```bash
 # Create production secrets first
 kubectl create secret generic leaflock-secret \
-  --from-literal=jwt-secret="$(openssl rand -base64 64)" \
+  --from-literal=clerk-secret-key="$(openssl rand -base64 64)" \
   --from-literal=server-encryption-key="$(openssl rand -base64 32)" \
   --namespace leaflock
 
@@ -140,8 +140,8 @@ frontend:
 
 ```yaml
 secrets:
-  # Base64 encoded JWT signing secret (64 bytes recommended)
-  jwtSecret: ""
+  # Base64 encoded Clerk secret key (64 bytes recommended)
+  clerkSecretKey: ""
   # Base64 encoded server encryption key (32 bytes required)  
   serverEncryptionKey: ""
 
@@ -268,7 +268,7 @@ EOF
 ```bash
 # Using sealed-secrets
 kubectl create secret generic leaflock-secret \
-  --from-literal=jwt-secret="..." \
+  --from-literal=clerk-secret-key="..." \
   --dry-run=client -o yaml | \
   kubeseal -o yaml > sealed-secret.yaml
 ```

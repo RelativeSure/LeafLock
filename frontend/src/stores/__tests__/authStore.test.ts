@@ -135,68 +135,27 @@ describe('authStore', () => {
   })
 
   describe('login', () => {
-    it('should login successfully without MFA', async () => {
-      const mockResponse = {
-        user: mockUser,
-        requiresMFA: false,
-        token: 'test-token',
-        encryptionSalt: 'test-salt-base64',
-      }
-
-      vi.mocked(authService.login).mockResolvedValue(mockResponse)
-      vi.mocked(encryptionUtils.deriveKey).mockResolvedValue('derived-key')
-
-      const result = await useAuthStore.getState().login('test@example.com', 'password123')
-
-      expect(result.requiresMFA).toBe(false)
-      expect(useAuthStore.getState().user).toEqual({
-        ...mockUser,
-        isAdmin: false,
-      })
-      expect(encryptionUtils.setStoredSalt).toHaveBeenCalledWith('test-salt-base64')
-      expect(encryptionUtils.deriveKey).toHaveBeenCalledWith('password123', 'test-salt-base64')
-      expect(encryptionUtils.setStoredKey).toHaveBeenCalledWith('derived-key')
-      expect(useAuthStore.getState().pendingEncryption).toBeNull()
+    it('should throw error for login (JWT deprecated)', async () => {
+      await expect(
+        useAuthStore.getState().login('test@example.com', 'password123')
+      ).rejects.toThrow('JWT authentication is deprecated. Use Clerk authentication instead.')
     })
 
-    it('should login admin user with correct role', async () => {
-      const mockResponse = {
-        user: mockAdminUser,
-        requiresMFA: false,
-        token: 'test-token',
-        encryptionSalt: 'test-salt-base64',
+    it('should not call authService.login (JWT deprecated)', async () => {
+      try {
+        await useAuthStore.getState().login('test@example.com', 'password123')
+      } catch (error) {
+        // Expected error
       }
 
-      vi.mocked(authService.login).mockResolvedValue(mockResponse)
-      vi.mocked(encryptionUtils.deriveKey).mockResolvedValue('derived-key')
-
-      await useAuthStore.getState().login('admin@example.com', 'password123')
-
-      expect(useAuthStore.getState().user).toEqual({
-        ...mockAdminUser,
-        isAdmin: true,
-      })
+      expect(authService.login).not.toHaveBeenCalled()
     })
 
-    it('should handle MFA required', async () => {
-      const mockResponse = {
-        user: mockUser,
-        requiresMFA: true,
-        token: 'test-token',
-        encryptionSalt: 'test-salt-base64',
-      }
-
-      vi.mocked(authService.login).mockResolvedValue(mockResponse)
-
-      const result = await useAuthStore.getState().login('test@example.com', 'password123')
-
-      expect(result.requiresMFA).toBe(true)
-      expect(useAuthStore.getState().user).toBeNull()
-      expect(useAuthStore.getState().pendingEncryption).toEqual({
-        password: 'password123',
-        salt: 'test-salt-base64',
-      })
-      expect(encryptionUtils.setStoredSalt).toHaveBeenCalledWith('test-salt-base64')
+    it('should handle MFA required by throwing deprecation error', async () => {
+      await expect(
+        useAuthStore.getState().login('test@example.com', 'password123')
+      ).rejects.toThrow('JWT authentication is deprecated. Use Clerk authentication instead.')
+    })
       expect(encryptionUtils.deriveKey).not.toHaveBeenCalled()
     })
 
@@ -240,12 +199,10 @@ describe('authStore', () => {
       expect(encryptionUtils.setStoredKey).toHaveBeenCalledWith(null)
     })
 
-    it('should handle login API failure', async () => {
-      vi.mocked(authService.login).mockRejectedValue(new Error('Invalid credentials'))
-
+    it('should handle login API failure with deprecation error', async () => {
       await expect(
         useAuthStore.getState().login('test@example.com', 'wrong-password')
-      ).rejects.toThrow('Invalid credentials')
+      ).rejects.toThrow('JWT authentication is deprecated. Use Clerk authentication instead.')
 
       expect(useAuthStore.getState().user).toBeNull()
     })
@@ -262,27 +219,10 @@ describe('authStore', () => {
       })
     })
 
-    it('should verify MFA successfully', async () => {
-      const mockResponse = {
-        user: mockUser,
-        token: 'test-token',
-        encryptionSalt: 'test-salt-base64',
-      }
-
-      vi.mocked(authService.verifyMFA).mockResolvedValue(mockResponse)
-      vi.mocked(encryptionUtils.deriveKey).mockResolvedValue('derived-key')
-
-      const result = await useAuthStore.getState().verifyMFA('123456')
-
-      expect(result).toBe(true)
-      expect(useAuthStore.getState().user).toEqual({
-        ...mockUser,
-        isAdmin: false,
-      })
-      expect(encryptionUtils.setStoredSalt).toHaveBeenCalledWith('test-salt-base64')
-      expect(encryptionUtils.deriveKey).toHaveBeenCalledWith('password123', 'test-salt-base64')
-      expect(encryptionUtils.setStoredKey).toHaveBeenCalledWith('derived-key')
-      expect(useAuthStore.getState().pendingEncryption).toBeNull()
+    it('should throw error for verifyMFA (JWT deprecated)', async () => {
+      await expect(
+        useAuthStore.getState().verifyMFA('123456')
+      ).rejects.toThrow('JWT authentication is deprecated. Use Clerk authentication instead.')
     })
 
     it('should use pending salt if response salt is missing', async () => {

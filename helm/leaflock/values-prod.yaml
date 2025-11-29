@@ -338,7 +338,8 @@ monitoring:
 # Production secrets (should be managed by external secret management)
 secrets:
   # These should be base64 encoded and provided via external secret management
-  jwtSecret: ""  # Set via external-secrets or sealed-secrets
+  clerkPublishableKey: ""  # Set via external-secrets or sealed-secrets
+  clerkSecretKey: ""  # Set via external-secrets or sealed-secrets
   serverEncryptionKey: ""  # Set via external-secrets or sealed-secrets
 
 # Enable Pod Security Standards enforcement

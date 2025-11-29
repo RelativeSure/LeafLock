@@ -89,29 +89,32 @@ vi.mock('@/stores/notesStore', () => {
   return { useNotesStore }
 })
 
-vi.mock('../components/auth/login-form', () => ({
-  LoginForm: ({ onToggleMode }: any) => (
-    <div data-testid="login-form">
-      <button onClick={onToggleMode}>Toggle Mode</button>
-    </div>
-  ),
-}))
+// Legacy login form mock - no longer used
+// vi.mock('../components/auth/login-form', () => ({
+//   LoginForm: ({ onToggleMode }: any) => (
+//     <div data-testid="login-form">
+//       <button onClick={onToggleMode}>Toggle Mode</button>
+//     </div>
+//   ),
+// }))
 
-vi.mock('../components/auth/register-form', () => ({
-  RegisterForm: ({ onToggleMode }: any) => (
-    <div data-testid="register-form">
-      <button onClick={onToggleMode}>Toggle Mode</button>
-    </div>
-  ),
-}))
+// Legacy register form mock - no longer used
+// vi.mock('../components/auth/register-form', () => ({
+//   RegisterForm: ({ onToggleMode }: any) => (
+//     <div data-testid="register-form">
+//       <button onClick={onToggleMode}>Toggle Mode</button>
+//     </div>
+//   ),
+// }))
 
-vi.mock('../components/auth/forgot-password-form', () => ({
-  ForgotPasswordForm: ({ onToggleMode }: any) => (
-    <div data-testid="forgot-password-form">
-      <button onClick={onToggleMode}>Toggle Mode</button>
-    </div>
-  ),
-}))
+// Legacy forgot password form mock - no longer used
+// vi.mock('../components/auth/forgot-password-form', () => ({
+//   ForgotPasswordForm: ({ onToggleMode }: any) => (
+//     <div data-testid="forgot-password-form">
+//       <button onClick={onToggleMode}>Toggle Mode</button>
+//     </div>
+//   ),
+// }))
 
 vi.mock('../components/dashboard/sidebar', () => ({
   Sidebar: () => <div data-testid="sidebar">Sidebar</div>,
@@ -240,34 +243,34 @@ describe('router', () => {
   })
 
   describe('AuthComponent', () => {
-    it('should render login form by default', async () => {
+    it('should render Clerk SignIn component by default', async () => {
       // Navigate to login route
       window.history.pushState({}, '', '/login')
 
       render(<RouterProvider router={router} />)
 
       await waitFor(() => {
-        expect(screen.getByTestId('login-form')).toBeInTheDocument()
+        expect(screen.getByTestId('sign-in')).toBeInTheDocument()
       })
     })
 
-    it('should render register form', async () => {
+    it('should render Clerk SignUp component', async () => {
       window.history.pushState({}, '', '/register')
 
       render(<RouterProvider router={router} />)
 
       await waitFor(() => {
-        expect(screen.getByTestId('register-form')).toBeInTheDocument()
+        expect(screen.getByTestId('sign-up')).toBeInTheDocument()
       })
     })
 
-    it('should render forgot password form', async () => {
+    it('should render not found for forgot password route (handled by Clerk)', async () => {
       window.history.pushState({}, '', '/forgot')
 
       render(<RouterProvider router={router} />)
 
       await waitFor(() => {
-        expect(screen.getByTestId('forgot-password-form')).toBeInTheDocument()
+        expect(screen.getByText('Not Found')).toBeInTheDocument()
       })
     })
 
@@ -328,13 +331,17 @@ describe('router', () => {
     })
 
     it('should render dashboard when user is authenticated', async () => {
-      const mockUser = { id: '1', email: 'test@example.com', name: 'Test User' }
-      setAuthStoreState({
-        user: mockUser,
-        isLoading: false,
-        initialize: vi.fn().mockResolvedValue(undefined),
-        logout: vi.fn(),
-      })
+      // Mock Clerk authenticated user
+      const mockClerkUser = {
+        id: '1',
+        primaryEmailAddress: { emailAddress: 'test@example.com' },
+        fullName: 'Test User',
+        publicMetadata: { isAdmin: false },
+      }
+
+      // Update Clerk mocks for authenticated user
+      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true })
+      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser })
 
       window.history.pushState({}, '', '/')
 
@@ -347,13 +354,17 @@ describe('router', () => {
     })
 
     it('should show preparing editor message before editor is ready', async () => {
-      const mockUser = { id: '1', email: 'test@example.com', name: 'Test User' }
-      setAuthStoreState({
-        user: mockUser,
-        isLoading: false,
-        initialize: vi.fn().mockResolvedValue(undefined),
-        logout: vi.fn(),
-      })
+      // Mock Clerk authenticated user
+      const mockClerkUser = {
+        id: '1',
+        primaryEmailAddress: { emailAddress: 'test@example.com' },
+        fullName: 'Test User',
+        publicMetadata: { isAdmin: false },
+      }
+
+      // Update Clerk mocks for authenticated user
+      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true })
+      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser })
 
       window.history.pushState({}, '', '/')
 
@@ -370,13 +381,17 @@ describe('router', () => {
     })
 
     it('should render user avatar in header', async () => {
-      const mockUser = { id: '1', email: 'test@example.com', name: 'Test User' }
-      setAuthStoreState({
-        user: mockUser,
-        isLoading: false,
-        initialize: vi.fn().mockResolvedValue(undefined),
-        logout: vi.fn(),
-      })
+      // Mock Clerk authenticated user
+      const mockClerkUser = {
+        id: '1',
+        primaryEmailAddress: { emailAddress: 'test@example.com' },
+        fullName: 'Test User',
+        publicMetadata: { isAdmin: false },
+      }
+
+      // Update Clerk mocks for authenticated user
+      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true })
+      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser })
 
       window.history.pushState({}, '', '/')
 
@@ -392,13 +407,17 @@ describe('router', () => {
     })
 
     it('should render logout button', async () => {
-      const mockUser = { id: '1', email: 'test@example.com', name: 'Test User' }
-      setAuthStoreState({
-        user: mockUser,
-        isLoading: false,
-        initialize: vi.fn().mockResolvedValue(undefined),
-        logout: vi.fn(),
-      })
+      // Mock Clerk authenticated user
+      const mockClerkUser = {
+        id: '1',
+        primaryEmailAddress: { emailAddress: 'test@example.com' },
+        fullName: 'Test User',
+        publicMetadata: { isAdmin: false },
+      }
+
+      // Update Clerk mocks for authenticated user
+      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true })
+      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser })
 
       window.history.pushState({}, '', '/')
 
@@ -416,12 +435,17 @@ describe('router', () => {
 
   describe('Settings route', () => {
     it('should render settings page', async () => {
-      const mockUser = { id: '1', email: 'test@example.com', name: 'Test User' }
-      setAuthStoreState({
-        user: mockUser,
-        isLoading: false,
-        initialize: vi.fn().mockResolvedValue(undefined),
-      })
+      // Mock Clerk authenticated user
+      const mockClerkUser = {
+        id: '1',
+        primaryEmailAddress: { emailAddress: 'test@example.com' },
+        fullName: 'Test User',
+        publicMetadata: { isAdmin: false },
+      }
+
+      // Update Clerk mocks for authenticated user
+      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true })
+      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser })
 
       window.history.pushState({}, '', '/settings')
 
@@ -435,12 +459,17 @@ describe('router', () => {
 
   describe('Manage route', () => {
     it('should render folders and tags page', async () => {
-      const mockUser = { id: '1', email: 'test@example.com', name: 'Test User' }
-      setAuthStoreState({
-        user: mockUser,
-        isLoading: false,
-        initialize: vi.fn().mockResolvedValue(undefined),
-      })
+      // Mock Clerk authenticated user
+      const mockClerkUser = {
+        id: '1',
+        primaryEmailAddress: { emailAddress: 'test@example.com' },
+        fullName: 'Test User',
+        publicMetadata: { isAdmin: false },
+      }
+
+      // Update Clerk mocks for authenticated user
+      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true })
+      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser })
 
       window.history.pushState({}, '', '/manage')
 
@@ -454,12 +483,17 @@ describe('router', () => {
 
   describe('Admin route', () => {
     it('should render admin page', async () => {
-      const mockUser = { id: '1', email: 'test@example.com', name: 'Test User', isAdmin: true }
-      setAuthStoreState({
-        user: mockUser,
-        isLoading: false,
-        initialize: vi.fn().mockResolvedValue(undefined),
-      })
+      // Mock Clerk authenticated admin user
+      const mockClerkUser = {
+        id: '1',
+        primaryEmailAddress: { emailAddress: 'admin@example.com' },
+        fullName: 'Admin User',
+        publicMetadata: { isAdmin: true },
+      }
+
+      // Update Clerk mocks for authenticated admin user
+      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true })
+      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser })
 
       window.history.pushState({}, '', '/admin')
 

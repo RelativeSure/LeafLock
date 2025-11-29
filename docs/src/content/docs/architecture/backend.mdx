@@ -49,7 +49,7 @@ Group("/api/v1/health/*")   // Live / Ready probes before auth`}
 csrf.New(...)               // Enforces X-CSRF-Token on mutating verbs
 cors.New(...)               // Dynamically built from AllowedOrigins
 metrics.PrometheusMiddleware() // ENABLE_METRICS=true
-middleware.JWTMiddleware(...)  // Validates JWT + Redis session
+middleware.ClerkMiddleware(...)  // Validates Clerk session tokens with enhanced security
 middleware.ShareLinkMiddleware // Loads shared note context`}
   language="go"
 />
@@ -92,7 +92,7 @@ Redis keys use `utils.ClientIP(c)` to hash IPv4/IPv6 uniformly.
 
 <CardGrid columns={2}>
   <Card title="Authentication" icon="lock">
-    `handlers/auth.go` issues JWTs signed with `JWT_SECRET`, coordinates Redis session caches, and delegates MFA to `services/mfa.go`.
+    `handlers/auth.go` and `backend/auth/clerk_*.go` handle Clerk authentication, session management, and coordinate with Clerk's enterprise-grade MFA system.
   </Card>
   <Card title="Notes & Metadata" icon="document">
     `handlers/notes.go`, `tags.go`, `folders.go`, `templates.go` work with encrypted payloads via `crypto.CryptoService`.
@@ -125,5 +125,5 @@ All jobs use `context.Context` timeouts and emit structured logs through `utils`
 - Broadcasts fan out only to users with entries in the `collaborations` table; share-link viewers are excluded deliberately.
 
 <Aside type="caution">
-WebSocket traffic bypasses HTTP CSRF checks—authorization depends entirely on JWT validation and database membership.
+WebSocket traffic bypasses HTTP CSRF checks—authorization depends entirely on Clerk session validation and database membership.
 </Aside>
