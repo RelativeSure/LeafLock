@@ -68,7 +68,7 @@
 // package rather than being mixed with HTTP handlers, enabling clear separation
 // of concerns and independent scaling of real-time features.
 //
-# Privacy-Preserving Collaboration: The architecture supports encrypted
+// Privacy-Preserving Collaboration: The architecture supports encrypted
 // collaboration where the server facilitates real-time updates without access
 // to the actual note content, maintaining zero-knowledge principles.
 package websocket
