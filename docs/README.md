@@ -1,35 +1,38 @@
-# Starlight Starter Kit: Basics
+# LeafLock Documentation
 
 [![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
 
-```bash
-pnpm create astro@latest -- --template starlight
-```
+Documentation site for LeafLock - A secure notes application with end-to-end encryption and real-time collaboration.
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## 🚀 What's New
 
-## 🚀 Project Structure
+**Modern Authentication with Clerk** - LeafLock now uses Clerk for professional-grade authentication!
 
-Inside of your Astro + Starlight project, you'll see the following folders and files:
+- **Social Logins**: Google, GitHub, and more
+- **Passwordless Authentication**: Magic links, passkeys
+- **Multi-Factor Authentication**: TOTP, SMS, backup codes
+- **Enterprise Security**: Automatic breach detection, bot protection
+- **Beautiful UX**: Accessible, themed authentication components
+
+[Get Started with Clerk Authentication →](./src/content/docs/authentication/quick-start.mdx)
+
+## 📁 Documentation Structure
 
 ```plaintext
-.
-├── public/
-├── src/
-│   ├── assets/
-│   ├── content/
-│   │   └── docs/
-│   └── content.config.ts
-├── astro.config.mjs
-├── package.json
-└── tsconfig.json
+docs/
+├── src/content/docs/
+│   ├── authentication/     # Clerk authentication guides
+│   ├── architecture/       # System architecture
+│   ├── features/          # Feature documentation
+│   ├── deployment/        # Deployment guides
+│   ├── operations/        # Operations & maintenance
+│   ├── api/              # API documentation
+│   ├── troubleshooting/   # Common issues & solutions
+│   └── legal/            # Legal & compliance
+├── src/assets/           # Images and assets
+├── public/              # Static files
+└── astro.config.mjs     # Astro configuration
 ```
-
-Starlight looks for `.md` or `.mdx` files in the `src/content/docs/` directory. Each file is exposed as a route based on its file name.
-
-Images can be added to `src/assets/` and embedded in Markdown with a relative link.
-
-Static assets, like favicons, can be placed in the `public/` directory.
 
 ## 🧞 Commands
 
@@ -44,6 +47,23 @@ All commands are run from the root of the project, from a terminal:
 | `pnpm astro ...`       | Run CLI commands like `astro add`, `astro check` |
 | `pnpm astro -- --help` | Get help using the Astro CLI                     |
 
-## 👀 Want to learn more?
+## 📖 Key Documentation
 
-Check out [Starlight’s docs](https://starlight.astro.build/), read [the Astro documentation](https://docs.astro.build), or jump into the [Astro Discord server](https://astro.build/chat).
+### Authentication
+- **[Quick Start](./src/content/docs/authentication/quick-start.mdx)** - Get Clerk running in 5 minutes
+- **[Implementation Details](./src/content/docs/authentication/implementation.mdx)** - Technical architecture
+- **[Migration Guide](./src/content/docs/authentication/migration.mdx)** - Move from JWT to Clerk
+- **[Configuration Reference](./src/content/docs/authentication/configuration.mdx)** - All config options
+- **[Troubleshooting](./src/content/docs/authentication/troubleshooting.mdx)** - Fix common issues
+
+### Development
+- Start the docs server: `pnpm dev`
+- Build for production: `pnpm build`
+- Preview build: `pnpm preview`
+
+## 🔗 Links
+
+- **LeafLock Repository**: https://github.com/RelativeSure/LeafLock
+- **Clerk Documentation**: https://clerk.com/docs
+- **Starlight Documentation**: https://starlight.astro.build/
+- **Astro Documentation**: https://docs.astro.build

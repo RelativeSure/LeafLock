@@ -23,8 +23,10 @@
  */
 import React from 'react'
 import { RouterProvider } from '@tanstack/react-router'
+import { ClerkProvider } from '@clerk/clerk-react'
 import { ThemeProvider } from './context/ThemeContext'
 import { EncryptionProvider } from './lib/encryption-context'
+import { useClerkApiClient } from './services/api/clerkApiClient'
 // import { ConfigDebug } from './components/debug/ConfigDebug'
 // Temporarily remove wrappers to isolate update loop
 
@@ -33,6 +35,9 @@ let routerInstance: any = null
 
 const App: React.FC = () => {
   const [router, setRouter] = React.useState<any>(null)
+  
+  // Initialize Clerk API client with session
+  useClerkApiClient()
 
   React.useEffect(() => {
     // Dynamically import router to break circular dependency
@@ -55,11 +60,18 @@ const App: React.FC = () => {
   }
 
   return (
-    <ThemeProvider>
-      <EncryptionProvider>
-        <RouterProvider router={router} />
-      </EncryptionProvider>
-    </ThemeProvider>
+    <ClerkProvider
+      publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
+      afterSignOutUrl="/login"
+      signInUrl="/login"
+      signUpUrl="/register"
+    >
+      <ThemeProvider>
+        <EncryptionProvider>
+          <RouterProvider router={router} />
+        </EncryptionProvider>
+      </ThemeProvider>
+    </ClerkProvider>
   )
 }
 

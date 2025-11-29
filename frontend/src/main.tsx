@@ -64,6 +64,16 @@ window.addEventListener('unhandledrejection', (event) => {
 
 import { logConfig } from '@/lib/config'
 
+// Validate Clerk configuration
+const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+if (!clerkPublishableKey) {
+  console.warn('⚠️ VITE_CLERK_PUBLISHABLE_KEY not found in environment variables')
+  console.warn('⚠️ Clerk authentication will not work without this key')
+  console.warn('⚠️ Please add VITE_CLERK_PUBLISHABLE_KEY to your .env file')
+} else {
+  console.log('✅ Clerk publishable key configured')
+}
+
 // Log configuration for debugging
 logConfig()
 

@@ -180,7 +180,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	// Authentication routes (public) - Tier 1: Strictest rate limiting - MODERN AUTH PACKAGE
 	api.Post("/auth/register", rateLimits.RegisterLimiter, authHandler.Register)
 	api.Post("/auth/login", rateLimits.AuthLimiter, authHandler.Login)
-	api.Post("/auth/logout", authHandler.JWTMiddleware, authHandler.Logout)
+	api.Post("/auth/logout", authHandler.DualAuthMiddleware, authHandler.Logout)
 	api.Get("/auth/registration", rateLimits.LightweightLimiter, authHandler.GetRegistrationStatus)
 
 	// Debug routes (development only) - double check for security
@@ -198,10 +198,10 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 
 	// Announcements (public with optional auth) - Tier 5: Lightweight
 	// Returns announcements based on auth status: 'all' for everyone, 'logged_in' only for authenticated users
-	api.Get("/announcements", rateLimits.LightweightLimiter, authHandler.OptionalJWTMiddleware, announcementsHandler.GetAnnouncements)
+	api.Get("/announcements", rateLimits.LightweightLimiter, authHandler.OptionalDualAuthMiddleware, announcementsHandler.GetAnnouncements)
 
 	// Protected routes (require JWT) - USING MODERN AUTH MIDDLEWARE
-	protected := api.Group("", authHandler.JWTMiddleware)
+	protected := api.Group("", authHandler.DualAuthMiddleware)
 
 	// MFA routes - Tier 5: Lightweight for status checks, Tier 1 for verification - MODERN AUTH PACKAGE
 	protected.Get("/auth/mfa/status", rateLimits.LightweightLimiter, authHandler.GetMFAStatus)

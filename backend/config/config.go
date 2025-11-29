@@ -21,8 +21,10 @@ type Config struct {
 	DatabaseURL   string
 	RedisURL      string
 	RedisPassword string
-	JWTSecret     []byte
+	JWTSecret     []byte // Legacy JWT secret - will be phased out with Clerk
 	// EncryptionKey removed - zero-knowledge architecture (no global encryption key)
+	ClerkPublishableKey string
+	ClerkSecretKey      string
 	Port               string
 	AllowedOrigins     []string
 	MaxLoginAttempts   int
@@ -190,6 +192,9 @@ func LoadConfig() *Config {
 		SMTPUseTLS:   GetEnvAsBool("SMTP_USE_TLS", true),
 		SMTPInsecure: GetEnvAsBool("SMTP_INSECURE", false),
 		FrontendURL:  GetEnvOrDefault("FRONTEND_URL", "https://leaflock.app"),
+		// Clerk authentication configuration
+		ClerkPublishableKey: GetEnvOrDefault("CLERK_PUBLISHABLE_KEY", ""),
+		ClerkSecretKey:      GetEnvOrDefault("CLERK_SECRET_KEY", ""),
 	}
 }
 

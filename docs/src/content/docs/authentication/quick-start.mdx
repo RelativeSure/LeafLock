@@ -1,0 +1,182 @@
+---
+title: Quick Start - Clerk Authentication
+description: Get Clerk authentication running in 5 minutes
+tableOfContents: { maxHeadingLevel: 3 }
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+Get Clerk authentication running on your LeafLock instance in just 5 minutes!
+
+## Prerequisites
+
+- LeafLock instance running locally or deployed
+- Node.js 18+ and pnpm installed
+- Basic terminal/command line knowledge
+
+## 🚀 5-Minute Setup
+
+<Steps>
+
+1. **Get Clerk Keys**
+   
+   Go to [Clerk Dashboard](https://dashboard.clerk.com) and:
+   
+   - Sign up for a free account
+   - Click "Create Application"
+   - Name it "LeafLock" 
+   - Select "React" as framework
+   - Go to "API Keys" and copy both keys
+
+2. **Configure Environment**
+   
+   Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Add your Clerk keys to `.env`:
+   ```bash
+   # Clerk Authentication
+   CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
+   CLERK_SECRET_KEY=sk_test_your_key_here
+   VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
+   
+   # Enable registration for testing
+   VITE_ENABLE_REGISTRATION=true
+   ```
+
+3. **Start the Application**
+   
+   Use the automated setup script:
+   ```bash
+   ./scripts/setup-clerk-dev.sh
+   ```
+   
+   Or start manually:
+   ```bash
+   # Start the full stack
+   make up
+   
+   # Or start frontend separately
+   cd frontend && pnpm dev
+   ```
+
+4. **Test Authentication**
+   
+   Open your browser and navigate to:
+   - **Login**: http://localhost:3000/login
+   - **Register**: http://localhost:3000/register
+   
+   Try creating a new account or signing in!
+
+</Steps>
+
+## ✅ Verification
+
+### Check Authentication is Working
+
+1. **Visit Login Page**
+   - You should see the Clerk sign-in component
+   - It should match LeafLock's dark/light theme
+
+2. **Create Account**
+   - Click "Sign Up" 
+   - Enter email and password
+   - Complete any verification steps
+
+3. **Access Protected Routes**
+   - After login, you should access the dashboard at `/`
+   - Settings page should show your user info
+   - Admin panel (if admin) should be accessible
+
+### Check Backend Integration
+
+1. **API Calls Include Tokens**
+   - Open browser dev tools
+   - Go to Network tab
+   - Make any API call
+   - Verify `Authorization: Bearer <token>` header is present
+
+2. **Backend Validates Tokens**
+   - Check backend logs for authentication success
+   - Verify user context is properly set
+   - Test both Clerk and JWT tokens work
+
+## 🎨 Customization
+
+### Basic Theming
+The default setup includes LeafLock's theme. To customize:
+
+```tsx title="src/router.tsx"
+appearance={{
+  elements: {
+    // Your custom styles here
+    card: 'bg-your-background border-your-border',
+    headerTitle: 'text-your-primary',
+    formButtonPrimary: 'bg-your-accent hover:bg-your-accent-hover',
+  }
+}}
+```
+
+### Environment-Specific Settings
+
+<Tabs>
+<TabItem label="Development">
+```bash
+VITE_ENABLE_REGISTRATION=true
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
+```
+</TabItem>
+
+<TabItem label="Production">
+```bash
+VITE_ENABLE_REGISTRATION=false  # Disable registration in production
+VITE_CLERK_PUBLISHABLE_KEY=pk_live_...
+```
+</TabItem>
+</Tabs>
+
+## 🔧 Common Issues
+
+### "Clerk keys not found"
+- Make sure you've added all three Clerk variables to `.env`
+- Restart your development server after adding keys
+- Check for typos in variable names
+
+### "Authentication not working"
+- Verify your Clerk application is active
+- Check browser console for Clerk-specific errors
+- Ensure backend can reach Clerk API (check CORS)
+
+### "Build fails"
+- Make sure you removed old `@clerk/tanstack-react-start` package
+- Verify all imports use `@clerk/clerk-react`
+- Run `pnpm install` to ensure clean dependencies
+
+### "Theme not applied"
+- Check that Clerk components are using the `appearance` prop
+- Verify your theme variables are correctly set
+- Test in both light and dark modes
+
+## 🚀 Next Steps
+
+Now that you have basic authentication working:
+
+1. **[Configure Social Logins](./social-logins.mdx)** - Add Google, GitHub, etc.
+2. **[Customize Appearance](./customization.mdx)** - Match your brand perfectly
+3. **[Set Up Admin Users](./admin-setup.mdx)** - Create admin accounts
+4. **[Plan User Migration](./migration.mdx)** - Migrate existing users
+
+## 📚 Learn More
+
+- [Clerk React Documentation](https://clerk.com/docs/quickstarts/react)
+- [LeafLock Authentication Guide](./index.mdx)
+- [Implementation Details](./implementation.mdx)
+- [Troubleshooting Guide](./troubleshooting.mdx)
+
+---
+
+**🎉 Congratulations!** You now have modern, secure authentication running on LeafLock. The integration supports both existing JWT users and new Clerk users during the migration period.
+
+Need help? Check the [troubleshooting guide](./troubleshooting.mdx) or join our [Discord community](https://discord.gg/leaflock).

@@ -1,81 +1,254 @@
 ---
-title: Multi-Factor Authentication
-description: Overview of LeafLock's MFA implementation
-sidebar:
-  order: 1
+title: Authentication Overview
+description: Complete guide to LeafLock's modern authentication system with Clerk
+tableOfContents: { maxHeadingLevel: 3 }
 ---
 
-LeafLock implements RFC 6238 TOTP multi-factor authentication with encrypted secret storage and Argon2id-hashed backup codes.
+import { CardGrid, Card, LinkCard } from '@astrojs/starlight/components';
 
-## Implementation Details
+LeafLock uses [Clerk](https://clerk.com) for modern, secure authentication. This integration provides enterprise-grade authentication features while maintaining LeafLock's zero-knowledge architecture and end-to-end encryption.
 
-**TOTP Configuration** (`backend/auth/mfa.go:35`):
-- Algorithm: SHA-1 (RFC 6238 standard)
-- Time step: 30 seconds
-- Code length: 6 digits
-- Window: ±30 seconds (90-second validity)
-- Secret storage: XChaCha20-Poly1305 encrypted in `mfa_secret_encrypted` column
+## 🚀 What's New
 
-**Backup Codes** (`backend/auth/mfa.go:89`):
-- Count: 10 codes per user
-- Format: 12 characters (XXXX-XXXX-XXXX)
-- Storage: Argon2id hashed with deterministic salt
-- Usage: Single-use, constant-time comparison
-- Regeneration: Requires password confirmation
+LeafLock has transitioned from a custom JWT-based authentication system to **Clerk**, providing:
 
-**Rate Limiting** (`backend/middleware/rate_limit.go:45`):
-- MFA verification: 10 requests per 5 minutes (IP-based)
-- MFA setup/enable/disable: 10 requests per 5 minutes
-- Implementation: Redis fixed window algorithm
-- Key format: `limiter:{ip}:/api/v1/auth/mfa/*`
+- **Modern Authentication**: Social logins, passwordless auth, passkeys, MFA
+- **Enterprise Security**: Automatic breach detection, bot protection, rate limiting  
+- **Professional UX**: Beautiful, accessible authentication components
+- **Developer Experience**: Type-safe, well-documented, easy to integrate
+- **Compliance**: Built-in GDPR, SOC 2, HIPAA compliance
 
-**Security Features**:
-- Constant-time code comparison (prevents timing attacks)
-- Account lockout: 5 failed login attempts = 15-minute lock
-- MFA session tokens: 5-minute expiration
-- Audit logging: All MFA events tracked in `audit_log` table
+## 🎯 Quick Start
 
-## Endpoints
+Get Clerk authentication running in under 5 minutes:
 
-- `POST /api/v1/auth/mfa/setup` - Generate TOTP secret and QR code
-- `POST /api/v1/auth/mfa/enable` - Activate MFA (returns backup codes)
-- `POST /api/v1/auth/mfa/verify` - Verify TOTP/backup code during login
-- `POST /api/v1/auth/mfa/disable` - Deactivate MFA
-- `GET /api/v1/auth/mfa/status` - Check MFA status and remaining codes
-- `POST /api/v1/auth/mfa/backup-codes/regenerate` - Generate new backup codes
+<LinkCard
+  title="Quick Start Guide"
+  description="Set up Clerk authentication in 5 minutes"
+  href="./quick-start"
+  icon="rocket"
+/>
 
-Full API reference: [/authentication/api-endpoints](/authentication/api-endpoints)
+## 📚 Documentation
 
-## Database Schema
+<CardGrid>
+  <Card title="Integration Guide" icon="plug">
+    Learn how Clerk is integrated into LeafLock's architecture
+    
+    [Read Guide →](./clerk-integration)
+  </Card>
+  
+  <Card title="Implementation Details" icon="code">
+    Technical details, code examples, and architecture decisions
+    
+    [View Details →](./implementation)
+  </Card>
+  
+  <Card title="Configuration Reference" icon="gear">
+    Complete reference for all authentication configuration options
+    
+    [View Reference →](./configuration)
+  </Card>
+  
+  <Card title="Migration Guide" icon="arrow-right">
+    Step-by-step guide for migrating from JWT to Clerk
+    
+    [Start Migration →](./migration)
+  </Card>
+  
+  <Card title="Troubleshooting" icon="wrench">
+    Common issues and solutions for authentication problems
+    
+    [Get Help →](./troubleshooting)
+  </Card>
+</CardGrid>
 
-**Users table columns** (`backend/database/schema.go:22-25`):
-```sql
-mfa_enabled BOOLEAN DEFAULT false
-mfa_secret_encrypted BYTEA
-mfa_backup_codes BYTEA[]        -- Argon2id hashes (10 total)
-mfa_backup_codes_used BYTEA[]   -- Hashes of used codes
+## 🔧 Architecture Overview
+
+LeafLock implements a **dual authentication system** that supports both legacy JWT tokens and modern Clerk authentication during the migration period:
+
+```mermaid
+graph TB
+    subgraph "Frontend (React)"
+        A[Clerk Provider] --> B[SignIn/SignUp Components]
+        B --> C[Session Management]
+        C --> D[API Client]
+    end
+    
+    subgraph "Backend (Go)"
+        D --> E[Dual Auth Middleware]
+        E --> F{Token Type?}
+        F -->|Clerk Token| G[Clerk Validation]
+        F -->|JWT Token| H[JWT Validation]
+        G --> I[User Context]
+        H --> I
+    end
+    
+    subgraph "External Services"
+        J[Clerk API]
+        K[Clerk Dashboard]
+    end
+    
+    G --> J
+    B --> K
+    
+    style A fill:#e1f5fe
+    style E fill:#fff3e0
+    style J fill:#f3e5f5
 ```
 
-**Audit log events**:
-- `mfa.enabled` / `mfa.disabled`
-- `mfa.verification_success` / `mfa.verification_failed`
-- `mfa.backup_code_used` / `mfa.backup_code_failed`
-- `mfa.backup_codes_regenerated`
+### Key Features
 
-## User Guides
+- **Zero-Downtime Migration**: Existing users continue working during transition
+- **Zero-Knowledge Architecture**: End-to-end encryption preserved
+- **Type Safety**: Full TypeScript support throughout the stack
+- **Professional Security**: Enterprise-grade authentication security
+- **Modern UX**: Accessible, beautiful authentication components
 
-- [Setup Guide](/authentication/setup-guide) - Enable MFA step-by-step
-- [Backup Codes](/authentication/backup-codes) - Understanding recovery codes
-- [Managing MFA](/authentication/managing-mfa) - Enable/disable/regenerate
-- [Troubleshooting](/authentication/troubleshooting) - Common issues
+## 🎨 Authentication Components
 
-## Admin Operations
+LeafLock includes professionally designed authentication components that match your theme:
 
-- [Admin MFA Management](/authentication/admin-mfa-management) - Database-level MFA reset, monitoring queries, audit trail analysis
+### Sign-In Component
+- Email/password authentication
+- Social login buttons (Google, GitHub, etc.)
+- Password reset links
+- Fully customizable appearance
 
-## Implementation Files
+### Sign-Up Component  
+- User registration with validation
+- Password strength indicators
+- Terms acceptance
+- Email verification
 
-- `backend/auth/mfa.go` - TOTP generation, verification, backup codes
-- `backend/auth/handlers.go` - HTTP endpoints (lines 202-379)
-- `backend/auth/middleware.go` - JWT validation
-- `backend/middleware/rate_limit.go` - Rate limiting configuration
+### User Profile
+- Account management
+- Password changes
+- MFA setup
+- Social connections
+
+## ⚙️ Configuration
+
+### Required Settings
+
+```bash
+# Clerk Authentication (Required)
+CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
+CLERK_SECRET_KEY=sk_test_your_key_here
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
+
+# Registration Control
+VITE_ENABLE_REGISTRATION=true
+```
+
+### Optional Settings
+
+```bash
+# Custom URLs
+CLERK_SIGN_IN_URL=/login
+CLERK_SIGN_UP_URL=/register
+CLERK_AFTER_SIGN_IN_URL=/
+
+# Security Settings
+MAX_LOGIN_ATTEMPTS=5
+LOCKOUT_MINUTES=15
+```
+
+## 🛡️ Security Features
+
+### Built-in Security
+- **Automatic Breach Detection**: Passwords checked against known breaches
+- **Bot Protection**: Advanced bot detection and prevention
+- **Rate Limiting**: Built-in protection against brute force attacks
+- **Session Management**: Secure session handling with automatic refresh
+
+### Compliance
+- **GDPR Compliant**: Built-in privacy controls and data export
+- **SOC 2 Type 2**: Regular security audits and compliance
+- **HIPAA Ready**: Available with BAA for healthcare applications
+
+### Zero-Knowledge Architecture
+- **Client-side Encryption**: User content encrypted before reaching server
+- **Password-derived Keys**: Encryption keys derived from user passwords
+- **No Server-side Keys**: Server never has access to encryption keys
+
+## 📊 Migration Status
+
+### Current Status
+- ✅ **Dual Authentication**: Both JWT and Clerk work simultaneously
+- ✅ **Backend Integration**: Clerk middleware implemented
+- ✅ **Frontend Components**: Clerk components integrated
+- ✅ **Type Safety**: Full TypeScript support
+- ✅ **Testing**: Integration tests passing
+
+### Next Steps
+1. **Get Clerk Keys**: Sign up at [Clerk Dashboard](https://dashboard.clerk.com)
+2. **Configure Environment**: Add your Clerk keys to `.env`
+3. **Test Authentication**: Try the sign-in/sign-up flow
+4. **Migrate Users**: Gradually move users to Clerk (optional)
+
+## 🚀 Getting Started
+
+### For New Projects
+Start with Clerk authentication from day one:
+
+```bash
+# 1. Get Clerk keys
+# Go to https://dashboard.clerk.com
+
+# 2. Configure environment
+echo "CLERK_PUBLISHABLE_KEY=pk_test_your_key" >> .env
+echo "CLERK_SECRET_KEY=sk_test_your_key" >> .env
+echo "VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_key" >> .env
+
+# 3. Start development
+./scripts/setup-clerk-dev.sh
+```
+
+### For Existing Projects
+Migrate from JWT to Clerk gradually:
+
+```bash
+# 1. Add Clerk configuration (keep JWT for now)
+echo "CLERK_PUBLISHABLE_KEY=pk_test_your_key" >> .env
+echo "CLERK_SECRET_KEY=sk_test_your_key" >> .env
+
+# 2. Deploy with dual authentication
+make deploy
+
+# 3. Test both authentication methods work
+# 4. Gradually migrate users
+# 5. Remove JWT when ready
+```
+
+## 📈 Benefits
+
+### For Users
+- **Better Security**: Professional-grade authentication security
+- **Modern Experience**: Beautiful, accessible authentication flows
+- **More Options**: Social logins, passwordless auth, MFA
+- **Reliability**: Enterprise-grade uptime and performance
+
+### For Developers
+- **Reduced Maintenance**: No more custom auth code to maintain
+- **Better Documentation**: Comprehensive guides and examples
+- **Type Safety**: Full TypeScript support throughout
+- **Professional Support**: Access to Clerk's support team
+
+### For Business
+- **Compliance**: Built-in GDPR, SOC 2, HIPAA compliance
+- **Scalability**: Handles authentication at enterprise scale
+- **Cost Effective**: Free tier covers most use cases
+- **Risk Reduction**: Professional security team oversight
+
+## 🔗 Related Documentation
+
+- **[Quick Start](./quick-start)** - Get running in 5 minutes
+- **[Implementation Details](./implementation)** - Technical architecture
+- **[Configuration Reference](./configuration)** - All configuration options
+- **[Migration Guide](./migration)** - Move from JWT to Clerk
+- **[Troubleshooting](./troubleshooting)** - Fix common issues
+
+---
+
+**Ready to upgrade your authentication?** Start with the [Quick Start Guide](./quick-start) and experience modern, secure authentication with Clerk and LeafLock! 🚀

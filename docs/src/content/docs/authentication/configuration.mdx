@@ -1,0 +1,690 @@
+---
+title: Configuration Reference
+description: Complete reference for all Clerk authentication configuration options
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+This document provides a complete reference for all configuration options related to Clerk authentication in LeafLock.
+
+## Environment Variables
+
+### Required Configuration
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `CLERK_PUBLISHABLE_KEY` | Clerk publishable key for backend | `pk_test_abc123...` |
+| `CLERK_SECRET_KEY` | Clerk secret key for backend | `sk_test_xyz789...` |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Clerk publishable key for frontend | `pk_test_abc123...` |
+
+### Optional Configuration
+
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| `VITE_ENABLE_REGISTRATION` | Enable/disable user registration | `true` | `true` or `false` |
+| `CLERK_SIGN_IN_URL` | Custom sign-in URL | `/login` | `/auth/signin` |
+| `CLERK_SIGN_UP_URL` | Custom sign-up URL | `/register` | `/auth/signup` |
+| `CLERK_AFTER_SIGN_IN_URL` | Redirect after sign in | `/` | `/dashboard` |
+| `CLERK_AFTER_SIGN_UP_URL` | Redirect after sign up | `/` | `/onboarding` |
+| `CLERK_AFTER_SIGN_OUT_URL` | Redirect after sign out | `/login` | `/` |
+
+## Frontend Configuration
+
+### ClerkProvider Setup
+
+```tsx title="src/App.tsx"
+<ClerkProvider
+  publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
+  afterSignOutUrl="/login"
+  signInUrl="/login"
+  signUpUrl="/register"
+>
+  {/* Your app content */}
+</ClerkProvider>
+```
+
+### Component Configuration
+
+#### SignIn Component
+
+```tsx title="SignIn Configuration"
+<SignIn
+  routing="path"
+  path="/login"
+  signUpUrl="/register"
+  afterSignInUrl="/"
+  redirectUrl="/"
+  appearance={{
+    elements: {
+      // Layout
+      rootBox: 'mx-auto max-w-md',
+      card: 'bg-background border-border shadow-lg',
+      cardBox: 'w-full',
+      
+      // Headers
+      headerTitle: 'text-2xl font-bold text-foreground',
+      headerSubtitle: 'text-muted-foreground text-sm',
+      
+      // Form fields
+      formFieldLabel: 'text-foreground font-medium text-sm',
+      formFieldInput: 'bg-background border-border text-foreground placeholder:text-muted-foreground',
+      formFieldInputShowPasswordButton: 'text-muted-foreground hover:text-foreground',
+      formFieldSuccessText: 'text-green-600',
+      formFieldErrorText: 'text-destructive',
+      
+      // Buttons
+      socialButtonsBlockButton: 'bg-background border-border text-foreground hover:bg-accent',
+      socialButtonsBlockButtonText: 'text-foreground',
+      socialButtonsProviderIcon: 'w-5 h-5',
+      
+      formButtonPrimary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+      formButtonReset: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+      
+      // Footer
+      footerActionText: 'text-muted-foreground',
+      footerActionLink: 'text-primary hover:text-primary/90 underline',
+      
+      // Dividers
+      dividerLine: 'bg-border',
+      dividerText: 'text-muted-foreground text-xs',
+      
+      // Alerts
+      alert: 'border-border bg-accent',
+      alertText: 'text-foreground',
+      
+      // Password
+      passwordInput: 'w-full',
+      passwordStrength: 'mt-2',
+      passwordStrengthText: 'text-xs',
+      
+      // Social connections
+      identityPreview: 'border-border bg-accent',
+      identityPreviewText: 'text-foreground',
+      identityPreviewEditButton: 'text-primary hover:text-primary/90',
+      
+      // Alternative methods
+      alternativeMethods: 'mt-4',
+      alternativeMethodsBlockButton: 'text-foreground hover:bg-accent',
+      
+      // Loader
+      spinner: 'text-primary',
+      
+      // Footer
+      footer: 'mt-8',
+    },
+    variables: {
+      colorPrimary: '#3b82f6',
+      colorBackground: '#0f172a',
+      colorText: '#f8fafc',
+      colorInputBackground: '#1e293b',
+      colorInputText: '#f8fafc',
+      fontFamily: 'Inter, sans-serif',
+      fontSize: '14px',
+      borderRadius: '6px',
+    },
+    layout: {
+      socialButtonsPlacement: 'bottom',
+      socialButtonsVariant: 'blockButton',
+      termsPageUrl: '/terms',
+      privacyPageUrl: '/privacy',
+      helpPageUrl: '/help',
+      showOptionalFields: true,
+    },
+  }}
+/>
+```
+
+#### SignUp Component
+
+```tsx title="SignUp Configuration"
+<SignUp
+  routing="path"
+  path="/register"
+  signInUrl="/login"
+  afterSignUpUrl="/"
+  unsafeMetadata={{
+    // Custom metadata for new users
+    onboarded: false,
+    theme: 'dark',
+  }}
+  appearance={{
+    elements: {
+      // Same as SignIn configuration
+      // Plus additional sign-up specific elements:
+      formFieldLabel__emailAddress: 'text-foreground',
+      formFieldLabel__password: 'text-foreground',
+      formFieldLabel__confirmPassword: 'text-foreground',
+      formFieldInput__emailAddress: 'bg-background border-border',
+      formFieldInput__password: 'bg-background border-border',
+      formFieldInput__confirmPassword: 'bg-background border-border',
+      formFieldHintText__password: 'text-muted-foreground text-sm',
+      formFieldHintText__confirmPassword: 'text-muted-foreground text-sm',
+    },
+  }}
+/>
+```
+
+### Custom Authentication Flow
+
+```tsx title="Custom Authentication Hook"
+import { useSignIn, useSignUp } from '@clerk/clerk-react'
+
+function CustomAuthFlow() {
+  const { signIn, isLoaded: signInLoaded } = useSignIn()
+  const { signUp, isLoaded: signUpLoaded } = useSignUp()
+  
+  const handleCustomSignIn = async (email: string, password: string) => {
+    if (!signInLoaded) return
+    
+    try {
+      await signIn.create({
+        identifier: email,
+        password: password,
+      })
+      
+      // Handle success
+      router.push('/')
+    } catch (error) {
+      // Handle error
+      console.error('Sign in failed:', error)
+    }
+  }
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* Custom form implementation */}
+    </form>
+  )
+}
+```
+
+## Backend Configuration
+
+### Go Configuration
+
+```go title="backend/config/config.go"
+type Config struct {
+    // ... existing fields
+    
+    // Clerk Authentication
+    ClerkPublishableKey string
+    ClerkSecretKey      string
+    
+    // Authentication Settings
+    MaxLoginAttempts   int
+    LockoutDuration    time.Duration
+    SessionDuration    time.Duration
+}
+
+func LoadConfig() *Config {
+    return &Config{
+        // ... existing configuration
+        
+        ClerkPublishableKey: GetEnvOrDefault("CLERK_PUBLISHABLE_KEY", ""),
+        ClerkSecretKey:      GetEnvOrDefault("CLERK_SECRET_KEY", ""),
+        
+        MaxLoginAttempts:   GetEnvAsInt("MAX_LOGIN_ATTEMPTS", 5),
+        LockoutDuration:    time.Duration(GetEnvAsInt("LOCKOUT_MINUTES", 15)) * time.Minute,
+        SessionDuration:    24 * time.Hour,
+    }
+}
+```
+
+### Middleware Configuration
+
+```go title="backend/auth/middleware.go"
+// Clerk middleware configuration
+func (h *Handler) ClerkMiddleware(c *fiber.Ctx) error {
+    // Configuration options
+    config := struct {
+        TokenCacheEnabled bool
+        CacheTTL         time.Duration
+        RateLimitEnabled bool
+        MaxAttempts      int
+    }{
+        TokenCacheEnabled: true,
+        CacheTTL:         5 * time.Minute,
+        RateLimitEnabled: true,
+        MaxAttempts:      h.config.MaxLoginAttempts,
+    }
+    
+    // Implementation with configuration
+    // ... middleware logic
+}
+```
+
+### Route Configuration
+
+```go title="backend/routes.go"
+func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *appconfig.Config, startTime time.Time, readyState *appserver.ReadyState) {
+    // Authentication configuration
+    authConfig := auth.Config{
+        MaxAttempts:   config.MaxLoginAttempts,
+        LockoutDuration: config.LockoutDuration,
+        SessionDuration: config.SessionDuration,
+        ClerkEnabled:  config.ClerkSecretKey != "",
+        JWTEnabled:    len(config.JWTSecret) > 0,
+    }
+    
+    // Apply authentication middleware based on configuration
+    if authConfig.ClerkEnabled || authConfig.JWTEnabled {
+        // Use dual authentication middleware
+        protected := api.Group("", authHandler.DualAuthMiddleware)
+        
+        // Conditional middleware based on auth type
+        if authConfig.ClerkEnabled {
+            // Clerk-specific routes
+            api.Post("/auth/clerk/webhook", rateLimits.StandardLimiter, authHandler.ClerkWebhook)
+        }
+        
+        if authConfig.JWTEnabled {
+            // JWT-specific routes during transition
+            api.Post("/auth/jwt/refresh", rateLimits.StandardLimiter, authHandler.JWTRefresh)
+        }
+    }
+}
+```
+
+## Social Authentication Configuration
+
+### Enable Social Providers
+
+<Tabs>
+<TabItem label="Google OAuth">
+```tsx title="Google OAuth Setup"
+// 1. Configure in Clerk Dashboard
+// Go to: User Authentication > Social Connections > Google
+// Add your OAuth credentials
+
+// 2. Frontend configuration
+<SignIn
+  appearance={{
+    elements: {
+      socialButtonsBlockButton__google: 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50',
+      socialButtonsProviderIcon__google: 'w-5 h-5',
+    },
+  }}
+  socialButtonsPlacement="bottom"
+  socialButtonsVariant="blockButton"
+/>
+
+// 3. Environment variables
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+```
+</TabItem>
+
+<TabItem label="GitHub OAuth">
+```tsx title="GitHub OAuth Setup"
+// 1. Configure in Clerk Dashboard
+// Go to: User Authentication > Social Connections > GitHub
+// Add your OAuth App credentials
+
+// 2. Frontend configuration
+<SignIn
+  appearance={{
+    elements: {
+      socialButtonsBlockButton__github: 'bg-gray-900 text-white hover:bg-gray-800',
+      socialButtonsProviderIcon__github: 'w-5 h-5',
+    },
+  }}
+  socialButtonsPlacement="bottom"
+  socialButtonsVariant="blockButton"
+/>
+
+// 3. Environment variables
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+```
+</TabItem>
+</Tabs>
+
+### Custom OAuth Providers
+
+```tsx title="Custom OAuth Configuration"
+// 1. Configure custom provider in Clerk Dashboard
+// Go to: User Authentication > Social Connections > Custom Provider
+
+// 2. Frontend usage
+<SignIn
+  socialButtonsPlacement="bottom"
+  socialButtonsVariant="blockButton"
+  oauthProviders={['google', 'github', 'custom']}
+  appearance={{
+    elements: {
+      socialButtonsBlockButton__custom: 'bg-blue-600 text-white hover:bg-blue-700',
+      socialButtonsProviderIcon__custom: 'w-5 h-5',
+    },
+  }}
+/>
+```
+
+## Multi-Factor Authentication (MFA)
+
+### Enable MFA
+
+```tsx title="MFA Configuration"
+// Backend configuration (in Clerk Dashboard)
+// Go to: User Authentication > Multi-factor Authentication
+
+// Frontend - Check MFA status
+import { useUser } from '@clerk/clerk-react'
+
+function MFASection() {
+  const { user } = useUser()
+  
+  return (
+    <div>
+      <h3>Two-Factor Authentication</h3>
+      {user?.twoFactorEnabled ? (
+        <p>✅ 2FA is enabled</p>
+      ) : (
+        <Button onClick={() => navigate('/settings/security')}>
+          Enable 2FA
+        </Button>
+      )}
+    </div>
+  )
+}
+```
+
+### MFA Setup Flow
+
+```tsx title="MFA Setup Component"
+import { useUser } from '@clerk/clerk-react'
+
+function MFASetup() {
+  const { user } = useUser()
+  
+  const enableMFA = async () => {
+    try {
+      // This will redirect to Clerk's MFA setup
+      await user?.update({
+        password: currentPassword,
+      })
+      
+      // Clerk will handle the MFA setup flow
+    } catch (error) {
+      console.error('MFA setup failed:', error)
+    }
+  }
+  
+  return (
+    <div>
+      <h2>Set Up Two-Factor Authentication</h2>
+      <Button onClick={enableMFA}>
+        Enable Two-Factor Authentication
+      </Button>
+    </div>
+  )
+}
+```
+
+## Security Configuration
+
+### Rate Limiting
+
+```go title="Rate Limiting Configuration"
+// Backend rate limiting
+func (h *Handler) setupRateLimiting() {
+    rateLimits := middleware.RateLimitConfig{
+        AuthEndpoints: middleware.RateLimit{
+            Requests: 10,
+            Window:   5 * time.Minute,
+            KeyFunc: func(c *fiber.Ctx) string {
+                return getClientIP(c) + ":auth"
+            },
+        },
+        ClerkSpecific: middleware.RateLimit{
+            Requests: 20,
+            Window:   1 * time.Minute,
+            KeyFunc: func(c *fiber.Ctx) string {
+                return getClientIP(c) + ":clerk"
+            },
+        },
+    }
+    
+    // Apply rate limiting middleware
+    app.Use(middleware.RateLimitMiddleware(rateLimits))
+}
+```
+
+### Security Headers
+
+```go title="Security Headers Configuration"
+app.Use(helmet.New(helmet.Config{
+    XSSProtection:      "1; mode=block",
+    ContentTypeNosniff: "nosniff",
+    XFrameOptions:      "DENY",
+    HSTSMaxAge:         31536000, // 1 year
+    HSTSPreloadEnabled: true,
+    ContentSecurityPolicy: "default-src 'self'; " +
+        "script-src 'self' https://clerk.your-domain.com; " +
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+        "img-src 'self' data: https://img.clerk.com; " +
+        "connect-src 'self' https://api.clerk.com; " +
+        "font-src 'self' https://fonts.gstatic.com;",
+}))
+```
+
+### Session Security
+
+```go title="Session Security Configuration"
+func (h *Handler) createSecureSession(ctx context.Context, userID uuid.UUID, authType string) (*Session, error) {
+    session := &Session{
+        ID:        uuid.New(),
+        UserID:    userID,
+        AuthType:  authType,
+        IPAddress: getClientIP(ctx),
+        UserAgent: getUserAgent(ctx),
+        ExpiresAt: time.Now().Add(h.config.SessionDuration),
+        CreatedAt: time.Now(),
+        Secure:    true,
+        HttpOnly:  true,
+        SameSite:  "strict",
+    }
+    
+    // Additional security measures
+    if authType == "clerk" {
+        session.TokenHash = generateSecureHash(session.ID.String())
+        session.EncryptionKey = deriveSessionKey(session.ID, userID)
+    }
+    
+    return session, nil
+}
+```
+
+## Monitoring and Analytics
+
+### Authentication Metrics
+
+```go title="Metrics Configuration"
+// Set up authentication metrics
+authMetrics := prometheus.NewCounterVec(
+    prometheus.CounterOpts{
+        Name: "leaflock_auth_attempts_total",
+        Help: "Total number of authentication attempts",
+    },
+    []string{"auth_type", "success"},
+)
+
+// Record authentication events
+func recordAuthEvent(authType string, success bool) {
+    authMetrics.WithLabelValues(authType, strconv.FormatBool(success)).Inc()
+}
+```
+
+### Logging Configuration
+
+```go title="Logging Configuration"
+// Structured logging for authentication
+func (h *Handler) logAuthEvent(ctx context.Context, event string, userID uuid.UUID, authType string, success bool) {
+    logEntry := logrus.WithFields(logrus.Fields{
+        "event":       event,
+        "user_id":     userID,
+        "auth_type":   authType,
+        "success":     success,
+        "ip":          getClientIP(ctx),
+        "user_agent":  getUserAgent(ctx),
+        "timestamp":   time.Now().Format(time.RFC3339),
+    })
+    
+    if success {
+        logEntry.Info("Authentication event")
+    } else {
+        logEntry.Warn("Authentication failure")
+    }
+}
+```
+
+## Deployment Configuration
+
+### Docker Configuration
+
+```dockerfile title="Dockerfile"
+# Frontend build arguments
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+
+# Backend environment
+ENV CLERK_PUBLISHABLE_KEY=$CLERK_PUBLISHABLE_KEY
+ENV CLERK_SECRET_KEY=$CLERK_SECRET_KEY
+
+# Build frontend
+RUN npm run build
+
+# Runtime configuration
+ENV NODE_ENV=production
+ENV LOG_LEVEL=info
+```
+
+### Docker Compose
+
+```yaml title="docker-compose.yml"
+services:
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY}
+    environment:
+      - NODE_ENV=production
+      - VITE_CLERK_PUBLISHABLE_KEY=${VITE_CLERK_PUBLISHABLE_KEY}
+      - VITE_ENABLE_REGISTRATION=${VITE_ENABLE_REGISTRATION:-false}
+  
+  backend:
+    build: ./backend
+    environment:
+      - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - MAX_LOGIN_ATTEMPTS=${MAX_LOGIN_ATTEMPTS:-5}
+      - LOCKOUT_MINUTES=${LOCKOUT_MINUTES:-15}
+```
+
+### Kubernetes Configuration
+
+```yaml title="kubernetes-config.yaml"
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: leaflock-config
+data:
+  CLERK_PUBLISHABLE_KEY: "pk_live_..."
+  MAX_LOGIN_ATTEMPTS: "5"
+  LOCKOUT_MINUTES: "15"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: leaflock-secrets
+type: Opaque
+data:
+  CLERK_SECRET_KEY: <base64-encoded-secret>
+```
+
+## Testing Configuration
+
+### Test Environment
+
+```bash title="test environment setup"
+# Test Clerk keys (use test keys, not production)
+CLERK_PUBLISHABLE_KEY=pk_test_your_test_key
+CLERK_SECRET_KEY=sk_test_your_test_key
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_test_key
+
+# Relaxed security for testing
+MAX_LOGIN_ATTEMPTS=100
+LOCKOUT_MINUTES=1
+SESSION_DURATION=1h
+
+# Enable debug logging
+LOG_LEVEL=debug
+```
+
+### Test Users
+
+```tsx title="test user creation"
+// Create test users in Clerk
+const testUsers = [
+  {
+    email: 'test@example.com',
+    password: 'TestPassword123!',
+    firstName: 'Test',
+    lastName: 'User',
+  },
+  {
+    email: 'admin@example.com',
+    password: 'AdminPassword123!',
+    firstName: 'Admin',
+    lastName: 'User',
+    publicMetadata: { isAdmin: true },
+  },
+]
+
+// Use Clerk Dashboard or API to create test users
+```
+
+## Troubleshooting Configuration
+
+### Debug Mode
+
+```bash title="debug configuration"
+# Enable debug logging
+LOG_LEVEL=debug
+
+# Verbose Clerk logging
+CLERK_LOG_LEVEL=debug
+
+# Enable request/response logging
+ENABLE_REQUEST_LOGGING=true
+ENABLE_RESPONSE_LOGGING=true
+```
+
+### Health Checks
+
+```go title="health check configuration"
+func (h *Handler) healthCheck(c *fiber.Ctx) error {
+    // Check Clerk connectivity
+    clerkHealth := h.checkClerkHealth()
+    
+    // Check database connectivity
+    dbHealth := h.checkDatabaseHealth()
+    
+    // Check Redis connectivity
+    redisHealth := h.checkRedisHealth()
+    
+    return c.JSON(fiber.Map{
+        "status": "healthy",
+        "timestamp": time.Now().Format(time.RFC3339),
+        "services": fiber.Map{
+            "clerk": clerkHealth,
+            "database": dbHealth,
+            "redis": redisHealth,
+        },
+    })
+}
+```
+
+---
+
+This configuration reference covers all aspects of Clerk authentication setup in LeafLock. For specific use cases or advanced configurations, refer to the [Clerk documentation](https://clerk.com/docs) or create custom implementations based on these patterns.

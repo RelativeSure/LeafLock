@@ -119,6 +119,19 @@ func main() {
 	handlerKey := sha256.Sum256(append([]byte(config.JWTSecret), []byte("-handler-encryption")...))
 	handlerCrypto := appcrypto.NewCryptoService(handlerKey[:])
 
+	// Initialize Clerk if configured
+	if config.ClerkSecretKey != "" {
+		clerkStart := time.Now()
+		if err := auth.InitializeClerk(config.ClerkSecretKey); err != nil {
+			log.Printf("⚠️  Clerk initialization failed: %v", err)
+			log.Printf("⚠️  Continuing with JWT authentication only")
+		} else {
+			log.Printf("⏱️  Clerk SDK initialized in %v", time.Since(clerkStart))
+		}
+	} else {
+		log.Println("⚠️  CLERK_SECRET_KEY not configured - Clerk authentication disabled")
+	}
+
 	// Initialize readiness state
 	readyState := appserver.NewReadyState(db, config, rdb)
 

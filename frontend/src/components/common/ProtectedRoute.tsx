@@ -1,15 +1,21 @@
 import React from 'react'
-import type { User } from '@/types'
 import { AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 
+interface ClerkUser {
+  id: string
+  email: string
+  name?: string
+  isAdmin: boolean
+}
+
 interface ProtectedRouteProps {
   children: React.ReactNode
   requiredRole?: 'admin' | 'user'
   isLoading?: boolean
-  user: User | null
+  user: ClerkUser | null
   fallbackRoute?: string
 }
 
@@ -51,7 +57,7 @@ export function ProtectedRoute({
     )
   }
 
-  if (requiredRole === 'admin' && user.role !== 'admin') {
+  if (requiredRole === 'admin' && !user.isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
