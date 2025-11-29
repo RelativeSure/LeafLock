@@ -1,3 +1,53 @@
+/**
+ * AppLayout Component
+ * 
+ * Purpose: Provides the main application layout structure with resizable sidebar,
+ * responsive design, and consistent navigation. Implements a flexible panel system
+ * that adapts to different screen sizes and user preferences.
+ * 
+ * User Experience Goals:
+ * - Intuitive resizable sidebar for customizable workspace
+ * - Smooth transitions and animations for layout changes
+ * - Mobile-responsive design with touch-friendly interactions
+ * - Persistent sidebar width preferences across sessions
+ * - Clean separation between navigation and content areas
+ * 
+ * Layout Architecture:
+ * - Resizable sidebar (15-40% width) containing app navigation
+ * - Main content area with header and dynamic content
+ * - Collapsible sidebar for mobile devices
+ * - Responsive handle for manual resizing
+ * 
+ * Performance Considerations:
+ * - Optimized re-renders through proper state management
+ * - Efficient resize handling with debounced updates
+ * - Mobile-specific optimizations to reduce layout calculations
+ * - Lazy loading of sidebar content when appropriate
+ * 
+ * Accessibility Features:
+ * - Keyboard navigation support for resize operations
+ * - Screen reader announcements for layout changes
+ * - High contrast indicators for resize handles
+ * - Semantic HTML structure for better navigation
+ * 
+ * Responsive Design:
+ * - Mobile: Fixed sidebar with overlay behavior
+ * - Tablet: Collapsible sidebar with touch gestures
+ * - Desktop: Full resizable functionality
+ * - Automatic adaptation based on viewport size
+ * 
+ * Integration Points:
+ * - SidebarProvider: Manages sidebar state and behavior
+ * - ResizablePanelGroup: Implements drag-to-resize functionality
+ * - useSidebarResize: Custom hook for persistent width management
+ * - TanStack Router: Handles dynamic content rendering
+ * 
+ * State Management:
+ * - Sidebar state (open/collapsed) via context provider
+ * - Panel width percentage via custom hook
+ * - Mobile detection for responsive behavior
+ */
+
 import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
 import { AppSidebar } from './app-sidebar'
 import { Outlet } from '@tanstack/react-router'
@@ -10,7 +60,15 @@ function AppLayoutContent() {
   const { widthPercentage, setWidth } = useSidebarResize()
   const isCollapsed = state === 'collapsed'
 
-  // Disable resize on mobile or when sidebar is collapsed
+  /**
+   * Responsive Behavior Control
+   * 
+   * Purpose: Disables resize functionality on mobile devices or when
+   * sidebar is collapsed to prevent layout issues and improve touch UX.
+   * 
+   * Mobile Experience: Uses overlay sidebar instead of resize
+   * Desktop Experience: Full resize capabilities with visual handles
+   */
   const resizeDisabled = isMobile || isCollapsed
 
   return (

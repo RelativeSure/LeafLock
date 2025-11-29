@@ -1,3 +1,5 @@
+// Package middleware provides HTTP middleware components for request processing.
+// Includes rate limiting, authentication, security headers, and request validation.
 package middleware
 
 import (
@@ -11,7 +13,9 @@ import (
 	"leaflock/utils"
 )
 
-// RateLimitConfig holds all rate limiter instances
+// RateLimitConfig manages multiple rate limiting strategies for different endpoint categories
+// Provides granular control over request throttling based on operation sensitivity and resource usage
+// Thread-safe configuration for high-concurrency environments
 type RateLimitConfig struct {
 	AuthLimiter             fiber.Handler
 	RegisterLimiter         fiber.Handler

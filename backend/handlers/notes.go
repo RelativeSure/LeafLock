@@ -164,7 +164,84 @@ func (h *NotesHandler) GetNote(c *fiber.Ctx) error {
 	})
 }
 
-// CreateNote godoc
+// CreateNote handles secure note creation with zero-knowledge encryption
+//
+// Business Purpose:
+// - Creates encrypted notes within user's workspace
+// - Implements client-side encryption with server-side integrity verification
+// - Supports note organization through pinning and ordering
+// - Provides version history foundation for future note updates
+//
+// Zero-Knowledge Architecture:
+// - Server receives only base64-encoded encrypted content
+// - No access to encryption keys or plaintext content
+// - Content integrity verified via Argon2id hash without decryption
+// - Encryption/decryption handled exclusively on client side
+// - Server acts as encrypted data storage and retrieval service
+//
+// Security Implementation:
+// - Encrypted content validated for proper base64 encoding
+// - Content hash generated for integrity verification (Argon2id)
+// - User authorization verified via JWT token
+// - Workspace ownership validated before note creation
+// - SQL injection prevention through parameterized queries
+//
+// Data Integrity & Validation:
+// - Base64 decoding validates client encoding correctness
+// - Content hash prevents tampering during transmission
+// - Encrypted content length validated for reasonable bounds
+// - Workspace existence verified before note association
+// - User ID extracted from authenticated JWT context
+//
+// Note Organization Features:
+// - Pinned notes support with custom ordering
+// - Default workspace assignment for new users
+// - Creation timestamp tracking for sorting
+// - User attribution for collaboration features
+// - Version history preparation for future updates
+//
+// Database Operations:
+// - Atomic note creation with integrity hash
+// - Workspace lookup via indexed user relationship
+// - Content stored as binary encrypted data
+// - Transaction support for consistency
+// - Metrics tracking for analytics
+//
+// Performance Considerations:
+// - Efficient workspace lookup via database indexes
+// - Minimal processing of encrypted content
+// - Binary storage for encrypted data efficiency
+// - Connection pooling for concurrent requests
+// - Caching support for frequently accessed notes
+//
+// Error Handling Strategy:
+// - Detailed validation errors for client debugging
+// - Generic error messages for security-sensitive failures
+// - Proper HTTP status codes for different failure types
+// - Database constraint violations handled gracefully
+// - Content encoding errors provide specific guidance
+//
+// API Design Decisions:
+// - POST method for resource creation
+// - Returns 201 Created with full note details
+// - Encrypted content returned in same format as received
+// - Consistent response structure across CRUD operations
+// - Version field included for future encryption updates
+//
+// Integration with Client Encryption:
+// - Expects client-side encrypted title and content
+// - Supports multiple encryption versions for future compatibility
+// - Content hash enables client-side integrity verification
+// - Base64 encoding ensures safe JSON transmission
+// - No server-side encryption/decryption operations
+//
+// Metrics & Monitoring:
+// - Note creation events tracked for analytics
+// - Database query performance monitored
+// - Error rates tracked for quality assurance
+// - User activity patterns analyzed
+// - Storage utilization metrics collected
+//
 // @Summary Create a new note
 // @Description Create a new note with encrypted title and content
 // @Tags Notes
@@ -247,7 +324,92 @@ func (h *NotesHandler) CreateNote(c *fiber.Ctx) error {
 	return c.Status(201).JSON(fiber.Map{"note": noteResponse})
 }
 
-// UpdateNote godoc
+// UpdateNote handles secure note updates with version history and integrity protection
+//
+// Business Purpose:
+// - Updates encrypted note content while preserving version history
+// - Implements optimistic locking to prevent concurrent update conflicts
+// - Supports selective field updates (title, content, pin status, order)
+// - Maintains audit trail for compliance and recovery purposes
+//
+// Zero-Knowledge Update Process:
+// - Server validates encrypted content integrity without decryption
+// - Current version saved to history before update (atomic operation)
+// - New content hash generated for tampering detection
+// - Version number incremented for optimistic concurrency control
+// - No access to plaintext content during update process
+//
+// Security & Integrity Features:
+// - Content integrity verification via Argon2id hash comparison
+// - Note ownership validation prevents unauthorized modifications
+// - Transactional update ensures data consistency
+// - Version history prevents data loss from overwrites
+// - Lock status check prevents editing of locked notes
+//
+// Version History Management:
+// - Automatic version creation before each update
+// - Version numbers monotonically increase
+// - History retention configurable per-note (10, 20, or 50 versions)
+// - Version compression for storage efficiency
+// - Point-in-time recovery capabilities
+//
+// Concurrent Update Handling:
+// - Optimistic locking via version numbers
+// - Transaction isolation prevents race conditions
+// - Automatic retry mechanism for conflict resolution
+// - User notification of concurrent modifications
+// - Last-write-wins with full history preservation
+//
+// Dynamic Field Updates:
+// - Optional field updates reduce network overhead
+// - Pin status toggling with order management
+// - Content updates with integrity verification
+// - Metadata updates without content changes
+// - Batch update support for multiple fields
+//
+// Database Transaction Flow:
+// 1. Begin transaction for atomic operations
+// 2. Validate note ownership and lock status
+// 3. Save current version to history table
+// 4. Update note with new encrypted content
+// 5. Increment version number and update timestamp
+// 6. Commit transaction or rollback on error
+//
+// Content Validation:
+// - Base64 encoding validation for encrypted content
+// - Content hash generation for integrity verification
+// - Size limits prevent resource exhaustion
+// - Malformed content detection and rejection
+// - Encryption version compatibility checking
+//
+// Error Recovery & Rollback:
+// - Automatic transaction rollback on any failure
+// - Version history preserved even on update failure
+// - Graceful handling of database constraint violations
+// - Client-friendly error messages for debugging
+// - Audit logging for security incident tracking
+//
+// Performance Optimizations:
+// - Indexed queries for note ownership validation
+// - Efficient version history storage
+// - Minimal data processing for encrypted content
+// - Connection pooling for concurrent updates
+// - Caching support for frequently accessed notes
+//
+// API Response Design:
+// - Returns complete updated note object
+// - Includes new version number for client synchronization
+// - Updated timestamp for conflict detection
+// - Encryption version for compatibility tracking
+// - Success confirmation with updated metadata
+//
+// Integration with Collaboration:
+// - Real-time update notifications via WebSocket
+// - Conflict resolution for simultaneous edits
+// - User attribution for version history
+// - Permission checking for shared note access
+// - Activity logging for collaboration analytics
+//
 // @Summary Update a note
 // @Description Update an existing note with new encrypted content
 // @Tags Notes

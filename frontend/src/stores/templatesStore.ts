@@ -1,17 +1,219 @@
+/**
+ * Templates Store - Reusable Content Template Management
+ * 
+ * @description
+ * Manages note templates for rapid content creation and standardization.
+ * Supports user-created templates, system starter templates, and community-shared
+ * templates. Provides template categorization, search, and application functionality.
+ * 
+ * @responsibilities
+ * - Template CRUD operations (create, read, update, delete)
+ * - Template categorization (user, system, community)
+ * - Template search and filtering
+ * - Template sharing and privacy controls
+ * - Template application for note creation
+ * - Starter template management for new users
+ * 
+ * @template-categories
+ * - User Templates: Created by current user for personal use
+ * - Starter Templates: System-provided templates for common use cases
+ * - Community Templates: Publicly shared templates from other users
+ * 
+ * @sharing-functionality
+ * - Templates can be marked as public for community sharing
+ * - Privacy controls via isPublic flag
+ * - Search includes community templates when available
+ * - Attribution maintained for shared templates
+ * 
+ * @integration-patterns
+ * - Consumed by template browser and selector components
+ * - Used by notesStore for template-based note creation
+ * - Provides content suggestions for new notes
+ * - Integrates with content service for API operations
+ * 
+ * @content-management
+ * - Templates contain name, description, content, and tags
+ * - Content can include variables for dynamic substitution
+ * - Support for rich text and markdown formatting
+ * - Icon and visual customization options
+ * 
+ * @search-capabilities
+ * - Multi-field search (name, description, content, tags)
+   - Case-insensitive matching
+   - Real-time search results
+   - Cross-category search support
+ */
 import { create } from 'zustand'
 import { contentService, type Template } from '@/services/api'
 
 interface TemplatesState {
+  /**
+   * User-created templates for personal use
+   * @type {Template[]} Templates created by current user
+   * Private by default, can be shared publicly
+   * Used for personal workflow optimization
+   */
   templates: Template[]
+  
+  /**
+   * System-provided starter templates
+   * @type {Template[]} Pre-built templates for common use cases
+   * Tagged with 'system' for identification
+   * Available to all users for quick start
+   */
   starterTemplates: Template[]
+  
+  /**
+   * Publicly shared community templates
+   * @type {Template[]} Templates shared by other users
+   - Excludes user's own templates and system templates
+   - Available for discovery and use
+   - Maintains attribution to original creator
+   */
   communityTemplates: Template[]
+  
+  /**
+   * Loading state for template operations
+   * @type {boolean} true during fetch/create/update/delete operations
+   * Used by UI components to show loading indicators
+   */
   isLoading: boolean
+  
+  /**
+   * Create new template
+   * @param template - Partial template data
+   * @returns Promise resolving to created template
+   * @throws {Error} On validation or creation failure
+   * 
+   * @validation
+   * - Name required and trimmed of whitespace
+   * - Content required and non-empty
+   * - User association from localStorage or provided userId
+   * 
+   * @creation
+   * - Creates template via contentService
+   * - Refreshes template collections after creation
+   * - Returns created template for immediate use
+   * 
+   * @error-handling
+   * - Validates input before API call
+   * - Provides user-friendly error messages
+   * - Graceful handling of authentication issues
+   */
   createTemplate: (template: Partial<Template>) => Promise<Template>
+  
+  /**
+   * Update existing template
+   * @param id - Template ID to update
+   * @param updates - Partial template data to modify
+   * @throws {Error} On validation or update failure
+   * 
+   * @update-strategy
+   * - Merges updates with existing template data
+   * - Fetches current template if not in local state
+   * - Validates merged data before submission
+   * 
+   * @validation
+   * - Name required for updates
+   * - Content availability verified
+   * - Preserves existing properties if not provided
+   * 
+   * @scope
+   * - Updates across all template categories if present
+   * - Refreshes template collections after update
+   * - Maintains template ownership and sharing status
+   */
   updateTemplate: (id: string, updates: Partial<Template>) => Promise<void>
+  
+  /**
+   * Delete template and remove from collections
+   * @param id - Template ID to delete
+   * @throws {Error} On deletion failure
+   * 
+   * @deletion
+   * - Deletes template via contentService
+   * - Removes from all local collections
+   * - Maintains data integrity across categories
+   * 
+   * @cleanup
+   * - Removes from user, starter, and community collections
+   * - No effect on notes created from template
+   * - Immediate UI update for consistency
+   */
   deleteTemplate: (id: string) => Promise<void>
+  
+  /**
+   * Apply template to create new note content
+   * @param templateId - Template ID to apply
+   * @returns Promise resolving to template content and tags
+   * @throws {Error} On template application failure
+   * 
+   * @application
+   * - Creates new note using template content
+   * - Applies template tags to new note
+   * - Supports variable substitution in template content
+   * 
+   * @content-generation
+   * - Returns content and tags for note creation
+   * - Used by notesStore.createNote for template-based notes
+   * - Supports rich text and markdown formatting
+   */
   applyTemplate: (templateId: string) => Promise<{ content: string; tags: string[] }>
+  
+  /**
+   * Share/unshare template with community
+   * @param id - Template ID to share
+   * @param isPublic - New sharing status
+   * @throws {Error} On sharing status update failure
+   * 
+   * @sharing
+   * - Updates template visibility via updateTemplate
+   * - Makes template available in community search
+   * - Maintains attribution to original creator
+   * 
+   * @privacy
+   * - Public templates appear in community search
+   * - Private templates only visible to creator
+   * - Reversible operation - can be made private again
+   */
   shareTemplate: (id: string, isPublic: boolean) => Promise<void>
+  
+  /**
+   * Search templates across all categories
+   * @param query - Search query string
+   * @returns Array of matching templates
+   * 
+   * @search-scope
+   * - Searches name, description, content, and tags
+   * - Case-insensitive matching
+   * - Searches user, starter, and community templates
+   * 
+   * @matching
+   * - Partial string matching supported
+   * - Multi-field search for comprehensive results
+   * - Real-time search suitable for typeahead interfaces
+   */
   searchTemplates: (query: string) => Template[]
+  
+  /**
+   * Load and categorize all templates
+   * @throws {Error} On template loading failure
+   * 
+   * @loading
+   * - Fetches all templates via contentService
+   * - Categorizes into user, starter, and community collections
+   * - Requires authenticated user for user templates
+   * 
+   * @categorization
+   * - User templates: created by current user
+   * - Starter templates: tagged with 'system'
+   * - Community templates: public templates from other users
+   * 
+   * @logging
+   * - Comprehensive logging for debugging
+   * - Category counts for monitoring
+   * - Error logging for troubleshooting
+   */
   loadTemplates: () => Promise<void>
 }
 

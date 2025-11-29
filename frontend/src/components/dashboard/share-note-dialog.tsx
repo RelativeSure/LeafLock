@@ -1,3 +1,46 @@
+/**
+ * ShareNoteDialog Component
+ * 
+ * Purpose: Provides a secure interface for sharing encrypted notes with other users.
+ * Manages collaboration invitations, active user presence, and permission controls
+ * while maintaining the security of encrypted content.
+ * 
+ * User Experience Goals:
+ * - Simple email-based sharing with instant feedback
+ * - Visual representation of active collaborators
+ * - Easy management of shared users with removal capabilities
+ * - Clear distinction between shared users and active session participants
+ * - Responsive design for mobile sharing workflows
+ * 
+ * Security Considerations:
+ * - Email validation to prevent malformed invitations
+ * - No exposure of note content in sharing interface
+ * - User enumeration protection through generic error messages
+ * - Collaboration sessions are secured with unique tokens
+ * - Access can be revoked at any time by the note owner
+ * 
+ * Collaboration Features:
+ * - Real-time presence indicators showing who's currently editing
+ * - Session-based collaboration with automatic cleanup
+ * - Permission-based access control (owner vs. collaborator)
+ * - Invitation system with email notifications
+ * 
+ * State Management:
+ * - Local state for email input and loading states
+ * - Collaboration context for shared user management
+ * - Error handling with user-friendly messages
+ * 
+ * Props Interface:
+ * - open: Controls dialog visibility
+ * - onOpenChange: Callback for dialog state changes
+ * - noteId: Unique identifier of the note to share
+ * 
+ * Integration Points:
+ * - useCollaboration: Provides sharing and session management
+ * - Avatar components: Display user identity securely
+ * - Dialog system: Modal interface with proper focus management
+ */
+
 'use client'
 
 import { useState } from 'react'

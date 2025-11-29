@@ -1,3 +1,5 @@
+// Package server provides HTTP server functionality and middleware adapters.
+// It includes health check systems, server lifecycle management, and initialization tracking.
 package server
 
 import (
@@ -9,7 +11,8 @@ import (
 )
 
 // ReadyState tracks initialization state for health checks
-// Zero-knowledge: crypto removed (no longer needed)
+// Manages atomic boolean flags for critical service dependencies
+// Ensures graceful startup by tracking admin, templates, allowlist, and Redis readiness
 type ReadyState struct {
 	db             *pgxpool.Pool
 	config         *config.Config

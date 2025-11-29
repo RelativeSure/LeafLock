@@ -1,3 +1,5 @@
+// Package utils provides common utility functions for the application.
+// Includes structured logging, validation helpers, and shared functionality across modules.
 package utils
 
 import (
@@ -11,7 +13,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// Global logger variables
+// Global logger variables for structured logging across the application
+// Separate loggers for different severity levels with appropriate output streams
 var (
 	DebugLogger *log.Logger
 	InfoLogger  *log.Logger

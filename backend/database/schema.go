@@ -1,14 +1,70 @@
 package database
 
 // DatabaseSchema contains the complete PostgreSQL schema for LeafLock
-// This includes all tables, indexes, triggers, and functions required for the application
+// This schema implements a privacy-first, zero-knowledge note-taking application
+// with advanced security features and comprehensive audit capabilities.
+//
+// Security Architecture:
+// - Zero-knowledge encryption: All user content encrypted client-side
+// - Hashed email addresses: GDPR-compliant user identification
+// - Argon2id password hashing: Memory-hard password protection
+// - UUIDv7 primary keys: Time-ordered, privacy-preserving identifiers
+// - Comprehensive audit logging: All actions tracked for security analysis
+//
+// Privacy Features:
+// - Email hash separation: Operational email vs. authentication hash
+// - Encrypted content storage: Notes, templates, and user data encrypted
+// - Soft deletion with hard cleanup: 30-day grace period for data recovery
+// - Session management: Redis-based with configurable TTL
+// - Share link security: Cryptographically secure tokens with expiration
+//
+// Performance Optimizations:
+// - UUIDv7 for time-ordered primary keys (reduces index fragmentation)
+// - Composite indexes for common query patterns
+// - Partial indexes for soft-deleted data exclusion
+// - Trigger-based audit logging (automatic and consistent)
+// - Function-based cleanup operations (efficient bulk operations)
+//
+// Schema Components:
+// - Users: Core user accounts with security features
+// - Workspaces: Multi-tenant organization structure
+// - Notes: Encrypted content with versioning and sharing
+// - Templates: Reusable content structures
+// - Share Links: Secure external access mechanism
+// - Audit Log: Comprehensive security tracking
+// - Indexes: Performance optimization for common queries
+// - Functions: Business logic encapsulation
+//
+// Migration Strategy:
+// - Version-controlled schema changes via _migrations table
+// - Backward-compatible additions (nullable columns, new tables)
+// - Function-based cleanup for data lifecycle management
+// - Extension-based feature additions (uuid-ossp, pgcrypto, pg_trgm)
 const DatabaseSchema = `
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
--- UUIDv7 function for time-ordered UUIDs (PostgreSQL 18+ native or custom implementation)
+-- UUIDv7 function for time-ordered UUIDs with cryptographic randomness
+-- This implementation provides PostgreSQL-native UUIDv7 generation when
+-- the database doesn't have built-in support (PostgreSQL < 18).
+--
+-- UUIDv7 Benefits over UUIDv4:
+-- - Time-ordered: Reduces index fragmentation in clustered databases
+-- - Sortable: Natural chronological ordering without additional columns
+-- - Privacy-preserving: No MAC address or timestamp exposure like UUIDv1
+-- - High entropy: 74 bits of randomness provides strong collision resistance
+--
+-- Structure (per RFC 9562):
+-- - 48 bits: Unix timestamp in milliseconds
+-- - 4 bits: Version field (0111b = 7)
+-- - 12 bits: Random data
+-- - 2 bits: Variant field (10b = RFC 4122)
+-- - 62 bits: Random data
+--
+-- Security: Uses gen_random_bytes() from pgcrypto for cryptographically
+-- secure randomness, suitable for security-sensitive identifiers.
 CREATE OR REPLACE FUNCTION uuid_generate_v7()
 RETURNS UUID AS $$
 DECLARE
@@ -40,7 +96,28 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Users table with zero-knowledge encryption
+-- Users table with zero-knowledge encryption and security features
+-- This table implements the core user account system with privacy-first design:
+--
+// Privacy Architecture:
+// - email_hash: SHA-256 for GDPR-compliant user identification without storing plaintext
+// - email_plaintext: Operational email for legitimate purposes (password reset, notifications)
+// - email_search_hash: Deterministic hash for login authentication (prevents timing attacks)
+// - password_hash: Argon2id memory-hard hashing for password protection
+// - salt: Per-user salt for password hashing uniqueness
+//
+// Security Features:
+// - Failed attempt tracking: Prevents brute force attacks
+// - Account locking: Temporary suspension after excessive failed attempts
+// - Email verification: Ensures email ownership before account activation
+// - MFA support: TOTP secret storage for two-factor authentication
+// - Session management: Secure token-based authentication
+//
+// GDPR Compliance:
+// - Right to be forgotten: email_hash allows user identification for deletion
+// - Data minimization: Only essential data stored, rest encrypted client-side
+// - Purpose limitation: email_plaintext used only for operational purposes
+// - Audit trail: All access logged for compliance reporting
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email_hash BYTEA UNIQUE NOT NULL, -- SHA-256 hash for unique constraint and GDPR lookups

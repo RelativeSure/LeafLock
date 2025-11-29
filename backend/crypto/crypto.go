@@ -1,6 +1,69 @@
-// Package crypto provides encryption, decryption, and cryptographic utilities
-// for the LeafLock application. It implements secure server-side encryption
-// using XChaCha20-Poly1305 AEAD cipher with various encryption modes.
+// Package crypto implements the cryptographic foundation for LeafLock's security
+// model, providing encryption, decryption, and key management operations that
+// enable both server-side security and zero-knowledge architecture patterns.
+//
+// # Purpose and Responsibilities
+//
+// The crypto package serves as the security backbone of the application,
+// responsible for:
+//   - Implementing authenticated encryption using XChaCha20-Poly1305 AEAD
+//   - Managing server-side encryption keys and key rotation
+//   - Supporting multiple encryption modes for different use cases
+//   - Providing deterministic encryption for searchable data
+//   - Enabling GDPR-compliant data deletion through key destruction
+//   - Ensuring cryptographic best practices and secure random generation
+//
+// # Key Abstractions and Patterns
+//
+// CryptoService: The central service that encapsulates all cryptographic
+// operations, supporting multiple encryption modes including standard,
+// deterministic, key derivation, and deletion-capable encryption.
+//
+// Encryption Modes: Different modes serve specific security requirements:
+//   - Standard: Secure random encryption for general data protection
+//   - Deterministic: Same plaintext produces same ciphertext for searchability
+//   - Key Derivation: Derives sub-keys from master keys for compartmentalization
+//   - Deletion: Enables permanent data deletion by destroying encryption keys
+//
+// Server-Side Architecture: Unlike client-side encryption schemes, this package
+// implements server-side encryption where the application manages keys, enabling
+// features like search, sharing, and collaboration while maintaining security.
+//
+// # Integration Points
+//
+// The crypto package is used by:
+//   - handlers/: Encrypting/decrypting note content and sensitive metadata
+//   - services/: Securing email templates and share link generation
+//   - auth/: Password hashing and session token operations
+//   - websocket/: Maintaining encryption during real-time collaboration
+//
+// # Security Considerations
+//
+//   - Uses XChaCha20-Poly1305, a modern AEAD cipher with 256-bit security
+//   - Implements constant-time comparison for sensitive data
+//   - Generates cryptographically secure random nonces and keys
+//   - Supports key rotation without data re-encryption in some modes
+//   - Provides authenticated encryption preventing tampering and forgery
+//   - Never exposes raw encryption keys in logs or error messages
+//
+// # Architectural Decisions
+//
+// Server-Side vs Client-Side: The architecture chooses server-side encryption
+// to enable search, collaboration, and sharing features while still providing
+// strong security guarantees. This trades absolute zero-knowledge for usability.
+//
+// XChaCha20-Poly1305 Selection: This modern cipher provides better performance
+// than AES-GCM on platforms without AES-NI hardware acceleration while
+// maintaining equivalent security levels.
+//
+// Multiple Encryption Modes: Rather than one-size-fits-all encryption, different
+// modes enable balancing security, functionality, and compliance requirements
+// based on specific data characteristics and use cases.
+//
+// Key Management Simplicity: The current implementation uses a single server key
+// for simplicity, with the architectural understanding that more sophisticated
+// key management (HSM, envelope encryption) could be added later without
+// changing the encryption interface.
 package crypto
 
 import (

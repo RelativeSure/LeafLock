@@ -1,3 +1,34 @@
+/**
+ * RegisterForm Component
+ * 
+ * Purpose: Provides a comprehensive user registration interface with robust validation
+ * and security features. Implements client-side validation for immediate feedback
+ * and server-side integration for account creation.
+ * 
+ * User Experience Goals:
+ * - Progressive validation with real-time feedback
+ * - Clear password requirements with visual indicators
+ * - Accessible form with proper labeling and ARIA support
+ * - Graceful handling of registration disabled states
+ * 
+ * Security Considerations:
+ * - Strong password requirements (8+ chars, mixed case, numbers, special chars)
+ * - Input sanitization for name field (letters, spaces, hyphens, apostrophes only)
+ * - Email format validation with RFC-compliant regex
+ * - Registration status check to prevent unauthorized access
+ * - Generic error messages to prevent user enumeration
+ * 
+ * Props Interface:
+ * - onToggleMode: Callback to switch between registration and login forms
+ * - animatedTitle: Optional animated branding element
+ * 
+ * State Management:
+ * - Form field states with validation tracking
+ * - Real-time password strength validation
+ * - Registration availability monitoring
+ * - Loading and success states for async operations
+ */
+
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { Button } from '@/components/ui/button'
@@ -41,13 +72,37 @@ export function RegisterForm({
     checkStatus()
   }, [checkRegistrationEnabled])
 
+  /**
+   * Real-time Validation Rules
+   * 
+   * Purpose: Provides immediate feedback on form field validity.
+   * All validation rules are enforced both client-side and server-side.
+   * 
+   * Name Validation:
+   * - Minimum 2 characters for meaningful names
+   * - Alphabetic characters, spaces, hyphens, and apostrophes only
+   * - Prevents injection of special characters or emojis
+   */
   // Name validation
   const nameValid = name.trim().length >= 2
   const nameHasValidChars = /^[a-zA-Z\s\-']+$/.test(name)
 
+  /**
+   * Email Validation:
+   * - RFC-compliant email format validation
+   * - Prevents malformed email addresses
+   */
   // Email validation
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
+  /**
+   * Password Requirements:
+   * - Minimum 8 characters for security
+   * - Mixed case letters (uppercase and lowercase)
+   * - At least one numeric character
+   * - At least one special character for complexity
+   * - Password confirmation must match exactly
+   */
   // Password complexity validation
   const passwordMinLength = password.length >= 8
   const passwordHasUppercase = /[A-Z]/.test(password)

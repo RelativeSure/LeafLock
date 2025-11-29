@@ -1,3 +1,49 @@
+/**
+ * SettingsPage Component
+ * 
+ * Purpose: Comprehensive settings interface for managing user account, security,
+ * data backup/restore, and application preferences. Provides a centralized
+ * location for users to configure their LeafLock experience and manage their data.
+ * 
+ * User Experience Goals:
+ * - Intuitive tabbed interface for easy navigation
+ * - Clear visual organization of related settings
+ * - Immediate feedback on setting changes
+ * - Safe data export/import with validation
+ * - Profile customization options
+ * 
+ * Security Considerations:
+ * - Data export includes only user-accessible information
+ * - Import validation prevents corrupted data ingestion
+ * - Profile settings respect privacy boundaries
+ * - Security settings are clearly marked and explained
+ * - All data operations are logged for audit trails
+ * 
+ * Data Management Features:
+ * - Complete backup export (notes, folders, tags, templates)
+ * - Safe import with version validation and error handling
+ * - Profile picture management with multiple source options
+ * - Application preference persistence
+ * 
+ * Accessibility Features:
+ * - Proper ARIA labeling for screen readers
+ * - Keyboard navigation support throughout
+ * - High contrast indicators for important settings
+ * - Clear visual hierarchy and grouping
+ * 
+ * State Management:
+ * - Local loading states for async operations
+ * - Store integration for persistent settings
+ * - File upload handling for data import
+ * - Toast notifications for user feedback
+ * 
+ * Integration Points:
+ * - Multiple store providers (Notes, Templates, Auth, Settings)
+ * - File API for data export/import operations
+ * - UserAvatar component for profile management
+ * - Toast system for operation feedback
+ */
+
 'use client'
 
 import { useNotesStore } from '../../stores/notesStore'

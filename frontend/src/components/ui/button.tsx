@@ -1,3 +1,40 @@
+/**
+ * Button Component - Radix UI Based Button System
+ * 
+ * @description
+ * Flexible button component built on Radix UI primitives with extensive customization options.
+ * Supports multiple variants, sizes, and asChild prop for polymorphic behavior.
+ * 
+ * @features
+ * - Multiple visual variants (default, destructive, outline, secondary, ghost, link)
+ * - Flexible sizing system (default, sm, lg, icon, icon-sm, icon-lg)
+ * - Radix UI Slot support for polymorphic rendering
+ * - Comprehensive focus states and accessibility
+ * - Smooth transitions and hover effects
+ * - Dark mode support with theme-aware styling
+ * 
+ * @variants
+ * - default: Primary action button with brand colors
+ * - destructive: Danger/critical action button (red)
+ * - outline: Border-only button for secondary actions
+ * - secondary: Subtle background for less prominent actions
+ * - ghost: No background, text-only button
+ * - link: Underlined text link appearance
+ * 
+ * @sizes
+ * - default: Standard 9px height button
+ * - sm: Compact 8px height for dense interfaces
+ * - lg: Large 10px height for primary actions
+ * - icon: Square 9px for icon-only buttons
+ * - icon-sm: Square 8px for small icon buttons
+ * - icon-lg: Square 10px for large icon buttons
+ * 
+ * @accessibility
+ * - Full keyboard navigation support
+ * - Focus-visible ring for keyboard users
+ * - ARIA-invalid states for form validation
+ * - Screen reader friendly with proper labeling
+ */
 import * as React from 'react'
 import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
