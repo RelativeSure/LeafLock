@@ -206,5 +206,36 @@ log "🚀 Frontend Caddy server starting on port ${PORT}"
 log "🔗 Proxying API requests to ${BACKEND_INTERNAL_URL} (source: ${BACKEND_SOURCE})"
 log "✅ Caddy will dynamically resolve backend DNS (Railway IPv6 compatible)"
 
+# Inject runtime environment variables into the HTML
+INDEX_HTML="/usr/share/caddy/index.html"
+if [ -f "$INDEX_HTML" ]; then
+  log "📝 Injecting runtime environment variables into index.html"
+
+  # Create meta tags for runtime configuration
+  META_TAGS=""
+
+  if [ -n "${VITE_CLERK_PUBLISHABLE_KEY:-}" ]; then
+    META_TAGS="${META_TAGS}<meta name=\"clerk-publishable-key\" content=\"${VITE_CLERK_PUBLISHABLE_KEY}\">"
+    log "✅ Injected VITE_CLERK_PUBLISHABLE_KEY (${VITE_CLERK_PUBLISHABLE_KEY:0:20}...)"
+  else
+    log "⚠️  VITE_CLERK_PUBLISHABLE_KEY not found in environment"
+  fi
+
+  if [ -n "${VITE_API_URL:-}" ]; then
+    META_TAGS="${META_TAGS}<meta name=\"api-url\" content=\"${VITE_API_URL}\">"
+    log "✅ Injected VITE_API_URL (${VITE_API_URL})"
+  fi
+
+  # Inject meta tags before </head> if any exist
+  if [ -n "$META_TAGS" ]; then
+    # Create a temporary file with injected meta tags
+    sed "s|</head>|${META_TAGS}</head>|" "$INDEX_HTML" > "${INDEX_HTML}.tmp"
+    mv "${INDEX_HTML}.tmp" "$INDEX_HTML"
+    log "✅ Runtime configuration injected successfully"
+  fi
+else
+  log "⚠️  index.html not found at $INDEX_HTML, skipping runtime config injection"
+fi
+
 # Caddy natively handles environment variable substitution
 exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
