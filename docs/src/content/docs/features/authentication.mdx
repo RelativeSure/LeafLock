@@ -53,7 +53,7 @@ During migration, LeafLock supports both authentication methods:
 - **Breach detection**: Automatic checking against known password breaches
 - **Account protection**: Rate limiting and lockout protection
 - **Password reset**: Secure email-based reset with time-limited tokens
-  </TabItem>
+</TabItem>
   
   <TabItem label="Social Login">
 - **Google OAuth**: Enterprise Google Workspace integration
@@ -61,14 +61,14 @@ During migration, LeafLock supports both authentication methods:
 - **Microsoft/Azure**: Azure AD and Microsoft account support
 - **Facebook/Twitter**: Additional social providers available
 - **Custom SAML**: Enterprise SAML SSO configuration
-  </TabItem>
+</TabItem>
   
   <TabItem label="Passwordless">
 - **Magic Links**: Email-based passwordless authentication
 - **One-time Codes**: SMS and email verification codes
 - **Passkeys**: Modern FIDO2/WebAuthn passwordless authentication
 - **Social Sign-in**: One-click social authentication
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ## Multi-Factor Authentication (MFA)
@@ -82,28 +82,28 @@ Clerk provides comprehensive MFA with multiple authentication methods and intell
 - **Supported Apps**: Google Authenticator, Authy, 1Password, Microsoft Authenticator
 - **Setup**: QR code scanning or manual secret entry
 - **Security**: 30-second code window with time synchronization
-  </TabItem>
+</TabItem>
   
   <TabItem label="SMS/Text Messages">
 - **Phone verification**: Codes sent to registered phone numbers
 - **Global coverage**: International SMS support
 - **Backup codes**: Alternative when SMS unavailable
 - **Rate limiting**: Protection against SMS abuse
-  </TabItem>
+</TabItem>
   
   <TabItem label="Email Codes">
 - **Email verification**: Codes sent to registered email addresses
 - **Backup method**: Alternative to primary MFA method
 - **Secure delivery**: Encrypted email transmission
 - **Time-limited**: Short expiration for security
-  </TabItem>
+</TabItem>
   
   <TabItem label="Backup Codes">
 - **Emergency access**: 8-digit one-time use codes
 - **Automatic generation**: Created when MFA is enabled
 - **Secure storage**: Encrypted and never displayed twice
 - **Cross-platform**: Work across all Clerk-enabled applications
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ### Advanced MFA Features
@@ -208,7 +208,7 @@ Headers: Authorization: Bearer <clerk_session_token>
 GET /api/v1/auth/registration
 Response: { "enabled": true }
 ```
-  </TabItem>
+</TabItem>
   
   <TabItem label="Clerk-Specific Endpoints">
 ```bash
@@ -227,7 +227,7 @@ Response: { "sessions": [...] }
 POST /api/v1/clerk/sessions/{sessionId}/revoke
 Response: { "message": "Session revoked successfully" }
 ```
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ### Webhook Integration

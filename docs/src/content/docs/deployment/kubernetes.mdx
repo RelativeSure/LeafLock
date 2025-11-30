@@ -53,7 +53,7 @@ Secrets map directly to `config.LoadConfig()` fields (`JWT_SECRET`, `SERVER_ENCR
   --set redis.passwordFromSecret=leaflock-secrets:redis-password`}
   language="bash"
 />
-  </TabItem>
+</TabItem>
   <TabItem label="Bring Your Own DB/Redis">
 <Code
   code={`helm upgrade --install leaflock ./helm \\
@@ -65,7 +65,7 @@ Secrets map directly to `config.LoadConfig()` fields (`JWT_SECRET`, `SERVER_ENCR
   --set backend.redisPasswordFromSecret=leaflock-secrets:redis-password`}
   language="bash"
 />
-  </TabItem>
+</TabItem>
 </Tabs>
 
 Key chart values:

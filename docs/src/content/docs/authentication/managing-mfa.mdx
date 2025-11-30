@@ -3,6 +3,8 @@ title: Managing MFA (Clerk)
 description: User guide for managing Multi-Factor Authentication settings with Clerk
 ---
 
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
 # Managing Your MFA Settings (Clerk)
 
 This guide covers how to manage your Multi-Factor Authentication (MFA) after you've enabled it with Clerk's enterprise-grade authentication system.
@@ -62,7 +64,7 @@ Clerk supports multiple authentication methods that you can manage:
 - 1Password
 - Microsoft Authenticator
 - Any TOTP-compatible app
-  </TabItem>
+</TabItem>
   
   <TabItem label="SMS/Text Message">
 1. Go to **Security** → **Two-Factor Authentication**
@@ -74,7 +76,7 @@ Clerk supports multiple authentication methods that you can manage:
 7. Click **Continue** to complete setup
 
 **Note:** SMS rates may apply depending on your carrier.
-  </TabItem>
+</TabItem>
   
   <TabItem label="Email Codes">
 1. Go to **Security** → **Two-Factor Authentication**
@@ -85,7 +87,7 @@ Clerk supports multiple authentication methods that you can manage:
 6. Click **Continue** to complete setup
 
 **Note:** Make sure you have access to this email account.
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ### Removing a Method

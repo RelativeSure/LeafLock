@@ -99,7 +99,7 @@ VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
 # Registration Control
 VITE_ENABLE_REGISTRATION=true
 ```
-  </TabItem>
+</TabItem>
   
   <TabItem label="Optional">
 ```bash
@@ -109,7 +109,7 @@ CLERK_SIGN_UP_URL=/register
 CLERK_AFTER_SIGN_IN_URL=/
 CLERK_AFTER_SIGN_UP_URL=/
 ```
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ### Advanced Configuration Options
@@ -462,25 +462,31 @@ During migration, both authentication methods work simultaneously:
 
 <Tabs>
   <TabItem label="Phase 1: Dual Auth (Current)">
+
 - Both JWT and Clerk tokens accepted
 - Existing users unaffected
 - New users get modern auth
 - Backend handles both seamlessly
-  </TabItem>
+
+</TabItem>
   
   <TabItem label="Phase 2: User Migration">
+
 - Map existing users to Clerk profiles
 - Handle password resets gracefully
 - Maintain user data integrity
 - Preserve encryption keys
-  </TabItem>
+
+</TabItem>
   
   <TabItem label="Phase 3: Advanced Features">
+
 - Enable organizations for B2B users
 - Configure enterprise SSO
 - Set up advanced MFA policies
 - Implement SCIM provisioning
-  </TabItem>
+
+</TabItem>
 </Tabs>
 
 ## Customization

@@ -36,7 +36,7 @@ Content-Type: application/json
 <Aside type="tip">
 Handler: `handlers/auth.go:Login`. If MFA is enabled the response includes `{ "mfa_required": true, "session": "temp_id" }`.
 </Aside>
-  </TabItem>
+</TabItem>
   <TabItem label="Verify MFA">
 <Code
   code={`POST /api/v1/auth/mfa/verify
@@ -49,7 +49,7 @@ Handler: `handlers/auth.go:Login`. If MFA is enabled the response includes `{ "m
 <Aside type="note">
 Handler: `handlers/auth.go:VerifyMFACode`. Rate limited by `middleware.rateLimits.MFAVerifyLimiter`.
 </Aside>
-  </TabItem>
+</TabItem>
   <TabItem label="Backup Codes">
 <Code
   code={`GET /api/v1/auth/mfa/backup-codes  # Requires Clerk session token
@@ -59,7 +59,7 @@ Authorization: Bearer <clerk_session_token>`}
 <Aside type="note">
 Handler: `handlers/auth.go:GetBackupCodes`. Response returns hashed codes encrypted in PostgreSQL (`users.mfa_backup_codes`).
 </Aside>
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ## Notes & Versions
@@ -121,7 +121,7 @@ Example assign tag request:
 }`}
   language="http"
 />
-  </TabItem>
+</TabItem>
   <TabItem label="Create Share Link">
 <Code
   code={`POST /api/v1/notes/:id/share-links
@@ -134,7 +134,7 @@ Example assign tag request:
 <Aside type="note">
 Public access uses <code>GET /api/v1/share/:token</code> without authentication. Middleware hydrates note metadata via PostgreSQL + Redis.
 </Aside>
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ## Attachments

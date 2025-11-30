@@ -62,7 +62,7 @@ Notes:
 - Admin status determined from Clerk metadata
 
 Implementation: backend/auth/clerk_functions.go:64`} language="json" />
-  </TabItem>
+</TabItem>
   
   <TabItem label="User Profile">
 <Code code={`GET /api/v1/clerk/user/profile
@@ -101,7 +101,7 @@ Notes:
 - Compatible with existing user management
 
 Implementation: backend/auth/clerk_functions.go:120`} language="json" />
-  </TabItem>
+</TabItem>
   
   <TabItem label="List Sessions">
 <Code code={`GET /api/v1/clerk/sessions
@@ -149,7 +149,7 @@ Notes:
 - Useful for security monitoring and session management
 
 Implementation: backend/auth/clerk_functions.go:157`} language="json" />
-  </TabItem>
+</TabItem>
   
   <TabItem label="Revoke Session">
 <Code code={`POST /api/v1/clerk/sessions/{sessionId}/revoke
@@ -174,7 +174,7 @@ Notes:
 - Useful for "log out of other devices" functionality
 
 Implementation: backend/auth/clerk_functions.go:194`} language="json" />
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ## Organization Management (Clerk)
@@ -209,7 +209,7 @@ Notes:
 - Role-based access within organizations
 
 Implementation: backend/auth/clerk_functions.go:244`} language="json" />
-  </TabItem>
+</TabItem>
   
   <TabItem label="Create Organization">
 <Code code={`POST /api/v1/clerk/organizations
@@ -244,7 +244,7 @@ Notes:
 - Organization ID returned for future references
 
 Implementation: backend/auth/clerk_functions.go:281`} language="json" />
-  </TabItem>
+</TabItem>
   
   <TabItem label="Get Organization">
 <Code code={`GET /api/v1/clerk/organizations/{orgId}
@@ -274,7 +274,7 @@ Notes:
 - Useful for organization management UIs
 
 Implementation: backend/auth/clerk_functions.go:343`} language="json" />
-  </TabItem>
+</TabItem>
   
   <TabItem label="Update Organization">
 <Code code={`PUT /api/v1/clerk/organizations/{orgId}
@@ -310,7 +310,7 @@ Notes:
 - Audit log entry created
 
 Implementation: backend/auth/clerk_functions.go:388`} language="json" />
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ## Core Authentication (Legacy + Clerk Support)
@@ -347,7 +347,7 @@ Notes:
 - Registration controlled by VITE_ENABLE_REGISTRATION
 
 Implementation: backend/auth/handlers.go:34`} language="json" />
-  </TabItem>
+</TabItem>
   
   <TabItem label="Login">
 <Code code={`POST /api/v1/auth/login
@@ -391,7 +391,7 @@ Account Locking:
 
 Implementation: backend/auth/handlers.go:88
 Rate Limit: 10 requests/5 minutes`} language="json" />
-  </TabItem>
+</TabItem>
   
   <TabItem label="Logout">
 <Code code={`POST /api/v1/auth/logout
@@ -409,7 +409,7 @@ Behavior:
 - Client must discard token
 
 Implementation: backend/auth/handlers.go:168`} language="json" />
-  </TabItem>
+</TabItem>
   
   <TabItem label="Registration Status">
 <Code code={`GET /api/v1/auth/registration
@@ -426,7 +426,7 @@ Notes:
 - Useful for UI state management
 
 Implementation: backend/auth/handlers.go:486`} language="json" />
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ## Multi-Factor Authentication (Clerk Managed)
@@ -451,7 +451,7 @@ Notes:
 - Clerk manages all MFA logic
 
 Implementation: backend/auth/handlers.go:210`} language="json" />
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ## Webhook Endpoints
@@ -492,7 +492,7 @@ Security:
 - Comprehensive audit logging
 
 Implementation: backend/handlers/clerk_webhook.go`} language="json" />
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ## Error Codes
@@ -545,7 +545,7 @@ async function clerkLogin(email, password) {
   
   const response = await fetch('/api/v1/clerk/session/info', {
     headers: {
-      'Authorization': `Bearer ${clerkSessionToken}`
+      'Authorization': \`Bearer \${clerkSessionToken}\`
     }
   });
   
@@ -557,7 +557,7 @@ async function clerkLogin(email, password) {
 async function getClerkSessions() {
   const response = await fetch('/api/v1/clerk/sessions', {
     headers: {
-      'Authorization': `Bearer ${clerkSessionToken}`
+      'Authorization': \`Bearer \${clerkSessionToken}\`
     }
   });
   
@@ -570,13 +570,14 @@ async function revokeSession(sessionId) {
   const response = await fetch(\`/api/v1/clerk/sessions/\${sessionId}/revoke\`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${clerkSessionToken}`
+      'Authorization': \`Bearer \${clerkSessionToken}\`
     }
   });
   
   return response.json();
+}
 }`} language="javascript" />
-  </TabItem>
+</TabItem>
   
   <TabItem label="Dual Authentication">
 <Code code={`// Support both authentication types during migration
@@ -607,11 +608,11 @@ async function universalLogout(token) {
   await fetch('/api/v1/auth/logout', {
     method: 'POST',
     headers: { 
-      'Authorization': `Bearer ${token}`
+      'Authorization': \`Bearer \${token}\`
     }
   });
 }`} language="javascript" />
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ## Security Notes
