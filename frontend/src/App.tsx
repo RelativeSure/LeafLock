@@ -35,19 +35,28 @@ import './styles/clerk-auth.css'
 // Lazy load router to prevent circular dependency
 let routerInstance: any = null
 
-const App: React.FC = () => {
+/**
+ * AppContent Component - Wrapper for Clerk-dependent hooks
+ *
+ * @description
+ * This component must be rendered inside ClerkProvider to access Clerk hooks.
+ * It handles router initialization, session monitoring, and provides the router.
+ */
+const AppContent: React.FC = () => {
   const [router, setRouter] = React.useState<any>(null)
 
-  // Initialize Clerk API client with session
+  // Initialize Clerk API client with session (now inside ClerkProvider)
   useClerkApiClient()
 
-  // Use enhanced Clerk functionality
+  // Use enhanced Clerk functionality (now inside ClerkProvider)
   const { isExpiringSoon, timeUntilExpiry } = useEnhancedClerk()
 
   // Monitor session expiration
   React.useEffect(() => {
     if (isExpiringSoon && timeUntilExpiry) {
-      console.log(`Clerk session expiring in ${Math.floor(timeUntilExpiry / 60000)} minutes`)
+      console.log(
+        `Clerk session expiring in ${Math.floor(timeUntilExpiry / 60000)} minutes`
+      )
 
       // Could show a notification to the user
       // Could automatically refresh the session
@@ -76,17 +85,23 @@ const App: React.FC = () => {
   }
 
   return (
+    <ThemeProvider>
+      <EncryptionProvider>
+        <RouterProvider router={router} />
+      </EncryptionProvider>
+    </ThemeProvider>
+  )
+}
+
+const App: React.FC = () => {
+  return (
     <ClerkProvider
       publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
       afterSignOutUrl="/login"
       signInUrl="/login"
       signUpUrl="/register"
     >
-      <ThemeProvider>
-        <EncryptionProvider>
-          <RouterProvider router={router} />
-        </EncryptionProvider>
-      </ThemeProvider>
+      <AppContent />
     </ClerkProvider>
   )
 }
