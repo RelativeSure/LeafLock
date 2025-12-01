@@ -2369,7 +2369,7 @@ snapshots:
 
   '@types/sax@1.2.7':
     dependencies:
-      '@types/node': 24.10.1
+      '@types/node': 17.0.45
 
   '@types/unist@2.0.11': {}
 
