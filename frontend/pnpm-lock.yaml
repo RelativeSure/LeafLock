@@ -301,8 +301,8 @@ importers:
         specifier: 7.2.6
         version: 7.2.6(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.30.2)
       vite-bundle-analyzer:
-        specifier: 1.2.3
-        version: 1.2.3
+        specifier: 1.2.4
+        version: 1.2.4
       vite-plugin-node-polyfills:
         specifier: 0.24.0
         version: 0.24.0(rollup@4.53.3)(vite@7.2.6(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.30.2))
@@ -4999,8 +4999,8 @@ packages:
   victory-vendor@37.3.6:
     resolution: {integrity: sha512-SbPDPdDBYp+5MJHhBCAyI7wKM3d5ivekigc2Dk2s7pgbZ9wIgIBYGVw4zGHBml/qTFbexrofXW6Gu4noGxrOwQ==}
 
-  vite-bundle-analyzer@1.2.3:
-    resolution: {integrity: sha512-8nhwDGHWMKKgg6oegAOpDgTT7/yzTVzeYzLF4y8WBJoYu9gO7h29UpHiQnXD2rAvfQzDy5Wqe/Za5cgqhnxi5g==}
+  vite-bundle-analyzer@1.2.4:
+    resolution: {integrity: sha512-bpWLEBlYxmajiCmjPrQQi1Kfh9NadyFKPSgz24RHnYf3sgaSxrIau5wYMPsmSC/JTfoMhfoTIV+/mH//alUxOA==}
     hasBin: true
 
   vite-plugin-node-polyfills@0.24.0:
@@ -10424,7 +10424,7 @@ snapshots:
       d3-time: 3.1.0
       d3-timer: 3.0.1
 
-  vite-bundle-analyzer@1.2.3: {}
+  vite-bundle-analyzer@1.2.4: {}
 
   vite-plugin-node-polyfills@0.24.0(rollup@4.53.3)(vite@7.2.6(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.30.2)):
     dependencies:
