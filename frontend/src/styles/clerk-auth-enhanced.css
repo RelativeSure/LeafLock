@@ -1,0 +1,409 @@
+/* Enhanced Clerk Authentication Styling - Compatible with Tailwind CSS v4 */
+
+/* Modern glassmorphism design system */
+.clerk-auth-modern {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #020617 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.clerk-auth-modern::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 50%, rgba(236, 72, 153, 0.1) 100%);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Enhanced card styling */
+.clerk-card-enhanced {
+  width: 100%;
+  max-width: 28rem;
+  position: relative;
+  z-index: 10;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  animation: fade-in-zoom 1s ease-out;
+  transition: all 0.5s ease-out;
+}
+
+.clerk-card-enhanced:hover {
+  box-shadow: 0 35px 60px -15px rgba(0, 0, 0, 0.3);
+  border-color: rgba(148, 163, 184, 0.5);
+}
+
+/* Header styling */
+.clerk-header-enhanced {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.clerk-title-enhanced {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -0.025em;
+  background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: slide-in-from-top 0.7s ease-out;
+}
+
+.clerk-subtitle-enhanced {
+  color: #94a3b8;
+  font-size: 0.875rem;
+  animation: slide-in-from-top 0.7s ease-out 0.2s both;
+}
+
+/* Form field enhancements */
+.clerk-field-enhanced {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.clerk-label-enhanced {
+  color: #f8fafc;
+  font-weight: 500;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.clerk-input-enhanced {
+  width: 100%;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  color: #f8fafc;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  font-size: 1rem;
+  transition: all 0.3s ease-out;
+  outline: none;
+}
+
+.clerk-input-enhanced::placeholder {
+  color: rgba(148, 163, 184, 0.8);
+}
+
+.clerk-input-enhanced:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2), 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  background: rgba(30, 41, 59, 1);
+}
+
+.clerk-input-enhanced:hover {
+  border-color: rgba(148, 163, 184, 0.8);
+}
+
+/* Button enhancements */
+.clerk-button-primary-enhanced {
+  width: 100%;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border-radius: 0.75rem;
+  padding: 1rem 1.5rem;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease-out;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: none;
+  cursor: pointer;
+  outline: none;
+}
+
+.clerk-button-primary-enhanced:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+}
+
+.clerk-button-primary-enhanced:active {
+  transform: scale(0.98);
+}
+
+.clerk-button-primary-enhanced:focus {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5), 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+}
+
+.clerk-button-secondary-enhanced {
+  width: 100%;
+  background: rgba(100, 116, 139, 0.2);
+  color: #f8fafc;
+  border-radius: 0.75rem;
+  padding: 1rem 1.5rem;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease-out;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  cursor: pointer;
+}
+
+.clerk-button-secondary-enhanced:hover {
+  background: rgba(100, 116, 139, 0.3);
+}
+
+.clerk-button-secondary-enhanced:active {
+  transform: scale(0.98);
+}
+
+/* Social auth buttons */
+.clerk-social-button-enhanced {
+  width: 100%;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: #f8fafc;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  font-weight: 500;
+  transition: all 0.3s ease-out;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.clerk-social-button-enhanced:hover {
+  background: rgba(100, 116, 139, 0.2);
+  border-color: rgba(148, 163, 184, 0.5);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.clerk-social-button-enhanced:active {
+  transform: scale(0.98);
+}
+
+.clerk-social-icon-enhanced {
+  width: 1.25rem;
+  height: 1.25rem;
+  transition: transform 0.3s ease-out;
+}
+
+.clerk-social-button-enhanced:hover .clerk-social-icon-enhanced {
+  transform: scale(1.1);
+}
+
+/* Footer and links */
+.clerk-footer-enhanced {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.clerk-footer-text-enhanced {
+  color: #94a3b8;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.clerk-footer-link-enhanced {
+  color: #3b82f6;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.3s ease-out;
+}
+
+.clerk-footer-link-enhanced:hover {
+  color: #60a5fa;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* Divider enhancements */
+.clerk-divider-enhanced {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1.5rem 0;
+}
+
+.clerk-divider-enhanced::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(148, 163, 184, 0.5) 50%, transparent 100%);
+}
+
+.clerk-divider-text-enhanced {
+  position: relative;
+  background: rgba(15, 23, 42, 0.95);
+  padding: 0 1rem;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Error and success messages */
+.clerk-message-error-enhanced {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.clerk-message-success-enhanced {
+  color: #10b981;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Loading states */
+.clerk-loading-enhanced {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: #94a3b8;
+}
+
+.clerk-spinner-enhanced {
+  width: 1.25rem;
+  height: 1.25rem;
+  animation: spin 1s linear infinite;
+  color: #3b82f6;
+}
+
+/* Identity preview */
+.clerk-identity-enhanced {
+  background: rgba(100, 116, 139, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.clerk-identity-text-enhanced {
+  color: #f8fafc;
+  font-weight: 500;
+}
+
+.clerk-identity-edit-enhanced {
+  color: #3b82f6;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.3s ease-out;
+}
+
+.clerk-identity-edit-enhanced:hover {
+  color: #60a5fa;
+}
+
+/* Responsive enhancements */
+@media (max-width: 640px) {
+  .clerk-card-enhanced {
+    padding: 1.5rem;
+    margin: 0 1rem;
+  }
+  
+  .clerk-title-enhanced {
+    font-size: 1.5rem;
+  }
+  
+  .clerk-input-enhanced {
+    padding: 0.75rem;
+    font-size: 1rem;
+  }
+  
+  .clerk-button-primary-enhanced,
+  .clerk-button-secondary-enhanced,
+  .clerk-social-button-enhanced {
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Dark mode enhancements */
+@media (prefers-color-scheme: dark) {
+  .clerk-input-enhanced {
+    background: rgba(15, 23, 42, 0.8);
+    border-color: rgba(100, 116, 139, 0.5);
+  }
+  
+  .clerk-social-button-enhanced {
+    background: rgba(15, 23, 42, 0.6);
+    border-color: rgba(100, 116, 139, 0.3);
+  }
+  
+  .clerk-divider-text-enhanced {
+    background: rgba(15, 23, 42, 0.95);
+  }
+}
+
+/* Animation keyframes */
+@keyframes slide-in-from-top {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Apply enhanced animations */
+.animate-slide-in-top {
+  animation: slide-in-from-top 0.7s ease-out;
+}
+
+.animate-fade-in-zoom {
+  animation: fade-in-zoom 1s ease-out;
+}

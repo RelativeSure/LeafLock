@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { RouterProvider } from '@tanstack/react-router'
 import { router } from '../router'
 import { useAuthStore } from '../stores/authStore'
+import { useAuth, useUser } from '@clerk/clerk-react'
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
@@ -18,6 +19,33 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: vi.fn(),
   })),
 })
+
+// Mock Clerk hooks
+vi.mock('@clerk/clerk-react', () => ({
+  useAuth: vi.fn(() => ({ 
+    isSignedIn: false, 
+    isLoaded: true,
+    userId: null,
+    sessionId: null,
+    sessionClaims: {},
+    actor: null,
+    orgId: null,
+    orgRole: null,
+    orgSlug: null,
+    has: vi.fn(() => false),
+    signOut: vi.fn(),
+    getToken: vi.fn(() => Promise.resolve(null)),
+  } as any)),
+  useUser: vi.fn(() => ({ 
+    user: null,
+    isLoaded: true,
+  } as any)),
+  useClerk: vi.fn(() => ({ 
+    signOut: vi.fn(),
+    openSignIn: vi.fn(),
+    openSignUp: vi.fn(),
+  })),
+}))
 
 // Mock all external dependencies
 vi.mock('../context/ThemeContext', () => ({
@@ -337,11 +365,11 @@ describe('router', () => {
         primaryEmailAddress: { emailAddress: 'test@example.com' },
         fullName: 'Test User',
         publicMetadata: { isAdmin: false },
-      }
+      } as any
 
       // Update Clerk mocks for authenticated user
-      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true })
-      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser })
+      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true } as any)
+      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser } as any)
 
       window.history.pushState({}, '', '/')
 
@@ -363,8 +391,8 @@ describe('router', () => {
       }
 
       // Update Clerk mocks for authenticated user
-      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true })
-      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser })
+      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true } as any)
+      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser } as any)
 
       window.history.pushState({}, '', '/')
 
@@ -390,8 +418,8 @@ describe('router', () => {
       }
 
       // Update Clerk mocks for authenticated user
-      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true })
-      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser })
+      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true } as any)
+      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser } as any)
 
       window.history.pushState({}, '', '/')
 
@@ -416,8 +444,8 @@ describe('router', () => {
       }
 
       // Update Clerk mocks for authenticated user
-      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true })
-      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser })
+      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true } as any)
+      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser } as any)
 
       window.history.pushState({}, '', '/')
 
@@ -444,8 +472,8 @@ describe('router', () => {
       }
 
       // Update Clerk mocks for authenticated user
-      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true })
-      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser })
+      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true } as any)
+      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser } as any)
 
       window.history.pushState({}, '', '/settings')
 
@@ -468,8 +496,8 @@ describe('router', () => {
       }
 
       // Update Clerk mocks for authenticated user
-      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true })
-      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser })
+      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true } as any)
+      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser } as any)
 
       window.history.pushState({}, '', '/manage')
 
@@ -492,8 +520,8 @@ describe('router', () => {
       }
 
       // Update Clerk mocks for authenticated admin user
-      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true })
-      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser })
+      vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, isLoaded: true } as any)
+      vi.mocked(useUser).mockReturnValue({ user: mockClerkUser } as any)
 
       window.history.pushState({}, '', '/admin')
 

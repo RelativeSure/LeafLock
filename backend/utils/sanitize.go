@@ -26,10 +26,6 @@ func SanitizeValue(value interface{}) interface{} {
 	ipRegex := regexp.MustCompile(`\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b`)
 	str = ipRegex.ReplaceAllString(str, "[ip]")
 
-	// Remove JWT tokens
-	jwtRegex := regexp.MustCompile(`eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*`)
-	str = jwtRegex.ReplaceAllString(str, "[token]")
-
 	return str
 }
 

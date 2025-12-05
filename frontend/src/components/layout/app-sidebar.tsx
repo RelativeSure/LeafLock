@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { Home, Settings, Shield, Tag, Plus, LogOut, Leaf, ChevronRight, Trash2 } from 'lucide-react'
 import { Link, useNavigate, useLocation } from '@tanstack/react-router'
+import { useClerk } from '@clerk/clerk-react'
 
 import {
   Sidebar,
@@ -39,13 +40,14 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/components/ui/user-avatar'
 
-import { useAuthStore } from '@/stores/authStore'
+import { useClerkAuthStore } from '@/stores/clerkAuthStore'
 import { useNotesStore } from '@/stores/notesStore'
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, logout } = useAuthStore()
+  const { user } = useClerkAuthStore()
+  const clerk = useClerk()
   const {
     folders,
     tags,
@@ -69,8 +71,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
   }
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await clerk.signOut()
     navigate({ to: '/login' })
   }
 

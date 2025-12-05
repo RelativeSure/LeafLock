@@ -1,11 +1,8 @@
 import { ApiClient } from './apiClient'
-import { LoginResponse, RegisterResponse, MFAStatusResponse } from './types'
+import { RegisterResponse, MFAStatusResponse } from './types'
 
 class AuthService extends ApiClient {
-  async login(_email: string, _password: string): Promise<LoginResponse> {
-    throw new Error('JWT authentication is deprecated. Use Clerk authentication instead.')
-  }
-
+  // Registration is handled through Clerk, but backend still processes registration requests
   async register(email: string, password: string, name: string): Promise<RegisterResponse> {
     const response = await this.request<any>('/auth/register', {
       method: 'POST',
@@ -17,14 +14,6 @@ class AuthService extends ApiClient {
         response?.message ??
         'Registration request accepted. If this email is eligible, you will receive further instructions shortly.',
     }
-  }
-
-  async verifyMFA(_code: string, _sessionToken?: string): Promise<LoginResponse> {
-    throw new Error('JWT authentication is deprecated. Use Clerk authentication instead.')
-  }
-
-  async logout(): Promise<void> {
-    throw new Error('JWT authentication is deprecated. Use Clerk authentication instead.')
   }
 
   async getMFAStatus(): Promise<MFAStatusResponse> {

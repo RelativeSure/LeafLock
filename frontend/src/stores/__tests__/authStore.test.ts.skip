@@ -267,29 +267,20 @@ describe('authStore', () => {
   })
 
   describe('register', () => {
-    it('should register successfully and return message', async () => {
-      vi.mocked(authService.register).mockResolvedValue({ message: 'Registration accepted' })
-
-      const message = await useAuthStore
-        .getState()
-        .register('test@example.com', 'password123', 'Test User')
-
-      expect(message).toBe('Registration accepted')
-      expect(useAuthStore.getState().user).toBeNull()
-      expect(encryptionUtils.setStoredSalt).not.toHaveBeenCalled()
-      expect(encryptionUtils.deriveKey).not.toHaveBeenCalled()
-      expect(encryptionUtils.setStoredKey).not.toHaveBeenCalled()
-      expect(useAuthStore.getState().pendingEncryption).toBeNull()
-    })
-
-    it('should handle registration API failure', async () => {
-      vi.mocked(authService.register).mockRejectedValue(new Error('Email already exists'))
-
+    it('should throw error for register (JWT deprecated)', async () => {
       await expect(
         useAuthStore.getState().register('test@example.com', 'password123', 'Test User')
-      ).rejects.toThrow('Email already exists')
+      ).rejects.toThrow('JWT authentication is deprecated. Use Clerk authentication instead.')
+    })
 
-      expect(useAuthStore.getState().user).toBeNull()
+    it('should not call authService.register (JWT deprecated)', async () => {
+      try {
+        await useAuthStore.getState().register('test@example.com', 'password123', 'Test User')
+      } catch (error) {
+        // Expected error
+      }
+
+      expect(authService.register).not.toHaveBeenCalled()
     })
   })
 
@@ -478,7 +469,6 @@ describe('authStore', () => {
 
       // Manually reset cache to simulate app restart
       useAuthStore.setState({ registrationEnabled: null })
-
       // Set to false
       vi.mocked(authService.isRegistrationEnabled).mockResolvedValue(false)
       await useAuthStore.getState().checkRegistrationEnabled()

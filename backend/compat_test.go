@@ -84,12 +84,7 @@ func SetupDatabase(url string) (*pgxpool.Pool, error) {
 	return appdb.SetupDatabase(url)
 }
 
-func JWTMiddleware(secret []byte, redis *redis.Client, crypto *appcrypto.CryptoService) fiber.Handler {
-	// Use new auth package middleware
-	authService := auth.NewService(nil, redis, string(secret))
-	authHandler := auth.NewHandler(authService, &MockEmailServiceCompat{})
-	return authHandler.JWTMiddleware
-}
+
 
 func isValidHexColor(color string) bool {
 	return utils.IsValidHexColor(color)

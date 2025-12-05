@@ -77,67 +77,6 @@ interface AuthState {
   registrationEnabled: boolean | null
 
   /**
-   * Authenticate user with email and password
-   * @param email - User's email address
-   * @param password - User's password (used for key derivation, not stored)
-   * @returns Promise resolving to MFA requirements
-   * @throws {Error} On authentication failure or network errors
-   *
-   * @flow
-   * 1. Submit credentials to authService
-   * 2. If MFA required: store encryption credentials and session
-   * 3. If direct login: derive and store encryption keys
-   * 4. Update user state and persist to storage
-   *
-   * @encryption
-   * - Receives encryption salt from server
-   * - Derives encryption key from password + salt
-   * - Stores derived key for subsequent operations
-   */
-  login: (email: string, password: string) => Promise<{ requiresMFA: boolean }>
-
-  /**
-   * Verify multi-factor authentication code
-   * @param code - 6-digit MFA code from authenticator app
-   * @returns Promise resolving to success status
-   * @throws {Error} On verification failure
-   *
-   * @flow
-   * 1. Submit MFA code with stored session token
-   * 2. On success: derive encryption keys from pending credentials
-   * 3. Clear MFA session and pending encryption data
-   * 4. Update user state
-   *
-   * @note
-   * - Requires valid mfaSession from previous login attempt
-   * - Uses pendingEncryption data to complete key derivation
-   * - Automatically clears sensitive temporary data
-   */
-  verifyMFA: (code: string) => Promise<boolean>
-
-  /**
-   * Logout current user and clear all authentication state
-   * Clears: user data, encryption keys, MFA sessions, pending encryption
-   * Calls authService.logout for server-side session cleanup
-   */
-  logout: () => void
-
-  /**
-   * Register new user account
-   * @param email - New user's email
-   * @param password - New user's password
-   * @param name - New user's display name
-   * @returns Promise resolving to success message
-   * @throws {Error} On registration failure or if registration is disabled
-   *
-   * @note
-   * - Checks registrationEnabled status before proceeding
-   * - Provides user-friendly error messages for disabled registration
-   * - Does not automatically log in the new user
-   */
-  register: (email: string, password: string, name: string) => Promise<string>
-
-  /**
    * Begin MFA setup process for current user
    * @returns Promise resolving to MFA secret for QR code generation
    * @throws {Error} If no user is logged in
@@ -145,7 +84,7 @@ interface AuthState {
    * @note
    * - Requires authenticated user
    * - Returns secret that should be displayed as QR code
-   * - User must verify setup with verifyMFA to complete enrollment
+   * - User must verify setup with enableMFA to complete enrollment
    */
   enableMFA: () => Promise<string>
 
@@ -202,22 +141,9 @@ export const useAuthStore = create<AuthState>()(
 
       initialize: async () => {
         console.log('Auth store initializing...')
-        // JWT authentication is deprecated - use Clerk instead
-        set({ user: null })
-        console.log('Auth store initialization complete, setting isLoading to false')
+        // Authentication is handled by Clerk - no initialization needed
         set({ isLoading: false })
-      },
-
-      login: async () => {
-        throw new Error('JWT authentication is deprecated. Use Clerk authentication instead.')
-      },
-
-      verifyMFA: async () => {
-        throw new Error('JWT authentication is deprecated. Use Clerk authentication instead.')
-      },
-
-      register: async () => {
-        throw new Error('JWT authentication is deprecated. Use Clerk authentication instead.')
+        console.log('Auth store initialization complete')
       },
 
       checkRegistrationEnabled: async () => {
@@ -261,6 +187,19 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           throw new Error(error instanceof Error ? error.message : 'Failed to disable MFA')
         }
+      },
+
+      // Legacy methods for backward compatibility - now handled by Clerk
+      login: async (_email: string, _password: string) => {
+        throw new Error('JWT authentication is deprecated. Use Clerk authentication instead.')
+      },
+
+      verifyMFA: async (_code: string) => {
+        throw new Error('JWT authentication is deprecated. Use Clerk authentication instead.')
+      },
+
+      register: async (email: string, password: string, name: string) => {
+        return authService.register(email, password, name)
       },
 
       logout: () => {
