@@ -103,7 +103,6 @@ const loginRoute = createRoute({
       <ClerkAuthWithErrorBoundary>
         <SignIn
           routing="hash"
-          path="/login"
           signUpUrl="/register"
           fallbackRedirectUrl="/"
           appearance={{
@@ -188,7 +187,6 @@ const registerRoute = createRoute({
       <ClerkAuthWithErrorBoundary>
         <SignUp
           routing="hash"
-          path="/register"
           signInUrl="/login"
           fallbackRedirectUrl="/"
           appearance={{
