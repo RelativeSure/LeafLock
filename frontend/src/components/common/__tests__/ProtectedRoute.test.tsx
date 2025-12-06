@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ProtectedRoute } from '../ProtectedRoute'
-import { useAuthStore } from '@/stores/authStore'
+import { useClerkAuthStore } from '@/stores/clerkAuthStore'
 
-vi.mock('@/stores/authStore', () => ({
-  useAuthStore: vi.fn(),
+vi.mock('@/stores/clerkAuthStore', () => ({
+  useClerkAuthStore: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -55,7 +55,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should render children for authenticated user', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: true,
       user: mockUser,
     } as any)
@@ -70,7 +70,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should redirect unauthenticated user', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: false,
       user: null,
     } as any)
@@ -86,7 +86,7 @@ describe('ProtectedRoute', () => {
 
   it('should allow admin access', () => {
     const adminUser = { ...mockUser, role: 'admin' as const, isAdmin: true }
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: true,
       user: adminUser,
     } as any)
@@ -101,7 +101,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should block non-admin from admin route', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: true,
       user: mockUser,
     } as any)
@@ -117,7 +117,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should show loading spinner when isLoading is true', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: false,
       user: null,
     } as any)
@@ -133,7 +133,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should not render children when loading', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: false,
       user: null,
     } as any)
@@ -148,7 +148,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should display unauthorized message for unauthenticated user', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: false,
       user: null,
     } as any)
@@ -163,7 +163,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should display login button for unauthenticated user', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: false,
       user: null,
     } as any)
@@ -178,7 +178,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should redirect to login when login button clicked', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: false,
       user: null,
     } as any)
@@ -196,7 +196,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should display access denied message for non-admin on admin route', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: true,
       user: mockUser,
     } as any)
@@ -211,7 +211,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should display permission denied message for non-admin', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: true,
       user: mockUser,
     } as any)
@@ -226,7 +226,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should display go back button for access denied', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: true,
       user: mockUser,
     } as any)
@@ -241,7 +241,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should redirect to fallback route when go back clicked', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: true,
       user: mockUser,
     } as any)
@@ -259,7 +259,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should redirect to root when go back clicked with no fallback', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: true,
       user: mockUser,
     } as any)
@@ -277,7 +277,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should render alert triangle icon for unauthorized', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: false,
       user: null,
     } as any)
@@ -292,7 +292,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should render alert triangle icon for access denied', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: true,
       user: mockUser,
     } as any)
@@ -307,7 +307,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should render user content when requiredRole is user', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: true,
       user: mockUser,
     } as any)
@@ -323,7 +323,7 @@ describe('ProtectedRoute', () => {
 
   it('should render admin content for admin user with default requiredRole', () => {
     const adminUser = { ...mockUser, role: 'admin' as const, isAdmin: true }
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: true,
       user: adminUser,
     } as any)
@@ -338,7 +338,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should use default fallbackRoute when not specified', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: true,
       user: mockUser,
     } as any)
@@ -356,7 +356,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should render loading with correct styling', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: false,
       user: null,
     } as any)
@@ -372,7 +372,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should not show loading when isLoading is false', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: true,
       user: mockUser,
     } as any)
@@ -388,7 +388,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should render multiple children', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: true,
       user: mockUser,
     } as any)
@@ -405,7 +405,7 @@ describe('ProtectedRoute', () => {
   })
 
   it('should display admin requirement message', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       isAuthenticated: true,
       user: mockUser,
     } as any)

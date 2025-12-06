@@ -2,12 +2,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TemplatesPage } from '../templates-page'
 import { useTemplatesStore } from '@/stores/templatesStore'
-import { useAuthStore } from '@/stores/authStore'
+import { useClerkAuthStore } from '@/stores/clerkAuthStore'
 
 const loadTemplatesMock = vi.fn()
 
 vi.mock('@/stores/templatesStore')
-vi.mock('@/stores/authStore')
+vi.mock('@/stores/clerkAuthStore')
 
 vi.mock('@/components/ui/card', () => ({
   Card: ({ children, ...props }: any) => (
@@ -54,7 +54,7 @@ describe('TemplatesPage', () => {
       loadTemplates: loadTemplatesMock,
     } as any)
 
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: { id: 'user-123' },
     } as any)
 

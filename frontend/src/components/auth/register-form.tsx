@@ -1,41 +1,19 @@
 /**
- * RegisterForm Component
+ * Pure Clerk Registration Form
  *
- * Purpose: Provides a comprehensive user registration interface with robust validation
- * and security features. Implements client-side validation for immediate feedback
- * and server-side integration for account creation.
+ * @description
+ * Pure Clerk authentication implementation.
+ * This component uses Clerk's native SignUp component with custom styling.
  *
- * User Experience Goals:
- * - Progressive validation with real-time feedback
- * - Clear password requirements with visual indicators
- * - Accessible form with proper labeling and ARIA support
- * - Graceful handling of registration disabled states
- *
- * Security Considerations:
- * - Strong password requirements (8+ chars, mixed case, numbers, special chars)
- * - Input sanitization for name field (letters, spaces, hyphens, apostrophes only)
- * - Email format validation with RFC-compliant regex
- * - Registration status check to prevent unauthorized access
- * - Generic error messages to prevent user enumeration
- *
- * Props Interface:
- * - onToggleMode: Callback to switch between registration and login forms
- * - animatedTitle: Optional animated branding element
- *
- * State Management:
- * - Form field states with validation tracking
- * - Real-time password strength validation
- * - Registration availability monitoring
- * - Loading and success states for async operations
+ * @features
+ * - Pure Clerk SignUp component with custom appearance
+ * - No legacy authentication methods
+ * - Direct integration with Clerk's authentication system
+ * - Custom styling to match LeafLock design system
  */
 
-import { useState, useEffect } from 'react'
-import { useAuthStore } from '@/stores/authStore'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Lock, Mail, User, Check, X, AlertCircle } from 'lucide-react'
+import * as React from 'react'
+import { SignUp } from '@clerk/clerk-react'
 
 export function RegisterForm({
   onToggleMode,
@@ -44,350 +22,96 @@ export function RegisterForm({
   onToggleMode: () => void
   animatedTitle?: React.ReactNode
 }) {
-  const { register, checkRegistrationEnabled } = useAuthStore()
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [error, setError] = useState('')
-  const [successMessage, setSuccessMessage] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [registrationEnabled, setRegistrationEnabled] = useState<boolean | null>(null)
-  const [checkingStatus, setCheckingStatus] = useState(true)
 
-  // Check registration status on mount
-  useEffect(() => {
-    const checkStatus = async () => {
-      setCheckingStatus(true)
-      try {
-        const enabled = await checkRegistrationEnabled()
-        setRegistrationEnabled(enabled)
-      } catch (error) {
-        console.error('Failed to check registration status:', error)
-        setRegistrationEnabled(false)
-      } finally {
-        setCheckingStatus(false)
-      }
-    }
-    checkStatus()
-  }, [checkRegistrationEnabled])
-
-  /**
-   * Real-time Validation Rules
-   *
-   * Purpose: Provides immediate feedback on form field validity.
-   * All validation rules are enforced both client-side and server-side.
-   *
-   * Name Validation:
-   * - Minimum 2 characters for meaningful names
-   * - Alphabetic characters, spaces, hyphens, and apostrophes only
-   * - Prevents injection of special characters or emojis
-   */
-  // Name validation
-  const nameValid = name.trim().length >= 2
-  const nameHasValidChars = /^[a-zA-Z\s\-']+$/.test(name)
-
-  /**
-   * Email Validation:
-   * - RFC-compliant email format validation
-   * - Prevents malformed email addresses
-   */
-  // Email validation
-  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-
-  /**
-   * Password Requirements:
-   * - Minimum 8 characters for security
-   * - Mixed case letters (uppercase and lowercase)
-   * - At least one numeric character
-   * - At least one special character for complexity
-   * - Password confirmation must match exactly
-   */
-  // Password complexity validation
-  const passwordMinLength = password.length >= 8
-  const passwordHasUppercase = /[A-Z]/.test(password)
-  const passwordHasLowercase = /[a-z]/.test(password)
-  const passwordHasNumber = /[0-9]/.test(password)
-  const passwordHasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)
-  const passwordsMatch = password === confirmPassword && confirmPassword.length > 0
-
-  const allPasswordRequirementsMet =
-    passwordMinLength &&
-    passwordHasUppercase &&
-    passwordHasLowercase &&
-    passwordHasNumber &&
-    passwordHasSpecial &&
-    passwordsMatch
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setSuccessMessage('')
-
-    // Validate name
-    if (!nameValid) {
-      setError('Name must be at least 2 characters')
-      return
-    }
-
-    if (!nameHasValidChars) {
-      setError('Name can only contain letters, spaces, hyphens, and apostrophes')
-      return
-    }
-
-    // Validate email
-    if (!emailValid) {
-      setError('Please enter a valid email address')
-      return
-    }
-
-    // Validate password
-    if (!allPasswordRequirementsMet) {
-      setError('Please meet all password requirements')
-      return
-    }
-
-    setIsLoading(true)
-
-    try {
-      const message = await register(email, password, name)
-      const successText =
-        typeof message === 'string' && message.trim().length > 0
-          ? message
-          : 'Registration request accepted. If this email is eligible, you will receive further instructions shortly.'
-      setSuccessMessage(successText)
-      setName('')
-      setEmail('')
-      setPassword('')
-      setConfirmPassword('')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const ValidationIndicator = ({ valid, text }: { valid: boolean; text: string }) => (
-    <div className="flex items-center gap-2 text-xs transition-smooth">
-      {valid ? (
-        <Check className="w-3 h-3 text-green-500 animate-scale-in" />
-      ) : (
-        <X className="w-3 h-3 text-muted-foreground" />
-      )}
-      <span className={valid ? 'text-green-500' : 'text-muted-foreground'}>{text}</span>
-    </div>
-  )
-
-  // Show loading state while checking registration status
-  if (checkingStatus) {
-    return (
-      <Card className="w-full max-w-md animate-scale-in hover-lift">
-        <CardHeader className="space-y-4">
-          <div className="flex items-center justify-center mx-auto">
-            <h1 className="text-4xl font-semibold tracking-tight text-slate-100">
-              {animatedTitle ? null : 'LeafLock'}
-            </h1>
-            {animatedTitle}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center text-muted-foreground py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4">Checking registration status...</p>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  // Show disabled message if registration is disabled
-  if (registrationEnabled === false) {
-    return (
-      <Card className="w-full max-w-md animate-scale-in hover-lift">
-        <CardHeader className="space-y-4">
-          <div className="flex items-center justify-center mx-auto">
-            <h1 className="text-4xl font-semibold tracking-tight text-slate-100">
-              {animatedTitle ? null : 'LeafLock'}
-            </h1>
-            {animatedTitle}
-          </div>
-          <div className="space-y-2">
-            <p className="text-center text-base text-slate-300 font-normal">
-              End-to-End Encrypted Note Taking
-            </p>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-start gap-3 p-4 bg-warning/10 border border-warning/20 rounded-md">
-              <AlertCircle className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-warning">Registration Disabled</p>
-                <p className="text-sm text-muted-foreground">
-                  New user registration is currently disabled by the administrator. Please contact
-                  support if you need access.
-                </p>
-              </div>
-            </div>
-            <Button onClick={onToggleMode} variant="outline" className="w-full">
-              Back to Sign In
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
 
   return (
-    <Card className="w-full max-w-md animate-scale-in hover-lift">
-      <CardHeader className="space-y-4">
-        <div className="flex items-center justify-center mx-auto">
-          <h1 className="text-4xl font-semibold tracking-tight text-slate-100">
-            {animatedTitle ? null : 'LeafLock'}
-          </h1>
+    <div className="w-full max-w-md mx-auto">
+      {animatedTitle && (
+        <div className="mb-8 text-center">
           {animatedTitle}
         </div>
-        <div className="space-y-2">
-          <p className="text-center text-base text-slate-300 font-normal">
-            End-to-End Encrypted Note Taking
-          </p>
-          <p className="text-center text-sm text-slate-400 font-light">
-            Create your account to get started
-          </p>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleRegister} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
-            <div className="relative">
-              <User className="absolute left-3 top-3 h-4 w-4 text-muted transition-smooth" />
-              <Input
-                id="name"
-                type="text"
-                placeholder="John Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="pl-10 transition-smooth"
-                required
-              />
-            </div>
-            {name.length > 0 && (
-              <div className="space-y-1 p-2 bg-muted/50 rounded-md">
-                <ValidationIndicator valid={nameValid} text="At least 2 characters" />
-                <ValidationIndicator valid={nameHasValidChars} text="Valid characters only" />
-              </div>
-            )}
-          </div>
+      )}
+      
+      <SignUp
+        routing="path"
+        path="/register"
+        signInUrl="/login"
+        fallbackRedirectUrl="/"
+        appearance={{
+          elements: {
+            // Root container
+            rootBox: 'w-full',
+            card: 'w-full bg-transparent border-0 shadow-none p-0 space-y-6',
+            
+            // Header
+            headerTitle: 'clerk-title-enhanced',
+            headerSubtitle: 'clerk-subtitle-enhanced',
+            
+            // Form fields
+            formFieldLabel: 'clerk-label-enhanced',
+            formFieldInput: 'clerk-input-enhanced',
+            formFieldInput__emailAddress: 'clerk-input-enhanced',
+            formFieldInput__password: 'clerk-input-enhanced',
+            formFieldInput__firstName: 'clerk-input-enhanced',
+            formFieldInput__lastName: 'clerk-input-enhanced',
+            formFieldInputShowPasswordButton: 'text-muted-foreground hover:text-foreground hover:scale-110 transition-all',
+            formFieldErrorText: 'clerk-message-error-enhanced',
+            formFieldSuccessText: 'clerk-message-success-enhanced',
+            formFieldHintText: 'text-muted-foreground text-xs mt-2',
+            
+            // Primary action buttons
+            formButtonPrimary: 'clerk-button-primary-enhanced',
+            formButtonReset: 'clerk-button-secondary-enhanced',
+            
+            // Social auth buttons
+            socialButtonsBlockButton: 'clerk-social-button-enhanced',
+            socialButtonsBlockButtonText: 'font-medium',
+            socialButtonsProviderIcon: 'clerk-social-icon-enhanced',
+            
+            // Footer and links
+            footerActionText: 'clerk-footer-text-enhanced',
+            footerActionLink: 'clerk-footer-link-enhanced',
+            footer: 'clerk-footer-enhanced',
+            
+            // Divider
+            dividerLine: 'clerk-divider-enhanced',
+            dividerText: 'clerk-divider-text-enhanced',
+            
+            // Loading and spinners
+            spinner: 'clerk-spinner-enhanced',
+          },
+          variables: {
+            colorPrimary: '#3b82f6',
+            colorBackground: 'transparent',
+            colorText: '#f8fafc',
+            colorInputBackground: 'rgba(30, 41, 59, 0.8)',
+            colorInputText: '#f8fafc',
+            fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            fontSize: '16px',
+            borderRadius: '12px',
+            spacingUnit: '6px',
+          },
+          layout: {
+            socialButtonsPlacement: 'bottom',
+            socialButtonsVariant: 'blockButton',
+            helpPageUrl: '/help',
+            showOptionalFields: true,
+          },
+        }}
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 h-4 w-4 text-muted transition-smooth" />
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-10 transition-smooth"
-                required
-              />
-            </div>
-            {email.length > 0 && (
-              <div className="space-y-1 p-2 bg-muted/50 rounded-md">
-                <ValidationIndicator valid={emailValid} text="Valid email format" />
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted transition-smooth" />
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-10 transition-smooth"
-                required
-              />
-            </div>
-            {password.length > 0 && (
-              <div className="space-y-1 p-2 bg-muted/50 rounded-md">
-                <ValidationIndicator valid={passwordMinLength} text="At least 8 characters" />
-                <ValidationIndicator
-                  valid={passwordHasUppercase}
-                  text="One uppercase letter (A-Z)"
-                />
-                <ValidationIndicator
-                  valid={passwordHasLowercase}
-                  text="One lowercase letter (a-z)"
-                />
-                <ValidationIndicator valid={passwordHasNumber} text="One number (0-9)" />
-                <ValidationIndicator
-                  valid={passwordHasSpecial}
-                  text="One special character (!@#$%...)"
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="confirm-password">Confirm Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted transition-smooth" />
-              <Input
-                id="confirm-password"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="pl-10 transition-smooth"
-                required
-              />
-            </div>
-            {confirmPassword.length > 0 && (
-              <div className="space-y-1 p-2 bg-muted/50 rounded-md">
-                <ValidationIndicator valid={passwordsMatch} text="Passwords match" />
-              </div>
-            )}
-          </div>
-
-          {successMessage && (
-            <div className="text-sm text-emerald-500 bg-emerald-500/10 p-3 rounded-md animate-slide-in">
-              {successMessage}
-            </div>
-          )}
-
-          {error && (
-            <div className="text-sm text-danger bg-danger/10 p-3 rounded-md animate-slide-in">
-              {error}
-            </div>
-          )}
-
-          <Button
-            type="submit"
-            className="w-full transition-bounce hover-lift"
-            disabled={isLoading}
+      />
+      
+      <div className="mt-6 text-center">
+        <p className="text-sm text-muted-foreground">
+          Already have an account?{' '}
+          <button
+            onClick={onToggleMode}
+            className="text-primary hover:text-primary/90 font-medium underline-offset-4 hover:underline transition-all"
           >
-            {isLoading ? 'Creating account...' : 'Create account'}
-          </Button>
-
-          <div className="text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
-            <button
-              type="button"
-              onClick={onToggleMode}
-              className="text-primary hover:underline transition-smooth"
-            >
-              Sign in
-            </button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+            Sign in
+          </button>
+        </p>
+      </div>
+    </div>
   )
 }

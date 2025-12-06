@@ -7,13 +7,8 @@ export const handlers = [
   // Auth endpoints
   http.post(`${API_BASE}/auth/login`, () => {
     return HttpResponse.json({
-      requiresMFA: false,
-      token: 'mock-jwt-token',
-      user: {
-        id: 'mock-user-id',
-        email: 'test@example.com',
-        username: 'testuser',
-      },
+      message: 'Login handled by Clerk - this endpoint is deprecated',
+      deprecated: true,
     })
   }),
 
@@ -33,12 +28,8 @@ export const handlers = [
 
   http.post(`${API_BASE}/auth/mfa/verify`, () => {
     return HttpResponse.json({
-      token: 'mock-jwt-token',
-      user: {
-        id: 'mock-user-id',
-        email: 'test@example.com',
-        username: 'testuser',
-      },
+      message: 'MFA verification handled by Clerk - this endpoint is deprecated',
+      deprecated: true,
     })
   }),
 

@@ -65,7 +65,7 @@ export function useCollaboration() {
 
   const unshareNote = useCallback(
     async (noteId: string, userId: string) => {
-      // Use socialService to remove collaborator instead of direct fetch with JWT
+      // Use socialService to remove collaborator
       await socialService.removeCollaborator(noteId, userId)
       await loadSharedUsers(noteId)
     },

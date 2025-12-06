@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
 import { Sidebar } from '../sidebar'
 import { useNotesStore } from '@/stores/notesStore'
-import { useAuthStore } from '@/stores/authStore'
+import { useClerkAuthStore } from '@/stores/clerkAuthStore'
 
 const createNoteMock = vi.fn()
 const selectNoteMock = vi.fn()
@@ -16,7 +16,7 @@ vi.mock('@/stores/notesStore', () => ({
 }))
 
 vi.mock('@/stores/authStore', () => ({
-  useAuthStore: vi.fn(),
+  useClerkAuthStore: vi.fn(),
 }))
 
 // Mock all child components
@@ -153,7 +153,7 @@ describe('Sidebar', () => {
       isLoading: false,
     } as any)
 
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
     } as any)

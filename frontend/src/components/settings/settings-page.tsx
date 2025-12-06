@@ -48,7 +48,7 @@
 
 import { useNotesStore } from '../../stores/notesStore'
 import { useTemplatesStore } from '../../stores/templatesStore'
-import { useAuthStore } from '../../stores/authStore'
+import { useClerkAuthStore } from '../../stores/clerkAuthStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { Button } from '@/components/ui/button'
 import {
@@ -80,7 +80,7 @@ import { useState } from 'react'
 export function SettingsPage() {
   const { notes, folders, tags, createNote, createFolder, createTag } = useNotesStore()
   const { templates, createTemplate } = useTemplatesStore()
-  const { user } = useAuthStore()
+  const { user } = useClerkAuthStore()
   const { settings, updateSettings } = useSettingsStore()
   const { toast } = useToast()
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)

@@ -20,6 +20,7 @@ LeafLock is a privacy-first notes application with end-to-end encryption, real-t
 
 ## Features
 
+- **Modern Authentication**: Pure Clerk authentication with social logins, MFA, and enterprise features
 - End-to-end encryption handled on the client
 - Zero-knowledge architecture for the backend
 - Real-time collaboration with WebSockets
@@ -67,9 +68,18 @@ LeafLock is a privacy-first notes application with end-to-end encryption, real-t
    docker compose down
    ```
 
-5. **First-time login**: Use the default admin credentials (⚠️ **Change immediately after first login!**):
-   - Email: `admin@leaflock.app` (configurable via `DEFAULT_ADMIN_EMAIL`)
-   - Password: `AdminPass123!` (configurable via `DEFAULT_ADMIN_PASSWORD`)
+5. **Set up Clerk Authentication**:
+   - Get your Clerk keys from [Clerk Dashboard](https://dashboard.clerk.com)
+   - Add to your `.env` file:
+     ```bash
+     VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
+     CLERK_PUBLISHABLE_KEY=pk_test_your_key_here  
+     CLERK_SECRET_KEY=sk_test_your_key_here
+     ```
+   - Visit `/login` to access Clerk's authentication components
+   - Create your first account or sign in
+
+   **Note**: The default admin account is still available for initial setup, but Clerk handles all authentication.
 
 ## Default Admin Account
 

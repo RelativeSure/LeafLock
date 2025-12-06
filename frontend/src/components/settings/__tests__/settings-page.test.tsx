@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, vi, type MockInstance } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SettingsPage } from '../settings-page'
-import { useAuthStore } from '@/stores/authStore'
+import { useClerkAuthStore } from '@/stores/clerkAuthStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useNotesStore } from '@/stores/notesStore'
 import { useTemplatesStore } from '@/stores/templatesStore'
 
-vi.mock('@/stores/authStore', () => ({
-  useAuthStore: vi.fn(),
+vi.mock('@/stores/clerkAuthStore', () => ({
+  useClerkAuthStore: vi.fn(),
 }))
 
 vi.mock('@/stores/settingsStore', () => ({
@@ -119,7 +119,7 @@ describe('SettingsPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
     } as any)
@@ -543,7 +543,7 @@ describe('SettingsPage', () => {
 
   describe('Profile picture settings', () => {
     beforeEach(() => {
-      vi.mocked(useAuthStore).mockReturnValue({
+      vi.mocked(useClerkAuthStore).mockReturnValue({
         user: mockUser,
         isAuthenticated: true,
       } as any)
@@ -581,7 +581,7 @@ describe('SettingsPage', () => {
 
   describe('Settings tabs', () => {
     beforeEach(() => {
-      vi.mocked(useAuthStore).mockReturnValue({
+      vi.mocked(useClerkAuthStore).mockReturnValue({
         user: mockUser,
         isAuthenticated: true,
       } as any)

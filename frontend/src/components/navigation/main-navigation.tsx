@@ -43,7 +43,7 @@
 'use client'
 
 import * as React from 'react'
-import { useAuthStore } from '../../stores/authStore'
+import { useClerkAuthStore } from '../../stores/clerkAuthStore'
 import { FileText, Tag, Settings, ShieldCheck, BookOpen, Github, ChevronDown } from 'lucide-react'
 
 import {
@@ -107,7 +107,7 @@ const externalLinks: { title: string; href: string; description: string; icon: R
   ]
 
 export function MainNavigation() {
-  const { user } = useAuthStore()
+  const { user } = useClerkAuthStore()
   const isAdmin = user?.isAdmin || false
 
   return (

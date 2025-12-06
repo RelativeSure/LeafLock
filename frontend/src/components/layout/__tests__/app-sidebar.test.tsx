@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
 import { AppSidebar } from '../app-sidebar'
 import { useNotesStore } from '@/stores/notesStore'
-import { useAuthStore } from '@/stores/authStore'
+import { useClerkAuthStore } from '@/stores/clerkAuthStore'
 
 const mockNavigate = vi.fn()
 const mockLogout = vi.fn()
@@ -18,7 +18,7 @@ vi.mock('@/stores/notesStore', () => ({
 }))
 
 vi.mock('@/stores/authStore', () => ({
-  useAuthStore: vi.fn(),
+  useClerkAuthStore: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -240,7 +240,7 @@ describe('AppSidebar', () => {
       isLoading: false,
     } as any)
 
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       logout: mockLogout,
       isAuthenticated: true,
@@ -307,7 +307,7 @@ describe('AppSidebar', () => {
     })
 
     it('should show Admin Console for admin users', () => {
-      vi.mocked(useAuthStore).mockReturnValue({
+      vi.mocked(useClerkAuthStore).mockReturnValue({
         user: mockAdminUser,
         logout: mockLogout,
         isAuthenticated: true,

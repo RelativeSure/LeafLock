@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useTemplatesStore } from '../../stores/templatesStore'
 import { useNotesStore } from '../../stores/notesStore'
-import { useAuthStore } from '../../stores/authStore'
+import { useClerkAuthStore } from '../../stores/clerkAuthStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -25,7 +25,7 @@ interface TemplatesDialogProps {
 }
 
 export function TemplatesDialog({ open, onOpenChange }: TemplatesDialogProps) {
-  const { user } = useAuthStore()
+  const { user } = useClerkAuthStore()
   const {
     templates,
     starterTemplates,

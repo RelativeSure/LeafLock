@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { AdminPage } from '../admin-page'
-import { useAuthStore } from '@/stores/authStore'
+import { useClerkAuthStore } from '@/stores/clerkAuthStore'
 
-vi.mock('@/stores/authStore', () => ({
-  useAuthStore: vi.fn(),
+vi.mock('@/stores/clerkAuthStore', () => ({
+  useClerkAuthStore: vi.fn(),
 }))
 
 vi.mock('@/components/ui/card', () => ({
@@ -139,7 +139,7 @@ describe('AdminPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockAdminUser,
       isAuthenticated: true,
     } as any)

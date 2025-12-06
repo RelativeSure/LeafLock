@@ -30,25 +30,25 @@ export const UserAvatar = React.forwardRef<HTMLDivElement, UserAvatarProps>(
           if (settings.profilePicture.customUrl) {
             return (
               <>
-                <AvatarImage src={settings.profilePicture.customUrl} alt={user.name} />
-                <AvatarFallback>{getUserInitials(user.name)}</AvatarFallback>
+                <AvatarImage src={settings.profilePicture.customUrl} alt={user.name || user.email} />
+                <AvatarFallback>{getUserInitials(user.name || user.email.split('@')[0])}</AvatarFallback>
               </>
             )
           }
           // Fall through to initials if no custom URL
-          return <AvatarFallback>{getUserInitials(user.name)}</AvatarFallback>
+          return <AvatarFallback>{getUserInitials(user.name || user.email.split('@')[0])}</AvatarFallback>
         }
 
         case 'initials':
-          return <AvatarFallback>{getUserInitials(user.name)}</AvatarFallback>
+          return <AvatarFallback>{getUserInitials(user.name || user.email.split('@')[0])}</AvatarFallback>
 
         case 'gravatar':
         default: {
           const gravatarUrl = getGravatarUrl(user.email, size)
           return (
             <>
-              <AvatarImage src={gravatarUrl} alt={user.name} />
-              <AvatarFallback>{getUserInitials(user.name)}</AvatarFallback>
+              <AvatarImage src={gravatarUrl} alt={user.name || user.email} />
+              <AvatarFallback>{getUserInitials(user.name || user.email.split('@')[0])}</AvatarFallback>
             </>
           )
         }

@@ -3,13 +3,13 @@ title: Implementation Details
 description: Technical details of the Clerk authentication integration
 ---
 
-This document provides comprehensive technical details about how Clerk authentication is integrated into LeafLock, including code examples, architecture decisions, and migration strategies.
+This document provides setup and configuration details for the pure Clerk authentication implementation in LeafLock.
 
 ## Architecture Overview
 
 ### System Design
 
-LeafLock implements a **dual authentication system** that supports both legacy JWT tokens and modern Clerk authentication during the migration period:
+LeafLock implements a **pure Clerk authentication system** that provides modern, secure authentication without any legacy JWT components:
 
 ```mermaid
 graph TB
@@ -20,20 +20,17 @@ graph TB
     end
     
     subgraph "Backend"
-        E[Dual Auth Middleware] --> F{Token Type?}
-        F -->|Clerk Token| G[Clerk Validation]
-        F -->|JWT Token| H[JWT Validation]
-        G --> I[User Context]
-        H --> I
+        E[Clerk Auth Middleware] --> F[Clerk Validation]
+        F --> G[User Context]
     end
     
     subgraph "External"
-        J[Clerk API]
-        K[Clerk Dashboard]
+        H[Clerk API]
+        I[Clerk Dashboard]
     end
     
-    G --> J
-    K --> A
+    F --> H
+    I --> A
     
     D --> E
 ```
@@ -47,9 +44,8 @@ graph TB
    - API calls include `Authorization: Bearer <clerk-token>` header
 
 2. **Backend Validation**
-   - Dual authentication middleware receives request
-   - Attempts Clerk token validation first
-   - Falls back to JWT validation if Clerk fails
+   - Clerk authentication middleware receives request
+   - Validates Clerk session token
    - Sets user context for downstream handlers
 
 3. **User Context**
@@ -292,9 +288,9 @@ func (h *Handler) validateClerkToken(ctx context.Context, token string) (*jwt.Cl
 }
 ```
 
-### Dual Authentication Middleware
+### Clerk Authentication Middleware
 
-```go title="backend/auth/dual_middleware.go"
+```go title="backend/auth/clerk_middleware.go"
 func (h *Handler) DualAuthMiddleware(c *fiber.Ctx) error {
     authHeader := c.Get("Authorization")
     if authHeader == "" {
@@ -333,29 +329,8 @@ func (h *Handler) DualAuthMiddleware(c *fiber.Ctx) error {
         }
     }
 
-    // Clerk failed, try JWT authentication
-    if h.config.JWTSecret != nil {
-        blacklisted, err := h.service.session.IsJWTBlacklisted(c.Context(), token)
-        if err == nil && blacklisted {
-            return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
-                Error: "Token has been revoked",
-                Code:  ErrCodeInvalidToken,
-            })
-        }
-
-        userID, isAdmin, err := h.service.ValidateJWT(token)
-        if err == nil {
-            c.Locals("user_id", userID)
-            c.Locals("is_admin", isAdmin)
-            c.Locals("auth_type", "jwt")
-            c.Locals("token", token)
-            
-            return c.Next()
-        }
-    }
-
     return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
-        Error: "Invalid or expired token",
+        Error: "Invalid or expired Clerk session",
         Code:  ErrCodeInvalidToken,
     })
 }
@@ -367,40 +342,18 @@ func (h *Handler) DualAuthMiddleware(c *fiber.Ctx) error {
 func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *appconfig.Config, startTime time.Time, readyState *appserver.ReadyState) {
     // ... existing middleware setup
     
-    // Authentication routes (dual auth support)
-    api.Post("/auth/logout", authHandler.DualAuthMiddleware, authHandler.Logout)
+    // Authentication routes (Clerk authentication)
+    api.Post("/auth/logout", authHandler.ClerkAuthMiddleware, authHandler.Logout)
     
-    // Protected routes (dual auth support)
-    protected := api.Group("", authHandler.DualAuthMiddleware)
+    // Protected routes (Clerk authentication)
+    protected := api.Group("", authHandler.ClerkAuthMiddleware)
     
-    // Admin routes (dual auth support)
+    // Admin routes (Clerk authentication)
     admin := protected.Group("/admin", authHandler.RequireAdminMiddleware)
     
     // ... rest of route setup
 }
 ```
-
-## Migration Strategy
-
-### User ID Mapping
-
-During migration, Clerk user IDs need to be mapped to internal user IDs:
-
-```go
-type UserMapping struct {
-    ID            uuid.UUID `db:"id"`
-    ClerkUserID   string    `db:"clerk_user_id"`
-    CreatedAt     time.Time `db:"created_at"`
-    UpdatedAt     time.Time `db:"updated_at"`
-}
-
-func (h *Handler) getOrCreateUserFromClerk(ctx context.Context, clerkUserID string, email string, isAdmin bool) (uuid.UUID, error) {
-    // Check if mapping exists
-    var userID uuid.UUID
-    err := h.db.QueryRow(ctx, `
-        SELECT user_id FROM user_clerk_mappings 
-        WHERE clerk_user_id = $1
-    `, clerkUserID).Scan(&userID)
     
     if err == nil {
         return userID, nil
@@ -444,40 +397,6 @@ func (h *Handler) getOrCreateUserFromClerk(ctx context.Context, clerkUserID stri
     }
     
     return userID, nil
-}
-```
-
-### Password Migration
-
-For existing users, password migration requires careful handling:
-
-```go
-func (h *Handler) initiateUserMigration(ctx context.Context, userID uuid.UUID, email string) error {
-    // Generate secure migration token
-    token, err := generateSecureToken()
-    if err != nil {
-        return fmt.Errorf("failed to generate migration token: %w", err)
-    }
-    
-    // Store migration token
-    _, err = h.db.Exec(ctx, `
-        INSERT INTO user_migration_tokens (user_id, token, expires_at, created_at)
-        VALUES ($1, $2, $3, $4)
-    `, userID, token, time.Now().Add(24*time.Hour), time.Now())
-    
-    if err != nil {
-        return fmt.Errorf("failed to store migration token: %w", err)
-    }
-    
-    // Send migration email
-    migrationURL := fmt.Sprintf("%s/migrate?token=%s", h.config.FrontendURL, token)
-    
-    emailData := map[string]interface{}{
-        "migration_url": migrationURL,
-        "expires_in": "24 hours",
-    }
-    
-    return h.emailService.SendTemplate(ctx, email, "migration_invite", emailData)
 }
 ```
 
@@ -662,23 +581,11 @@ func TestClerkTokenValidation(t *testing.T) {
 
 ### Integration Tests
 ```go
-func TestDualAuthentication(t *testing.T) {
+func TestClerkAuthentication(t *testing.T) {
     // Test with Clerk token
     t.Run("clerk authentication", func(t *testing.T) {
         req := httptest.NewRequest("GET", "/api/protected", nil)
         req.Header.Set("Authorization", "Bearer clerk_test_token")
-        
-        rec := httptest.NewRecorder()
-        testApp.ServeHTTP(rec, req)
-        
-        assert.Equal(t, http.StatusOK, rec.Code)
-    })
-    
-    // Test with JWT token
-    t.Run("jwt authentication", func(t *testing.T) {
-        jwtToken := createTestJWT()
-        req := httptest.NewRequest("GET", "/api/protected", nil)
-        req.Header.Set("Authorization", "Bearer "+jwtToken)
         
         rec := httptest.NewRecorder()
         testApp.ServeHTTP(rec, req)
@@ -706,10 +613,7 @@ func TestDualAuthentication(t *testing.T) {
 // Authentication metrics
 type AuthMetrics struct {
     ClerkValidations   prometheus.Counter
-    JWTValidations     prometheus.Counter
     ValidationErrors   prometheus.Counter
-    MigrationAttempts  prometheus.Counter
-    MigrationSuccesses prometheus.Counter
 }
 
 func (h *Handler) recordAuthMetrics(authType string, success bool) {
@@ -719,11 +623,7 @@ func (h *Handler) recordAuthMetrics(authType string, success bool) {
     }
     
     if success {
-        if authType == "clerk" {
-            h.metrics.ClerkValidations.With(labels).Inc()
-        } else {
-            h.metrics.JWTValidations.With(labels).Inc()
-        }
+        h.metrics.ClerkValidations.With(labels).Inc()
     } else {
         h.metrics.ValidationErrors.With(labels).Inc()
     }

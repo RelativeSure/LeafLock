@@ -187,7 +187,7 @@ export function AdminPage() {
 
   const handleUserStatusChange = async (userId: string, newStatus: string) => {
     try {
-      // Use Clerk auth service instead of JWT tokens
+      // Use Clerk auth service
       // This would need proper admin API endpoints
       if (newStatus === 'active') {
         // await authService.unlockUser(userId) // This method doesn't exist yet
@@ -205,7 +205,7 @@ export function AdminPage() {
 
   const handleUserRoleChange = async (userId: string, newRole: string) => {
     try {
-      // Use Clerk auth service instead of JWT tokens
+      // Use Clerk auth service
       // This would need proper admin API endpoints
       // await authService.updateUserRole(userId, newRole) // This method doesn't exist yet
       console.log('User role update operation would be called here')
@@ -221,7 +221,7 @@ export function AdminPage() {
 
   const handleDeleteUser = async (userId: string) => {
     try {
-      // Use Clerk auth service instead of JWT tokens
+      // Use Clerk auth service
       // This would need proper admin API endpoints
       // await authService.deleteUser(userId) // This method doesn't exist yet
       console.log('User delete operation would be called here')
@@ -574,7 +574,7 @@ export function AdminPage() {
                             checked={announcement.isActive}
                             onCheckedChange={async (checked) => {
                               try {
-                                // Use Clerk auth service instead of JWT tokens
+                                // Use Clerk auth service
                                 // This would need proper admin API endpoints
                                 // await authService.updateAnnouncement(announcement.id, { isActive: checked })
                                 console.log('Announcement update operation would be called here')

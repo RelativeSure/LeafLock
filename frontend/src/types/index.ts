@@ -1,12 +1,13 @@
 export interface User {
   id: string
   email: string
-  name: string
-  role: 'admin' | 'user'
+  name?: string
+  role?: 'admin' | 'user'
   isAdmin: boolean
-  mfaEnabled: boolean
+  mfaEnabled?: boolean
   mfaSecret?: string
-  createdAt: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export interface NoteVersion {

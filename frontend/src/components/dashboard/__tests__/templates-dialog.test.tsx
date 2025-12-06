@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TemplatesDialog } from '../templates-dialog'
 import { useTemplatesStore } from '@/stores/templatesStore'
 import { useNotesStore } from '@/stores/notesStore'
-import { useAuthStore } from '@/stores/authStore'
+import { useClerkAuthStore } from '@/stores/clerkAuthStore'
 
 const loadTemplatesMock = vi.fn()
 const applyTemplateMock = vi.fn()
@@ -14,7 +14,7 @@ const selectNoteMock = vi.fn()
 
 vi.mock('@/stores/templatesStore')
 vi.mock('@/stores/notesStore')
-vi.mock('@/stores/authStore')
+vi.mock('@/stores/clerkAuthStore')
 
 vi.mock('@/components/ui/dialog', () => ({
   Dialog: ({ children, open }: any) => (open ? <div data-testid="dialog">{children}</div> : null),
@@ -110,7 +110,7 @@ describe('TemplatesDialog', () => {
       selectNote: selectNoteMock,
     } as any)
 
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: { id: 'user-1' },
     } as any)
   })

@@ -100,7 +100,6 @@ describe('ApiClient', () => {
       vi.mocked(navigationUtils.isOnAuthRoute).mockReturnValue(false)
 
       await expect(client.getNotes()).rejects.toThrow('Unauthorized')
-      // JWT cleanup removed - Clerk handles authentication
     })
 
     it('does not redirect when already on auth route', async () => {
