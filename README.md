@@ -1,5 +1,10 @@
 # LeafLock
 
+> [!IMPORTANT]  
+>THIS PROJECT IS A PRODUCT OF VIBE CODING AND TESTING AI/LLMS.
+
+## Badges
+
 [![Unit Tests](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/unit-tests.yml?branch=main&label=unit%20tests)](https://github.com/RelativeSure/LeafLock/actions/workflows/unit-tests.yml)
 [![Code Coverage](https://img.shields.io/github/actions/workflow/status/RelativeSure/LeafLock/ci-code-coverage.yml?branch=main&label=coverage)](https://github.com/RelativeSure/LeafLock/actions/workflows/ci-code-coverage.yml)
 [![codecov](https://codecov.io/gh/RelativeSure/LeafLock/branch/main/graph/badge.svg?token=YOUR_CODECOV_TOKEN)](https://codecov.io/gh/RelativeSure/LeafLock)
