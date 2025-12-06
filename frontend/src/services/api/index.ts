@@ -6,7 +6,6 @@ export { organizationService } from './organizationService'
 
 // Export types
 export type {
-  LoginResponse,
   RegisterResponse,
   MFAStatusResponse,
   Note,

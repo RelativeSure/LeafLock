@@ -13,7 +13,7 @@
  */
 
 import { useClerkApiClient } from './clerkApiClient'
-import { LoginResponse, RegisterResponse, MFAStatusResponse } from './types'
+import { ClerkUser, RegisterResponse, MFAStatusResponse } from './types'
 import { useAuth, useUser, useSession } from '@clerk/clerk-react'
 
 import React from 'react'
@@ -48,7 +48,7 @@ class ClerkAuthService {
   }
 
   // Legacy login method - now handled by Clerk
-  async login(_email: string, _password: string): Promise<LoginResponse> {
+  async login(_email: string, _password: string): Promise<{ user: ClerkUser }> {
     // This method is no longer needed as Clerk handles login
     // Return a mock response for compatibility during transition
     throw new Error('Use Clerk signIn instead of authService.login()')
@@ -62,7 +62,7 @@ class ClerkAuthService {
   }
 
   // MFA verification - now handled by Clerk
-  async verifyMFA(_code: string, _sessionToken?: string): Promise<LoginResponse> {
+  async verifyMFA(_code: string, _sessionToken?: string): Promise<{ user: ClerkUser }> {
     // MFA is handled by Clerk's built-in MFA flow
     throw new Error('Use Clerk MFA flow instead of authService.verifyMFA()')
   }
@@ -127,7 +127,7 @@ class ClerkAuthService {
   }
 
   // Get current Clerk user info in legacy format
-  getCurrentUser(): LoginResponse['user'] | null {
+  getCurrentUser(): ClerkUser | null {
     const { user: clerkUser } = this.user
     const { isSignedIn } = this.auth
 

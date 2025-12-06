@@ -11,22 +11,15 @@ export const DEFAULT_NOTE_FIELDS = {
   pinned: false,
 }
 
-// Legacy LoginResponse - no longer used with Clerk
-// export interface LoginResponse {
-//   token: string
-//   user: {
-//     id: string
-//     email: string
-//     name: string
-//     role: 'admin' | 'user'
-//     mfaEnabled: boolean
-//     createdAt: string
-//   }
-//   requiresMFA?: boolean
-//   mfaSession?: string
-//   encryptionSalt?: string
-//   encryptionVersion?: number
-// }
+// Clerk-compatible user interface for legacy compatibility
+export interface ClerkUser {
+  id: string
+  email: string
+  name: string
+  role: 'admin' | 'user'
+  mfaEnabled: boolean
+  createdAt: string
+}
 
 export interface RegisterResponse {
   message: string
