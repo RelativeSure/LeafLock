@@ -65,7 +65,7 @@
     "@tiptap/extension-highlight": "3.13.0",
     "@tiptap/extension-link": "3.13.0",
     "@tiptap/extension-placeholder": "3.13.0",
-    "@tiptap/extension-task-item": "3.12.1",
+    "@tiptap/extension-task-item": "3.13.0",
     "@tiptap/extension-task-list": "3.12.1",
     "@tiptap/extension-typography": "3.12.1",
     "@tiptap/react": "3.12.1",
