@@ -11,7 +11,7 @@ This document summarizes the comprehensive documentation added to critical backe
 #### Register Handler
 - **Business Logic**: User registration with zero-knowledge architecture
 - **Security Focus**: Email enumeration prevention, dual-layer registration controls
-- **Key Features**: 
+- **Key Features**:
   - Anti-enumeration via consistent responses
   - Environment + database registration controls
   - Zero-knowledge email storage (search hash only)
