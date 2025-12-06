@@ -75,11 +75,8 @@ func seedDefaultAdminUser(db appdb.Database, crypto *appcrypto.CryptoService, cf
 }
 
 func LoadConfig() *appconfig.Config {
-	jwtLower := strings.ToLower(os.Getenv("JWT_SECRET"))
-	if jwtLower == "" || strings.HasPrefix(jwtLower, "test") {
-		_ = os.Setenv("JWT_SECRET", "integration-jwt-secret-value-1234567890abcdef")
-	}
-	// Zero-knowledge: SERVER_ENCRYPTION_KEY no longer used (encryption keys derived from JWT_SECRET)
+	// JWT_SECRET removed - Clerk-only authentication
+	// Zero-knowledge: SERVER_ENCRYPTION_KEY no longer used (encryption keys derived from Clerk secret)
 	return appconfig.LoadConfig()
 }
 
@@ -87,12 +84,7 @@ func SetupDatabase(url string) (*pgxpool.Pool, error) {
 	return appdb.SetupDatabase(url)
 }
 
-func JWTMiddleware(secret []byte, redis *redis.Client, crypto *appcrypto.CryptoService) fiber.Handler {
-	// Use new auth package middleware
-	authService := auth.NewService(nil, redis, string(secret))
-	authHandler := auth.NewHandler(authService, &MockEmailServiceCompat{})
-	return authHandler.JWTMiddleware
-}
+
 
 func isValidHexColor(color string) bool {
 	return utils.IsValidHexColor(color)

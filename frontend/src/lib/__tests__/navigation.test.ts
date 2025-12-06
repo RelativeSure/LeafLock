@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { clearAuthStorage, safeRedirectToLogin, isOnAuthRoute } from '../navigation'
+import { safeRedirectToLogin, isOnAuthRoute } from '../navigation'
 
 describe('navigation utils', () => {
   beforeEach(() => {
@@ -7,28 +7,6 @@ describe('navigation utils', () => {
     sessionStorage.clear()
     delete (window as any).location
     ;(window as any).location = { pathname: '/', replace: vi.fn() }
-  })
-
-  describe('clearAuthStorage', () => {
-    it('should clear auth-related storage', () => {
-      localStorage.setItem('token', 'test-token')
-      localStorage.setItem('user', 'test-user')
-
-      clearAuthStorage()
-
-      expect(localStorage.getItem('token')).toBeNull()
-      expect(localStorage.getItem('user')).toBeNull()
-    })
-
-    it('should not clear non-auth items', () => {
-      localStorage.setItem('theme', 'dark')
-      localStorage.setItem('token', 'test-token')
-
-      clearAuthStorage()
-
-      expect(localStorage.getItem('theme')).toBe('dark')
-      expect(localStorage.getItem('token')).toBeNull()
-    })
   })
 
   describe('isOnAuthRoute', () => {
@@ -87,16 +65,6 @@ describe('navigation utils', () => {
       expect(window.location.href).toBe('')
     })
 
-    it('should handle localStorage errors gracefully in clearAuthStorage', () => {
-      const originalRemoveItem = Storage.prototype.removeItem
-      Storage.prototype.removeItem = vi.fn(() => {
-        throw new Error('localStorage is disabled')
-      })
 
-      // Should not throw
-      expect(() => clearAuthStorage()).not.toThrow()
-
-      Storage.prototype.removeItem = originalRemoveItem
-    })
   })
 })

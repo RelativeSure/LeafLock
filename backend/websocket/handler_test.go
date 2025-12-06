@@ -64,7 +64,7 @@ func TestHub_UnregisterConnection(t *testing.T) {
 	}
 
 	hub.RegisterConnection(conn)
-	
+
 	// Wait for registration
 	assert.Eventually(t, func() bool {
 		users := hub.GetConnectedUsers(noteID)

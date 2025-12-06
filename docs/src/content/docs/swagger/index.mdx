@@ -105,7 +105,7 @@ Each endpoint includes:
     - `POST /auth/mfa/enable` - Enable MFA
     - `POST /auth/mfa/disable` - Disable MFA
     - `POST /auth/mfa/backup-codes/regenerate` - Regenerate backup codes
-  </TabItem>
+</TabItem>
   <TabItem label="Notes (15 endpoints)">
     **Tag**: `Notes`
 
@@ -135,7 +135,7 @@ Each endpoint includes:
     - `POST /notes/import` - Import note
     - `POST /notes/bulk-import` - Bulk import notes
     - `POST /notes/{id}/export` - Export note
-  </TabItem>
+</TabItem>
   <TabItem label="Share Links (5 endpoints)">
     **Tag**: `Share Links`
 
@@ -148,7 +148,7 @@ Each endpoint includes:
 
     **Public Endpoint**:
     - `GET /share/{token}` - Access shared note via token
-  </TabItem>
+</TabItem>
   <TabItem label="Settings & Account (4 endpoints)">
     **Tags**: `Settings`, `Account`
 
@@ -160,7 +160,7 @@ Each endpoint includes:
     - `DELETE /account` - Delete account
     - `GET /account/export` - Export user data
     - `GET /user/storage` - Get storage info
-  </TabItem>
+</TabItem>
   <TabItem label="Admin (4 endpoints)">
     **Tag**: `Admin` (Admin-only)
 
@@ -172,7 +172,7 @@ Each endpoint includes:
 
     **Public Announcements**:
     - `GET /api/v1/announcements` - Get announcements (public)
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ## Specification Files
@@ -213,7 +213,7 @@ Generate API clients from the OpenAPI spec:
       -g typescript-fetch \
       -o ./generated-client
     ```
-  </TabItem>
+</TabItem>
   <TabItem label="Python">
     ```bash
     # Using openapi-generator
@@ -222,7 +222,7 @@ Generate API clients from the OpenAPI spec:
       -g python \
       -o ./python-client
     ```
-  </TabItem>
+</TabItem>
   <TabItem label="Go">
     ```bash
     # Using oapi-codegen
@@ -231,7 +231,7 @@ Generate API clients from the OpenAPI spec:
       http://localhost:8080/api/v1/docs/openapi.json \
       > client.go
     ```
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ## Implementation Details

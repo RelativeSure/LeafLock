@@ -650,4 +650,4 @@ func generateFilename(title, format string) string {
 //       ws.HandleWebSocket(c, hub, db)
 //   }))
 
-// JWT Middleware
+// Clerk Session Middleware

@@ -62,7 +62,7 @@ func TestLoadAllowlistFromSources_EmptyEnv(t *testing.T) {
 
 func TestLoadAllowlistFromSources_WithSpaces(t *testing.T) {
 	allowlist, _ := LoadAllowlistFromSources(" user1 , user2 , user3 ", "")
-	
+
 	assert.Equal(t, 3, len(allowlist))
 	assert.Contains(t, allowlist, "user1")
 	assert.Contains(t, allowlist, "user2")
@@ -71,7 +71,7 @@ func TestLoadAllowlistFromSources_WithSpaces(t *testing.T) {
 
 func TestLoadAllowlistFromSources_EmptyValues(t *testing.T) {
 	allowlist, _ := LoadAllowlistFromSources("user1,,user2,", "")
-	
+
 	assert.Equal(t, 2, len(allowlist))
 	assert.Contains(t, allowlist, "user1")
 	assert.Contains(t, allowlist, "user2")

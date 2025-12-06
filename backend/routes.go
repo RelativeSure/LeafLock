@@ -28,7 +28,6 @@ import (
 )
 
 // setupRoutes configures all API routes and middleware for the application
-// Zero-knowledge: crypto removed, handlers derive encryption from JWT_SECRET internally
 func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *appconfig.Config, startTime time.Time, readyState *appserver.ReadyState) {
 	// Request ID middleware - adds unique ID to each request for tracing
 	app.Use(middleware.RequestIDMiddleware())
@@ -85,7 +84,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 				strings.HasPrefix(path, "/api/v1/health") ||
 				strings.HasPrefix(path, "/api/v1/ready") ||
 				strings.HasPrefix(path, "/api/v1/auth/") ||
-				strings.HasPrefix(path, "/api/v1/") // Skip CSRF for all API routes (JWT-authenticated, CSRF-safe)
+				strings.HasPrefix(path, "/api/v1/") // Skip CSRF for all API routes (Clerk-authenticated, CSRF-safe)
 		},
 	}))
 
@@ -132,14 +131,15 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	emailService := services.NewEmailService(config)
 	notificationService := services.NewNotificationService(db, emailService)
 
-	// Zero-knowledge: Derive handler encryption key from JWT secret
+	// Derive handler encryption key from a secure source
 	// Used for share links, attachments, and other server-managed encrypted data
 	// Note: User notes remain E2E encrypted with password-derived keys
-	handlerKey := sha256.Sum256(append([]byte(config.JWTSecret), []byte("-handler-encryption")...))
+	// Use Clerk secret key as the base for handler encryption key
+	handlerKey := sha256.Sum256(append([]byte(config.ClerkSecretKey), []byte("-handler-encryption")...))
 	handlerCrypto := appcrypto.NewCryptoService(handlerKey[:])
 
 	// Initialize modern auth package
-	authService := auth.NewService(db, rdb, string(config.JWTSecret))
+	authService := auth.NewService(db, rdb, config.ClerkSecretKey)
 	authHandler := auth.NewHandler(authService, emailService)
 
 	// Initialize other handlers
@@ -180,7 +180,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	// Authentication routes (public) - Tier 1: Strictest rate limiting - MODERN AUTH PACKAGE
 	api.Post("/auth/register", rateLimits.RegisterLimiter, authHandler.Register)
 	api.Post("/auth/login", rateLimits.AuthLimiter, authHandler.Login)
-	api.Post("/auth/logout", authHandler.JWTMiddleware, authHandler.Logout)
+	api.Post("/auth/logout", authHandler.ClerkMiddleware, authHandler.Logout)
 	api.Get("/auth/registration", rateLimits.LightweightLimiter, authHandler.GetRegistrationStatus)
 
 	// Debug routes (development only) - double check for security
@@ -198,11 +198,12 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 
 	// Announcements (public with optional auth) - Tier 5: Lightweight
 	// Returns announcements based on auth status: 'all' for everyone, 'logged_in' only for authenticated users
-	api.Get("/announcements", rateLimits.LightweightLimiter, authHandler.OptionalJWTMiddleware, announcementsHandler.GetAnnouncements)
+	// Using Clerk-specific optional middleware for enhanced security
+	api.Get("/announcements", rateLimits.LightweightLimiter, authHandler.OptionalClerkMiddleware, announcementsHandler.GetAnnouncements)
 
-	// Protected routes (require JWT) - USING MODERN AUTH MIDDLEWARE
-	protected := api.Group("", authHandler.JWTMiddleware)
-
+	// Protected routes (require authentication) - USING MODERN AUTH MIDDLEWARE
+	// Primary routes use Clerk authentication with enhanced security
+	protected := api.Group("", authHandler.ClerkMiddleware)
 	// MFA routes - Tier 5: Lightweight for status checks, Tier 1 for verification - MODERN AUTH PACKAGE
 	protected.Get("/auth/mfa/status", rateLimits.LightweightLimiter, authHandler.GetMFAStatus)
 	protected.Post("/auth/mfa/setup", rateLimits.AuthLimiter, authHandler.BeginMFASetup)
@@ -323,6 +324,28 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 
 	// Analytics routes - Tier 5: Lightweight
 	protected.Get("/analytics", rateLimits.LightweightLimiter, analyticsHandler.GetUserAnalytics)
+
+	// Clerk-specific routes - Enhanced authentication features
+	// These routes leverage Clerk's advanced capabilities
+	clerkEnhanced := protected.Group("/clerk")
+
+	// Session management - Get current Clerk session info
+	clerkEnhanced.Get("/session/info", rateLimits.LightweightLimiter, authHandler.GetClerkSessionInfo)
+
+	// User profile - Get enhanced Clerk user information
+	clerkEnhanced.Get("/user/profile", rateLimits.LightweightLimiter, authHandler.GetClerkUserProfile)
+
+	// Device management - List active sessions/devices
+	clerkEnhanced.Get("/sessions", rateLimits.LightweightLimiter, authHandler.GetClerkSessions)
+
+	// Revoke specific session
+	clerkEnhanced.Post("/sessions/:sessionId/revoke", rateLimits.AuthLimiter, authHandler.RevokeClerkSession)
+
+	// Organization management (when organizations are enabled)
+	clerkEnhanced.Get("/organizations", rateLimits.LightweightLimiter, authHandler.GetClerkOrganizations)
+	clerkEnhanced.Post("/organizations", rateLimits.StandardCRUDLimiter, authHandler.CreateClerkOrganization)
+	clerkEnhanced.Get("/organizations/:orgId", rateLimits.LightweightLimiter, authHandler.GetClerkOrganization)
+	clerkEnhanced.Put("/organizations/:orgId", rateLimits.StandardCRUDLimiter, authHandler.UpdateClerkOrganization)
 
 	// Admin routes - Tier 4: Standard CRUD (admin only)
 	admin := protected.Group("/admin", authHandler.RequireAdminMiddleware)

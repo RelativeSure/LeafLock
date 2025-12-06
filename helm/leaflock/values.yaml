@@ -313,8 +313,9 @@ networkPolicy:
 
 # Secrets configuration
 secrets:
-  # JWT signing secret (base64 encoded)
-  jwtSecret: ""
+  # Clerk authentication keys (base64 encoded)
+  clerkPublishableKey: ""
+  clerkSecretKey: ""
   # Server encryption key (base64 encoded)
   serverEncryptionKey: ""
 

@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { Home, Settings, Shield, Tag, Plus, LogOut, Leaf, ChevronRight, Trash2 } from 'lucide-react'
 import { Link, useNavigate, useLocation } from '@tanstack/react-router'
+import { useClerk } from '@clerk/clerk-react'
 
 import {
   Sidebar,
@@ -39,13 +40,14 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/components/ui/user-avatar'
 
-import { useAuthStore } from '@/stores/authStore'
+import { useClerkAuthStore } from '@/stores/clerkAuthStore'
 import { useNotesStore } from '@/stores/notesStore'
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, logout } = useAuthStore()
+  const { user } = useClerkAuthStore()
+  const clerk = useClerk()
   const {
     folders,
     tags,
@@ -69,8 +71,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
   }
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await clerk.signOut()
     navigate({ to: '/login' })
   }
 
@@ -90,7 +92,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader className="group-data-[collapsible=icon]:px-1">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild className="group-data-[collapsible=icon]:!p-2 group-data-[collapsible=icon]:justify-center">
+            <SidebarMenuButton
+              size="lg"
+              asChild
+              className="group-data-[collapsible=icon]:!p-2 group-data-[collapsible=icon]:justify-center"
+            >
               <Link to="/">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                   <Leaf className="size-4" />
@@ -282,7 +288,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupLabel>Settings</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Settings" className="group-data-[collapsible=icon]:justify-center">
+              <SidebarMenuButton
+                asChild
+                tooltip="Settings"
+                className="group-data-[collapsible=icon]:justify-center"
+              >
                 <Link to="/settings">
                   <Settings />
                   <span className="group-data-[collapsible=icon]:hidden">Settings</span>
@@ -291,7 +301,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuItem>
             {user?.isAdmin && (
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Admin Console" className="group-data-[collapsible=icon]:justify-center">
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Admin Console"
+                  className="group-data-[collapsible=icon]:justify-center"
+                >
                   <Link to="/admin">
                     <Shield />
                     <span className="group-data-[collapsible=icon]:hidden">Admin Console</span>

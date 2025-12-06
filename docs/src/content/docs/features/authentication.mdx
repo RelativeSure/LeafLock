@@ -1,283 +1,402 @@
 ---
-title: Authentication & MFA
-description: LeafLock's modern authentication system with TOTP multi-factor authentication
+title: Authentication & MFA (Clerk)
+description: LeafLock's modern authentication system powered by Clerk with enterprise-grade security
 sidebar:
   order: 1
 ---
 
 import { Code, Tabs, TabItem } from '@astrojs/starlight/components';
 
-## Modern Authentication Package
+## Modern Authentication with Clerk
 
-LeafLock uses a modular Go authentication package with JWT tokens, Argon2id password hashing, and TOTP MFA.
+LeafLock uses [Clerk](https://clerk.com) for enterprise-grade authentication, providing modern security features while maintaining LeafLock's zero-knowledge architecture.
 
-**Architecture** (`backend/auth/`):
-- `models.go` - Type-safe models, structured error codes
-- `session.go` - Redis-backed encrypted session management
-- `password.go` - Argon2id hashing (64MB memory, 3 iterations), password reset
-- `mfa.go` - TOTP + 10 backup codes implementation
-- `service.go` - Coordinating service layer
-- `handlers.go` - HTTP API (13 endpoints)
-- `middleware.go` - JWT validation, auth guards
+**Key Benefits**:
+- **Enterprise Security**: SOC 2, GDPR, HIPAA compliant with built-in threat detection
+- **Multiple Auth Methods**: Email/password, social logins, magic links, passkeys, SAML SSO
+- **Advanced MFA**: TOTP, SMS, email codes, backup codes with risk-based authentication
+- **Organization Management**: Multi-tenant support with role-based access control
+- **Developer Experience**: Pre-built components, comprehensive APIs, excellent documentation
 
-**Key Features**:
-- Password strength validation (12+ chars, mixed case, digits, special)
-- Account locking (5 failed attempts = 15min lockout)
-- XChaCha20-Poly1305 encrypted sessions
-- 24-hour session duration
-- 5-minute MFA session window
+## Authentication Architecture
 
-## Authentication Endpoints
+### Authentication Flow
 
+```mermaid
+graph TD
+    A[User visits app] --> B{Authenticated?}
+    B -->|Yes| C[Access granted]
+    B -->|No| D[Redirect to /login]
+    D --> E[Clerk SignIn component]
+    E --> F[User authenticates]
+    F --> G[Clerk session created]
+    G --> H[Session token sent to backend]
+    H --> I[Backend validates token]
+    I --> J[User context established]
+    J --> C
+```
+
+### Dual Authentication Support
+
+During migration, LeafLock supports both authentication methods:
+
+- **Clerk Authentication**: New users and gradual migration (recommended)
+- **Legacy JWT**: Existing users continue working during transition
+- **Automatic Detection**: Backend intelligently handles both token types
+
+## Authentication Methods
+
+### Primary Authentication
 <Tabs>
-  <TabItem label="Core Auth">
-<Code code={`# Register new user
-POST /api/v1/auth/register
-Body: { "email": "user@example.com", "password": "SecureP@ss123" }
-Response: { "message": "Registration request accepted. Check your email for next steps." }
-
-# Login
-POST /api/v1/auth/login
-Body: { "email": "user@example.com", "password": "..." }
-Response: { "token": "jwt_token", "user_id": "uuid" }
-OR: { "mfa_required": true, "session_token": "temp_token" }
-
-# Logout
-POST /api/v1/auth/logout
-Headers: Authorization: Bearer <jwt_token>
-
-# Registration status
-GET /api/v1/auth/registration
-Response: { "enabled": true }`} language="bash" />
-  </TabItem>
-  <TabItem label="Password Reset">
-<Code code={`# Request reset (public)
-POST /api/v1/auth/password/reset-request
-Body: { "email": "user@example.com" }
-
-# Verify token (public)
-GET /api/v1/auth/password/reset-verify?token=<reset_token>
-Response: { "valid": true }
-
-# Confirm reset (public)
-POST /api/v1/auth/password/reset-confirm
-Body: { "token": "<reset_token>", "new_password": "NewP@ss123" }
-
-# Token expires in: 15 minutes
-# Verification limit: 10 attempts per token (15-minute window)
-`} language="bash" />
-  </TabItem>
+  <TabItem label="Email & Password">
+- **Secure password policies**: Minimum requirements with strength validation
+- **Breach detection**: Automatic checking against known password breaches
+- **Account protection**: Rate limiting and lockout protection
+- **Password reset**: Secure email-based reset with time-limited tokens
+</TabItem>
+  
+  <TabItem label="Social Login">
+- **Google OAuth**: Enterprise Google Workspace integration
+- **GitHub OAuth**: Developer-friendly GitHub authentication
+- **Microsoft/Azure**: Azure AD and Microsoft account support
+- **Facebook/Twitter**: Additional social providers available
+- **Custom SAML**: Enterprise SAML SSO configuration
+</TabItem>
+  
+  <TabItem label="Passwordless">
+- **Magic Links**: Email-based passwordless authentication
+- **One-time Codes**: SMS and email verification codes
+- **Passkeys**: Modern FIDO2/WebAuthn passwordless authentication
+- **Social Sign-in**: One-click social authentication
+</TabItem>
 </Tabs>
 
 ## Multi-Factor Authentication (MFA)
 
-RFC 6238 TOTP implementation with encrypted secret storage.
+Clerk provides comprehensive MFA with multiple authentication methods and intelligent security features.
 
-### Configuration
-
-**TOTP Settings**:
-- Algorithm: SHA-1 (RFC standard)
-- Time step: 30 seconds
-- Code length: 6 digits
-- Secret storage: XChaCha20-Poly1305 encrypted in `mfa_secret_encrypted`
-- Implementation: `backend/auth/mfa.go`
-
-**Backup Codes**:
-- Count: 10 codes per user
-- Format: 12 characters (XXXX-XXXX-XXXX)
-- Storage: Argon2id hashed (deterministic salt)
-- One-time use, tracked in `mfa_backup_codes_used[]`
-- Constant-time comparison for security
-
-**Rate Limits** (`backend/middleware/rate_limit.go`):
-- Login: 10 attempts per 5 minutes
-- MFA verification: 10 attempts per 5 minutes
-- MFA setup/enable/disable: 10 attempts per 5 minutes
-- Password reset: 10 attempts per 5 minutes
-
-### MFA Endpoints
-
+### MFA Methods
 <Tabs>
-  <TabItem label="Setup">
-<Code code={`# Get MFA status (protected)
-GET /api/v1/auth/mfa/status
-Headers: Authorization: Bearer <jwt_token>
-Response: { "mfa_enabled": true, "backup_codes_remaining": 8 }
-
-# Begin MFA setup (protected) - generates QR code
-POST /api/v1/auth/mfa/setup
-Headers: Authorization: Bearer <jwt_token>
-Response: {
-  "secret": "JBSWY3DPEHPK3PXP",
-  "qr_code_url": "otpauth://totp/LeafLock:user@example.com?secret=..."
-}
-
-# Enable MFA (protected) - verifies code and returns backup codes
-POST /api/v1/auth/mfa/enable
-Headers: Authorization: Bearer <jwt_token>
-Body: { "secret": "JBSWY...", "code": "123456" }
-Response: {
-  "backup_codes": [
-    "A1B2C3D4E5F6",
-    "G7H8I9J0K1L2",
-    ...
-  ]
-}
-
-# Disable MFA (protected)
-POST /api/v1/auth/mfa/disable
-Headers: Authorization: Bearer <jwt_token>
-Body: { "code": "123456" }  # or backup code
-
-# Regenerate backup codes (protected)
-POST /api/v1/auth/mfa/backup-codes/regenerate
-Headers: Authorization: Bearer <jwt_token>
-Body: { "password": "user_password" }
-Response: { "backup_codes": [...] }`} language="bash" />
-  </TabItem>
-  <TabItem label="Login Flow">
-<Code code={`# Step 1: Login with password
-POST /api/v1/auth/login
-Body: { "email": "user@example.com", "password": "..." }
-Response (MFA enabled): {
-  "mfa_required": true,
-  "session_token": "temp_session_token",
-  "user_id": "uuid"
-}
-
-# Step 2: Verify TOTP code (public endpoint)
-POST /api/v1/auth/mfa/verify
-Body: {
-  "session_token": "temp_session_token",
-  "code": "123456"
-}
-Response: {
-  "token": "jwt_token",
-  "user_id": "uuid",
-  "workspace_id": "uuid",
-  "is_admin": false,
-  "expires_at": "2025-10-22T10:00:00Z"
-}
-
-# Alternative: Use backup code (same endpoint)
-POST /api/v1/auth/mfa/verify
-Body: {
-  "session_token": "temp_session_token",
-  "code": "A1B2C3D4E5F6"  # backup code
-}`} language="bash" />
-  </TabItem>
+  <TabItem label="Authenticator Apps">
+- **TOTP (Time-based One-Time Password)**: Standard RFC 6238 implementation
+- **Supported Apps**: Google Authenticator, Authy, 1Password, Microsoft Authenticator
+- **Setup**: QR code scanning or manual secret entry
+- **Security**: 30-second code window with time synchronization
+</TabItem>
+  
+  <TabItem label="SMS/Text Messages">
+- **Phone verification**: Codes sent to registered phone numbers
+- **Global coverage**: International SMS support
+- **Backup codes**: Alternative when SMS unavailable
+- **Rate limiting**: Protection against SMS abuse
+</TabItem>
+  
+  <TabItem label="Email Codes">
+- **Email verification**: Codes sent to registered email addresses
+- **Backup method**: Alternative to primary MFA method
+- **Secure delivery**: Encrypted email transmission
+- **Time-limited**: Short expiration for security
+</TabItem>
+  
+  <TabItem label="Backup Codes">
+- **Emergency access**: 8-digit one-time use codes
+- **Automatic generation**: Created when MFA is enabled
+- **Secure storage**: Encrypted and never displayed twice
+- **Cross-platform**: Work across all Clerk-enabled applications
+</TabItem>
 </Tabs>
 
-### Error Codes
+### Advanced MFA Features
 
-**Structured errors** (`backend/auth/models.go`):
-- `INVALID_CREDENTIALS` - Invalid email/password
-- `ACCOUNT_LOCKED` - Too many failed attempts
-- `MFA_REQUIRED` - MFA verification needed
-- `INVALID_MFA_CODE` - Wrong TOTP/backup code
-- `INVALID_TOKEN` - Invalid JWT or session token
-- `EXPIRED_TOKEN` - Token expired
-- `USER_NOT_FOUND` - User doesn't exist
-- `EMAIL_EXISTS` - Email already registered
-- `VALIDATION_FAILED` - Input validation error
-- `REGISTRATION_DISABLED` - Registration not allowed
+#### Risk-Based Authentication
+Intelligent MFA that adapts based on security context:
+- **Location-based**: Different requirements for new locations
+- **Device-based**: Enhanced security for unrecognized devices
+- **Behavior-based**: Detection of unusual login patterns
+- **Time-based**: Variable requirements based on access timing
 
-### User Flow
+#### Organization MFA Policies
+For enterprise deployments:
+- **Required MFA**: Enforce MFA for all organization members
+- **Role-based**: Different MFA requirements by role (admin, member, etc.)
+- **Conditional**: MFA based on resource sensitivity
+- **Grace periods**: Allow time for users to set up MFA
 
-**Setup**: Settings → Security → Enable MFA → Scan QR → Verify Code → Save Backup Codes
-**Login**: Email/Password → MFA Prompt → Enter TOTP or Backup Code → Authenticated
-**Disable**: Settings → Security → Disable MFA → Enter TOTP/Backup Code → Disabled
+## Enterprise Features
 
-### Admin Operations
+### Organization Management
+Multi-tenant support for B2B applications:
 
-**Reset MFA** (requires database access):
-<Code code={`UPDATE users
-SET mfa_enabled = false,
-    mfa_secret_encrypted = NULL,
-    mfa_backup_codes = NULL,
-    mfa_backup_codes_used = NULL
-WHERE id = 'user_uuid';`} language="sql" />
+```tsx
+// Organization switching
+import { OrganizationSwitcher } from '@clerk/clerk-react'
 
-**Check MFA adoption**:
-<Code code={`SELECT COUNT(*) FILTER (WHERE mfa_enabled = true) * 100.0 / COUNT(*) as percentage
-FROM users
-WHERE deleted_at IS NULL;`} language="sql" />
+// Organization profile management
+import { OrganizationProfile } from '@clerk/clerk-react'
+```
 
-**Find users without MFA**:
-<Code code={`SELECT id, email_encrypted, last_login
-FROM users
-WHERE mfa_enabled = false AND deleted_at IS NULL
-ORDER BY last_login DESC NULLS LAST;`} language="sql" />
+**Features**:
+- **Organization creation**: Users can create and manage organizations
+- **Role-based access**: Admin, member, and custom roles
+- **Domain-based enrollment**: Automatic organization membership
+- **Multi-organization**: Users can belong to multiple organizations
 
-### Troubleshooting
+### Enterprise SSO
+SAML and enterprise identity provider support:
 
-**"Invalid MFA code"**:
-- Verify device time is synchronized (TOTP requires accurate time)
-- Wait for next 30-second window
-- Check correct account in authenticator app
-- Rate limit: wait 5 minutes after 10 failed attempts
-- Implementation: `backend/auth/mfa.go:65` (VerifyTOTP)
+- **SAML 2.0**: Full SAML SSO implementation
+- **SCIM provisioning**: Automated user lifecycle management
+- **Directory integration**: Active Directory and LDAP support
+- **Custom identity providers**: Support for enterprise IdPs
 
-**Lost authenticator device**:
-- Use saved backup code to login
-- Go to Settings → Security → Regenerate Backup Codes
-- Or request admin to reset MFA via SQL
+### Advanced Security
 
-**Backup codes exhausted**:
-- Login with TOTP from authenticator app
-- Navigate to Settings → Security → Regenerate Backup Codes
-- Requires password confirmation
-- Implementation: `backend/auth/mfa.go:153` (RegenerateBackupCodes)
+#### Threat Detection
+- **Breach detection**: Automatic detection of compromised credentials
+- **Bot protection**: Advanced bot detection and prevention
+- **Anomaly detection**: Unusual login pattern identification
+- **Rate limiting**: Intelligent protection across all endpoints
 
-**Account locked**:
-- Lockout duration: 15 minutes
-- Trigger: 5 failed login attempts
-- Reset: Wait 15 minutes or contact admin
-- Implementation: `backend/auth/service.go:312` (incrementFailedAttempts)
+#### Audit and Compliance
+- **Comprehensive audit logs**: All authentication events tracked
+- **Compliance reporting**: Built-in compliance reporting
+- **Data retention policies**: Configurable data retention
+- **Privacy controls**: GDPR, CCPA, and other privacy regulations
 
-**Redis session check**:
-<Code code={`# Check if session exists
-redis-cli GET "session:<token_hash>"
+## Session Management
 
-# Delete session (force logout)
-redis-cli DEL "session:<token_hash>"
+### Advanced Session Features
+- **Multi-device sessions**: Users can manage sessions across devices
+- **Session revocation**: "Log out of other devices" functionality
+- **Detailed session info**: IP addresses, device information, last active times
+- **Automatic session expiration**: Configurable session timeouts
+- **Suspicious activity detection**: Automatic detection of unusual session behavior
 
-# Check MFA session
-redis-cli GET "mfa_session:<token_hash>"`} language="bash" />
+### Session API Endpoints
 
-### Database Schema
+```bash
+# Get current session information
+GET /api/v1/clerk/session/info
+Headers: Authorization: Bearer <clerk_session_token>
 
-**Users table MFA columns** (`backend/database/schema.go:22-25`):
-- `mfa_enabled` (BOOLEAN) - MFA active flag
-- `mfa_secret_encrypted` (BYTEA) - XChaCha20-Poly1305 encrypted TOTP secret
-- `mfa_backup_codes` (BYTEA[]) - Argon2id hashed backup codes (10 total)
-- `mfa_backup_codes_used` (BYTEA[]) - Hashes of used codes
-- `failed_attempts` (INT) - Login failure counter
-- `locked_until` (TIMESTAMPTZ) - Account lockout expiry
+# List all user sessions
+GET /api/v1/clerk/sessions
+Headers: Authorization: Bearer <clerk_session_token>
 
-**Password reset tokens table**:
-- `token_hash` (BYTEA) - SHA-256 of reset token
-- `expires_at` (TIMESTAMPTZ) - 1-hour expiration
-- `used` (BOOLEAN) - Prevents reuse
+# Revoke specific session
+POST /api/v1/clerk/sessions/{sessionId}/revoke
+Headers: Authorization: Bearer <clerk_session_token>
+```
 
-## Environment Variables
+## API Integration
 
-<Code code={`# Required
-JWT_SECRET=<64-character-base64-secret>
-SERVER_ENCRYPTION_KEY=<32-character-base64-key>
-REDIS_PASSWORD=<redis-password>
+### Authentication Endpoints
 
-# Optional (defaults)
-ENABLE_REGISTRATION=false  # Registration toggle`} language="bash" />
+<Tabs>
+  <TabItem label="Core Authentication">
+```bash
+# Modern Clerk authentication
+POST /api/v1/auth/login
+Body: { "email": "user@example.com", "password": "..." }
+Response: { "message": "Authentication successful", "auth_type": "clerk" }
 
-## Security Notes
+# Logout (revokes Clerk session)
+POST /api/v1/auth/logout
+Headers: Authorization: Bearer <clerk_session_token>
 
-- MFA secrets encrypted at rest with `SERVER_ENCRYPTION_KEY`
-- Backup codes hashed with Argon2id (deterministic salt for verification)
-- Sessions encrypted in Redis with XChaCha20-Poly1305
-- Constant-time comparison for TOTP/backup codes (prevents timing attacks)
-- All sessions invalidated on password reset
-- Password reset tokens: SHA-256 hashed, 1-hour expiration
-- Account auto-locks after 5 failed attempts (15-minute lockout)
+# Registration status
+GET /api/v1/auth/registration
+Response: { "enabled": true }
+```
+</TabItem>
+  
+  <TabItem label="Clerk-Specific Endpoints">
+```bash
+# Get session information
+GET /api/v1/clerk/session/info
+Response: {
+  "session": { "session_id": "...", "status": "active" },
+  "user": { "email": "user@example.com", "is_admin": false }
+}
 
-For full API reference see `/authentication/api-endpoints`.
+# List user sessions
+GET /api/v1/clerk/sessions
+Response: { "sessions": [...] }
+
+# Revoke session
+POST /api/v1/clerk/sessions/{sessionId}/revoke
+Response: { "message": "Session revoked successfully" }
+```
+</TabItem>
+</Tabs>
+
+### Webhook Integration
+
+Clerk webhooks for real-time event handling:
+
+```bash
+# Webhook endpoint for Clerk events
+POST /api/v1/webhooks/clerk
+Headers: Clerk-Signature: <signature>
+Body: {
+  "type": "user.created",
+  "data": { "id": "user_xxx", "email_addresses": [...] }
+}
+```
+
+**Supported Events**:
+- `user.created`, `user.updated`, `user.deleted`
+- `session.created`, `session.ended`
+- `organization.created`, `organization.updated`
+- `email.created`, `sms.created`
+
+## Security Features
+
+### Built-in Security
+- **Automatic breach detection**: Password checking against known breaches
+- **Bot protection**: Advanced bot detection and prevention
+- **Rate limiting**: Built-in protection against attacks
+- **Session management**: Secure session handling with automatic refresh
+- **Encryption**: All data encrypted in transit and at rest
+
+### Zero-Knowledge Architecture
+LeafLock maintains its security-first approach:
+- **Server never sees plaintext user data**: Encryption keys remain client-side
+- **Clerk handles authentication only**: No access to encrypted user content
+- **End-to-end encryption**: User data encrypted before reaching server
+- **Privacy by design**: Built-in privacy controls and data protection
+
+### Compliance & Certifications
+- **SOC 2 Type 2**: Regular security audits
+- **GDPR Compliant**: Built-in privacy controls
+- **HIPAA Ready**: Available with Business Associate Agreement
+- **ISO 27001**: Information security management
+- **Regular Penetration Testing**: Ongoing security validation
+
+## Customization
+
+### Theming
+Clerk components are fully customizable to match LeafLock's design:
+
+```tsx
+appearance={{
+  elements: {
+    // Layout
+    card: 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
+    headerTitle: 'text-2xl font-bold text-foreground',
+    
+    // Form elements
+    formFieldInput: 'bg-background border-border text-foreground',
+    formButtonPrimary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+    
+    // Social logins
+    socialButtonsBlockButton: 'bg-background border-border hover:bg-accent',
+  },
+  variables: {
+    colorPrimary: '#3b82f6',
+    colorBackground: '#0f172a',
+    colorText: '#f8fafc',
+  },
+}}
+```
+
+### Custom Flows
+Create completely custom authentication experiences:
+
+```tsx
+import { useSignIn, useSession } from '@clerk/clerk-react'
+
+function CustomAuthFlow() {
+  const { signIn } = useSignIn()
+  const { session } = useSession()
+  
+  // Build completely custom authentication flows
+}
+```
+
+## Migration from Legacy JWT
+
+### Dual Authentication Support
+During migration, both systems work seamlessly:
+
+```mermaid
+graph TD
+    A[User Login Request] --> B{Token Type Detection}
+    B -->|JWT Token| C[Legacy JWT Handler]
+    B -->|Clerk Token| D[Clerk Token Handler]
+    C --> E[Redis Session Validation]
+    D --> F[Clerk API Validation]
+    E --> G[User Context Established]
+    F --> G
+    G --> H[Access Granted]
+```
+
+### Migration Process
+1. **Phase 1**: Dual authentication (current) - Both systems work
+2. **Phase 2**: User migration - Gradual transition to Clerk
+3. **Phase 3**: Advanced features - Enable organizations, SSO, etc.
+4. **Phase 4**: Cleanup - Remove legacy code (when ready)
+
+## Performance & Scalability
+
+### Optimization Features
+- **Lazy Loading**: Components load on demand
+- **Token Caching**: Intelligent session token caching
+- **CDN Delivery**: Global CDN for static assets
+- **Tree Shaking**: Minimal bundle size impact
+
+### Enterprise Performance
+- **Edge Authentication**: Global edge functions for authentication
+- **Intelligent Caching**: Smart caching of authentication data
+- **Load Balancing**: Automatic scaling across regions
+- **Monitoring**: Real-time performance monitoring
+
+## Troubleshooting
+
+### Common Issues
+
+#### "Invalid Clerk token"
+- Verify `CLERK_SECRET_KEY` is correct
+- Check token hasn't expired
+- Ensure backend can reach Clerk API
+
+#### "MFA not working"
+- Check device time synchronization
+- Verify correct authenticator app
+- Try alternative MFA method
+
+#### "Social login not working"
+- Verify OAuth app configuration
+- Check redirect URI settings
+- Ensure social provider is enabled in Clerk
+
+### Debug Tools
+```bash
+# Check Clerk API health
+curl -X GET \
+  "https://api.clerk.com/v1/health" \
+  -H "Authorization: Bearer $CLERK_SECRET_KEY"
+
+# Test webhook locally
+# Use ngrok to forward webhooks to development server
+```
+
+## Support & Resources
+
+### Clerk Resources
+- 📚 [Clerk Documentation](https://clerk.com/docs)
+- 💬 [Clerk Discord Community](https://clerk.com/discord)
+- 🎥 [Clerk YouTube Channel](https://www.youtube.com/c/ClerkDev)
+- 📧 [Clerk Support](https://clerk.com/support)
+
+### LeafLock Integration
+- [Authentication API Reference](./api-endpoints)
+- [MFA Setup Guide](./setup-guide)
+- [Admin Management](./admin-mfa-management)
+- [Troubleshooting Guide](./troubleshooting)
+
+---
+
+**🎉 Experience enterprise-grade authentication with Clerk and LeafLock!** 🔐
+
+This modern authentication system provides comprehensive security, user management, and compliance features while maintaining LeafLock's commitment to privacy and zero-knowledge architecture.

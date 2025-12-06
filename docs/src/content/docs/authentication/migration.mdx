@@ -1,0 +1,592 @@
+---
+title: Migration Complete - Pure Clerk Authentication
+description: LeafLock has successfully migrated to pure Clerk authentication
+---
+
+import { Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## ✅ Migration Complete!
+
+LeafLock has successfully completed the migration from JWT authentication to **pure Clerk authentication**. All legacy authentication code has been removed, and the system now uses Clerk's modern authentication exclusively.
+
+## What Was Accomplished
+
+### Complete Legacy Removal
+- **JWT Authentication**: Completely removed from codebase
+- **Legacy Auth Store**: Replaced with pure Clerk auth store
+- **Manual Token Management**: Eliminated in favor of Clerk session management
+- **Custom Login/Logout**: Replaced with Clerk's native components
+
+### Pure Clerk Implementation
+- **Frontend**: Uses `@clerk/clerk-react` SignIn/SignUp components
+- **Backend**: Clerk middleware for session validation
+- **API Integration**: Clerk session tokens for authenticated requests
+- **User Management**: Handled entirely through Clerk
+
+## Current Authentication Architecture
+
+## Pre-Migration Checklist
+
+<Steps>
+
+1. **Backup Everything**
+   ```bash
+   # Backup database
+   pg_dump your_database > leaflock_backup_$(date +%Y%m%d).sql
+   
+   # Backup environment variables
+   cp .env .env.backup
+   
+   # Backup user data if needed
+   ```
+
+2. **Test in Development**
+   - Set up Clerk in development environment
+   - Test authentication flow thoroughly
+   - Verify all features work with Clerk
+
+3. **Plan Communication**
+   - Notify users about upcoming changes
+   - Prepare help documentation
+   - Set up support channels
+
+4. **Review Current Setup**
+   - Document current JWT configuration
+   - Note any custom authentication features
+   - Identify users with special requirements
+
+</Steps>
+
+## Phase 1: Dual Authentication Setup
+
+This phase sets up Clerk while keeping JWT authentication working.
+
+### Step 1: Configure Clerk
+
+<Tabs>
+<TabItem label="Development">
+```bash
+# Add to .env
+CLERK_PUBLISHABLE_KEY=pk_test_your_key
+CLERK_SECRET_KEY=sk_test_your_key
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_key
+
+# Keep existing JWT for now
+JWT_SECRET=your_existing_jwt_secret
+```
+</TabItem>
+
+<TabItem label="Production">
+```bash
+# Add to production environment
+CLERK_PUBLISHABLE_KEY=pk_live_your_key
+CLERK_SECRET_KEY=sk_live_your_key
+VITE_CLERK_PUBLISHABLE_KEY=pk_live_your_key
+
+# Keep JWT for existing users
+JWT_SECRET=your_production_jwt_secret
+```
+</TabItem>
+</Tabs>
+
+### Step 2: Deploy Dual Authentication
+
+The backend is already configured for dual authentication. Deploy your changes:
+
+```bash
+# Deploy with dual auth support
+git pull origin main
+make deploy
+
+# Verify both auth methods work
+curl -H "Authorization: Bearer your_jwt_token" http://your-domain/api/user
+curl -H "Authorization: Bearer your_clerk_token" http://your-domain/api/user
+```
+
+### Step 3: Verify Setup
+
+1. **Test JWT Authentication**
+   ```bash
+   # Existing JWT tokens should still work
+   curl -H "Authorization: Bearer existing_jwt_token" \
+        http://localhost:8080/api/v1/auth/mfa/status
+   ```
+
+2. **Test Clerk Authentication**
+   ```bash
+   # Get Clerk token from frontend
+   # Test with Clerk token
+   curl -H "Authorization: Bearer clerk_session_token" \
+        http://localhost:8080/api/v1/auth/mfa/status
+   ```
+
+3. **Check Backend Logs**
+   ```bash
+   # Look for authentication type in logs
+   tail -f logs/backend.log | grep -E "(JWT|Clerk|auth)"
+   ```
+
+## Phase 2: User Migration
+
+### Migration Strategies
+
+Choose the strategy that best fits your user base:
+
+#### Strategy A: Gradual Migration (Recommended)
+- New users automatically use Clerk
+- Existing users migrate over time
+- Minimal disruption
+- Good for large user bases
+
+#### Strategy B: Bulk Migration
+- Migrate all users at once
+- Faster but higher risk
+- Good for smaller user bases
+- Requires careful planning
+
+#### Strategy C: Invitation-Based
+- Send migration invitations
+- Users migrate when ready
+- Most controlled approach
+- Good for enterprise users
+
+### Implementation: Gradual Migration
+
+<Steps>
+
+1. **Enable New User Registration**
+   ```tsx title="frontend/src/router.tsx"
+   // New users automatically use Clerk
+   const registerRoute = createRoute({
+     // ... existing config
+     beforeLoad: async () => {
+       // Always allow registration via Clerk
+       return // Clerk handles registration limits
+     },
+   })
+   ```
+
+2. **Create User Mapping System**
+   ```sql title="database migration"
+   -- Create user mapping table
+   CREATE TABLE user_clerk_mappings (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     clerk_user_id TEXT NOT NULL UNIQUE,
+     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+   );
+   
+   -- Add clerk_user_id to users table (optional)
+   ALTER TABLE users ADD COLUMN clerk_user_id TEXT UNIQUE;
+   
+   -- Create indexes for performance
+   CREATE INDEX idx_user_clerk_mappings_user_id ON user_clerk_mappings(user_id);
+   CREATE INDEX idx_user_clerk_mappings_clerk_id ON user_clerk_mappings(clerk_user_id);
+   ```
+
+3. **Implement Migration Backend**
+   ```go title="backend/auth/migration.go"
+   func (h *Handler) migrateUserToClerk(ctx context.Context, userID uuid.UUID, clerkUserID string) error {
+     tx, err := h.db.Begin(ctx)
+     if err != nil {
+       return fmt.Errorf("failed to begin transaction: %w", err)
+     }
+     defer tx.Rollback(ctx)
+     
+     // Create mapping
+     _, err = tx.Exec(ctx, `
+       INSERT INTO user_clerk_mappings (user_id, clerk_user_id, created_at)
+       VALUES ($1, $2, $3)
+     `, userID, clerkUserID, time.Now())
+     
+     if err != nil {
+       return fmt.Errorf("failed to create mapping: %w", err)
+     }
+     
+     // Update user record (optional)
+     _, err = tx.Exec(ctx, `
+       UPDATE users SET clerk_user_id = $1, updated_at = $2
+       WHERE id = $3
+     `, clerkUserID, time.Now(), userID)
+     
+     if err != nil {
+       return fmt.Errorf("failed to update user: %w", err)
+     }
+     
+     return tx.Commit(ctx)
+   }
+   ```
+
+4. **Create Migration API**
+   ```go title="backend/handlers/migration.go"
+   func (h *Handler) InitiateMigration(c *fiber.Ctx) error {
+     userID, err := auth.GetUserID(c)
+     if err != nil {
+       return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+         "error": "Authentication required",
+       })
+     }
+     
+     // Check if user already migrated
+     var clerkUserID string
+     err = h.db.QueryRow(c.Context(), `
+       SELECT clerk_user_id FROM users WHERE id = $1
+     `, userID).Scan(&clerkUserID)
+     
+     if err == nil && clerkUserID != "" {
+       return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+         "error": "User already migrated to Clerk",
+       })
+     }
+     
+     // Generate migration token
+     token, err := generateSecureMigrationToken()
+     if err != nil {
+       return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+         "error": "Failed to generate migration token",
+       })
+     }
+     
+     // Store migration token
+     _, err = h.db.Exec(c.Context(), `
+       INSERT INTO user_migration_tokens (user_id, token, expires_at, created_at)
+       VALUES ($1, $2, $3, $4)
+     `, userID, token, time.Now().Add(24*time.Hour), time.Now())
+     
+     if err != nil {
+       return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+         "error": "Failed to create migration token",
+       })
+     }
+     
+     // Send migration email
+     migrationURL := fmt.Sprintf("%s/migrate?token=%s", h.config.FrontendURL, token)
+     
+     emailData := map[string]interface{}{
+       "migration_url": migrationURL,
+       "user_name":     getUserDisplayName(c.Context(), userID),
+       "expires_in":    "24 hours",
+     }
+     
+     user, err := h.getUserByID(c.Context(), userID)
+     if err != nil {
+       return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+         "error": "Failed to get user information",
+       })
+     }
+     
+     if err := h.emailService.SendTemplate(c.Context(), user.Email, "migration_invite", emailData); err != nil {
+       return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+         "error": "Failed to send migration email",
+       })
+     }
+     
+     return c.JSON(fiber.Map{
+       "message": "Migration invitation sent successfully",
+       "expires_at": time.Now().Add(24 * time.Hour).Format(time.RFC3339),
+     })
+   }
+   ```
+
+5. **Frontend Migration Interface**
+   ```tsx title="frontend/src/components/auth/migration-flow.tsx"
+   export function MigrationFlow() {
+     const { isSignedIn, user } = useAuth()
+     const [isMigrating, setIsMigrating] = useState(false)
+     
+     const handleMigration = async () => {
+       if (!isSignedIn || !user) return
+       
+       setIsMigrating(true)
+       try {
+         // Call migration API
+         const response = await apiClient.post('/auth/migrate/initiate')
+         
+         // Show success message
+         toast.success('Migration invitation sent to your email')
+       } catch (error) {
+         toast.error('Failed to initiate migration')
+       } finally {
+         setIsMigrating(false)
+       }
+     }
+     
+     return (
+       <Card>
+         <CardHeader>
+           <CardTitle>Upgrade to Modern Authentication</CardTitle>
+           <CardDescription>
+             Migrate your account to get access to social logins, better security, and more features.
+           </CardDescription>
+         </CardHeader>
+         <CardContent>
+           <Button 
+             onClick={handleMigration}
+             disabled={isMigrating}
+             className="w-full"
+           >
+             {isMigrating ? (
+               <>
+                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                 Sending invitation...
+               </>
+             ) : (
+               'Send Migration Invitation'
+             )}
+           </Button>
+         </CardContent>
+       </Card>
+     )
+   }
+   ```
+
+</Steps>
+
+### Migration Email Template
+
+Create an email template for migration invitations:
+
+```html title="email-templates/migration_invite.html"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Upgrade Your LeafLock Account</title>
+</head>
+<body>
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1>Upgrade Your LeafLock Account</h1>
+        
+        <p>Hi {{.UserName}},</p>
+        
+        <p>We're excited to offer you upgraded authentication with Clerk! This includes:</p>
+        
+        <ul>
+            <li>Social login (Google, GitHub, etc.)</li>
+            <li>Multi-factor authentication</li>
+            <li>Passwordless authentication</li>
+            <li>Better security and reliability</li>
+        </ul>
+        
+        <p><strong>Your migration link:</strong></p>
+        <p><a href="{{.MigrationURL}}" style="background: #3b82f6; color: white; padding: 10px 20px; text-decoration: none;">Migrate My Account</a></p>
+        
+        <p><small>This link expires in {{.ExpiresIn}}.</small></p>
+        
+        <p>Questions? Reply to this email or contact support.</p>
+        
+        <p>Best regards,<br>The LeafLock Team</p>
+    </div>
+</body>
+</html>
+```
+
+## Phase 3: Cleanup and Completion
+
+### Remove JWT Authentication
+
+<Steps>
+
+1. **Update Environment**
+   ```bash
+   # Remove JWT configuration
+   # Keep only Clerk variables
+   CLERK_PUBLISHABLE_KEY=pk_live_...
+   CLERK_SECRET_KEY=sk_live_...
+   VITE_CLERK_PUBLISHABLE_KEY=pk_live_...
+   ```
+
+2. **Simplify Backend Middleware**
+   ```go title="backend/auth/middleware.go"
+   // Remove dual auth, use only Clerk
+   func (h *Handler) AuthMiddleware(c *fiber.Ctx) error {
+     return h.ClerkMiddleware(c)
+   }
+   ```
+
+3. **Remove JWT Dependencies**
+   ```go title="backend/go.mod"
+   // Remove JWT dependencies
+   // github.com/golang-jwt/jwt/v5 v5.3.0
+   ```
+
+4. **Clean Up Database**
+   ```sql
+   -- Remove JWT-related tables (after migration complete)
+   DROP TABLE IF EXISTS password_reset_tokens;
+   DROP TABLE IF EXISTS jwt_blacklist;
+   
+   -- Keep user mappings but can remove JWT-specific fields
+   ALTER TABLE users DROP COLUMN IF EXISTS password_hash;
+   ALTER TABLE users DROP COLUMN IF EXISTS failed_attempts;
+   ```
+
+5. **Update Documentation**
+   - Remove JWT references from docs
+   - Update API documentation
+   - Update deployment guides
+
+</Steps>
+
+## Migration Monitoring
+
+### Key Metrics to Track
+
+<Steps>
+
+1. **Authentication Success Rate**
+   ```bash
+   # Monitor auth success/failure rates
+   grep -E "(JWT|Clerk).*success" logs/backend.log | wc -l
+   grep -E "(JWT|Clerk).*failure" logs/backend.log | wc -l
+   ```
+
+2. **User Migration Progress**
+   ```sql
+   -- Track migration progress
+   SELECT 
+     COUNT(*) FILTER (WHERE clerk_user_id IS NOT NULL) as migrated_users,
+     COUNT(*) FILTER (WHERE clerk_user_id IS NULL) as legacy_users,
+     COUNT(*) as total_users
+   FROM users;
+   ```
+
+3. **Error Rates**
+   ```bash
+   # Monitor authentication errors
+   tail -f logs/backend.log | grep -i "auth.*error" | grep -v "success"
+   ```
+
+4. **Performance Metrics**
+   ```bash
+   # Check response times
+   grep "auth.*took" logs/backend.log | awk '{print $NF}' | sort -n
+   ```
+
+</Steps>
+
+### Migration Dashboard
+
+Create a simple dashboard to monitor migration:
+
+```tsx title="frontend/src/components/admin/migration-dashboard.tsx"
+export function MigrationDashboard() {
+  const [metrics, setMetrics] = useState<MigrationMetrics | null>(null)
+  
+  useEffect(() => {
+    fetchMigrationMetrics().then(setMetrics)
+  }, [])
+  
+  if (!metrics) return <LoadingSpinner />
+  
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Migration Progress</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            {metrics.migratedUsers} / {metrics.totalUsers}
+          </div>
+          <Progress value={(metrics.migratedUsers / metrics.totalUsers) * 100} />
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Auth Success Rate</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            {metrics.successRate.toFixed(1)}%
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {metrics.totalAttempts} attempts
+          </p>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Error Rate</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            {metrics.errorRate.toFixed(2)}%
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {metrics.totalErrors} errors
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+```
+
+## Rollback Plan
+
+If you need to rollback the migration:
+
+<Steps>
+
+1. **Stop Migration Process**
+   ```bash
+   # Disable new user registration via Clerk
+   VITE_ENABLE_REGISTRATION=false
+   ```
+
+2. **Revert to JWT-Only**
+   ```bash
+   # Remove Clerk configuration
+   # Keep only JWT variables
+   JWT_SECRET=your_jwt_secret
+   ```
+
+3. **Update Backend**
+   ```go
+   // Revert to JWT-only middleware
+   func (h *Handler) AuthMiddleware(c *fiber.Ctx) error {
+     return h.JWTMiddleware(c)
+   }
+   ```
+
+4. **Database Rollback**
+   ```sql
+   -- Remove Clerk-related data (carefully)
+   -- Keep user mappings for potential future migration
+   -- Restore JWT-specific tables if needed
+   ```
+
+5. **Communicate to Users**
+   - Send notification about rollback
+   - Provide support for affected users
+   - Document lessons learned
+
+</Steps>
+
+## Best Practices
+
+### Communication
+- **Transparent**: Explain benefits of migration to users
+- **Gradual**: Don't rush users to migrate
+- **Supportive**: Provide help throughout the process
+- **Documented**: Keep users informed of progress
+
+### Technical
+- **Test Thoroughly**: Test migration in development first
+- **Monitor Closely**: Watch metrics during migration
+- **Backup Regularly**: Keep backups during migration
+- **Plan Rollback**: Always have a rollback plan
+
+### Security
+- **Secure Tokens**: Use secure migration tokens
+- **Rate Limiting**: Prevent abuse during migration
+- **Audit Logging**: Log all migration activities
+- **Data Validation**: Validate all migrated data
+
+---
+
+**🎯 Ready to migrate?** Start with [Phase 1](./quick-start.mdx) and gradually move your users to modern, secure authentication with Clerk!

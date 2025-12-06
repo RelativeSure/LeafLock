@@ -104,36 +104,3 @@ func TestMFASessionLifecycle(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "MFA session not found")
 }
-
-func TestJWTBlacklistLifecycle(t *testing.T) {
-	mr := miniredis.RunT(t)
-	defer mr.Close()
-
-	key := make([]byte, 32)
-	_, err := rand.Read(key)
-	require.NoError(t, err)
-
-	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	defer func() {
-		require.NoError(t, rdb.Close())
-	}()
-
-	sm := NewSessionManager(rdb, appcrypto.NewCryptoService(key))
-
-	ctx := context.Background()
-	token := "unit-test-jwt"
-	expiresAt := time.Now().Add(2 * time.Minute)
-
-	require.NoError(t, sm.BlacklistJWT(ctx, token, expiresAt))
-
-	isBlacklisted, err := sm.IsJWTBlacklisted(ctx, token)
-	require.NoError(t, err)
-	assert.True(t, isBlacklisted)
-
-	// Advance time beyond expiration to confirm automatic cleanup
-	mr.FastForward(3 * time.Minute)
-
-	isBlacklisted, err = sm.IsJWTBlacklisted(ctx, token)
-	require.NoError(t, err)
-	assert.False(t, isBlacklisted)
-}

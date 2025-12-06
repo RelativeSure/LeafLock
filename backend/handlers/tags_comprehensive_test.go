@@ -140,7 +140,6 @@ func TestTagsHandler_GetTags_Success(t *testing.T) {
 	assert.NotNil(t, result)
 }
 
-
 func TestTagsHandler_DeleteTag_InvalidID(t *testing.T) {
 	pool, cleanup := setupTagsTestDB(t)
 	defer cleanup()

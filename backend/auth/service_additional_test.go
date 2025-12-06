@@ -8,7 +8,6 @@ import (
 	miniredis "github.com/alicebob/miniredis/v2"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -79,24 +78,4 @@ func TestServiceLogoutDeletesSession(t *testing.T) {
 	require.NoError(t, service.Logout(ctx, token))
 	_, err = sessionManager.GetSession(ctx, token)
 	require.Error(t, err)
-}
-
-func TestServiceValidateJWTInvalid(t *testing.T) {
-	service := &Service{jwtSecret: "test-secret-key-that-is-long-enough"}
-	_, _, err := service.ValidateJWT("invalid-token")
-	require.Error(t, err)
-}
-
-func TestServiceGenerateAndValidateJWT(t *testing.T) {
-	userID := uuid.New()
-	service := &Service{jwtSecret: "another-secret-key-with-length"}
-
-	token, err := service.GenerateJWT(userID, true)
-	require.NoError(t, err)
-	require.NotEmpty(t, token)
-
-	parsedID, isAdmin, err := service.ValidateJWT(token)
-	require.NoError(t, err)
-	assert.True(t, isAdmin)
-	assert.Equal(t, userID, parsedID)
 }

@@ -1,57 +1,62 @@
 /**
- * Application Router Configuration
- * 
+ * Application Router Configuration with Clerk Authentication
+ *
  * @description
- * Defines all application routes using TanStack Router with lazy loading and code splitting.
- * Implements authentication flow, protected routes, and role-based access control.
- * 
+ * Defines all application routes using TanStack Router with Clerk authentication.
+ * Implements authentication flow, protected routes, and role-based access control via Clerk.
+ *
  * @architecture
- * - Root layout provides ThemeProvider and EncryptionProvider to all routes
- * - Auth routes handle login, registration, and password recovery
- * - Protected routes require authentication and wrap with ProtectedLayout
- * - Admin route requires admin role with dynamic store loading
+ * - Root layout provides ClerkProvider, ThemeProvider and EncryptionProvider to all routes
+ * - Auth routes use Clerk's pre-built components for login, registration, and password recovery
+ * - Protected routes require authentication via Clerk's useAuth hook
+ * - Admin route requires admin role from Clerk's user metadata
  * - Lazy loading reduces initial bundle size and improves performance
- * 
+ *
  * @route-structure
- * / (root) - Theme and encryption providers
- * ├── /login - Authentication component (login mode)
- * ├── /register - Authentication component (register mode) with registration check
- * ├── /forgot - Authentication component (password recovery mode)
+ * / (root) - Theme, encryption, and Clerk providers
+ * ├── /login - Clerk SignIn component
+ * ├── /register - Clerk SignUp component with registration check
+ * ├── /forgot - Clerk password recovery flow
  * └── / (protected layout) - Requires authentication
  *     ├── / - Dashboard view (default route)
  *     ├── /settings - User settings page
  *     ├── /manage - Folder and tag management
  *     └── /admin - Admin panel (requires admin role)
- * 
+ *
  * @performance-features
  * - Component lazy loading with React.Suspense fallback
  * - Route-based code splitting
  * - Dynamic imports for heavy components
- * - Registration availability check before load
- * 
+ *
  * @security-features
- * - Protected routes with authentication requirements
- * - Role-based access control for admin routes
- * - Registration disabled check prevents unauthorized signups
- * - Automatic redirects for unauthorized access
+ * - Protected routes with Clerk authentication
+ * - Role-based access control using Clerk user metadata
+ * - Automatic redirects for unauthorized access via Clerk
  */
 import React from 'react'
-import { Outlet, createRoute, createRouter, createRootRoute } from '@tanstack/react-router'
+import {
+  Outlet,
+  createRoute,
+  createRouter,
+  createRootRoute,
+} from '@tanstack/react-router'
+import { useAuth, useUser, SignIn, SignUp } from '@clerk/clerk-react'
 
 import { ThemeProvider } from './context/ThemeContext'
 import { EncryptionProvider } from './lib/encryption-context'
-import { useAuthStore } from './stores/authStore'
+import { useSyncClerkAuth } from './stores/clerkAuthStore'
+import { ClerkAuthWithErrorBoundary } from './components/auth/clerk-error-boundary'
 
-// Lazy load stores and components
-const LoginForm = React.lazy(() =>
-  import('./components/auth/login-form').then((m) => ({ default: m.LoginForm }))
-)
-const RegisterForm = React.lazy(() =>
-  import('./components/auth/register-form').then((m) => ({ default: m.RegisterForm }))
-)
-const ForgotPasswordForm = React.lazy(() =>
-  import('./components/auth/forgot-password-form').then((m) => ({ default: m.ForgotPasswordForm }))
-)
+// Legacy components - no longer used but kept for reference during migration
+// const LoginForm = React.lazy(() =>
+//   import('./components/auth/login-form').then((m) => ({ default: m.LoginForm }))
+// )
+// const RegisterForm = React.lazy(() =>
+//   import('./components/auth/register-form').then((m) => ({ default: m.RegisterForm }))
+// )
+// const ForgotPasswordForm = React.lazy(() =>
+//   import('./components/auth/forgot-password-form').then((m) => ({ default: m.ForgotPasswordForm }))
+// )
 
 // New Layouts & Views
 import { ProtectedLayout } from './components/layout/protected-layout'
@@ -62,86 +67,215 @@ import { AdminPage } from './components/admin/admin-page'
 import { ProtectedRoute } from './components/common/ProtectedRoute'
 import { InteractiveGridPattern } from './components/ui/interactive-grid-pattern'
 
-const RootLayout: React.FC = () => (
-  <ThemeProvider>
-    <EncryptionProvider>
-      <div className="min-h-screen transition-all duration-300 ease-in-out">
-        <Outlet />
-      </div>
-    </EncryptionProvider>
-  </ThemeProvider>
-)
+const RootLayout: React.FC = () => {
+  useSyncClerkAuth() // Sync Clerk auth state with our store
+
+  return (
+    <ThemeProvider>
+      <EncryptionProvider>
+        <div className="min-h-screen transition-all duration-300 ease-in-out">
+          <Outlet />
+        </div>
+      </EncryptionProvider>
+    </ThemeProvider>
+  )
+}
 
 const rootRoute = createRootRoute({
   component: RootLayout,
 })
 
-// Auth routes
-const AuthComponent: React.FC<{ mode?: 'login' | 'register' | 'forgot' }> = ({
-  mode: initialMode = 'login',
-}) => {
-  const [mode, setMode] = React.useState<'login' | 'register' | 'forgot'>(initialMode)
-
-  React.useEffect(() => {
-    setMode(initialMode)
-  }, [initialMode])
-
-  React.useEffect(() => {
-    try {
-      useAuthStore.getState().initialize()
-    } catch (_) {
-      // no-op
-    }
-  }, [])
-
-  return (
-    <div className="min-h-screen flex items-center justify-center p-4 animate-in fade-in-50 duration-700 relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-      <InteractiveGridPattern width={50} height={50} className="absolute inset-0 opacity-50" />
-      <div className="w-full max-w-md relative z-10">
-        <React.Suspense
-          fallback={
-            <div className="flex items-center justify-center p-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          }
-        >
-          {mode === 'login' ? (
-            <LoginForm onToggleMode={() => setMode('register')} />
-          ) : mode === 'register' ? (
-            <RegisterForm onToggleMode={() => setMode('login')} />
-          ) : (
-            <ForgotPasswordForm onToggleMode={() => setMode('login')} />
-          )}
-        </React.Suspense>
-      </div>
+// Clerk authentication components with LeafLock design system and enhanced loading
+const ClerkAuthLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="clerk-auth-modern">
+    <InteractiveGridPattern width={50} height={50} className="absolute inset-0 opacity-30" />
+    <div className="clerk-card-enhanced animate-fade-in-zoom">
+      {children}
     </div>
-  )
-}
+  </div>
+)
 
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'login',
-  component: () => <AuthComponent mode="login" />,
+  component: () => (
+    <ClerkAuthLayout>
+      <ClerkAuthWithErrorBoundary>
+        <SignIn
+          routing="hash"
+          signUpUrl="/register"
+          fallbackRedirectUrl="/"
+          appearance={{
+            elements: {
+              // Root container
+              rootBox: 'w-full',
+              card: 'w-full bg-transparent border-0 shadow-none p-0 space-y-6',
+              
+              // Header
+              headerTitle: 'clerk-title-enhanced',
+              headerSubtitle: 'clerk-subtitle-enhanced',
+              
+              // Form fields
+              formFieldLabel: 'clerk-label-enhanced',
+              formFieldInput: 'clerk-input-enhanced',
+              formFieldInput__emailAddress: 'clerk-input-enhanced',
+              formFieldInput__password: 'clerk-input-enhanced',
+              formFieldInput__code: 'clerk-code-input-enhanced', // 2FA code input
+              formFieldInputShowPasswordButton: 'text-muted-foreground hover:text-foreground hover:scale-110 transition-all',
+              formFieldErrorText: 'clerk-message-error-enhanced',
+              formFieldSuccessText: 'clerk-message-success-enhanced',
+              formFieldHintText: 'text-muted-foreground text-xs mt-2',
+              
+              // Buttons
+              formButtonPrimary: 'clerk-button-primary-enhanced',
+              formButtonReset: 'clerk-button-secondary-enhanced',
+              
+              // Social auth
+              socialButtonsBlockButton: 'clerk-social-button-enhanced',
+              socialButtonsBlockButtonText: 'font-medium',
+              socialButtonsProviderIcon: 'clerk-social-icon-enhanced',
+              
+              // Footer
+              footerActionText: 'clerk-footer-text-enhanced',
+              footerActionLink: 'clerk-footer-link-enhanced',
+              footer: 'clerk-footer-enhanced',
+              
+              // Divider
+              dividerLine: 'clerk-divider-enhanced',
+              dividerText: 'clerk-divider-text-enhanced',
+              
+              // Alternative methods
+              alternativeMethods: 'mt-8 pt-6 border-t border-border/30',
+              alternativeMethodsBlockButton: 'clerk-button-secondary-enhanced',
+              
+              // Identity preview
+              identityPreview: 'clerk-identity-enhanced',
+              identityPreviewText: 'clerk-identity-text-enhanced',
+              identityPreviewEditButton: 'clerk-identity-edit-enhanced',
+              
+              // Loading
+              spinner: 'clerk-spinner-enhanced',
+            },
+            variables: {
+              colorPrimary: '#3b82f6',
+              colorBackground: 'transparent',
+              colorText: '#f8fafc',
+              colorInputBackground: 'rgba(30, 41, 59, 0.8)',
+              colorInputText: '#f8fafc',
+              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontSize: '16px',
+              borderRadius: '12px',
+              spacingUnit: '6px',
+            },
+            layout: {
+              socialButtonsPlacement: 'bottom',
+              socialButtonsVariant: 'blockButton',
+              helpPageUrl: '/help',
+              showOptionalFields: true,
+            },
+          }}
+        />
+      </ClerkAuthWithErrorBoundary>
+    </ClerkAuthLayout>
+  ),
 })
 
 const registerRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'register',
-  component: () => <AuthComponent mode="register" />,
+  component: () => (
+    <ClerkAuthLayout>
+      <ClerkAuthWithErrorBoundary>
+        <SignUp
+          routing="hash"
+          signInUrl="/login"
+          fallbackRedirectUrl="/"
+          appearance={{
+            elements: {
+              // Root container
+              rootBox: 'w-full',
+              card: 'w-full bg-transparent border-0 shadow-none p-0 space-y-6',
+              
+              // Header
+              headerTitle: 'clerk-title-enhanced',
+              headerSubtitle: 'clerk-subtitle-enhanced',
+              
+              // Form fields
+              formFieldLabel: 'clerk-label-enhanced',
+              formFieldLabel__emailAddress: 'clerk-label-enhanced',
+              formFieldLabel__password: 'clerk-label-enhanced',
+              formFieldLabel__confirmPassword: 'clerk-label-enhanced',
+              formFieldLabel__firstName: 'clerk-label-enhanced',
+              formFieldLabel__lastName: 'clerk-label-enhanced',
+              formFieldInput: 'clerk-input-enhanced',
+              formFieldInput__emailAddress: 'clerk-input-enhanced',
+              formFieldInput__password: 'clerk-input-enhanced',
+              formFieldInput__confirmPassword: 'clerk-input-enhanced',
+              formFieldInput__firstName: 'clerk-input-enhanced',
+              formFieldInput__lastName: 'clerk-input-enhanced',
+              formFieldInputShowPasswordButton: 'text-muted-foreground hover:text-foreground hover:scale-110 transition-all',
+              formFieldErrorText: 'clerk-message-error-enhanced',
+              formFieldSuccessText: 'clerk-message-success-enhanced',
+              formFieldHintText: 'text-muted-foreground text-xs mt-2',
+              formFieldHintText__password: 'text-muted-foreground text-xs mt-2',
+              formFieldHintText__confirmPassword: 'text-muted-foreground text-xs mt-2',
+              
+              // Buttons
+              formButtonPrimary: 'clerk-button-primary-enhanced',
+              formButtonReset: 'clerk-button-secondary-enhanced',
+              
+              // Social auth
+              socialButtonsBlockButton: 'clerk-social-button-enhanced',
+              socialButtonsBlockButtonText: 'font-medium',
+              socialButtonsProviderIcon: 'clerk-social-icon-enhanced',
+              
+              // Footer
+              footerActionText: 'clerk-footer-text-enhanced',
+              footerActionLink: 'clerk-footer-link-enhanced',
+              footer: 'clerk-footer-enhanced',
+              
+              // Divider
+              dividerLine: 'clerk-divider-enhanced',
+              dividerText: 'clerk-divider-text-enhanced',
+              
+              // Alternative methods
+              alternativeMethods: 'mt-8 pt-6 border-t border-border/30',
+              alternativeMethodsBlockButton: 'clerk-button-secondary-enhanced',
+              
+              // Identity preview
+              identityPreview: 'clerk-identity-enhanced',
+              identityPreviewText: 'clerk-identity-text-enhanced',
+              identityPreviewEditButton: 'clerk-identity-edit-enhanced',
+              
+              // Loading
+              spinner: 'clerk-spinner-enhanced',
+            },
+            variables: {
+              colorPrimary: '#3b82f6',
+              colorBackground: 'transparent',
+              colorText: '#f8fafc',
+              colorInputBackground: 'rgba(30, 41, 59, 0.8)',
+              colorInputText: '#f8fafc',
+              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontSize: '16px',
+              borderRadius: '12px',
+              spacingUnit: '6px',
+            },
+            layout: {
+              socialButtonsPlacement: 'bottom',
+              socialButtonsVariant: 'blockButton',
+              helpPageUrl: '/help',
+              showOptionalFields: true,
+            },
+          }}
+        />
+      </ClerkAuthWithErrorBoundary>
+    </ClerkAuthLayout>
+  ),
   beforeLoad: async () => {
-    const { checkRegistrationEnabled } = useAuthStore.getState()
-    const enabled = await checkRegistrationEnabled()
-    if (!enabled) {
-      window.location.href = '/login'
-      throw new Error('Registration is disabled')
-    }
+    // Registration is controlled by Clerk dashboard settings
+    // Clerk handles user registration restrictions automatically
   },
-})
-
-const forgotRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: 'forgot',
-  component: () => <AuthComponent mode="forgot" />,
 })
 
 // Protected routes structure
@@ -170,21 +304,34 @@ const manageRoute = createRoute({
 })
 
 const AdminPageComponent = () => {
-  const [authStore, setAuthStore] = React.useState<any>(null)
-  const [isLoading, setIsLoading] = React.useState(true)
+  const { user, isLoaded } = useUser()
+  const { isSignedIn } = useAuth()
 
-  React.useEffect(() => {
-    import('./stores/authStore').then(({ useAuthStore }) => {
-      const store = useAuthStore.getState()
-      setAuthStore(store)
-      store.initialize().then(() => {
-        setIsLoading(false)
-      })
-    })
-  }, [])
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (!isSignedIn) {
+    return null // Will be handled by route protection
+  }
+
+  // Check if user has admin role from Clerk metadata
+  const isAdmin = user?.publicMetadata?.isAdmin === true || user?.publicMetadata?.role === 'admin'
+
+  const clerkUser = user
+    ? {
+        id: user.id,
+        email: user.primaryEmailAddress?.emailAddress || '',
+        isAdmin,
+      }
+    : null
 
   return (
-    <ProtectedRoute requiredRole="admin" isLoading={isLoading} user={authStore?.user}>
+    <ProtectedRoute requiredRole="admin" isLoading={!isLoaded} user={clerkUser}>
       <AdminPage />
     </ProtectedRoute>
   )
@@ -201,9 +348,9 @@ export const router = createRouter({
   routeTree: rootRoute.addChildren([
     loginRoute,
     registerRoute,
-    forgotRoute,
     protectedLayoutRoute.addChildren([dashboardRoute, settingsRoute, manageRoute, adminRoute]),
   ]),
+  // Note: forgotRoute removed - handled by Clerk's built-in password recovery
 })
 
 declare module '@tanstack/react-router' {

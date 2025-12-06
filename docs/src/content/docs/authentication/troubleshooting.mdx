@@ -1,78 +1,692 @@
 ---
-title: MFA Troubleshooting
-description: Common MFA issues and solutions
+title: Authentication Troubleshooting
+description: Common issues and solutions for Clerk authentication
 ---
 
-# MFA Troubleshooting Guide
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
-Common issues and solutions for Multi-Factor Authentication.
+This guide helps you diagnose and fix common issues with Clerk authentication in LeafLock.
 
-## "Invalid MFA code" Error
+## Quick Diagnostics
 
-### Cause
-- Time synchronization issue between device and server
-- Code has expired (30-second window)
-- Wrong account in authenticator app
+Before diving into specific issues, run these quick checks:
 
-### Solutions
-1. **Check device time**:
-   - Ensure automatic date & time is enabled
-   - Sync time with internet time server
-   - Verify timezone is correct
+```bash title="Quick Health Check"
+# Check if Clerk is configured
+echo $CLERK_SECRET_KEY | grep -q "sk_" && echo "✅ Clerk configured" || echo "❌ Clerk not configured"
 
-2. **Wait for new code**:
-   - TOTP codes expire every 30 seconds
-   - Wait for the authenticator to generate a new code
+# Check if backend can reach Clerk
+curl -s https://api.clerk.com/v1/health | jq -r ".status" || echo "❌ Cannot reach Clerk API"
 
-3. **Verify correct account**:
-   - Check you're viewing the LeafLock entry
-   - Account name should match your email
+# Check frontend build
+pnpm run typecheck && echo "✅ TypeScript clean" || echo "❌ TypeScript errors"
 
-## Can't Scan QR Code
+# Check authentication
+pnpm run build && echo "✅ Build successful" || echo "❌ Build failed"
+```
 
-### Solutions
-1. Increase screen brightness
-2. Move camera closer or further away
-3. Clean camera lens
-4. Use manual entry instead:
-   - Copy the text secret
-   - Open authenticator app
-   - Select "Enter a setup key"
-   - Paste the secret
+## Common Issues
 
-## Lost Authenticator Device
+### Configuration Issues
 
-### If you have backup codes:
-1. Log in using a backup code
-2. Disable MFA
-3. Set up MFA on new device
-4. Generate new backup codes
+#### "CLERK_SECRET_KEY not found"
 
-### If you don't have backup codes:
-- Contact your administrator for MFA reset
-- See [Admin MFA Management](/authentication/admin-mfa-management)
+<Aside type="tip">
+Make sure you have all three Clerk environment variables set:
+- `CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY` 
+- `VITE_CLERK_PUBLISHABLE_KEY`
+</Aside>
 
-## Rate Limited ("Too many attempts")
+**Symptoms:**
+- Authentication components don't load
+- Backend shows "Clerk not configured" warnings
+- Frontend shows "Publishable key not found" errors
 
-### Cause
-Exceeded maximum failed verification attempts
+**Solutions:**
 
-### Wait times:
-- 5 failed TOTP attempts: 15-minute lockout
-- 3 failed backup codes: 15-minute lockout
+<Tabs>
+<TabItem label="Development">
+```bash
+# Check current environment
+cat .env | grep CLERK
 
-### Solution
-Wait for the lockout period to expire, then try again with correct code.
+# Add missing variables
+echo "CLERK_PUBLISHABLE_KEY=pk_test_your_key" >> .env
+echo "CLERK_SECRET_KEY=sk_test_your_key" >> .env
+echo "VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_key" >> .env
 
-## Backup Code Not Working
+# Restart your development server
+make down && make up
+```
+</TabItem>
 
-### Check:
-1. Code format: `XXXX-XXXX-XXXX-XXXX` (16 characters)
-2. Code not previously used (one-time use only)
-3. Codes not regenerated (old codes invalidated)
+<TabItem label="Production">
+```bash
+# Check your deployment platform
+# Add environment variables to your platform:
+# - Railway: Dashboard > Variables
+# - Vercel: Project Settings > Environment Variables
+# - Docker: docker-compose.yml or .env file
+# - Kubernetes: ConfigMap or Secret
 
-## Next Steps
+CLERK_PUBLISHABLE_KEY=pk_live_your_key
+CLERK_SECRET_KEY=sk_live_your_key
+VITE_CLERK_PUBLISHABLE_KEY=pk_live_your_key
+```
+</TabItem>
+</Tabs>
 
-- [Setup Guide](/authentication/setup-guide)
-- [Backup Codes](/authentication/backup-codes)
-- [Admin Management](/authentication/admin-mfa-management)
+#### "Invalid Clerk keys"
+
+**Symptoms:**
+- "Invalid publishable key" error in browser console
+- "Invalid secret key" error in backend logs
+- Authentication fails immediately
+
+**Solutions:**
+
+1. **Verify Key Format**
+   ```bash
+   # Test keys should start with:
+   # Publishable: pk_test_ (development) or pk_live_ (production)
+   # Secret: sk_test_ (development) or sk_live_ (production)
+   
+   echo $CLERK_SECRET_KEY | grep -E "^sk_(test|live)_"
+   ```
+
+2. **Check Application Environment**
+   ```bash
+   # Make sure keys match your environment
+   # Development keys won't work in production
+   # Production keys won't work in development
+   ```
+
+3. **Regenerate Keys**
+   - Go to [Clerk Dashboard](https://dashboard.clerk.com)
+   - Navigate to your application
+   - Go to "API Keys"
+   - Click "Regenerate" if needed
+   - Update your environment variables
+
+### Frontend Issues
+
+#### "Clerk components not loading"
+
+**Symptoms:**
+- Blank authentication pages
+- Login/register forms don't appear
+- JavaScript errors in console
+
+**Solutions:**
+
+<Tabs>
+<TabItem label="Import Issues">
+```tsx
+// Make sure you're using the correct import
+import { ClerkProvider } from '@clerk/clerk-react'
+
+// NOT the TanStack Start version
+// import { ClerkProvider } from '@clerk/tanstack-react-start' // ❌ Wrong
+```
+</TabItem>
+
+<TabItem label="Provider Configuration">
+```tsx
+// App.tsx - Correct setup
+function App() {
+  return (
+    <ClerkProvider
+      publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
+      afterSignOutUrl="/login"
+      signInUrl="/login"
+      signUpUrl="/register"
+    >
+      {/* Your app content */}
+    </ClerkProvider>
+  )
+}
+```
+</TabItem>
+
+<TabItem label="Environment Variables">
+```bash
+# Check if VITE variable is set
+echo $VITE_CLERK_PUBLISHABLE_KEY
+
+# If empty, add to .env
+echo "VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_key" >> .env
+
+# Restart development server
+npm run dev
+```
+</TabItem>
+</Tabs>
+
+#### "Theme not applied to Clerk components"
+
+**Symptoms:**
+- Clerk components use default styling
+- Don't match LeafLock's dark/light theme
+- Colors look out of place
+
+**Solutions:**
+
+```tsx title="Fix theme configuration"
+<SignIn
+  appearance={{
+    elements: {
+      // Layout
+      rootBox: 'mx-auto max-w-md',
+      card: 'bg-background border-border shadow-lg',
+      
+      // Typography
+      headerTitle: 'text-2xl font-bold text-foreground',
+      headerSubtitle: 'text-muted-foreground',
+      
+      // Form elements
+      formFieldLabel: 'text-foreground font-medium',
+      formFieldInput: 'bg-background border-border text-foreground placeholder:text-muted-foreground',
+      
+      // Buttons
+      socialButtonsBlockButton: 'bg-background border-border text-foreground hover:bg-accent',
+      formButtonPrimary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+      
+      // Links
+      footerActionText: 'text-muted-foreground',
+      footerActionLink: 'text-primary hover:text-primary/90 underline',
+      
+      // Dividers
+      dividerLine: 'bg-border',
+      dividerText: 'text-muted-foreground',
+    },
+    variables: {
+      colorPrimary: '#3b82f6', // Your primary color
+      colorBackground: '#0f172a', // Your background color
+      colorText: '#f8fafc', // Your text color
+    },
+  }}
+/>
+```
+
+#### "Session tokens not being sent"
+
+**Symptoms:**
+- API calls return 401 Unauthorized
+- No Authorization header in network requests
+- Backend shows "No authorization token provided"
+
+**Solutions:**
+
+<Tabs>
+<TabItem label="API Client Setup">
+```tsx
+// Make sure you're using the Clerk API client
+import { useClerkApiClient } from '@/services/api/clerkApiClient'
+
+function MyComponent() {
+  const apiClient = useClerkApiClient()
+  
+  const fetchData = async () => {
+    try {
+      const data = await apiClient.get('/api/data')
+      // Handle data
+    } catch (error) {
+      console.error('API call failed:', error)
+    }
+  }
+}
+```
+</TabItem>
+
+<TabItem label="Manual Token Handling">
+```tsx
+import { useSession } from '@clerk/clerk-react'
+
+function MyComponent() {
+  const { getToken } = useSession()
+  
+  const fetchData = async () => {
+    const token = await getToken()
+    
+    const response = await fetch('/api/data', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    
+    return response.json()
+  }
+}
+```
+</TabItem>
+
+<TabItem label="Debug Token Issues">
+```tsx
+// Debug session token
+function DebugAuth() {
+  const { getToken, isLoaded, isSignedIn } = useSession()
+  
+  useEffect(() => {
+    const checkToken = async () => {
+      if (isLoaded && isSignedIn) {
+        try {
+          const token = await getToken()
+          console.log('Session token:', token?.substring(0, 20) + '...')
+        } catch (error) {
+          console.error('Failed to get token:', error)
+        }
+      }
+    }
+    
+    checkToken()
+  }, [isLoaded, isSignedIn, getToken])
+  
+  return null
+}
+```
+</TabItem>
+</Tabs>
+
+### Backend Issues
+
+#### "Clerk token validation failed"
+
+**Symptoms:**
+- "Invalid or expired Clerk session token" errors
+- Backend shows Clerk validation failures
+- Users can't authenticate even with valid sessions
+
+**Solutions:**
+
+<Tabs>
+<TabItem label="Check Backend Configuration">
+```go
+// main.go - Verify Clerk initialization
+if config.ClerkSecretKey != "" {
+    if err := auth.InitializeClerk(config.ClerkSecretKey); err != nil {
+        log.Printf("⚠️ Clerk initialization failed: %v", err)
+    } else {
+        log.Printf("✅ Clerk SDK initialized")
+    }
+} else {
+    log.Println("⚠️ CLERK_SECRET_KEY not configured")
+}
+```
+</TabItem>
+
+<TabItem label="Test Token Validation">
+```go
+// Debug token validation
+func (h *Handler) debugClerkToken(ctx context.Context, token string) {
+    log.Printf("Validating Clerk token: %s...", token[:20])
+    
+    claims, err := h.validateClerkToken(ctx, token)
+    if err != nil {
+        log.Printf("Clerk validation failed: %v", err)
+        return
+    }
+    
+    log.Printf("Clerk claims: Subject=%s, IssuedAt=%v", 
+        claims.Subject, claims.IssuedAt)
+}
+```
+</TabItem>
+
+<TabItem label="Check Network Connectivity">
+```bash
+# Test Clerk API connectivity
+nslookup api.clerk.com
+curl -I https://api.clerk.com/v1/health
+
+# Check if backend can reach Clerk
+# (from your backend server)
+curl -H "Authorization: Bearer $CLERK_SECRET_KEY" \
+     https://api.clerk.com/v1/users
+```
+</TabItem>
+</Tabs>
+
+#### "Dual authentication not working"
+
+**Symptoms:**
+- JWT tokens don't work after Clerk setup
+- Clerk tokens don't work
+- Backend shows "Invalid or expired token" for both
+
+**Solutions:**
+
+<Tabs>
+<TabItem label="Verify Dual Middleware">
+```go
+// Check middleware configuration
+func (h *Handler) DualAuthMiddleware(c *fiber.Ctx) error {
+    // Log authentication attempts
+    authHeader := c.Get("Authorization")
+    log.Printf("Auth attempt: %s", authHeader[:20]+"...")
+    
+    // Add detailed logging
+    if h.config.ClerkSecretKey != "" {
+        log.Println("Clerk authentication enabled")
+    } else {
+        log.Println("Clerk authentication disabled")
+    }
+    
+    if h.config.JWTSecret != nil {
+        log.Println("JWT authentication enabled")
+    } else {
+        log.Println("JWT authentication disabled")
+    }
+    
+    // ... rest of middleware
+}
+```
+</TabItem>
+
+<TabItem label="Test Both Methods">
+```bash
+# Test JWT authentication
+curl -H "Authorization: Bearer your_jwt_token" \
+     http://localhost:8080/api/test
+
+# Test Clerk authentication  
+curl -H "Authorization: Bearer your_clerk_token" \
+     http://localhost:8080/api/test
+
+# Check which method succeeded
+# Look for "auth_type" in response headers or logs
+```
+</TabItem>
+
+<TabItem label="Debug Token Detection">
+```go
+// Add debugging to determine token type
+func (h *Handler) determineAuthType(token string) string {
+    // Clerk tokens typically have specific format
+    if strings.HasPrefix(token, "eyJ") && len(token) > 100 {
+        // Likely JWT (check structure)
+        parts := strings.Split(token, ".")
+        if len(parts) == 3 {
+            return "jwt"
+        }
+    }
+    
+    // Default to trying both
+    return "unknown"
+}
+```
+</TabItem>
+</Tabs>
+
+### Migration Issues
+
+#### "User migration failing"
+
+**Symptoms:**
+- Migration API returns errors
+- Users can't migrate to Clerk
+- Migration tokens don't work
+
+**Solutions:**
+
+<Tabs>
+<TabItem label="Check User Status">
+```sql
+-- Check if user already migrated
+SELECT clerk_user_id FROM users WHERE id = 'user-uuid';
+
+-- Check for existing mappings
+SELECT * FROM user_clerk_mappings WHERE user_id = 'user-uuid';
+
+-- Check migration tokens
+SELECT * FROM user_migration_tokens WHERE user_id = 'user-uuid';
+```
+</TabItem>
+
+<TabItem label="Debug Migration Process">
+```go
+// Add detailed logging to migration
+func (h *Handler) migrateUserToClerk(ctx context.Context, userID uuid.UUID, clerkUserID string) error {
+    log.Printf("Starting migration: userID=%s, clerkUserID=%s", userID, clerkUserID)
+    
+    // Check existing state
+    var existingClerkID sql.NullString
+    err := h.db.QueryRow(ctx, "SELECT clerk_user_id FROM users WHERE id = $1", userID).Scan(&existingClerkID)
+    if err != nil {
+        log.Printf("Error checking existing user: %v", err)
+        return err
+    }
+    
+    if existingClerkID.Valid && existingClerkID.String != "" {
+        log.Printf("User already migrated: existing=%s, new=%s", existingClerkID.String, clerkUserID)
+        return fmt.Errorf("user already migrated")
+    }
+    
+    // ... rest of migration logic
+}
+```
+</TabItem>
+
+<TabItem label="Handle Conflicts">
+```go
+// Handle migration conflicts gracefully
+func (h *Handler) handleMigrationConflict(ctx context.Context, userID uuid.UUID, newClerkUserID string) error {
+    // Check for existing mapping
+    var existingMapping struct {
+        UserID        uuid.UUID
+        ClerkUserID   string
+        CreatedAt     time.Time
+    }
+    
+    err := h.db.QueryRow(ctx, `
+        SELECT user_id, clerk_user_id, created_at 
+        FROM user_clerk_mappings 
+        WHERE user_id = $1
+    `, userID).Scan(&existingMapping.UserID, &existingMapping.ClerkUserID, &existingMapping.CreatedAt)
+    
+    if err == nil {
+        // User already has mapping
+        if existingMapping.ClerkUserID == newClerkUserID {
+            log.Printf("User already has this Clerk mapping")
+            return nil // Not an error
+        }
+        
+        // Different Clerk user ID - this might be a conflict
+        log.Printf("Migration conflict: existing=%s, new=%s", existingMapping.ClerkUserID, newClerkUserID)
+        
+        // Handle based on your policy
+        // Option 1: Allow override (careful!)
+        // Option 2: Require manual intervention
+        // Option 3: Create new user mapping
+        
+        return fmt.Errorf("clerk user mapping conflict")
+    }
+    
+    return nil // No conflict
+}
+```
+</TabItem>
+</Tabs>
+
+## Performance Issues
+
+#### "Slow authentication"
+
+**Symptoms:**
+- Authentication takes >2 seconds
+- Users complain about login speed
+- Backend shows slow response times
+
+**Solutions:**
+
+<Tabs>
+<TabItem label="Enable Token Caching">
+```go
+// Implement token caching
+type TokenCache struct {
+    cache map[string]*CachedToken
+    mutex sync.RWMutex
+    ttl   time.Duration
+}
+
+func (tc *TokenCache) Set(token string, userID uuid.UUID, isAdmin bool) {
+    tc.mutex.Lock()
+    defer tc.mutex.Unlock()
+    
+    tc.cache[token] = &CachedToken{
+        UserID:    userID,
+        IsAdmin:   isAdmin,
+        ExpiresAt: time.Now().Add(tc.ttl),
+    }
+}
+
+func (tc *TokenCache) Get(token string) (uuid.UUID, bool, bool) {
+    tc.mutex.RLock()
+    defer tc.mutex.RUnlock()
+    
+    cached, exists := tc.cache[token]
+    if !exists || time.Now().After(cached.ExpiresAt) {
+        return uuid.Nil, false, false
+    }
+    
+    return cached.UserID, cached.IsAdmin, true
+}
+```
+</TabItem>
+
+<TabItem label="Optimize Database Queries">
+```sql
+-- Add indexes for user lookups
+CREATE INDEX CONCURRENTLY idx_users_clerk_user_id ON users(clerk_user_id);
+CREATE INDEX CONCURRENTLY idx_user_clerk_mappings_user_id ON user_clerk_mappings(user_id);
+CREATE INDEX CONCURRENTLY idx_user_clerk_mappings_clerk_id ON user_clerk_mappings(clerk_user_id);
+
+-- Optimize user lookup query
+SELECT u.id, u.email, u.is_admin, u.created_at, ucm.clerk_user_id
+FROM users u
+LEFT JOIN user_clerk_mappings ucm ON u.id = ucm.user_id
+WHERE u.id = $1
+LIMIT 1;
+```
+</TabItem>
+
+<TabItem label="Implement Connection Pooling">
+```go
+// Optimize database connections
+dbConfig := &pgxpool.Config{
+    ConnConfig: &pgx.ConnConfig{
+        // ... connection details
+    },
+    MaxConns:        25,  // Increase for auth-heavy apps
+    MinConns:        5,   // Keep minimum connections
+    MaxConnLifetime: time.Hour,
+    MaxConnIdleTime: 30 * time.Minute,
+    HealthCheckPeriod: time.Minute,
+}
+```
+</TabItem>
+</Tabs>
+
+## Build and Development Issues
+
+#### "Build fails with Clerk errors"
+
+**Symptoms:**
+- TypeScript compilation fails
+- Vite build fails
+- Import errors
+
+**Solutions:**
+
+<Tabs>
+<TabItem label="Import Issues">
+```tsx
+// Fix import statements
+import { ClerkProvider, useAuth } from '@clerk/clerk-react'
+
+// NOT these:
+// import { ClerkProvider } from '@clerk/tanstack-react-start' // ❌
+// import { ClerkProvider } from '@clerk/nextjs' // ❌
+```
+</TabItem>
+
+<TabItem label="TypeScript Errors">
+```bash
+# Update TypeScript types
+npm install @clerk/clerk-react@latest --save-dev
+
+# Check for type conflicts
+npx tsc --noEmit --skipLibCheck
+
+# Fix any type issues in your code
+```
+</TabItem>
+
+<TabItem label="Clean Dependencies">
+```bash
+# Clean install
+rm -rf node_modules package-lock.json
+npm install
+
+# Clear build cache
+rm -rf dist .next
+npm run build
+```
+</TabItem>
+</Tabs>
+
+## Getting Help
+
+### Self-Help Resources
+
+1. **Check Logs First**
+   ```bash
+   # Frontend logs
+   tail -f logs/frontend.log
+   
+   # Backend logs
+   tail -f logs/backend.log
+   
+   # Browser console
+   # Press F12 and check Console tab
+   ```
+
+2. **Use Debug Mode**
+   ```bash
+   # Enable debug logging
+   LOG_LEVEL=debug npm run dev
+   ```
+
+3. **Test in Isolation**
+   ```bash
+   # Test Clerk directly
+   npm test src/__tests__/clerk-integration.test.tsx
+   
+   # Test backend auth
+   go test ./auth/... -v
+   ```
+
+### Community Resources
+
+- **Clerk Discord**: https://clerk.com/discord
+- **Clerk Documentation**: https://clerk.com/docs
+- **LeafLock Issues**: https://github.com/RelativeSure/LeafLock/issues
+
+### Professional Support
+
+For critical issues:
+- **Clerk Support**: https://clerk.com/support
+- **Enterprise Support**: Available with Clerk Pro plans
+
+---
+
+**Still stuck?** Create an issue with:
+- Error messages (full stack traces)
+- Environment details (dev/prod, versions)
+- Steps to reproduce
+- Expected vs actual behavior

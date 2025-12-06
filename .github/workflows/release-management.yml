@@ -230,8 +230,23 @@ jobs:
         env:
           DATABASE_URL: postgres://postgres:testpass123@localhost:5432/notes?sslmode=disable # secretlint-disable-line
           REDIS_URL: localhost:6379
-          JWT_SECRET: test_jwt_secret_for_ci_only_not_for_production_use_12345678901234567890
           SERVER_ENCRYPTION_KEY: test_encryption_key_32_chars_ok12
+          # Clerk test configuration for integration test
+          CLERK_PUBLISHABLE_KEY: pk_test_integration_test_only_not_for_production
+          CLERK_SECRET_KEY: sk_test_integration_test_only_not_for_production
+          # Frontend Clerk configuration
+          VITE_CLERK_PUBLISHABLE_KEY: pk_test_integration_test_only_not_for_production
+          VITE_ENABLE_REGISTRATION: true
+          # Application environment
+          APP_ENV: test
+          ENABLE_DEFAULT_ADMIN: true
+          DEFAULT_ADMIN_EMAIL: test-admin@leaflock.test
+          DEFAULT_ADMIN_PASSWORD: TestAdmin#P@ssw0rd&123!
+          # CORS configuration for test
+          CORS_ORIGINS: http://localhost:3000
+          # Frontend configuration
+          VITE_API_URL: http://localhost:8080
+          VITE_WS_URL: ws://localhost:8080
         working-directory: backend
         run: |
           go build -o app .

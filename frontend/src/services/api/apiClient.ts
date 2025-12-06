@@ -1,19 +1,11 @@
-import { clearAuthStorage, safeRedirectToLogin, isOnAuthRoute } from '@/lib/navigation'
+import { safeRedirectToLogin, isOnAuthRoute } from '@/lib/navigation'
 import { API_BASE_URL } from './types'
 
 export class ApiClient {
   private baseURL: string
-  private token: string | null = null
 
   constructor(baseURL: string = API_BASE_URL) {
     this.baseURL = baseURL
-    this.token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-  }
-
-  private refreshToken(): void {
-    if (typeof window !== 'undefined') {
-      this.token = localStorage.getItem('token')
-    }
   }
 
   protected async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -37,13 +29,7 @@ export class ApiClient {
       }
     }
 
-    // Always refresh token from localStorage before making requests to ensure it's current
-    // This handles cases where token was set in another tab/window or after page reload
-    this.refreshToken()
 
-    if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`
-    }
 
     const response = await fetch(url, {
       ...options,
@@ -53,16 +39,14 @@ export class ApiClient {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
 
-      // Handle 401 Unauthorized - token expired
-      // BUT: Don't clear session for login/register endpoints (those 401s are expected for wrong credentials)
+      // Handle 401 Unauthorized - but don't clear session for login/register endpoints
       const isAuthEndpoint =
         endpoint.includes('/auth/login') ||
         endpoint.includes('/auth/register') ||
         endpoint.includes('/auth/mfa/verify')
 
       if (response.status === 401 && !isAuthEndpoint) {
-        console.warn('401 Unauthorized - clearing expired session')
-        clearAuthStorage()
+        console.warn('401 Unauthorized - authentication required')
         if (typeof window !== 'undefined' && !isOnAuthRoute()) {
           // Small timeout to allow UI to settle before navigation
           setTimeout(() => safeRedirectToLogin(), 50)
@@ -92,20 +76,7 @@ export class ApiClient {
     return data
   }
 
-  protected setToken(token: string): void {
-    this.token = token
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('token', token)
-    }
-  }
 
-  protected clearToken(): void {
-    this.token = null
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-    }
-  }
 
   // Public methods for direct usage
   async get<T>(endpoint: string, options?: RequestInit): Promise<T> {

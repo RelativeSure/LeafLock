@@ -37,7 +37,7 @@ Use these guides whenever you need source file references or want to validate a 
 ## Runtime Flow
 
 - Vite builds the SPA entry point at `frontend/src/main.tsx`; it loads per-user keys via `cryptoService`.
-- Authenticated calls go through `SecureAPI` (JWT + CSRF token handling) to `/api/v1/*`.
+- Authenticated calls go through `SecureAPI` (Clerk session tokens + CSRF handling) to `/api/v1/*`.
 - `backend/server/app.go` wires Fiber middleware (recover, logging, compression) before `routes.go` adds security controls.
 - PostgreSQL queries run through pgx pools; Redis maintains session state, rate limit buckets, and share-link cache entries.
 - Background services under `backend/services/` seed the default admin, rotate encryption keys, and purge trashed notes daily.

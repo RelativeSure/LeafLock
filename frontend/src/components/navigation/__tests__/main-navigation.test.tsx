@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MainNavigation } from '../main-navigation'
-import { useAuthStore } from '@/stores/authStore'
+import { useClerkAuthStore } from '@/stores/clerkAuthStore'
 
-vi.mock('@/stores/authStore', () => ({
-  useAuthStore: vi.fn(),
+vi.mock('@/stores/clerkAuthStore', () => ({
+  useClerkAuthStore: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -58,7 +58,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render navigation for authenticated user', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -69,7 +69,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render navigation for unauthenticated user', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: null,
       isAuthenticated: false,
       logout: vi.fn(),
@@ -80,7 +80,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render navigation for admin user', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: { ...mockUser, role: 'admin', isAdmin: true },
       isAuthenticated: true,
       logout: vi.fn(),
@@ -91,7 +91,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render Tools menu', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -102,7 +102,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render Resources menu', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -113,7 +113,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render Templates link in Tools menu', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -124,7 +124,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render Tags link in Tools menu', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -135,7 +135,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render Settings link in Tools menu', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -146,7 +146,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render Templates description', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -157,7 +157,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render Tags description', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -168,7 +168,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render Settings description', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -179,7 +179,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render Documentation link in Resources menu', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -190,7 +190,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render GitHub link in Resources menu', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -201,7 +201,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render Documentation description', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -212,7 +212,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render GitHub description', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -223,7 +223,7 @@ describe('MainNavigation', () => {
   })
 
   it('should not render Admin menu for regular users', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -234,7 +234,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render Admin menu for admin users', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: { ...mockUser, role: 'admin', isAdmin: true },
       isAuthenticated: true,
       logout: vi.fn(),
@@ -245,7 +245,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render Admin Dashboard link for admin users', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: { ...mockUser, role: 'admin', isAdmin: true },
       isAuthenticated: true,
       logout: vi.fn(),
@@ -256,7 +256,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render Admin Dashboard description for admin users', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: { ...mockUser, role: 'admin', isAdmin: true },
       isAuthenticated: true,
       logout: vi.fn(),
@@ -267,7 +267,7 @@ describe('MainNavigation', () => {
   })
 
   it('should have Templates link with correct href', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -281,7 +281,7 @@ describe('MainNavigation', () => {
   })
 
   it('should have Tags link with correct href', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -295,7 +295,7 @@ describe('MainNavigation', () => {
   })
 
   it('should have Settings link with correct href', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -308,7 +308,7 @@ describe('MainNavigation', () => {
   })
 
   it('should have Documentation link as external', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -323,7 +323,7 @@ describe('MainNavigation', () => {
   })
 
   it('should have GitHub link as external', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -338,7 +338,7 @@ describe('MainNavigation', () => {
   })
 
   it('should have Documentation link with correct href', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -352,7 +352,7 @@ describe('MainNavigation', () => {
   })
 
   it('should have GitHub link with correct href', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -366,7 +366,7 @@ describe('MainNavigation', () => {
   })
 
   it('should have Admin Dashboard link with correct href for admin', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: { ...mockUser, role: 'admin', isAdmin: true },
       isAuthenticated: true,
       logout: vi.fn(),
@@ -380,7 +380,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render icons for menu items', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -392,7 +392,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render chevron down icons', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -403,7 +403,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render both external links correctly', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
       logout: vi.fn(),
@@ -415,7 +415,7 @@ describe('MainNavigation', () => {
   })
 
   it('should render navigation when user is null', () => {
-    vi.mocked(useAuthStore).mockReturnValue({
+    vi.mocked(useClerkAuthStore).mockReturnValue({
       user: null,
       isAuthenticated: false,
       logout: vi.fn(),

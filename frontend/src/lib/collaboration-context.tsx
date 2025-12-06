@@ -65,13 +65,8 @@ export function useCollaboration() {
 
   const unshareNote = useCallback(
     async (noteId: string, userId: string) => {
-      // Backend API expects DELETE /notes/:id/share/:userId
-      const apiUrl = import.meta.env.VITE_API_URL || window.location.origin
-      const token = localStorage.getItem('token')
-      await fetch(`${apiUrl}/api/v1/notes/${noteId}/share/${userId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      // Use socialService to remove collaborator
+      await socialService.removeCollaborator(noteId, userId)
       await loadSharedUsers(noteId)
     },
     [loadSharedUsers]

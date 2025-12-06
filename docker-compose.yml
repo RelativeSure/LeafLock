@@ -40,8 +40,7 @@ services:
       PORT: 8080
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-leaflock}?sslmode=disable
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me-please-64-characters-long-1234567890abc}
-      # SERVER_ENCRYPTION_KEY removed - zero-knowledge architecture
+      # JWT_SECRET removed - Clerk-only authentication
       ENABLE_DEFAULT_ADMIN: ${ENABLE_DEFAULT_ADMIN:-true}
       DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-REDACTED_EMAIL}
       DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-REDACTED_PASSWORD}
@@ -65,6 +64,8 @@ services:
     environment:
       BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8080}
       PORT: ${FRONTEND_PORT:-80}
+      VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:-}
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8080/api/v1}
     ports:
       - "3000:${FRONTEND_PORT:-80}"
     depends_on:

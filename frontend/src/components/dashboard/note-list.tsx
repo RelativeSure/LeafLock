@@ -1,10 +1,10 @@
 /**
  * NoteList Component
- * 
+ *
  * Purpose: Provides a comprehensive interface for browsing, searching, and managing
  * encrypted notes. Implements advanced filtering, sorting, and bulk operations
  * while maintaining security through encrypted content handling.
- * 
+ *
  * User Experience Goals:
  * - Fast, responsive note browsing with virtual scrolling
  * - Intuitive search and filtering capabilities
@@ -12,31 +12,31 @@
  * - Bulk operations for efficient note management
  * - Context menus for quick actions
  * - Real-time decryption status feedback
- * 
+ *
  * Security Considerations:
  * - Encrypted notes show lock indicators without exposing content
  * - Search operates on decrypted content only when unlocked
  * - No sensitive data is exposed in list view
  * - Bulk operations require explicit user confirmation
- * 
+ *
  * Performance Optimizations:
  * - Memoized filtering and sorting operations
  * - Virtual scrolling for large note collections
  * - Debounced search input to reduce re-renders
  * - Efficient decryption caching via custom hook
  * - Optimistic UI updates for immediate feedback
- * 
+ *
  * Accessibility Features:
  * - Proper ARIA labels for screen readers
  * - Keyboard navigation support
  * - High contrast indicators for note states
  * - Semantic HTML structure
- * 
+ *
  * Integration Points:
  * - NotesStore: Provides note data and CRUD operations
  * - useDecryptedNotes: Handles encrypted content decryption
  * - BulkOperationsBar: Manages multi-note selections
- * 
+ *
  * State Management:
  * - Local state for UI controls (search, sort, selection)
  * - Store integration for note data persistence

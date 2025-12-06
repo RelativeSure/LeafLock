@@ -27,11 +27,11 @@ const (
 // SessionManager handles session operations
 type SessionManager struct {
 	redis  *redis.Client
-	crypto *appcrypto.CryptoService // Derived from JWT secret, not server encryption key
+	crypto *appcrypto.CryptoService // Derived from system secret, not server encryption key
 }
 
 // NewSessionManager creates a new session manager
-// Zero-knowledge: crypto param is JWT-derived, not from SERVER_ENCRYPTION_KEY
+// Zero-knowledge: crypto param is system-derived, not from SERVER_ENCRYPTION_KEY
 func NewSessionManager(rdb *redis.Client, crypto *appcrypto.CryptoService) *SessionManager {
 	return &SessionManager{
 		redis:  rdb,
@@ -129,39 +129,6 @@ func (sm *SessionManager) DeleteSession(ctx context.Context, token string) error
 	}
 
 	return nil
-}
-
-// BlacklistJWT adds a JWT token to the blacklist until its expiration
-func (sm *SessionManager) BlacklistJWT(ctx context.Context, token string, expiresAt time.Time) error {
-	// Calculate TTL based on token expiration
-	ttl := time.Until(expiresAt)
-	if ttl <= 0 {
-		// Token already expired, no need to blacklist
-		return nil
-	}
-
-	// Store in Redis with TTL matching token expiration
-	tokenHash := sm.hashToken(token)
-	blacklistKey := "jwt:blacklist:" + tokenHash
-
-	if err := sm.redis.Set(ctx, blacklistKey, "1", ttl).Err(); err != nil {
-		return fmt.Errorf("failed to blacklist JWT: %w", err)
-	}
-
-	return nil
-}
-
-// IsJWTBlacklisted checks if a JWT token is blacklisted
-func (sm *SessionManager) IsJWTBlacklisted(ctx context.Context, token string) (bool, error) {
-	tokenHash := sm.hashToken(token)
-	blacklistKey := "jwt:blacklist:" + tokenHash
-
-	result, err := sm.redis.Exists(ctx, blacklistKey).Result()
-	if err != nil {
-		return false, fmt.Errorf("failed to check JWT blacklist: %w", err)
-	}
-
-	return result > 0, nil
 }
 
 // CreateMFASession creates a temporary MFA verification session

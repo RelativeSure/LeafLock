@@ -47,19 +47,19 @@ Adjust numbers in `middleware/rate_limit.go` if your deployment demands differen
 <Tabs>
   <TabItem label="Authentication">
     `POST /auth/login`, `POST /auth/password/reset-*`, and `POST /auth/mfa/*` all use Tier 1 limiters.
-  </TabItem>
+</TabItem>
   <TabItem label="Notes & Metadata">
     `GET/POST/PUT/DELETE /notes*`, `tags`, `folders`, `templates` use Tier 4.
-  </TabItem>
+</TabItem>
   <TabItem label="Attachments">
     Upload/download routes (`/notes/:id/attachments`) use the Tier 3 `AttachmentUploadLimiter`.
-  </TabItem>
+</TabItem>
   <TabItem label="Search & Exports">
     `/search`, `/notes/import`, `/notes/:id/export`, `/notes/bulk-import` map to Tier 3 limiters.
-  </TabItem>
+</TabItem>
   <TabItem label="Share Links">
     `POST /notes/:id/share-links` → Tier 2 (create), `GET /share/:token` → Tier 2 (public).
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ## Redis Configuration

@@ -341,7 +341,7 @@ Temporary solution (if any):
 //
 // Privacy Architecture:
 // - Templates are encrypted at rest using the same crypto service as user data
-// - Encryption key is derived from JWT_SECRET (consistent with user data)
+// - Encryption key is derived from Clerk secret key (consistent with user data)
 // - Even system templates maintain the zero-knowledge architecture
 // - Prevents plaintext storage of any content in the database
 //
@@ -398,7 +398,7 @@ func SeedDefaultTemplates(db database.Database, cryptoService interface {
 	for _, template := range defaultTemplates {
 		// Encrypt all template fields for privacy consistency
 		// Even system templates are encrypted to maintain the zero-knowledge
-	 // architecture. This ensures that:
+		// architecture. This ensures that:
 		// 1. No plaintext content exists in the database
 		// 2. System templates have same security guarantees as user templates
 		// 3. Database backups remain encrypted

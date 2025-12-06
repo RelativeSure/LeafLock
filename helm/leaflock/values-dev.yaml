@@ -156,5 +156,6 @@ monitoring:
 
 # Development secrets (these should be overridden with proper values)
 secrets:
-  jwtSecret: "ZGV2LWp3dC1zZWNyZXQtY2hhbmdlLW1lLWluLXByb2R1Y3Rpb24tZm9yLXNlY3VyaXR5"
+  clerkPublishableKey: ""
+  clerkSecretKey: ""
   serverEncryptionKey: "ZGV2LXNlcnZlci1rZXktY2hhbmdlLW1lLWluLXByb2R1Y3Rpb24="

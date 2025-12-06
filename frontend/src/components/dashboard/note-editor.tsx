@@ -1,37 +1,37 @@
 /**
  * NoteEditor Component
- * 
+ *
  * Purpose: Central component for creating, editing, and managing encrypted notes.
  * Implements end-to-end encryption, real-time collaboration, auto-save functionality,
  * and comprehensive note management features including tagging, sharing, and templating.
- * 
+ *
  * User Experience Goals:
  * - Seamless editing experience with auto-save and conflict resolution
  * - Intuitive toolbar with contextual actions (pin, share, tag, etc.)
  * - Real-time collaboration indicators and user presence
  * - Progressive disclosure of advanced features
  * - Responsive design for mobile and desktop editing
- * 
+ *
  * Security Considerations:
  * - All note content is encrypted using AES-256 before storage
  * - Encryption keys are never transmitted to the server
  * - Collaboration sessions are secured with unique session tokens
  * - Content is decrypted only in memory, never stored unencrypted
  * - Auto-save encrypts content transparently on each save interval
- * 
+ *
  * Performance Optimizations:
  * - Debounced auto-save (500ms) to reduce API calls
  * - Content diffing to avoid unnecessary saves
  * - Memoized encryption/decryption operations
  * - Optimistic UI updates for better perceived performance
  * - Lazy loading of collaboration features
- * 
+ *
  * Integration Points:
  * - NotesStore: Manages note CRUD operations and state
  * - CollaborationContext: Handles real-time multi-user editing
  * - EncryptionContext: Provides encryption/decryption capabilities
  * - RichTextEditor: Handles content editing with formatting
- * 
+ *
  * State Management Strategy:
  * - Local state for UI controls (tags, dialogs, loading states)
  * - Ref-based state for tracking user edits and save baselines
@@ -93,7 +93,7 @@ export function NoteEditor() {
   const { selectedNote, updateNote, moveToTrash, selectNote, tags, createTag } = useNotesStore()
   const { joinSession, leaveSession } = useCollaboration()
   const { isUnlocked, encryptText, decryptText, encryptionVersion } = useEncryption()
-  
+
   // Component state management
   const [title, setTitle] = useState('')
   const [_content, setContent] = useState('')
@@ -106,13 +106,13 @@ export function NoteEditor() {
   const [isUnlockDialogOpen, setIsUnlockDialogOpen] = useState(false)
   const [isDecrypting, setIsDecrypting] = useState(false)
   const [decryptError, setDecryptError] = useState('')
-  
+
   /**
    * Ref-based State Management
-   * 
+   *
    * Purpose: Uses refs for state that doesn't trigger re-renders but needs
    * to persist across renders and be accessible in effect cleanup functions.
-   * 
+   *
    * isSyncingRef: Prevents autosave from running during programmatic content sync
    * decryptedBaselineRef: Tracks original decrypted content to detect user edits
    * userEditedRef: Flags when user has made changes vs. initial decrypted content

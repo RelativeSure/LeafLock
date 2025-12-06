@@ -33,7 +33,7 @@ func TestErrorCreation(t *testing.T) {
 func TestErrorComparison(t *testing.T) {
 	err1 := errors.New("error 1")
 	err2 := errors.New("error 2")
-	
+
 	t.Run("Different errors", func(t *testing.T) {
 		assert.NotEqual(t, err1, err2)
 	})
@@ -51,7 +51,7 @@ func TestErrorComparison(t *testing.T) {
 
 // TestErrorMessages tests error message handling
 func TestErrorMessages(t *testing.T) {
-	tests := []struct{
+	tests := []struct {
 		name    string
 		message string
 		empty   bool

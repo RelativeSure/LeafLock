@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -16,7 +15,6 @@ import (
 	"leaflock/database"
 	"leaflock/utils"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
@@ -43,10 +41,9 @@ func shouldSkipAutoLogin(ctx context.Context) bool {
 type Service struct {
 	db database.Database
 	// crypto removed - zero-knowledge architecture (no server-wide encryption key)
-	session   sessionManager
-	password  *PasswordManager
-	mfa       *MFAManager
-	jwtSecret string
+	session  sessionManager
+	password *PasswordManager
+	mfa      *MFAManager
 }
 
 type sessionManager interface {
@@ -55,29 +52,26 @@ type sessionManager interface {
 	GetMFASession(ctx context.Context, token string) (*MFASession, error)
 	DeleteMFASession(ctx context.Context, token string) error
 	DeleteSession(ctx context.Context, token string) error
-	BlacklistJWT(ctx context.Context, token string, expiresAt time.Time) error
-	IsJWTBlacklisted(ctx context.Context, token string) (bool, error)
 }
 
 const defaultEncryptionVersion = 1
 
 // NewService creates a new auth service
-// Zero-knowledge: MFA & session encryption derived from JWT secret (system-level)
-func NewService(db database.Database, rdb *redis.Client, jwtSecret string) *Service {
-	// Derive MFA encryption key from JWT secret (deterministic, per-deployment)
-	mfaKey := sha256.Sum256(append([]byte(jwtSecret), []byte("-mfa-encryption")...))
+// Zero-knowledge: MFA & session encryption derived from system secret
+func NewService(db database.Database, rdb *redis.Client, systemSecret string) *Service {
+	// Derive MFA encryption key from system secret (deterministic, per-deployment)
+	mfaKey := sha256.Sum256(append([]byte(systemSecret), []byte("-mfa-encryption")...))
 	mfaCrypto := appcrypto.NewCryptoService(mfaKey[:])
 
-	// Derive session encryption key from JWT secret (deterministic, per-deployment)
-	sessionKey := sha256.Sum256(append([]byte(jwtSecret), []byte("-session-encryption")...))
+	// Derive session encryption key from system secret (deterministic, per-deployment)
+	sessionKey := sha256.Sum256(append([]byte(systemSecret), []byte("-session-encryption")...))
 	sessionCrypto := appcrypto.NewCryptoService(sessionKey[:])
 
 	return &Service{
-		db:        db,
-		session:   NewSessionManager(rdb, sessionCrypto),
-		password:  NewPasswordManager(db),
-		mfa:       NewMFAManager(db, mfaCrypto),
-		jwtSecret: jwtSecret,
+		db:       db,
+		session:  NewSessionManager(rdb, sessionCrypto),
+		password: NewPasswordManager(db),
+		mfa:      NewMFAManager(db, mfaCrypto),
 	}
 }
 
@@ -228,7 +222,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (*AuthRe
 		}, nil
 	}
 
-	// Create session and generate JWT
+	// Create session for Clerk-based auth
 	ipAddress := utils.GetClientIPFromContext(ctx)
 	userAgent := utils.GetUserAgentFromContext(ctx)
 
@@ -237,13 +231,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (*AuthRe
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
 
-	jwtToken, err := s.GenerateJWT(userID, false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate JWT: %w", err)
-	}
-
 	return &AuthResponse{
-		Token:       jwtToken,
 		UserID:      userID.String(),
 		WorkspaceID: workspaceID.String(),
 		IsAdmin:     false,
@@ -424,102 +412,15 @@ func (s *Service) VerifyMFA(ctx context.Context, sessionToken, code string) (*Au
 	return response, nil
 }
 
-// Logout logs out a user
+// Logout logs out a user (Clerk-based authentication)
 func (s *Service) Logout(ctx context.Context, token string) error {
-	parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte(s.jwtSecret), nil
-	})
-
-	var expiresAt time.Time
-
-	if err == nil && parsedToken.Valid {
-		if claims, ok := parsedToken.Claims.(jwt.MapClaims); ok {
-			if expValue, ok := claims["exp"]; ok {
-				switch v := expValue.(type) {
-				case float64:
-					expiresAt = time.Unix(int64(v), 0)
-				case json.Number:
-					if parsed, parseErr := v.Int64(); parseErr == nil {
-						expiresAt = time.Unix(parsed, 0)
-					}
-				case int64:
-					expiresAt = time.Unix(v, 0)
-				case int:
-					expiresAt = time.Unix(int64(v), 0)
-				}
-			}
-		}
-	}
-
-	if !expiresAt.IsZero() {
-		if err := s.session.BlacklistJWT(ctx, token, expiresAt); err != nil {
-			return fmt.Errorf("failed to revoke token: %w", err)
-		}
-	}
-
+	// For Clerk-based auth, we don't need JWT blacklisting
+	// Just delete the session
 	if err := s.session.DeleteSession(ctx, token); err != nil {
 		return fmt.Errorf("failed to delete session: %w", err)
 	}
 
 	return nil
-}
-
-// GenerateJWT generates a JWT token
-func (s *Service) GenerateJWT(userID uuid.UUID, isAdmin bool) (string, error) {
-	claims := jwt.MapClaims{
-		"user_id":  userID.String(),
-		"is_admin": isAdmin,
-		"exp":      time.Now().UTC().Add(SessionDuration).Unix(),
-		"iat":      time.Now().UTC().Unix(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signedToken, err := token.SignedString([]byte(s.jwtSecret))
-	if err != nil {
-		return "", fmt.Errorf("failed to sign JWT: %w", err)
-	}
-
-	return signedToken, nil
-}
-
-// ValidateJWT validates a JWT token and returns the user ID
-func (s *Service) ValidateJWT(tokenString string) (uuid.UUID, bool, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte(s.jwtSecret), nil
-	})
-
-	if err != nil {
-		return uuid.Nil, false, fmt.Errorf("invalid token: %w", err)
-	}
-
-	if !token.Valid {
-		return uuid.Nil, false, fmt.Errorf("token is not valid")
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return uuid.Nil, false, fmt.Errorf("invalid token claims")
-	}
-
-	userIDStr, ok := claims["user_id"].(string)
-	if !ok {
-		return uuid.Nil, false, fmt.Errorf("user_id not found in token")
-	}
-
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		return uuid.Nil, false, fmt.Errorf("invalid user_id format")
-	}
-
-	isAdmin, _ := claims["is_admin"].(bool)
-
-	return userID, isAdmin, nil
 }
 
 // Helper functions
@@ -550,14 +451,7 @@ func (s *Service) createAuthResponse(ctx context.Context, userID uuid.UUID, isAd
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
 
-	// Generate JWT
-	jwtToken, err := s.GenerateJWT(userID, isAdmin)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate JWT: %w", err)
-	}
-
 	response := &AuthResponse{
-		Token:     jwtToken,
 		UserID:    userID.String(),
 		IsAdmin:   isAdmin,
 		ExpiresAt: session.ExpiresAt,

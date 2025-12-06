@@ -26,11 +26,4 @@ export function safeRedirectToLogin(options?: { force?: boolean }): void {
   window.location.href = '/login'
 }
 
-export function clearAuthStorage(): void {
-  try {
-    localStorage.removeItem('user')
-    localStorage.removeItem('token')
-  } catch (_) {
-    // ignore
-  }
-}
+

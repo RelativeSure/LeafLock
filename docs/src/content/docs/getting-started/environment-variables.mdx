@@ -43,12 +43,23 @@ description: Complete reference for all LeafLock environment variables
 
 ### Security & Authentication
 
-#### JWT_SECRET
+#### Clerk Authentication Configuration
+
+##### CLERK_PUBLISHABLE_KEY
 **Required**: Yes
-**Type**: String (minimum 64 characters recommended)
-**Example**: `dev-super-secret-jwt-key-change-me-please-64-characters-long!!!!`
-**Description**: Secret key for signing JWT tokens. Must be cryptographically random in production.
-**Generation**: `openssl rand -base64 64`
+**Type**: String
+**Example**: `pk_test_Y2xlcmsuaW5mb3JtYXRpb24tNzguY2xlcmsuY29tJA`
+**Description**: Clerk publishable key for backend API calls. Get from Clerk dashboard → API Keys.
+
+---
+
+##### CLERK_SECRET_KEY
+**Required**: Yes
+**Type**: String
+**Example**: `sk_test_1reFhwQ0FIOw3yksdhi3F7j8qhd98y2I7eqhd98y2I7e`
+**Description**: Clerk secret key for backend authentication. Keep secure and never expose publicly. Get from Clerk dashboard → API Keys.
+
+---
 
 ---
 
@@ -306,7 +317,10 @@ POSTGRES_PASSWORD=<db_password>
 REDIS_URL=redis://localhost:6379
 
 # Security (CHANGE IN PRODUCTION!)
-JWT_SECRET=dev-super-secret-jwt-key-change-me-please-64-characters-long!!!!
+# Clerk Authentication (get from https://dashboard.clerk.com)
+CLERK_PUBLISHABLE_KEY=pk_test_your_publishable_key_here
+CLERK_SECRET_KEY=sk_test_your_secret_key_here
+# Server encryption for sensitive data
 SERVER_ENCRYPTION_KEY=c9f7IloUZlY6qSdB5KTNLJHdKEJaDbOt
 
 # CORS
@@ -347,7 +361,10 @@ REDIS_URL=redis://:CHANGE_ME_REDIS_PASSWORD@redis:6379/0
 REDIS_PASSWORD=CHANGE_ME_REDIS_PASSWORD
 
 # Security (GENERATE NEW RANDOM VALUES!)
-JWT_SECRET=$(openssl rand -base64 64)
+# Clerk Authentication (get from https://dashboard.clerk.com)
+CLERK_PUBLISHABLE_KEY=pk_live_your_publishable_key_here
+CLERK_SECRET_KEY=sk_live_your_secret_key_here
+# Server encryption for sensitive data
 SERVER_ENCRYPTION_KEY=$(openssl rand -base64 24)
 
 # CORS (your production domain)
@@ -376,11 +393,6 @@ ENABLE_METRICS=true
 ---
 
 ## Generating Secure Values
-
-### JWT Secret (64+ characters)
-```bash
-openssl rand -base64 64
-```
 
 ### Server Encryption Key (32 characters)
 ```bash
@@ -431,16 +443,7 @@ openssl rand -base64 32
 
 ---
 
-### "Invalid JWT Secret length"
 
-**Cause**: `JWT_SECRET` is too short.
-
-**Solution**: Generate a new 64+ character secret:
-```bash
-openssl rand -base64 64
-```
-
----
 
 ### "Server encryption key must be exactly 32 characters"
 

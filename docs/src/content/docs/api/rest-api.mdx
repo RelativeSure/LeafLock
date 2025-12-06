@@ -18,7 +18,7 @@ import { Aside, Card, CardGrid, Code, Tabs, TabItem } from '@astrojs/starlight/c
   </Card>
 </CardGrid>
 
-Base URL: `/api/v1`. All mutating endpoints require a bearer JWT issued by `POST /auth/login` and a valid CSRF token.
+Base URL: `/api/v1`. All mutating endpoints require authentication via Clerk session tokens (bearer tokens) issued after successful login, plus valid CSRF tokens for state-changing operations.
 
 ## Authentication
 
@@ -36,7 +36,7 @@ Content-Type: application/json
 <Aside type="tip">
 Handler: `handlers/auth.go:Login`. If MFA is enabled the response includes `{ "mfa_required": true, "session": "temp_id" }`.
 </Aside>
-  </TabItem>
+</TabItem>
   <TabItem label="Verify MFA">
 <Code
   code={`POST /api/v1/auth/mfa/verify
@@ -49,17 +49,17 @@ Handler: `handlers/auth.go:Login`. If MFA is enabled the response includes `{ "m
 <Aside type="note">
 Handler: `handlers/auth.go:VerifyMFACode`. Rate limited by `middleware.rateLimits.MFAVerifyLimiter`.
 </Aside>
-  </TabItem>
+</TabItem>
   <TabItem label="Backup Codes">
 <Code
-  code={`GET /api/v1/auth/mfa/backup-codes  # Requires JWT
-Authorization: Bearer <jwt>`}
+  code={`GET /api/v1/auth/mfa/backup-codes  # Requires Clerk session token
+Authorization: Bearer <clerk_session_token>`}
   language="http"
 />
 <Aside type="note">
 Handler: `handlers/auth.go:GetBackupCodes`. Response returns hashed codes encrypted in PostgreSQL (`users.mfa_backup_codes`).
 </Aside>
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ## Notes & Versions
@@ -71,7 +71,7 @@ Handler: `handlers/auth.go:GetBackupCodes`. Response returns hashed codes encryp
 
 <Code
   code={`POST /api/v1/notes
-Authorization: Bearer <jwt>
+Authorization: Bearer <clerk_session_token>
 Content-Type: application/json
 {
   "workspace_id": "c76c0c3d-0c2d-4ac3-a71c-1b1837a8cb6d",
@@ -121,7 +121,7 @@ Example assign tag request:
 }`}
   language="http"
 />
-  </TabItem>
+</TabItem>
   <TabItem label="Create Share Link">
 <Code
   code={`POST /api/v1/notes/:id/share-links
@@ -134,7 +134,7 @@ Example assign tag request:
 <Aside type="note">
 Public access uses <code>GET /api/v1/share/:token</code> without authentication. Middleware hydrates note metadata via PostgreSQL + Redis.
 </Aside>
-  </TabItem>
+</TabItem>
 </Tabs>
 
 ## Attachments
@@ -143,7 +143,7 @@ Attachments are stored encrypted in PostgreSQL (`attachments.content_encrypted`)
 
 <Code
   code={`POST /api/v1/notes/:noteId/attachments
-Authorization: Bearer <jwt>
+Authorization: Bearer <clerk_session_token>
 Content-Type: multipart/form-data
 
 file=@contract.pdf
@@ -191,7 +191,7 @@ Enable debug logging (`LOG_LEVEL=debug`) to include `request_id` and stack trace
 
 ## CORS & CSRF
 
-`middleware.JWTMiddleware` and the global CORS middleware guard every route:
+Clerk authentication middleware and global CORS middleware protect all routes:
 
 - Allowed origins derived from `config.AllowedOrigins` (`CORS_ORIGINS` env).
 - `AllowHeaders` includes `X-CSRF-Token`.
@@ -200,13 +200,13 @@ Enable debug logging (`LOG_LEVEL=debug`) to include `request_id` and stack trace
 Implementation references:
 
 - `backend/routes.go` → CORS + CSRF setup
-- `frontend/src/services/SecureAPI.ts` → automatically forwards JWT + CSRF headers
+- `frontend/src/services/SecureAPI.ts` → automatically forwards Clerk session tokens + CSRF headers
 
 ## Implementation Map
 
 <CardGrid columns={2}>
   <Card title="Auth" icon="lock">
-    `backend/handlers/auth.go`, `middleware/jwt.go`, `services/mfa.go`
+    `backend/handlers/auth.go`, `backend/auth/clerk_*.go`, `backend/auth/middleware.go`
   </Card>
   <Card title="Notes" icon="document">
     `backend/handlers/notes.go`, `handlers/templates.go`, `handlers/attachments.go`

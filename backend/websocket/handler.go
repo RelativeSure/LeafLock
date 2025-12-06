@@ -2,11 +2,10 @@ package websocket
 
 import (
 	"context"
-	"fmt"
 	"log"
 
+	"github.com/clerk/clerk-sdk-go/v2/jwt"
 	"github.com/gofiber/contrib/websocket"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
 	"leaflock/config"
@@ -25,37 +24,38 @@ func HandleWebSocket(c *websocket.Conn, hub *Hub, db database.Database) {
 	userIDStr := c.Query("user_id")
 	tokenStr := c.Query("token")
 
-	// Validate JWT token
+	// Validate Clerk session token
 	if tokenStr == "" {
 		log.Printf("WebSocket connection rejected: missing token")
 		return
 	}
 
-	// Parse and validate JWT token
+	// Parse and validate Clerk JWT token
 	cfg := config.LoadConfig()
-	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return cfg.JWTSecret, nil
+	if cfg.ClerkSecretKey == "" {
+		log.Printf("WebSocket connection rejected: Clerk not configured")
+		return
+	}
+
+	// Validate Clerk session token
+	claims, err := jwt.Verify(context.Background(), &jwt.VerifyParams{
+		Token: tokenStr,
 	})
-
-	if err != nil || !token.Valid {
-		log.Printf("WebSocket connection rejected: invalid token")
+	if err != nil {
+		log.Printf("WebSocket connection rejected: invalid Clerk token: %v", err)
 		return
 	}
 
-	// Extract claims
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		log.Printf("WebSocket connection rejected: invalid token claims")
+	// Extract user ID from Clerk claims
+	clerkUserID := claims.Subject
+	if clerkUserID == "" {
+		log.Printf("WebSocket connection rejected: missing user ID in Clerk claims")
 		return
 	}
 
-	// Verify the user ID matches the token
-	tokenUserID, ok := claims["user_id"].(string)
-	if !ok || tokenUserID != userIDStr {
-		log.Printf("WebSocket connection rejected: user ID mismatch")
+	// Verify the user ID from query matches the Clerk user ID
+	if clerkUserID != userIDStr {
+		log.Printf("WebSocket connection rejected: user ID mismatch (Clerk: %s, Query: %s)", clerkUserID, userIDStr)
 		return
 	}
 

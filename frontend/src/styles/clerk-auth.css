@@ -1,0 +1,249 @@
+/**
+ * Custom Clerk Authentication Styles
+ * 
+ * Enhances Clerk components with LeafLock-specific animations and interactions
+ * Uses standard CSS to avoid Tailwind v4 compatibility issues
+ */
+
+/* Custom animations for Clerk components */
+.cl-formFieldInput {
+  transition: all 0.2s ease-in-out;
+}
+
+.cl-formFieldInput:hover {
+  border-color: #e2e8f0;
+}
+
+.cl-formFieldInput:focus {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.cl-formButtonPrimary {
+  transition: all 0.2s ease-in-out;
+}
+
+.cl-formButtonPrimary:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.cl-formButtonPrimary:active {
+  transform: scale(0.98);
+}
+
+.cl-socialButtonsBlockButton {
+  transition: all 0.2s ease-in-out;
+}
+
+.cl-socialButtonsBlockButton:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.cl-socialButtonsBlockButton:active {
+  transform: scale(0.98);
+}
+
+.cl-footerActionLink {
+  transition: all 0.2s ease-in-out;
+}
+
+.cl-footerActionLink:hover {
+  transform: scale(1.05);
+}
+
+/* Enhanced focus states */
+.cl-formFieldInput:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #3b82f6, 0 0 0 4px rgba(59, 130, 246, 0.5);
+}
+
+/* Custom loading animations */
+.cl-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Social button hover effects */
+.cl-socialButtonsBlockButton:hover .cl-socialButtonsProviderIcon {
+  transform: scale(1.1);
+  transition: transform 0.2s ease-in-out;
+}
+
+/* Enhanced card hover effects */
+.cl-card:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.3s ease-in-out;
+}
+
+/* Custom shimmer effect for loading states */
+@keyframes clerk-shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.cl-loading {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  background-size: 200px 100%;
+  animation: clerk-shimmer 1.5s infinite;
+}
+
+/* Custom transition for form elements */
+.cl-formField {
+  transition: all 0.3s ease-in-out;
+}
+
+.cl-formField:focus-within {
+  transform: scale(1.01);
+}
+
+/* Enhanced error states */
+.cl-formFieldError {
+  animation: slideInFromLeft 0.3s ease-in-out;
+}
+
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Success state animations */
+.cl-formFieldSuccess {
+  animation: slideInFromLeft 0.3s ease-in-out;
+}
+
+/* Custom focus ring for accessibility */
+.cl-focusable:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #3b82f6, 0 0 0 4px rgba(59, 130, 246, 0.5);
+}
+
+/* Hover effects for interactive elements */
+.cl-hoverable:hover {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Custom active states */
+.cl-clickable:active {
+  transform: scale(0.98);
+  transition: transform 0.15s ease-in-out;
+}
+
+/* Enhanced typography */
+.cl-headerTitle {
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Custom scrollbar for long forms */
+.cl-form::-webkit-scrollbar {
+  width: 8px;
+}
+
+.cl-form::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 9999px;
+}
+
+.cl-form::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 9999px;
+}
+
+.cl-form::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
+/* Mobile-responsive adjustments */
+@media (max-width: 640px) {
+  .cl-card {
+    margin: 2rem 1rem;
+  }
+
+  .cl-formFieldInput {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .cl-formFieldInput {
+    border-width: 2px;
+  }
+
+  .cl-formButtonPrimary {
+    border: 2px solid #3b82f6;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .cl-card,
+  .cl-formFieldInput,
+  .cl-formButtonPrimary,
+  .cl-socialButtonsBlockButton {
+    transition: none;
+  }
+}
+
+/* Print styles */
+@media print {
+  .cl-card {
+    box-shadow: none;
+    border: 1px solid #e2e8f0;
+  }
+
+  .cl-formButtonPrimary {
+    border: 2px solid #3b82f6;
+  }
+}
+
+/* Custom focus visible for keyboard navigation */
+.cl-focus-visible:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #3b82f6, 0 0 0 4px rgba(59, 130, 246, 0.5);
+}
+
+/* Enhanced loading states */
+.cl-loading-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.cl-loading-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}

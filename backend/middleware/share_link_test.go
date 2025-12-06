@@ -426,7 +426,7 @@ func TestShareLinkMiddlewareRaceConditionPrevention(t *testing.T) {
 	// Simulate race condition: second concurrent request with same use_count
 	// In a real race condition, both requests would read use_count=4 before either updates
 	// Our fix ensures the UPDATE with WHERE clause prevents this
-	db.useCount = 5 // Now at limit
+	db.useCount = 5            // Now at limit
 	db.shouldFailUpdate = true // Simulate RowsAffected() == 0
 
 	resp2, err := app.Test(httptest.NewRequest("GET", "/share/racing", nil), -1)

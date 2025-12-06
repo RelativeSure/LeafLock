@@ -99,25 +99,25 @@ $$ LANGUAGE plpgsql;
 -- Users table with zero-knowledge encryption and security features
 -- This table implements the core user account system with privacy-first design:
 --
-// Privacy Architecture:
-// - email_hash: SHA-256 for GDPR-compliant user identification without storing plaintext
-// - email_plaintext: Operational email for legitimate purposes (password reset, notifications)
-// - email_search_hash: Deterministic hash for login authentication (prevents timing attacks)
-// - password_hash: Argon2id memory-hard hashing for password protection
-// - salt: Per-user salt for password hashing uniqueness
-//
-// Security Features:
-// - Failed attempt tracking: Prevents brute force attacks
-// - Account locking: Temporary suspension after excessive failed attempts
-// - Email verification: Ensures email ownership before account activation
-// - MFA support: TOTP secret storage for two-factor authentication
-// - Session management: Secure token-based authentication
-//
-// GDPR Compliance:
-// - Right to be forgotten: email_hash allows user identification for deletion
-// - Data minimization: Only essential data stored, rest encrypted client-side
-// - Purpose limitation: email_plaintext used only for operational purposes
-// - Audit trail: All access logged for compliance reporting
+-- Privacy Architecture:
+-- - email_hash: SHA-256 for GDPR-compliant user identification without storing plaintext
+-- - email_plaintext: Operational email for legitimate purposes (password reset, notifications)
+-- - email_search_hash: Deterministic hash for login authentication (prevents timing attacks)
+-- - password_hash: Argon2id memory-hard hashing for password protection
+-- - salt: Per-user salt for password hashing uniqueness
+--
+-- Security Features:
+-- - Failed attempt tracking: Prevents brute force attacks
+-- - Account locking: Temporary suspension after excessive failed attempts
+-- - Email verification: Ensures email ownership before account activation
+-- - MFA support: TOTP secret storage for two-factor authentication
+-- - Session management: Secure token-based authentication
+--
+-- GDPR Compliance:
+-- - Right to be forgotten: email_hash allows user identification for deletion
+-- - Data minimization: Only essential data stored, rest encrypted client-side
+-- - Purpose limitation: email_plaintext used only for operational purposes
+-- - Audit trail: All access logged for compliance reporting
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email_hash BYTEA UNIQUE NOT NULL, -- SHA-256 hash for unique constraint and GDPR lookups
@@ -618,20 +618,27 @@ CREATE INDEX IF NOT EXISTS idx_notes_pinned ON notes(is_pinned, pinned_order DES
 CREATE INDEX IF NOT EXISTS idx_notes_locked ON notes(is_locked, locked_by) WHERE is_locked = true;
 
 -- Zero-knowledge migration: Convert email_encrypted to email_plaintext
--- WARNING: This migration assumes SERVER_ENCRYPTION_KEY is no longer used
--- For existing deployments with encrypted emails, manual migration required
+-- WARNING: This migration requires email_encrypted to be decrypted to plaintext
+-- For development: We'll use a placeholder email format for existing users
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_plaintext TEXT;
 
--- Drop encrypted email column (data will be lost - migration assumes fresh install or manual data migration)
--- To preserve data, decrypt email_encrypted with old SERVER_ENCRYPTION_KEY before running this
+-- Migrate data from email_encrypted to email_plaintext
+-- For development environments: Create placeholder emails from user IDs
+-- For production: This should be done with proper decryption before deploying this migration
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='email_encrypted') THEN
-        -- Check if email_plaintext is populated
-        IF NOT EXISTS (SELECT 1 FROM users WHERE email_plaintext IS NOT NULL LIMIT 1) THEN
-            RAISE WARNING 'email_encrypted exists but email_plaintext is not populated. Manual migration required!';
+        -- Check if email_plaintext needs population
+        IF EXISTS (SELECT 1 FROM users WHERE email_plaintext IS NULL) THEN
+            RAISE NOTICE 'Migrating users from email_encrypted to email_plaintext...';
+            -- Create placeholder emails for development (format: user_<id>@placeholder.local)
+            -- In production, this should decrypt email_encrypted instead
+            UPDATE users
+            SET email_plaintext = 'user_' || REPLACE(id::text, '-', '') || '@migrated.local'
+            WHERE email_plaintext IS NULL;
+            RAISE NOTICE 'Migration complete. Note: Placeholder emails created for development.';
         END IF;
-        -- Drop email_encrypted column
+        -- Drop email_encrypted column after migration
         ALTER TABLE users DROP COLUMN IF EXISTS email_encrypted;
     END IF;
 END $$;
@@ -640,7 +647,12 @@ END $$;
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='email_plaintext' AND is_nullable='YES') THEN
-        ALTER TABLE users ALTER COLUMN email_plaintext SET NOT NULL;
+        -- Only set NOT NULL if all rows have values
+        IF NOT EXISTS (SELECT 1 FROM users WHERE email_plaintext IS NULL) THEN
+            ALTER TABLE users ALTER COLUMN email_plaintext SET NOT NULL;
+        ELSE
+            RAISE WARNING 'Cannot set email_plaintext to NOT NULL: some users still have NULL values.';
+        END IF;
     END IF;
 END $$;
 

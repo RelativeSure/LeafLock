@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useTemplatesStore } from '../../stores/templatesStore'
-import { useAuthStore } from '../../stores/authStore'
+import { useClerkAuthStore } from '../../stores/clerkAuthStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -20,7 +20,7 @@ export function TemplatesPage() {
       loadTemplates: state.loadTemplates,
     })
   )
-  const { user } = useAuthStore()
+  const { user } = useClerkAuthStore()
   const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
