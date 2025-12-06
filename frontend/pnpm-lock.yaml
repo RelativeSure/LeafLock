@@ -117,8 +117,8 @@ importers:
         specifier: 3.12.1
         version: 3.12.1(@tiptap/extension-list@3.12.1(@tiptap/core@3.12.1(@tiptap/pm@3.12.1))(@tiptap/pm@3.12.1))
       '@tiptap/extension-typography':
-        specifier: 3.12.1
-        version: 3.12.1(@tiptap/core@3.12.1(@tiptap/pm@3.12.1))
+        specifier: 3.13.0
+        version: 3.13.0(@tiptap/core@3.12.1(@tiptap/pm@3.12.1))
       '@tiptap/react':
         specifier: 3.12.1
         version: 3.12.1(@floating-ui/dom@1.7.4)(@tiptap/core@3.12.1(@tiptap/pm@3.12.1))(@tiptap/pm@3.12.1)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -1917,10 +1917,10 @@ packages:
     peerDependencies:
       '@tiptap/core': ^3.12.1
 
-  '@tiptap/extension-typography@3.12.1':
-    resolution: {integrity: sha512-m9uWOJ5S7Qi5o1BvGZcuy0T9CXLInrePBlloNJn7aNeuDDsPQJBvqt7RWgnEYBJWk286YiyAmfVxqb5cGp6o5w==}
+  '@tiptap/extension-typography@3.13.0':
+    resolution: {integrity: sha512-Pvxc0Mu3fIgcqOVpU5DqK55F+/ShvX020HmbsPY+Z7SED9fkan5QVn3n2nm13A2TQ+RWDlPAnHe7Gh0d/KsL5Q==}
     peerDependencies:
-      '@tiptap/core': ^3.12.1
+      '@tiptap/core': ^3.13.0
 
   '@tiptap/extension-underline@3.12.1':
     resolution: {integrity: sha512-V/x3c0O1W99STnMnNuU3Pv7aI+za5muzpxwiBojV2p+yzmGFDduQZKRY5QohoxAFB/Fa46fvYS8DIrxbdsNVPg==}
@@ -6854,7 +6854,7 @@ snapshots:
     dependencies:
       '@tiptap/core': 3.12.1(@tiptap/pm@3.12.1)
 
-  '@tiptap/extension-typography@3.12.1(@tiptap/core@3.12.1(@tiptap/pm@3.12.1))':
+  '@tiptap/extension-typography@3.13.0(@tiptap/core@3.12.1(@tiptap/pm@3.12.1))':
     dependencies:
       '@tiptap/core': 3.12.1(@tiptap/pm@3.12.1)
 
