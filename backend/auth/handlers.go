@@ -1115,6 +1115,3 @@ func (h *Handler) ResetAdminUser(c *fiber.Ctx) error {
 		"email":   "REDACTED_EMAIL",
 	})
 }
-TED_EMAIL",
-	})
-}
