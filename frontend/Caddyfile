@@ -55,7 +55,7 @@
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), fullscreen=(), picture-in-picture=()"
 
 		# Content Security Policy
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev local.adguard.org; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https: https://*.clerk.accounts.dev; worker-src 'self' blob: https://*.clerk.accounts.dev; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://clerk.leaflock.app local.adguard.org; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https: https://*.clerk.accounts.dev https://clerk.leaflock.app; worker-src 'self' blob: https://*.clerk.accounts.dev https://clerk.leaflock.app; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 	}
 
 	# Logging
