@@ -65,16 +65,16 @@ func (h *Handler) EnhancedClerkMiddleware(c *fiber.Ctx) error {
 		// Check if it's a token expiration issue
 		if isTokenExpired(err) {
 			return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
-				Error: "Session expired. Please sign in again.",
-				Code:  "SESSION_EXPIRED",
-				Debug: h.getDebugInfo(err, token),
+				Error:   "Session expired. Please sign in again.",
+				Code:    "SESSION_EXPIRED",
+				Details: h.getDebugInfo(err, token),
 			})
 		}
 
 		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
-			Error: "Invalid or expired Clerk session token",
-			Code:  ErrCodeInvalidToken,
-			Debug: h.getDebugInfo(err, token),
+			Error:   "Invalid or expired Clerk session token",
+			Code:    ErrCodeInvalidToken,
+			Details: h.getDebugInfo(err, token),
 		})
 	}
 
@@ -89,9 +89,9 @@ func (h *Handler) EnhancedClerkMiddleware(c *fiber.Ctx) error {
 	if err != nil {
 		log.Printf("❌ Invalid user identification: %v", err)
 		return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
-			Error: "Invalid user identification",
-			Code:  ErrCodeInvalidToken,
-			Debug: h.getDebugInfo(err, token),
+			Error:   "Invalid user identification",
+			Code:    ErrCodeInvalidToken,
+			Details: h.getDebugInfo(err, token),
 		})
 	}
 

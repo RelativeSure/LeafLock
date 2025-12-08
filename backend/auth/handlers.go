@@ -26,13 +26,15 @@ type EmailService interface {
 type Handler struct {
 	service      *Service
 	emailService EmailService
+	config       *Config
 }
 
 // NewHandler creates a new auth handler
-func NewHandler(service *Service, emailService EmailService) *Handler {
+func NewHandler(service *Service, emailService EmailService, config *Config) *Handler {
 	return &Handler{
 		service:      service,
 		emailService: emailService,
+		config:       config,
 	}
 }
 
@@ -1111,5 +1113,8 @@ func (h *Handler) ResetAdminUser(c *fiber.Ctx) error {
 		"success": true,
 		"message": "Admin user reset successfully with current encryption key",
 		"email":   "REDACTED_EMAIL",
+	})
+}
+TED_EMAIL",
 	})
 }

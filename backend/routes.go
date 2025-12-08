@@ -140,7 +140,8 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 
 	// Initialize modern auth package
 	authService := auth.NewService(db, rdb, config.ClerkSecretKey)
-	authHandler := auth.NewHandler(authService, emailService)
+	authConfig := auth.LoadConfig()
+	authHandler := auth.NewHandler(authService, emailService, authConfig)
 
 	// Initialize other handlers
 	accountHandler := handlers.NewAccountHandler(db, rdb, handlerCrypto, config)

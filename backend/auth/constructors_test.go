@@ -20,12 +20,14 @@ func TestNewHandler(t *testing.T) {
 	// Create a mock service (nil is fine for constructor test)
 	var service *Service
 	mockEmail := &MockEmailServiceConstructor{}
+	config := LoadConfig()
 
-	handler := NewHandler(service, mockEmail)
+	handler := NewHandler(service, mockEmail, config)
 
 	require.NotNil(t, handler)
 	assert.Equal(t, service, handler.service)
 	assert.Equal(t, mockEmail, handler.emailService)
+	assert.Equal(t, config, handler.config)
 }
 
 func TestNewMFAManager(t *testing.T) {

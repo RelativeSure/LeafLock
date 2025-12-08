@@ -29,7 +29,7 @@ func newTestService(t *testing.T) (*Service, *SessionManager, *miniredis.Minired
 
 func TestHandlerLogoutSuccess(t *testing.T) {
 	service, session, _ := newTestService(t)
-	handler := NewHandler(service, &MockEmailService{})
+	handler := NewHandler(service, &MockEmailService{}, LoadConfig())
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -56,7 +56,7 @@ func TestHandlerLogoutSuccess(t *testing.T) {
 
 func TestHandlerLogoutMissingToken(t *testing.T) {
 	service, _, _ := newTestService(t)
-	handler := NewHandler(service, &MockEmailService{})
+	handler := NewHandler(service, &MockEmailService{}, LoadConfig())
 
 	app := fiber.New()
 	app.Post("/auth/logout", func(c *fiber.Ctx) error {
@@ -70,7 +70,7 @@ func TestHandlerLogoutMissingToken(t *testing.T) {
 
 func TestHandlerLogoutInvalidFormat(t *testing.T) {
 	service, _, _ := newTestService(t)
-	handler := NewHandler(service, &MockEmailService{})
+	handler := NewHandler(service, &MockEmailService{}, LoadConfig())
 
 	app := fiber.New()
 	app.Post("/auth/logout", func(c *fiber.Ctx) error {
@@ -85,7 +85,7 @@ func TestHandlerLogoutInvalidFormat(t *testing.T) {
 
 func TestHandlerLogoutInternalError(t *testing.T) {
 	service, session, mr := newTestService(t)
-	handler := NewHandler(service, &MockEmailService{})
+	handler := NewHandler(service, &MockEmailService{}, LoadConfig())
 
 	ctx := context.Background()
 	userID := uuid.New()

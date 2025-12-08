@@ -43,7 +43,7 @@ func (suite *AuthHandlersTestSuite) SetupTest() {
 	mockService := &Service{}
 	suite.mockSvc.service = mockService
 
-	suite.handler = NewHandler(mockService, &MockEmailService{})
+	suite.handler = NewHandler(mockService, &MockEmailService{}, LoadConfig())
 
 	key := make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {

@@ -109,7 +109,7 @@ func (h *AuthHandler) handler() *auth.Handler {
 		panic("AuthHandler requires *pgxpool.Pool, not database.Database interface")
 	}
 	authService := auth.NewService(db, h.redis, string(h.config.JWTSecret))
-	return auth.NewHandler(authService, &MockEmailServiceCompat{})
+	return auth.NewHandler(authService, &MockEmailServiceCompat{}, auth.LoadConfig())
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {

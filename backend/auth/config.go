@@ -3,6 +3,7 @@ package auth
 import (
 	"os"
 	"strconv"
+	"strings"
 )
 
 // Config holds configuration for Clerk authentication
