@@ -20,9 +20,24 @@ export const ProtectedLayout: React.FC = () => {
 
   React.useEffect(() => {
     if (isLoaded && !isSignedIn) {
-      if (typeof window === 'undefined' || !isOnAuthRoute()) {
-        safeRedirectToLogin()
-      }
+      // Add a small delay to allow Clerk to fully initialize and prevent race conditions
+      const timeoutId = setTimeout(() => {
+        // Double-check authentication state before redirecting
+        // Clerk might still be initializing the session
+        const clerk = (window as any).Clerk
+        if (clerk && clerk.user) {
+          // User is actually authenticated, don't redirect
+          console.log('Clerk user found after delay, preventing redirect loop')
+          return
+        }
+        
+        if (typeof window === 'undefined' || !isOnAuthRoute()) {
+          console.log('Redirecting to login - not authenticated')
+          safeRedirectToLogin()
+        }
+      }, 300) // 300ms delay to prevent race condition
+      
+      return () => clearTimeout(timeoutId)
     }
   }, [isSignedIn, isLoaded])
 

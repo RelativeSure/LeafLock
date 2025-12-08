@@ -185,11 +185,13 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	api.Get("/auth/registration", rateLimits.LightweightLimiter, authHandler.GetRegistrationStatus)
 
 	// Debug routes (development only) - double check for security
-	if config.Environment != "production" && os.Getenv("ENABLE_DEBUG_ENDPOINTS") == "true" {
+	// Enable when CLERK_DEBUG=true (merged from ENABLE_DEBUG_ENDPOINTS)
+	if config.Environment != "production" && authConfig.EnableDebugEndpoints {
 		api.Post("/auth/debug-login", authHandler.DebugLogin)
 		api.Get("/auth/debug-admin", authHandler.DebugAdminInfo)
 		api.Get("/auth/debug-encryption", authHandler.DebugEncryptionKey)
 		api.Post("/auth/reset-admin", authHandler.ResetAdminUser)
+		api.Get("/auth/debug-state", authHandler.EnhancedClerkMiddleware, authHandler.DebugAuthState)
 	}
 
 	// Password reset routes (public) - Tier 1: Strictest rate limiting
@@ -204,7 +206,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 
 	// Protected routes (require authentication) - USING MODERN AUTH MIDDLEWARE
 	// Primary routes use Clerk authentication with enhanced security
-	protected := api.Group("", authHandler.ClerkMiddleware)
+	protected := api.Group("", authHandler.EnhancedClerkMiddleware)
 	// MFA routes - Tier 5: Lightweight for status checks, Tier 1 for verification - MODERN AUTH PACKAGE
 	protected.Get("/auth/mfa/status", rateLimits.LightweightLimiter, authHandler.GetMFAStatus)
 	protected.Post("/auth/mfa/setup", rateLimits.AuthLimiter, authHandler.BeginMFASetup)

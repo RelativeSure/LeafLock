@@ -1115,3 +1115,71 @@ func (h *Handler) ResetAdminUser(c *fiber.Ctx) error {
 		"email":   "REDACTED_EMAIL",
 	})
 }
+
+// DebugAuthState provides debugging information about the current authentication state
+// @Summary Debug current auth state
+// @Description Get detailed information about the current authentication state for debugging
+// @Tags Authentication
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Router /auth/debug-state [get]
+func (h *Handler) DebugAuthState(c *fiber.Ctx) error {
+	// Only allow in development mode - check multiple indicators
+	environment := os.Getenv("ENVIRONMENT")
+	appEnv := os.Getenv("APP_ENV")
+	isProduction := environment == "production" || appEnv == "production" ||
+		strings.Contains(os.Getenv("RAILWAY_ENVIRONMENT"), "production") ||
+		os.Getenv("NODE_ENV") == "production"
+
+	if isProduction {
+		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{
+			Error: "Debug endpoint not available in production",
+			Code:  ErrCodeAccessDenied,
+		})
+	}
+
+	// Additional security: require debug token
+	debugToken := c.Get("X-Debug-Token")
+	expectedToken := os.Getenv("DEBUG_TOKEN")
+	if expectedToken != "" && debugToken != expectedToken {
+		return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{
+			Error: "Invalid debug token",
+			Code:  ErrCodeAccessDenied,
+		})
+	}
+
+	// Collect authentication state information
+	authState := map[string]interface{}{
+		"timestamp":     time.Now().Unix(),
+		"request_path":  c.Path(),
+		"method":        c.Method(),
+		"has_auth_header": c.Get("Authorization") != "",
+	}
+
+	// Check if we have user context
+	userID := c.Locals("user_id")
+	if userID != nil {
+		authState["authenticated"] = true
+		authState["user_id"] = userID
+		authState["is_admin"] = c.Locals("is_admin")
+		authState["clerk_user_id"] = c.Locals("clerk_user_id")
+		authState["auth_type"] = c.Locals("auth_type")
+		authState["has_token"] = c.Locals("token") != nil
+		authState["has_claims"] = c.Locals("clerk_claims") != nil
+	} else {
+		authState["authenticated"] = false
+		authState["reason"] = "No user_id in context"
+	}
+
+	// Check Clerk SDK status
+	authState["clerk_configured"] = h.config != nil && h.config.ClerkSecretKey != ""
+	authState["clerk_secret_key_length"] = 0
+	if h.config != nil && h.config.ClerkSecretKey != "" {
+		authState["clerk_secret_key_length"] = len(h.config.ClerkSecretKey)
+	}
+
+	return c.JSON(authState)
+}

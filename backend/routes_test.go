@@ -19,7 +19,7 @@ import (
 func TestSetupRoutesInitializesDocs(t *testing.T) {
 	app := fiber.New(fiber.Config{DisableStartupMessage: true})
 
-	t.Setenv("ENABLE_DEBUG_ENDPOINTS", "true")
+	t.Setenv("CLERK_DEBUG", "true")
 
 	cfg := &appconfig.Config{
 		AllowedOrigins: []string{"*"},

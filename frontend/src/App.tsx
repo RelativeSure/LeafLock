@@ -93,6 +93,10 @@ const AppContent: React.FC = () => {
     <ThemeProvider>
       <EncryptionProvider>
         <RouterProvider router={router} />
+        {/* Show auth debug panel in development */}
+        {import.meta.env.DEV && (
+          React.createElement(React.lazy(() => import('./components/debug/ClerkAuthDebug')))
+        )}
       </EncryptionProvider>
     </ThemeProvider>
   )

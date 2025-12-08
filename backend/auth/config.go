@@ -11,6 +11,10 @@ type Config struct {
 	// EnableDebugLogging enables detailed debug logging for Clerk operations
 	EnableDebugLogging bool
 	
+	// EnableDebugEndpoints enables debug endpoints for development
+	// Controlled by CLERK_DEBUG environment variable
+	EnableDebugEndpoints bool
+	
 	// ClerkSecretKey is the Clerk secret key for backend validation
 	ClerkSecretKey string
 	
@@ -23,8 +27,10 @@ type Config struct {
 
 // LoadConfig loads authentication configuration from environment variables
 func LoadConfig() *Config {
+	clerkDebug := getEnvAsBool("CLERK_DEBUG", false)
 	return &Config{
-		EnableDebugLogging: getEnvAsBool("CLERK_DEBUG", false),
+		EnableDebugLogging: clerkDebug,
+		EnableDebugEndpoints: clerkDebug, // Merge: debug endpoints enabled when CLERK_DEBUG=true
 		ClerkSecretKey:     os.Getenv("CLERK_SECRET_KEY"),
 		RateLimitAuthAttempts: getEnvAsBool("RATE_LIMIT_AUTH", true),
 		AuthFailureThreshold: getEnvAsInt("AUTH_FAILURE_THRESHOLD", 5),
