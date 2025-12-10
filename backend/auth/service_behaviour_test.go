@@ -144,11 +144,17 @@ func (m *mockSessionManager) CreateSession(ctx context.Context, userID uuid.UUID
 		}
 		return session, token, err
 	}
-	s := &Session{UserID: userID, Token: "token", ExpiresAt: time.Now().Add(time.Hour)}
+	// Generate a longer, properly formatted token for tests
+	testToken := base64.URLEncoding.EncodeToString([]byte("session-token-for-testing-purposes-123456789"))
+	s := &Session{
+		UserID:    userID,
+		Token:     testToken,
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
 	m.mu.Lock()
 	m.lastSession = s
 	m.mu.Unlock()
-	return s, "token", nil
+	return s, testToken, nil
 }
 
 func (m *mockSessionManager) CreateMFASession(ctx context.Context, userID uuid.UUID, email, ipAddress, userAgent string, mfaEnabled bool) (string, error) {

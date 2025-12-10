@@ -142,11 +142,49 @@ func SanitizeClerkError(err error) string {
 
 // removeEmails removes email addresses from strings
 func removeEmails(s string) string {
-	// Simple email removal - in production, use proper regex
-	parts := strings.Split(s, "@")
-	if len(parts) == 2 {
-		return "[email]"
+	// Simple email removal - replace email with [email]
+	// Look for common email pattern and replace
+	// This is a simplified version - in production, use proper regex
+	
+	// Find positions of @ symbol
+	atIndex := strings.Index(s, "@")
+	if atIndex == -1 {
+		return s
 	}
+	
+	// Find email start (word boundary or beginning of string, skip spaces)
+	emailStart := atIndex
+	for i := atIndex - 1; i >= 0; i-- {
+		if s[i] == ' ' || i == 0 {
+			// Found space, email starts after it unless it's the beginning
+			if i == 0 {
+				emailStart = 0
+			} else {
+				emailStart = i + 1 // Start after the space
+			}
+			break
+		}
+	}
+	
+	// Find email end - continue through domain (letters, numbers, hyphens, dots)
+	emailEnd := atIndex + 1
+	for i := atIndex + 1; i < len(s); i++ {
+		// Continue if it's part of domain name (letter, number, hyphen, dot)
+		if (s[i] >= 'a' && s[i] <= 'z') || (s[i] >= 'A' && s[i] <= 'Z') ||
+		   (s[i] >= '0' && s[i] <= '9') || s[i] == '-' || s[i] == '.' {
+			continue
+		}
+		// Stop at space, punctuation (except dot which is handled above)
+		// End before this character
+		emailEnd = i
+		break
+	}
+	
+	// Replace the email with [email]
+	if emailStart < emailEnd {
+		return s[:emailStart] + "[email]" + s[emailEnd:]
+	}
+	
 	return s
 }
 
@@ -170,11 +208,29 @@ func removeTokens(s string) string {
 
 // removePhoneNumbers removes phone numbers from strings
 func removePhoneNumbers(s string) string {
-	// Simple phone number removal
-	if strings.ContainsAny(s, "0123456789") && len(s) >= 10 {
-		return "[phone]"
+	// Simple phone number removal - looks for patterns like +1234567890
+	// This is a simplified version - in production, use proper regex
+	
+	result := s
+	words := strings.Fields(s)
+	
+	for _, word := range words {
+		// Check if this word looks like a phone number
+		// Contains digits and at least 10 characters (for 10-digit numbers)
+		digitCount := 0
+		for _, ch := range word {
+			if ch >= '0' && ch <= '9' {
+				digitCount++
+			}
+		}
+		
+		// If it has 8+ digits, treat it as a phone number
+		if digitCount >= 8 {
+			result = strings.Replace(result, word, "[phone]", 1)
+		}
 	}
-	return s
+	
+	return result
 }
 
 // removeIPAddresses removes IP addresses from strings
