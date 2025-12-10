@@ -17,7 +17,7 @@ vi.mock('@/stores/notesStore', () => ({
   useNotesStore: vi.fn(),
 }))
 
-vi.mock('@/stores/authStore', () => ({
+vi.mock('@/stores/clerkAuthStore', () => ({
   useClerkAuthStore: vi.fn(),
 }))
 

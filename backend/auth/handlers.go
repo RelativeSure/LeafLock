@@ -1153,9 +1153,9 @@ func (h *Handler) DebugAuthState(c *fiber.Ctx) error {
 
 	// Collect authentication state information
 	authState := map[string]interface{}{
-		"timestamp":     time.Now().Unix(),
-		"request_path":  c.Path(),
-		"method":        c.Method(),
+		"timestamp":       time.Now().Unix(),
+		"request_path":    c.Path(),
+		"method":          c.Method(),
 		"has_auth_header": c.Get("Authorization") != "",
 	}
 

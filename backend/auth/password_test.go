@@ -801,8 +801,6 @@ func (suite *PasswordManagerTestSuite) TestCleanupExpiredTokens_DatabaseError() 
 // Helper Functions for Tests
 // =====================================
 
-
-
 // Mock implementations (reuse from handlers_test.go)
 type MockDB struct {
 	mock.Mock

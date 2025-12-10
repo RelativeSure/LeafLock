@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"os"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -75,7 +73,6 @@ func seedDefaultAdminUser(db appdb.Database, crypto *appcrypto.CryptoService, cf
 }
 
 func LoadConfig() *appconfig.Config {
-	// JWT_SECRET removed - Clerk-only authentication
 	// Zero-knowledge: SERVER_ENCRYPTION_KEY no longer used (encryption keys derived from Clerk secret)
 	return appconfig.LoadConfig()
 }
@@ -83,8 +80,6 @@ func LoadConfig() *appconfig.Config {
 func SetupDatabase(url string) (*pgxpool.Pool, error) {
 	return appdb.SetupDatabase(url)
 }
-
-
 
 func isValidHexColor(color string) bool {
 	return utils.IsValidHexColor(color)
@@ -108,7 +103,7 @@ func (h *AuthHandler) handler() *auth.Handler {
 	if !ok {
 		panic("AuthHandler requires *pgxpool.Pool, not database.Database interface")
 	}
-	authService := auth.NewService(db, h.redis, string(h.config.JWTSecret))
+	authService := auth.NewService(db, h.redis, string(h.config.ClerkSecretKey))
 	return auth.NewHandler(authService, &MockEmailServiceCompat{}, auth.LoadConfig())
 }
 

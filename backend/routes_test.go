@@ -23,7 +23,7 @@ func TestSetupRoutesInitializesDocs(t *testing.T) {
 
 	cfg := &appconfig.Config{
 		AllowedOrigins: []string{"*"},
-		JWTSecret:      []byte(strings.Repeat("s", 32)),
+		ClerkSecretKey: strings.Repeat("s", 32),
 		Environment:    "development",
 	}
 
@@ -51,7 +51,7 @@ func TestSetupRoutesCorsAndMetricsInProduction(t *testing.T) {
 
 	cfg := &appconfig.Config{
 		AllowedOrigins: []string{"https://example.com", "https://*.example.com"},
-		JWTSecret:      []byte(strings.Repeat("p", 32)),
+		ClerkSecretKey: strings.Repeat("p", 32),
 		Environment:    "production",
 	}
 

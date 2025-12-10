@@ -44,7 +44,7 @@ func TestImportExportFeatures(t *testing.T) {
 	defer mr.Close()
 
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	authService := auth.NewService(dbPool, rdb, string(cfg.JWTSecret))
+	authService := auth.NewService(dbPool, rdb, string(cfg.ClerkSecretKey))
 
 	// Create import/export handler
 	handler := &ImportExportHandler{

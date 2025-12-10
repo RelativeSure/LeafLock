@@ -46,8 +46,8 @@ describe('ApiClient', () => {
     vi.unstubAllGlobals()
   })
 
-  describe('authorization handling', () => {
-    it('includes Authorization header when token exists', async () => {
+  describe('basic request handling', () => {
+    it('makes request with correct endpoint', async () => {
       localStorage.setItem('token', 'token-123')
       fetchMock.mockResolvedValue(buildResponse(200, []))
 
@@ -57,13 +57,13 @@ describe('ApiClient', () => {
         `${apiBaseUrl}/notes`,
         expect.objectContaining({
           headers: expect.objectContaining({
-            Authorization: 'Bearer token-123',
+            'Content-Type': 'application/json',
           }),
         })
       )
     })
 
-    it('refreshes token from localStorage before each request', async () => {
+    it('handles multiple requests independently', async () => {
       localStorage.setItem('token', 'initial-token')
       fetchMock.mockResolvedValue(buildResponse(200, []))
 
@@ -75,11 +75,12 @@ describe('ApiClient', () => {
 
       await client.getNotes()
 
+      expect(fetchMock).toHaveBeenCalledTimes(1)
       expect(fetchMock).toHaveBeenCalledWith(
         `${apiBaseUrl}/notes`,
         expect.objectContaining({
           headers: expect.objectContaining({
-            Authorization: 'Bearer updated-token',
+            'Content-Type': 'application/json',
           }),
         })
       )

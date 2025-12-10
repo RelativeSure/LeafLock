@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/sha256"
-	"os"
 	"regexp"
 	"strings"
 	"time"

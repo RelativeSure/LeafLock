@@ -74,10 +74,10 @@ func TestSecureErrorHandling(t *testing.T) {
 func TestSecureLogging(t *testing.T) {
 	// Test error sanitization
 	tests := []struct {
-		name     string
-		input    string
-		expected string
-			errorInput string
+		name       string
+		input      string
+		expected   string
+		errorInput string
 	}{
 		{
 			name:       "Email removal",
@@ -126,17 +126,17 @@ func TestAdminRoleValidation(t *testing.T) {
 
 	// Test admin role detection - this is a simplified test since we can't easily mock
 	// the actual Clerk claims structure without more complex setup
-	
+
 	// For now, we'll just test that the function exists and can be called
 	// In a real implementation, you would mock the Clerk SDK properly
-	
+
 	// Create a minimal claims structure for testing
 	claims := &clerk.SessionClaims{}
-	
+
 	// The actual implementation checks HasRole("admin") and HasPermission("admin")
 	// which we can't easily mock without more complex test setup
 	isAdmin := handler.extractAdminStatusFromClerkClaims(claims)
-	
+
 	// Just verify the function doesn't panic and returns a boolean
 	assert.IsType(t, true, isAdmin, "Function should return a boolean value")
 }
@@ -146,13 +146,13 @@ func TestWebhookSignatureVerification(t *testing.T) {
 	type MockWebhookHandler struct {
 		secret string
 	}
-	
+
 	handler := &MockWebhookHandler{secret: "test_secret"}
 
 	// Test signature calculation
 	payload := "timestamp.body"
 	expectedSignature := "mock_signature_for_testing"
-	
+
 	// Use the variables to avoid unused errors
 	_ = handler
 	_ = payload
@@ -164,13 +164,13 @@ func TestWebhookSignatureVerification(t *testing.T) {
 func TestDatabaseSecurityConfiguration(t *testing.T) {
 	// Create a mock security config for testing
 	type MockSecurityConfig struct {
-		EncryptionAtRest   bool
-		AuditLogging       bool
-		RowLevelSecurity   bool
-		ConnectionTimeout  time.Duration
-		IdleTimeout        time.Duration
+		EncryptionAtRest  bool
+		AuditLogging      bool
+		RowLevelSecurity  bool
+		ConnectionTimeout time.Duration
+		IdleTimeout       time.Duration
 	}
-	
+
 	config := &MockSecurityConfig{
 		EncryptionAtRest:  true,
 		AuditLogging:      true,
@@ -192,16 +192,16 @@ func TestSecureDatabaseConnection(t *testing.T) {
 
 	// Create a mock security config for testing
 	type MockSecurityConfig struct {
-		EncryptionAtRest   bool
-		AuditLogging       bool
-		RowLevelSecurity   bool
-		ConnectionTimeout  time.Duration
-		IdleTimeout        time.Duration
+		EncryptionAtRest     bool
+		AuditLogging         bool
+		RowLevelSecurity     bool
+		ConnectionTimeout    time.Duration
+		IdleTimeout          time.Duration
 		ConnectionEncryption bool
-		MaxConnections     int32
-		MinConnections     int32
+		MaxConnections       int32
+		MinConnections       int32
 	}
-	
+
 	config := &MockSecurityConfig{
 		EncryptionAtRest:     true,
 		AuditLogging:         true,

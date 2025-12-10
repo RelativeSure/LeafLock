@@ -10,17 +10,17 @@ import (
 type Config struct {
 	// EnableDebugLogging enables detailed debug logging for Clerk operations
 	EnableDebugLogging bool
-	
+
 	// EnableDebugEndpoints enables debug endpoints for development
 	// Controlled by CLERK_DEBUG environment variable
 	EnableDebugEndpoints bool
-	
+
 	// ClerkSecretKey is the Clerk secret key for backend validation
 	ClerkSecretKey string
-	
+
 	// RateLimitAuthAttempts prevents auth loops by limiting attempts
 	RateLimitAuthAttempts bool
-	
+
 	// AuthFailureThreshold is the number of auth failures before blocking
 	AuthFailureThreshold int
 }
@@ -29,11 +29,11 @@ type Config struct {
 func LoadConfig() *Config {
 	clerkDebug := getEnvAsBool("CLERK_DEBUG", false)
 	return &Config{
-		EnableDebugLogging: clerkDebug,
-		EnableDebugEndpoints: clerkDebug, // Merge: debug endpoints enabled when CLERK_DEBUG=true
-		ClerkSecretKey:     os.Getenv("CLERK_SECRET_KEY"),
+		EnableDebugLogging:    clerkDebug,
+		EnableDebugEndpoints:  clerkDebug, // Merge: debug endpoints enabled when CLERK_DEBUG=true
+		ClerkSecretKey:        os.Getenv("CLERK_SECRET_KEY"),
 		RateLimitAuthAttempts: getEnvAsBool("RATE_LIMIT_AUTH", true),
-		AuthFailureThreshold: getEnvAsInt("AUTH_FAILURE_THRESHOLD", 5),
+		AuthFailureThreshold:  getEnvAsInt("AUTH_FAILURE_THRESHOLD", 5),
 	}
 }
 
@@ -69,9 +69,9 @@ func (c *Config) IsDebugMode() bool {
 
 // HasValidClerkConfig checks if Clerk configuration is valid
 func (c *Config) HasValidClerkConfig() bool {
-	return c.ClerkSecretKey != "" && 
-		   len(c.ClerkSecretKey) > 20 &&
-		   (len(c.ClerkSecretKey) > 50 || !containsSuspiciousPattern(c.ClerkSecretKey))
+	return c.ClerkSecretKey != "" &&
+		len(c.ClerkSecretKey) > 20 &&
+		(len(c.ClerkSecretKey) > 50 || !containsSuspiciousPattern(c.ClerkSecretKey))
 }
 
 func containsSuspiciousPattern(s string) bool {
