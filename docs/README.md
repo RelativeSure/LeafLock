@@ -63,7 +63,7 @@ All commands are run from the root of the project, from a terminal:
 
 ## 🔗 Links
 
-- **LeafLock Repository**: https://github.com/RelativeSure/LeafLock
-- **Clerk Documentation**: https://clerk.com/docs
-- **Starlight Documentation**: https://starlight.astro.build/
-- **Astro Documentation**: https://docs.astro.build
+- **LeafLock Repository**: <https://github.com/RelativeSure/LeafLock>
+- **Clerk Documentation**: <https://clerk.com/docs>
+- **Starlight Documentation**: <https://starlight.astro.build/>
+- **Astro Documentation**: <https://docs.astro.build>
