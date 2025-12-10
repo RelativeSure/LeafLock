@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -489,10 +488,6 @@ type ClerkOrganizationInfo struct {
 }
 
 // logSecurityEvent logs security events with proper formatting
-func logSecurityEvent(ctx context.Context, event string, details map[string]interface{}) {
-	// Implementation would log to security audit system
-	log.Printf("SECURITY_EVENT: %s %v", event, details)
-}
 
 // getClerkSessionsFromAPI retrieves sessions from Clerk API
 func (h *Handler) getClerkSessionsFromAPI(ctx context.Context, clerkUserID string) ([]*ClerkSessionInfo, error) {

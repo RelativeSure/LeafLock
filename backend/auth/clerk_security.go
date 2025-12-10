@@ -31,7 +31,7 @@ func (h *Handler) SecureTokenValidation(token string) (*clerk.SessionClaims, err
 	time.Sleep(1 * time.Millisecond)
 
 	// Use Clerk's built-in validation
-	return h.validateClerkTokenEnhanced(nil, token)
+	return h.validateClerkTokenEnhanced(context.TODO(), token)
 }
 
 // validateClerkTokenEnhanced validates a Clerk session token with enhanced security

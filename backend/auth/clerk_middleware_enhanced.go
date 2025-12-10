@@ -123,7 +123,7 @@ func (h *Handler) validateClerkTokenEnhancedWithDebug(ctx context.Context, token
 
 	// Check if Clerk SDK is initialized
 	if !h.isClerkInitialized() {
-		return nil, fmt.Errorf("Clerk SDK not initialized. Check CLERK_SECRET_KEY configuration")
+		return nil, fmt.Errorf("clerk SDK not initialized. Check CLERK_SECRET_KEY configuration")
 	}
 
 	// Use Clerk SDK to verify the session token
