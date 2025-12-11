@@ -244,6 +244,11 @@ func removeIPAddresses(s string) string {
 
 // CreateSecureError creates a secure error for logging
 func CreateSecureError(operation string, originalError error, context map[string]interface{}) error {
+	// If no error, return nil
+	if originalError == nil {
+		return nil
+	}
+	
 	// Sanitize the original error
 	sanitizedError := SanitizeClerkError(originalError)
 
