@@ -51,7 +51,6 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-
 interface User {
   id: string
   name: string

@@ -29,8 +29,6 @@ export class ApiClient {
       }
     }
 
-
-
     const response = await fetch(url, {
       ...options,
       headers,
@@ -75,8 +73,6 @@ export class ApiClient {
 
     return data
   }
-
-
 
   // Public methods for direct usage
   async get<T>(endpoint: string, options?: RequestInit): Promise<T> {

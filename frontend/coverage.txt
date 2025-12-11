@@ -1,0 +1,44 @@
+
+> leaflock-frontend@0.0.1-rc.20250910210438 test:coverage /home/rasmus/repos/LeafLock/frontend
+> NODE_OPTIONS=--max-old-space-size=16384 vitest run --coverage --pool=threads --max-workers=1 --reporter=text --reporter=json
+
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Startup Error [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯⎯[39m
+Error: Failed to load custom Reporter from text
+    at loadCustomReporterModule (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vitest@4.0.15_@types+node@24.10.1_jiti@2.6.1_jsdom@27.2.0_lightningcss@1.30.2_msw@2.12._5087b1d181f2f5e75a8f35e545527a70/node_modules/vitest/dist/chunks/cli-api.C7sYjHmQ.js:10516:9)
+    at file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vitest@4.0.15_@types+node@24.10.1_jiti@2.6.1_jsdom@27.2.0_lightningcss@1.30.2_msw@2.12._5087b1d181f2f5e75a8f35e545527a70/node_modules/vitest/dist/chunks/cli-api.C7sYjHmQ.js:10532:23
+    ... 3 lines matching cause stack trace ...
+    at _createServer (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vite@7.2.6_@types+node@24.10.1_jiti@2.6.1_lightningcss@1.30.2/node_modules/vite/dist/node/chunks/config.js:25593:86)
+    at createViteServer (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vitest@4.0.15_@types+node@24.10.1_jiti@2.6.1_jsdom@27.2.0_lightningcss@1.30.2_msw@2.12._5087b1d181f2f5e75a8f35e545527a70/node_modules/vitest/dist/chunks/cli-api.C7sYjHmQ.js:9810:17)
+    at createVitest (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vitest@4.0.15_@types+node@24.10.1_jiti@2.6.1_jsdom@27.2.0_lightningcss@1.30.2_msw@2.12._5087b1d181f2f5e75a8f35e545527a70/node_modules/vitest/dist/chunks/cli-api.C7sYjHmQ.js:13099:17)
+    at prepareVitest (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vitest@4.0.15_@types+node@24.10.1_jiti@2.6.1_jsdom@27.2.0_lightningcss@1.30.2_msw@2.12._5087b1d181f2f5e75a8f35e545527a70/node_modules/vitest/dist/chunks/cli-api.C7sYjHmQ.js:13461:14)
+    at startVitest (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vitest@4.0.15_@types+node@24.10.1_jiti@2.6.1_jsdom@27.2.0_lightningcss@1.30.2_msw@2.12._5087b1d181f2f5e75a8f35e545527a70/node_modules/vitest/dist/chunks/cli-api.C7sYjHmQ.js:13407:14) {
+  [cause]: Error: Failed to load url text (resolved id: text). Does the file exist?
+      at reviveInvokeError (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vite@7.2.6_@types+node@24.10.1_jiti@2.6.1_lightningcss@1.30.2/node_modules/vite/dist/node/module-runner.js:475:14)
+      at Object.invoke (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vite@7.2.6_@types+node@24.10.1_jiti@2.6.1_lightningcss@1.30.2/node_modules/vite/dist/node/module-runner.js:491:33)
+      at ServerModuleRunner.getModuleInformation (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vite@7.2.6_@types+node@24.10.1_jiti@2.6.1_lightningcss@1.30.2/node_modules/vite/dist/node/module-runner.js:1086:7)
+      at ServerModuleRunner.import (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vite@7.2.6_@types+node@24.10.1_jiti@2.6.1_lightningcss@1.30.2/node_modules/vite/dist/node/module-runner.js:1013:23)
+      at loadCustomReporterModule (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vitest@4.0.15_@types+node@24.10.1_jiti@2.6.1_jsdom@27.2.0_lightningcss@1.30.2_msw@2.12._5087b1d181f2f5e75a8f35e545527a70/node_modules/vitest/dist/chunks/cli-api.C7sYjHmQ.js:10514:26)
+      at file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vitest@4.0.15_@types+node@24.10.1_jiti@2.6.1_jsdom@27.2.0_lightningcss@1.30.2_msw@2.12._5087b1d181f2f5e75a8f35e545527a70/node_modules/vitest/dist/chunks/cli-api.C7sYjHmQ.js:10532:23
+      at async Promise.all (index 0)
+      at Vitest._setServer (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vitest@4.0.15_@types+node@24.10.1_jiti@2.6.1_jsdom@27.2.0_lightningcss@1.30.2_msw@2.12._5087b1d181f2f5e75a8f35e545527a70/node_modules/vitest/dist/chunks/cli-api.C7sYjHmQ.js:12168:138)
+      at BasicMinimalPluginContext.handler (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vitest@4.0.15_@types+node@24.10.1_jiti@2.6.1_jsdom@27.2.0_lightningcss@1.30.2_msw@2.12._5087b1d181f2f5e75a8f35e545527a70/node_modules/vitest/dist/chunks/cli-api.C7sYjHmQ.js:13071:6)
+      at _createServer (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vite@7.2.6_@types+node@24.10.1_jiti@2.6.1_lightningcss@1.30.2/node_modules/vite/dist/node/chunks/config.js:25593:86) {
+    code: 'ERR_LOAD_URL',
+    runnerError: Error: RunnerError
+        at reviveInvokeError (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vite@7.2.6_@types+node@24.10.1_jiti@2.6.1_lightningcss@1.30.2/node_modules/vite/dist/node/module-runner.js:476:64)
+        at Object.invoke (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vite@7.2.6_@types+node@24.10.1_jiti@2.6.1_lightningcss@1.30.2/node_modules/vite/dist/node/module-runner.js:491:33)
+        at ServerModuleRunner.getModuleInformation (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vite@7.2.6_@types+node@24.10.1_jiti@2.6.1_lightningcss@1.30.2/node_modules/vite/dist/node/module-runner.js:1086:7)
+        at ServerModuleRunner.import (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vite@7.2.6_@types+node@24.10.1_jiti@2.6.1_lightningcss@1.30.2/node_modules/vite/dist/node/module-runner.js:1013:23)
+        at loadCustomReporterModule (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vitest@4.0.15_@types+node@24.10.1_jiti@2.6.1_jsdom@27.2.0_lightningcss@1.30.2_msw@2.12._5087b1d181f2f5e75a8f35e545527a70/node_modules/vitest/dist/chunks/cli-api.C7sYjHmQ.js:10514:26)
+        at file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vitest@4.0.15_@types+node@24.10.1_jiti@2.6.1_jsdom@27.2.0_lightningcss@1.30.2_msw@2.12._5087b1d181f2f5e75a8f35e545527a70/node_modules/vitest/dist/chunks/cli-api.C7sYjHmQ.js:10532:23
+        at async Promise.all (index 0)
+        at Vitest._setServer (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vitest@4.0.15_@types+node@24.10.1_jiti@2.6.1_jsdom@27.2.0_lightningcss@1.30.2_msw@2.12._5087b1d181f2f5e75a8f35e545527a70/node_modules/vitest/dist/chunks/cli-api.C7sYjHmQ.js:12168:138)
+        at BasicMinimalPluginContext.handler (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vitest@4.0.15_@types+node@24.10.1_jiti@2.6.1_jsdom@27.2.0_lightningcss@1.30.2_msw@2.12._5087b1d181f2f5e75a8f35e545527a70/node_modules/vitest/dist/chunks/cli-api.C7sYjHmQ.js:13071:6)
+        at _createServer (file:///home/rasmus/repos/LeafLock/frontend/node_modules/.pnpm/vite@7.2.6_@types+node@24.10.1_jiti@2.6.1_lightningcss@1.30.2/node_modules/vite/dist/node/chunks/config.js:25593:86)
+  }
+}
+
+
+
+ ELIFECYCLE  Command failed with exit code 1.

@@ -6,15 +6,18 @@ import AppLayout from './app-layout'
 export const ProtectedLayout: React.FC = () => {
   const { isSignedIn, isLoaded } = useAuth()
   const { user: clerkUser } = useUser()
-  
+
   // Convert Clerk user to our expected format
-  const user = clerkUser ? {
-    id: clerkUser.id,
-    email: clerkUser.primaryEmailAddress?.emailAddress || '',
-    name: clerkUser.fullName || '',
-    isAdmin: clerkUser.publicMetadata?.isAdmin === true || clerkUser.publicMetadata?.role === 'admin'
-  } : null
-  
+  const user = clerkUser
+    ? {
+        id: clerkUser.id,
+        email: clerkUser.primaryEmailAddress?.emailAddress || '',
+        name: clerkUser.fullName || '',
+        isAdmin:
+          clerkUser.publicMetadata?.isAdmin === true || clerkUser.publicMetadata?.role === 'admin',
+      }
+    : null
+
   const isLoading = !isLoaded
   const [dataLoaded, setDataLoaded] = React.useState(false)
 
@@ -30,13 +33,13 @@ export const ProtectedLayout: React.FC = () => {
           console.log('Clerk user found after delay, preventing redirect loop')
           return
         }
-        
+
         if (typeof window === 'undefined' || !isOnAuthRoute()) {
           console.log('Redirecting to login - not authenticated')
           safeRedirectToLogin()
         }
       }, 300) // 300ms delay to prevent race condition
-      
+
       return () => clearTimeout(timeoutId)
     }
   }, [isSignedIn, isLoaded])

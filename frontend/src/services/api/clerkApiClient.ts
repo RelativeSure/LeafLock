@@ -70,18 +70,15 @@ export class ClerkApiClient {
   }
 
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const requestKey = `${endpoint}-${Date.now()}-${Math.random()}`
-    
     // Check for duplicate requests
     if (this.pendingRequests.has(endpoint)) {
       this.debug(`Duplicate request detected: ${endpoint}, returning cached promise`)
       return this.pendingRequests.get(endpoint)!
     }
 
-    const requestPromise = this.executeRequest<T>(endpoint, options)
-      .finally(() => {
-        this.pendingRequests.delete(endpoint)
-      })
+    const requestPromise = this.executeRequest<T>(endpoint, options).finally(() => {
+      this.pendingRequests.delete(endpoint)
+    })
 
     this.pendingRequests.set(endpoint, requestPromise)
     return requestPromise
@@ -89,7 +86,7 @@ export class ClerkApiClient {
 
   private async executeRequest<T>(endpoint: string, options: RequestInit, attempt = 1): Promise<T> {
     const url = `${this.baseURL}${endpoint}`
-    
+
     this.debug(`Making ${options.method || 'GET'} request to: ${url} (attempt ${attempt})`)
 
     let token: string | null = null
@@ -107,7 +104,7 @@ export class ClerkApiClient {
       }
     } catch (error) {
       this.error('Failed to get Clerk session token:', error)
-      
+
       // If we're having trouble getting tokens, let Clerk handle it
       if (attempt > 1) {
         throw new ClerkApiError(
@@ -117,7 +114,7 @@ export class ClerkApiClient {
           { originalError: error }
         )
       }
-      
+
       // Retry once for token acquisition
       await this.sleep(this.config.retryDelay)
       return this.executeRequest<T>(endpoint, options, attempt + 1)
@@ -165,17 +162,19 @@ export class ClerkApiClient {
       if (error instanceof ClerkApiError) {
         throw error
       }
-      
+
       this.error('Network error:', error)
-      
+
       // Retry for network errors
       if (attempt <= this.config.maxRetries && this.isRetryableError(error)) {
         this.debug(`Retrying after network error (attempt ${attempt + 1})`)
         await this.sleep(this.config.retryDelay * attempt)
         return this.executeRequest<T>(endpoint, options, attempt + 1)
       }
-      
-      throw new ClerkApiError('Network error occurred', undefined, 'NETWORK_ERROR', { originalError: error })
+
+      throw new ClerkApiError('Network error occurred', undefined, 'NETWORK_ERROR', {
+        originalError: error,
+      })
     }
   }
 
@@ -201,7 +200,7 @@ export class ClerkApiClient {
     // Handle authentication failures
     if (response.status === 401 || response.status === 403) {
       this.authFailureCount++
-      
+
       // Check if we're in a redirect loop
       if (this.authFailureCount >= this.maxAuthFailures) {
         this.error('Max auth failures reached, preventing redirect loop')
@@ -214,17 +213,12 @@ export class ClerkApiClient {
       }
 
       // Don't automatically redirect - let the component handle it
-      throw new ClerkApiError(
-        errorMessage,
-        response.status,
-        parsedError?.code || 'AUTH_FAILED',
-        { 
-          endpoint, 
-          debugInfo: parsedError?.debug,
-          tokenLength: this.session ? 'present' : 'missing',
-          attempts: this.authFailureCount
-        }
-      )
+      throw new ClerkApiError(errorMessage, response.status, parsedError?.code || 'AUTH_FAILED', {
+        endpoint,
+        debugInfo: parsedError?.debug,
+        tokenLength: this.session ? 'present' : 'missing',
+        attempts: this.authFailureCount,
+      })
     }
 
     // Retry for 5xx errors
@@ -238,7 +232,9 @@ export class ClerkApiClient {
   }
 
   private isAuthRoute(endpoint: string): boolean {
-    return endpoint.includes('/auth/') || endpoint.includes('/login') || endpoint.includes('/register')
+    return (
+      endpoint.includes('/auth/') || endpoint.includes('/login') || endpoint.includes('/register')
+    )
   }
 
   private isRetryableError(error: any): boolean {
@@ -250,12 +246,12 @@ export class ClerkApiClient {
       'ETIMEDOUT',
       'ENOTFOUND',
     ]
-    
-    return networkErrors.some(err => errorMessage.includes(err))
+
+    return networkErrors.some((err) => errorMessage.includes(err))
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
+    return new Promise((resolve) => setTimeout(resolve, ms))
   }
 
   // Public debug method to check auth status
@@ -292,44 +288,43 @@ export class ClerkApiClient {
   }
 
   // Batch request method for multiple endpoints
-  async batch<T>(requests: Array<{endpoint: string, options?: RequestInit}>): Promise<T[]> {
-    return Promise.all(
-      requests.map(req => this.request<T>(req.endpoint, req.options))
-    )
+  async batch<T>(requests: Array<{ endpoint: string; options?: RequestInit }>): Promise<T[]> {
+    return Promise.all(requests.map((req) => this.request<T>(req.endpoint, req.options)))
   }
 }
 
 // Enhanced error boundary for auth errors
 export function isAuthLoopError(error: any): boolean {
-  return error instanceof ClerkApiError && 
-         (error.code === 'AUTH_LOOP_DETECTED' || 
-          (error.status === 401 && error.message?.includes('multiple times')))
+  return (
+    error instanceof ClerkApiError &&
+    (error.code === 'AUTH_LOOP_DETECTED' ||
+      (error.status === 401 && error.message?.includes('multiple times')))
+  )
 }
 
 export function shouldRedirectToLogin(error: any): boolean {
   if (!error) return false
-  
+
   // Don't redirect for auth loop errors
   if (isAuthLoopError(error)) {
     return false
   }
-  
+
   // Only redirect for auth errors with specific codes
   const authErrorCodes = ['AUTH_FAILED', 'SESSION_EXPIRED']
-  return error instanceof ClerkApiError && 
-         error.status === 401 && 
-         authErrorCodes.includes(error.code || '')
+  return (
+    error instanceof ClerkApiError &&
+    error.status === 401 &&
+    authErrorCodes.includes(error.code || '')
+  )
 }
 
 // Create singleton instance with enhanced configuration
-export const clerkApiClient = new ClerkApiClient(
-  import.meta.env.VITE_API_URL || '',
-  {
-    enableDebug: import.meta.env.DEV,
-    maxRetries: 2,
-    retryOnAuthFailure: false,
-  }
-)
+export const clerkApiClient = new ClerkApiClient(import.meta.env.VITE_API_URL || '', {
+  enableDebug: import.meta.env.DEV,
+  maxRetries: 2,
+  retryOnAuthFailure: false,
+})
 
 // Hook to initialize the API client with Clerk session
 export const useClerkApiClient = () => {
@@ -348,9 +343,9 @@ export const useAuthLoopDetector = () => {
   const [lastAuthError, setLastAuthError] = React.useState<any>(null)
 
   const recordAuthError = React.useCallback((error: any) => {
-    setAuthErrorCount(prev => {
+    setAuthErrorCount((prev) => {
       const newCount = prev + 1
-      
+
       // If we get more than 3 auth errors in a row, we might be in a loop
       if (newCount > 3) {
         console.error('Potential auth loop detected:', {
@@ -358,7 +353,7 @@ export const useAuthLoopDetector = () => {
           count: newCount,
         })
       }
-      
+
       return newCount
     })
     setLastAuthError(error)

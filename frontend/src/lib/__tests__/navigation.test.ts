@@ -64,7 +64,5 @@ describe('navigation utils', () => {
 
       expect(window.location.href).toBe('')
     })
-
-
   })
 })

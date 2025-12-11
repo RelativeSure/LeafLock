@@ -368,7 +368,7 @@ export const useSecurityMonitoring = (): {
     // Monitor for security events
     const handleSecurityEvent = (event: any) => {
       const eventType = event?.type || event?.name
-      
+
       // Skip if no event type
       if (!eventType) return
 

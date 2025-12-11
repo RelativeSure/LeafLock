@@ -8,37 +8,37 @@
  * Variables are exposed via window.__ENV__ and can be accessed by the application.
  */
 
-(function() {
-  'use strict';
+;(function () {
+  'use strict'
 
   // Create global runtime configuration object
-  window.__ENV__ = window.__ENV__ || {};
+  window.__ENV__ = window.__ENV__ || {}
 
   // Try to load from server-injected meta tags first
-  const clerkKeyMeta = document.querySelector('meta[name="clerk-publishable-key"]');
+  const clerkKeyMeta = document.querySelector('meta[name="clerk-publishable-key"]')
   if (clerkKeyMeta && clerkKeyMeta.content) {
-    window.__ENV__.VITE_CLERK_PUBLISHABLE_KEY = clerkKeyMeta.content;
+    window.__ENV__.VITE_CLERK_PUBLISHABLE_KEY = clerkKeyMeta.content
   }
 
-  const apiUrlMeta = document.querySelector('meta[name="api-url"]');
+  const apiUrlMeta = document.querySelector('meta[name="api-url"]')
   if (apiUrlMeta && apiUrlMeta.content) {
-    window.__ENV__.VITE_API_URL = apiUrlMeta.content;
+    window.__ENV__.VITE_API_URL = apiUrlMeta.content
   }
 
   // Fallback to build-time environment variables (embedded by Vite)
   // Note: import.meta is not available in regular script files, only ES modules
   if (!window.__ENV__.VITE_CLERK_PUBLISHABLE_KEY) {
     // Try to get from global Vite env if available (for development builds)
-    window.__ENV__.VITE_CLERK_PUBLISHABLE_KEY = (typeof window !== 'undefined' && window.VITE_CLERK_PUBLISHABLE_KEY)
-      ? window.VITE_CLERK_PUBLISHABLE_KEY
-      : undefined;
+    window.__ENV__.VITE_CLERK_PUBLISHABLE_KEY =
+      typeof window !== 'undefined' && window.VITE_CLERK_PUBLISHABLE_KEY
+        ? window.VITE_CLERK_PUBLISHABLE_KEY
+        : undefined
   }
 
   if (!window.__ENV__.VITE_API_URL) {
     // Try to get from global Vite env if available (for development builds)
-    window.__ENV__.VITE_API_URL = (typeof window !== 'undefined' && window.VITE_API_URL)
-      ? window.VITE_API_URL
-      : undefined;
+    window.__ENV__.VITE_API_URL =
+      typeof window !== 'undefined' && window.VITE_API_URL ? window.VITE_API_URL : undefined
   }
 
   // Log configuration status (only in development)
@@ -48,12 +48,14 @@
       clerkKeyPrefix: window.__ENV__.VITE_CLERK_PUBLISHABLE_KEY
         ? window.__ENV__.VITE_CLERK_PUBLISHABLE_KEY.substring(0, 10) + '...'
         : 'NOT SET',
-      apiUrl: window.__ENV__.VITE_API_URL || 'NOT SET'
-    });
+      apiUrl: window.__ENV__.VITE_API_URL || 'NOT SET',
+    })
   }
 
   // Emit ready event for app initialization
-  window.dispatchEvent(new CustomEvent('runtime-config-ready', {
-    detail: window.__ENV__
-  }));
-})();
+  window.dispatchEvent(
+    new CustomEvent('runtime-config-ready', {
+      detail: window.__ENV__,
+    })
+  )
+})()

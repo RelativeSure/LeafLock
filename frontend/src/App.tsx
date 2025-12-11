@@ -29,10 +29,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { EncryptionProvider } from './lib/encryption-context'
 import { useClerkApiClient } from './services/api/clerkApiClient'
 import { useEnhancedClerk } from './hooks/useEnhancedClerk'
-import {
-  getClerkPublishableKey,
-  debugRuntimeConfig,
-} from './lib/runtime-config'
+import { getClerkPublishableKey, debugRuntimeConfig } from './lib/runtime-config'
 import './styles/clerk-auth.css'
 // import { ConfigDebug } from './components/debug/ConfigDebug'
 // Temporarily remove wrappers to isolate update loop
@@ -59,9 +56,7 @@ const AppContent: React.FC = () => {
   // Monitor session expiration
   React.useEffect(() => {
     if (isExpiringSoon && timeUntilExpiry) {
-      console.log(
-        `Clerk session expiring in ${Math.floor(timeUntilExpiry / 60000)} minutes`
-      )
+      console.log(`Clerk session expiring in ${Math.floor(timeUntilExpiry / 60000)} minutes`)
 
       // Could show a notification to the user
       // Could automatically refresh the session
@@ -94,18 +89,15 @@ const AppContent: React.FC = () => {
       <EncryptionProvider>
         <RouterProvider router={router} />
         {/* Show auth debug panel in development */}
-        {import.meta.env.DEV && (
-          React.createElement(React.lazy(() => import('./components/debug/ClerkAuthDebug')))
-        )}
+        {import.meta.env.DEV &&
+          React.createElement(React.lazy(() => import('./components/debug/ClerkAuthDebug')))}
       </EncryptionProvider>
     </ThemeProvider>
   )
 }
 
 const App: React.FC = () => {
-  const [clerkKey, setClerkKey] = React.useState<string | undefined>(
-    getClerkPublishableKey()
-  )
+  const [clerkKey, setClerkKey] = React.useState<string | undefined>(getClerkPublishableKey())
 
   React.useEffect(() => {
     // Debug runtime config in development
@@ -123,8 +115,7 @@ const App: React.FC = () => {
     }
 
     window.addEventListener('runtime-config-ready', handleConfigReady)
-    return () =>
-      window.removeEventListener('runtime-config-ready', handleConfigReady)
+    return () => window.removeEventListener('runtime-config-ready', handleConfigReady)
   }, [clerkKey])
 
   // Show error if Clerk key is missing
@@ -134,20 +125,16 @@ const App: React.FC = () => {
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
           <div className="text-center">
             <div className="text-4xl mb-4">🔑</div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Configuration Error
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Configuration Error</h1>
             <p className="text-gray-600 mb-4">
-              Clerk publishable key is not configured. Please check your
-              environment variables.
+              Clerk publishable key is not configured. Please check your environment variables.
             </p>
             <div className="bg-gray-100 rounded p-4 text-left text-sm">
               <p className="font-mono text-gray-800 mb-2">
                 Required: <strong>VITE_CLERK_PUBLISHABLE_KEY</strong>
               </p>
               <p className="text-gray-600 text-xs">
-                This should be set in your Railway environment variables or .env
-                file.
+                This should be set in your Railway environment variables or .env file.
               </p>
             </div>
           </div>

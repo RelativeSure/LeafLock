@@ -22,16 +22,10 @@ export function LoginForm({
   onToggleMode: () => void
   animatedTitle?: React.ReactNode
 }) {
-
-
   return (
     <div className="w-full max-w-md mx-auto">
-      {animatedTitle && (
-        <div className="mb-8 text-center">
-          {animatedTitle}
-        </div>
-      )}
-      
+      {animatedTitle && <div className="mb-8 text-center">{animatedTitle}</div>}
+
       <SignIn
         routing="path"
         path="/login"
@@ -42,39 +36,40 @@ export function LoginForm({
             // Root container
             rootBox: 'w-full',
             card: 'w-full bg-transparent border-0 shadow-none p-0 space-y-6',
-            
+
             // Header
             headerTitle: 'clerk-title-enhanced',
             headerSubtitle: 'clerk-subtitle-enhanced',
-            
+
             // Form fields
             formFieldLabel: 'clerk-label-enhanced',
             formFieldInput: 'clerk-input-enhanced',
             formFieldInput__emailAddress: 'clerk-input-enhanced',
             formFieldInput__password: 'clerk-input-enhanced',
-            formFieldInputShowPasswordButton: 'text-muted-foreground hover:text-foreground hover:scale-110 transition-all',
+            formFieldInputShowPasswordButton:
+              'text-muted-foreground hover:text-foreground hover:scale-110 transition-all',
             formFieldErrorText: 'clerk-message-error-enhanced',
             formFieldSuccessText: 'clerk-message-success-enhanced',
             formFieldHintText: 'text-muted-foreground text-xs mt-2',
-            
+
             // Primary action buttons
             formButtonPrimary: 'clerk-button-primary-enhanced',
             formButtonReset: 'clerk-button-secondary-enhanced',
-            
+
             // Social auth buttons
             socialButtonsBlockButton: 'clerk-social-button-enhanced',
             socialButtonsBlockButtonText: 'font-medium',
             socialButtonsProviderIcon: 'clerk-social-icon-enhanced',
-            
+
             // Footer and links
             footerActionText: 'clerk-footer-text-enhanced',
             footerActionLink: 'clerk-footer-link-enhanced',
             footer: 'clerk-footer-enhanced',
-            
+
             // Divider
             dividerLine: 'clerk-divider-enhanced',
             dividerText: 'clerk-divider-text-enhanced',
-            
+
             // Loading and spinners
             spinner: 'clerk-spinner-enhanced',
           },
@@ -96,9 +91,8 @@ export function LoginForm({
             showOptionalFields: true,
           },
         }}
-
       />
-      
+
       <div className="mt-6 text-center">
         <p className="text-sm text-muted-foreground">
           Don't have an account?{' '}

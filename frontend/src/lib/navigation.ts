@@ -25,5 +25,3 @@ export function safeRedirectToLogin(options?: { force?: boolean }): void {
   lastRedirectAt = now
   window.location.href = '/login'
 }
-
-

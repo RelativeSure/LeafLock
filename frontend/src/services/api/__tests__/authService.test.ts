@@ -40,10 +40,10 @@ describe('authService (Clerk-compatible)', () => {
         '/auth/register',
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ 
-            email: 'test@example.com', 
-            password: 'password123', 
-            name: 'Test User' 
+          body: JSON.stringify({
+            email: 'test@example.com',
+            password: 'password123',
+            name: 'Test User',
           }),
         })
       )
@@ -68,7 +68,9 @@ describe('authService (Clerk-compatible)', () => {
 
       const result = await authService.register('test@example.com', 'password123', 'Test User')
 
-      expect(result.message).toBe('Registration request accepted. If this email is eligible, you will receive further instructions shortly.')
+      expect(result.message).toBe(
+        'Registration request accepted. If this email is eligible, you will receive further instructions shortly.'
+      )
     })
   })
 
@@ -90,7 +92,8 @@ describe('authService (Clerk-compatible)', () => {
 
       const mockResponse = {
         secret: 'mfa-secret-key',
-        qrCode: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+        qrCode:
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
       }
 
       requestSpy.mockResolvedValue(mockResponse)
