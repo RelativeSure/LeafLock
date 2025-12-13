@@ -115,7 +115,7 @@ func TestValidateClerkTokenEnhancedWithDebug_DebugLogging(t *testing.T) {
 	handler := &Handler{
 		config: &Config{
 			EnableDebugLogging: true,
-			ClerkSecretKey:       "sk_test_abcdefghijklmnopqrstuvwxyz1234567890abcdef",
+			ClerkSecretKey:       "sk_test_mock_keyghijklmnopqrstuvwxyz1234567890abcdef",
 		},
 	}
 
@@ -167,7 +167,7 @@ func TestIsClerkInitialized(t *testing.T) {
 	}{
 		{"NilConfig", nil, false},
 		{"EmptySecret", &Config{ClerkSecretKey: ""}, false},
-		{"ValidConfig", &Config{ClerkSecretKey: "sk_test_1234567890"}, true},
+		{"ValidConfig", &Config{ClerkSecretKey: "sk_test_mock_key"}, true},
 	}
 
 	for _, tt := range tests {

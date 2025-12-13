@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"io"
 	"errors"
 	"testing"
 	"time"
@@ -28,7 +29,7 @@ func TestTimingAttackProtection(t *testing.T) {
 }
 
 func TestSecureErrorHandling(t *testing.T) {
-	handler := NewClerkErrorHandler()
+	handler := NewClerkErrorHandler(io.Discard)
 
 	// Test error categorization
 	tests := []struct {
@@ -232,7 +233,7 @@ func TestSecureDatabaseConnection(t *testing.T) {
 }
 
 func TestSecurityEventLogging(t *testing.T) {
-	logger := utils.NewSecurityLogger()
+	logger := utils.NewSecurityLogger(io.Discard)
 	userID := uuid.New()
 
 	// Test auth event logging

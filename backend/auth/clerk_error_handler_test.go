@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"io"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -35,7 +36,7 @@ func captureLogOutput(f func()) string {
 
 // TestNewClerkErrorHandler tests clerk error handler creation
 func TestNewClerkErrorHandler(t *testing.T) {
-	handler := NewClerkErrorHandler()
+	handler := NewClerkErrorHandler(io.Discard)
 	assert.NotNil(t, handler)
 	assert.NotNil(t, handler.logger)
 }
@@ -136,7 +137,7 @@ func TestClerkErrorHandler_HandleClerkError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := NewClerkErrorHandler()
+			handler := NewClerkErrorHandler(io.Discard)
 
 			app := fiber.New()
 			app.Get("/test", func(c *fiber.Ctx) error {
@@ -253,7 +254,7 @@ func TestClerkErrorHandler_CategorizeClerkError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := NewClerkErrorHandler()
+			handler := NewClerkErrorHandler(io.Discard)
 			err := errors.New(tt.errMsg)
 
 			errorType, severity, publicMessage := handler.categorizeClerkError(err)
@@ -348,13 +349,13 @@ func TestValidateClerkConfiguration(t *testing.T) {
 		},
 		{
 			name:        "ContainsExamplePattern",
-			secretKey:   "sk_live_example_WEAK_PATTERN_PLACEHOLDER",
+			secretKey:   "sk_live_mock_keyxample_WEAK_PATTERN_PLACEHOLDER",
 			expectError: true,
 			errorMsg:    "CLERK_SECRET_KEY contains weak pattern: example",
 		},
 		{
 			name:        "ContainsNumbers",
-			secretKey:   "sk_live_123456_WEAK_PATTERN_PLACEHOLDER",
+			secretKey:   "sk_live_mock_key_WEAK_PATTERN_PLACEHOLDER",
 			expectError: true,
 			errorMsg:    "CLERK_SECRET_KEY contains weak pattern: 123456",
 		},
@@ -648,7 +649,7 @@ func TestShouldLogSecurityEvent_AfterTimeout(t *testing.T) {
 
 // TestClerkErrorHandler_LoggingValidation tests that logging includes all expected fields
 func TestClerkErrorHandler_LoggingValidation(t *testing.T) {
-	handler := NewClerkErrorHandler()
+	handler := NewClerkErrorHandler(io.Discard)
 
 	app := fiber.New()
 	app.Get("/test", func(c *fiber.Ctx) error {

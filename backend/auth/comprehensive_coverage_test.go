@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"io"
 	"os"
 	"testing"
 
@@ -117,7 +118,7 @@ func TestComprehensiveConfigCoverage(t *testing.T) {
 
 // TestComprehensiveClerkErrorHandler tests all error handler functionality
 func TestComprehensiveClerkErrorHandler(t *testing.T) {
-	handler := NewClerkErrorHandler()
+	handler := NewClerkErrorHandler(io.Discard)
 	assert.NotNil(t, handler)
 	
 	t.Run("CategorizeAllErrorTypesComprehensive", func(t *testing.T) {
@@ -266,68 +267,6 @@ func TestComprehensiveSanitization(t *testing.T) {
 	})
 }
 
-// TestComprehensiveMiddlewareCoverage tests middleware functionality
-func TestComprehensiveMiddlewareCoverage(t *testing.T) {
-	t.Run("IsClerkInitializedComprehensive", func(t *testing.T) {
-		handler := &Handler{}
-		
-		handler.config = nil
-		assert.False(t, handler.isClerkInitialized())
-		
-		handler.config = &Config{ClerkSecretKey: ""}
-		assert.False(t, handler.isClerkInitialized())
-		
-		handler.config = &Config{ClerkSecretKey: "sk_test_PLACEHOLDER_KEY_SHORT"}
-		assert.True(t, handler.isClerkInitialized())
-		
-		handler.config = &Config{ClerkSecretKey: "sk_live_PLACEHOLDER_KEY_LONG"}
-		assert.True(t, handler.isClerkInitialized())
-	})
-	
-	t.Run("IsTokenExpiredComprehensive", func(t *testing.T) {
-		testCases := []struct {
-			msg      string
-			expected bool
-		}{
-			{"", false}, // nil check handled separately
-			{"token expired", true},
-			{"expired token", true},
-			{"Token expired at 12345", true},
-			{"invalid token", true},
-			{"invalid signature", true},
-			{"network error", false},
-			{"timeout", false},
-			{"rate limit", false},
-		}
-		
-		for _, tc := range testCases {
-			assert.Equal(t, tc.expected, isTokenExpired(&customError{msg: tc.msg}), 
-				"Wrong result for: %s", tc.msg)
-		}
-		
-		assert.False(t, isTokenExpired(nil))
-	})
-	
-	t.Run("MinFunctionComprehensive", func(t *testing.T) {
-		testCases := []struct {
-			a, b, expected int
-		}{
-			{5, 10, 5},
-			{10, 5, 5},
-			{5, 5, 5},
-			{0, 100, 0},
-			{-10, 10, -10},
-			{10, -10, -10},
-			{-50, -100, -100},
-			{100, 200, 100},
-		}
-		
-		for _, tc := range testCases {
-			assert.Equal(t, tc.expected, min(tc.a, tc.b), 
-				"min(%d, %d) should be %d", tc.a, tc.b, tc.expected)
-		}
-	})
-}
 
 // customError is a simple error implementation for testing
 type customError struct {
@@ -347,7 +286,7 @@ func BenchmarkAllCoverageFunctions(b *testing.B) {
 	})
 	
 	b.Run("CategorizeClerkError", func(b *testing.B) {
-		handler := NewClerkErrorHandler()
+		handler := NewClerkErrorHandler(io.Discard)
 		err := &customError{msg: "token expired"}
 		for i := 0; i < b.N; i++ {
 			handler.categorizeClerkError(err)

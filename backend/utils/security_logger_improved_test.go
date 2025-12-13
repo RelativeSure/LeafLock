@@ -2,57 +2,29 @@ package utils
 
 import (
 	"bytes"
+	"io"
 	"log"
-	"os"
-	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
-// captureLogOutput properly captures log output for testing
-func captureLogOutput(f func()) string {
-	// Save current log settings
-	oldFlags := log.Flags()
-	oldPrefix := log.Prefix()
-	oldWriter := log.Writer()
-	oldExitFunc := log.ExitFunc
 
-	// Create buffer for capture
-	var buf bytes.Buffer
-
-	// Set new log settings (minimal flags for test consistency)
-	log.SetFlags(0)
-	log.SetPrefix("")
-	log.SetOutput(&buf)
-	log.SetExitFunc(func(int) {})
-
-	// Execute the function
-	f()
-
-	// Restore original settings
-	log.SetFlags(oldFlags)
-	log.SetPrefix(oldPrefix)
-	log.SetOutput(oldWriter)
-	log.SetExitFunc(oldExitFunc)
-
-	return buf.String()
-}
 
 // TestImprovedSecurityLogger tests all security logger functionality
 func TestImprovedSecurityLogger(t *testing.T) {
 	userID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
 	
 	t.Run("AuthEventLogging", func(t *testing.T) {
-		logger := NewSecurityLogger()
+		var buf bytes.Buffer
+		logger := NewSecurityLogger(&buf)
 		
-		output := captureLogOutput(func() {
-			logger.LogAuthEvent("login_attempt", userID, true, map[string]interface{}{
-				"ip": "192.168.1.1",
-			})
+		logger.LogAuthEvent("login_attempt", userID, true, map[string]interface{}{
+			"ip": "192.168.1.1",
 		})
 		
+		output := buf.String()
 		assert.Contains(t, output, "AUTH_EVENT:")
 		assert.Contains(t, output, "login_attempt")
 		assert.Contains(t, output, "success=true")
@@ -63,15 +35,15 @@ func TestImprovedSecurityLogger(t *testing.T) {
 	})
 	
 	t.Run("SecurityEventLogging", func(t *testing.T) {
-		logger := NewSecurityLogger()
+		var buf bytes.Buffer
+		logger := NewSecurityLogger(&buf)
 		
-		output := captureLogOutput(func() {
-			logger.LogSecurityEvent("suspicious_activity", "high", map[string]interface{}{
-				"user_id": userID,
-				"action":  "multiple_failed_attempts",
-			})
+		logger.LogSecurityEvent("suspicious_activity", "high", map[string]interface{}{
+			"user_id": userID,
+			"action":  "multiple_failed_attempts",
 		})
-		
+
+		output := buf.String()
 		assert.Contains(t, output, "SECURITY_EVENT:")
 		assert.Contains(t, output, "suspicious_activity")
 		assert.Contains(t, output, "severity=high")
@@ -79,16 +51,16 @@ func TestImprovedSecurityLogger(t *testing.T) {
 	})
 	
 	t.Run("ErrorLogging", func(t *testing.T) {
-		logger := NewSecurityLogger()
+		var buf bytes.Buffer
+		logger := NewSecurityLogger(&buf)
 		
-		output := captureLogOutput(func() {
-			logger.LogError("database_query", assert.AnError, map[string]interface{}{
-				"query":     "SELECT * FROM users",
-				"user_id":   userID,
-				"sensitive": "should_be_sanitized@example.com",
-			})
+		logger.LogError("database_query", assert.AnError, map[string]interface{}{
+			"query":     "SELECT * FROM users",
+			"user_id":   userID,
+			"sensitive": "should_be_sanitized@example.com",
 		})
-		
+
+		output := buf.String()
 		assert.Contains(t, output, "ERROR:")
 		assert.Contains(t, output, "database_query")
 		assert.Contains(t, output, "assert.AnError")
@@ -97,12 +69,12 @@ func TestImprovedSecurityLogger(t *testing.T) {
 	})
 	
 	t.Run("TokenEventLogging", func(t *testing.T) {
-		logger := NewSecurityLogger()
+		var buf bytes.Buffer
+		logger := NewSecurityLogger(&buf)
 		
-		output := captureLogOutput(func() {
-			logger.LogTokenEvent("token_generated", "token_hash_12345", userID)
-		})
-		
+		logger.LogTokenEvent("token_generated", "token_hash_12345", userID)
+
+		output := buf.String()
 		assert.Contains(t, output, "TOKEN_EVENT:")
 		assert.Contains(t, output, "token_generated")
 		assert.Contains(t, output, "token_hash=token_hash_12345")
@@ -110,12 +82,12 @@ func TestImprovedSecurityLogger(t *testing.T) {
 	})
 	
 	t.Run("SessionEventLogging", func(t *testing.T) {
-		logger := NewSecurityLogger()
+		var buf bytes.Buffer
+		logger := NewSecurityLogger(&buf)
 		
-		output := captureLogOutput(func() {
-			logger.LogSessionEvent("session_created", "sess_abc123xyz", userID)
-		})
-		
+		logger.LogSessionEvent("session_created", "sess_abc123xyz", userID)
+
+		output := buf.String()
 		assert.Contains(t, output, "SESSION_EVENT:")
 		assert.Contains(t, output, "session_created")
 		assert.Contains(t, output, "[session:")
@@ -135,10 +107,10 @@ func TestImprovedSanitizationInLogger(t *testing.T) {
 		"safe_field": "safe_value",
 	}
 	
-	output := captureLogOutput(func() {
-		logger := NewSecurityLogger()
-		logger.LogAuthEvent("test_event", userID, true, metadata)
-	})
+	var buf bytes.Buffer
+	logger := NewSecurityLogger(&buf)
+	logger.LogAuthEvent("test_event", userID, true, metadata)
+	output := buf.String()
 	
 	// Verify sanitization happened
 	assert.Contains(t, output, "[email]")
@@ -201,13 +173,17 @@ func TestImprovedRedaction(t *testing.T) {
 func TestStructuredLoggingImproved(t *testing.T) {
 	userID := uuid.New()
 	
-	output := captureLogOutput(func() {
-		StructuredSecurityLog("user_login", "info", userID, map[string]interface{}{
-			"location": "NYC",
-			"device":   "mobile",
-		})
+	var buf bytes.Buffer
+	oldWriter := log.Writer()
+	log.SetOutput(&buf)
+	defer log.SetOutput(oldWriter)
+
+	StructuredSecurityLog("user_login", "info", userID, map[string]interface{}{
+		"location": "NYC",
+		"device":   "mobile",
 	})
 	
+	output := buf.String()
 	assert.Contains(t, output, "SECURITY_EVENT:")
 	assert.Contains(t, output, "user_login")
 	assert.Contains(t, output, "severity=info")
@@ -218,15 +194,15 @@ func TestStructuredLoggingImproved(t *testing.T) {
 
 // TestLoggerCreationImproved tests logger initialization
 func TestLoggerCreationImproved(t *testing.T) {
-	logger := NewSecurityLogger()
+	var buf bytes.Buffer
+	logger := NewSecurityLogger(&buf)
 	
 	assert.NotNil(t, logger)
 	assert.NotNil(t, logger.logger)
 	
 	// Verify logger works
-	output := captureLogOutput(func() {
-		logger.LogSecurityEvent("test", "low", nil)
-	})
+	logger.LogSecurityEvent("test", "low", nil)
+	output := buf.String()
 	
 	assert.Contains(t, output, "SECURITY_EVENT:")
 	assert.Contains(t, output, "test")
@@ -241,20 +217,16 @@ func BenchmarkSecurityLogger(b *testing.B) {
 	}
 	
 	b.Run("LogAuthEvent", func(b *testing.B) {
-		logger := NewSecurityLogger()
+		logger := NewSecurityLogger(io.Discard)
 		for i := 0; i < b.N; i++ {
-			captureLogOutput(func() {
-				logger.LogAuthEvent("login", userID, true, metadata)
-			})
+			logger.LogAuthEvent("login", userID, true, metadata)
 		}
 	})
 	
 	b.Run("LogSecurityEvent", func(b *testing.B) {
-		logger := NewSecurityLogger()
+		logger := NewSecurityLogger(io.Discard)
 		for i := 0; i < b.N; i++ {
-			captureLogOutput(func() {
-				logger.LogSecurityEvent("test_event", "high", metadata)
-			})
+			logger.LogSecurityEvent("test_event", "high", metadata)
 		}
 	})
 }

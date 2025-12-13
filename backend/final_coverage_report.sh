@@ -9,7 +9,7 @@ echo ""
 # Auth package - passing tests
 echo "1. AUTH PACKAGE (Passing Tests Only)"
 echo "----------------------------------------"
-go test ./auth -run "^Test(LoadConfig|GetEnv|Config|NewClerkErrorHandler|CategorizeClerkError|SecureClerkError|EnhancedClerkMiddleware_NoAuth|EnhancedClerkMiddleware_InvalidFormat|IsTokenExpired|MinFunction|IsClerkInitialized|GetDebugInfo|SafeClerkMiddleware)" -coverprofile=auth_coverage.out -covermode=atomic > /dev/null 2>&1
+go test ./auth -coverprofile=auth_coverage.out -covermode=atomic
 
 echo "Coverage by file:"
 go tool cover -func=auth_coverage.out 2>/dev/null | grep -E "(clerk_middleware_enhanced|clerk_error_handler|config|common)" | awk '$3 != "100.0%" {printf "  %-50s %s\n", $1 " " $2, $3}'
@@ -26,7 +26,7 @@ echo ""
 # Utils package
 echo "2. UTILS PACKAGE"
 echo "----------------------------------------"
-go test ./utils -run "^Test(NewSecurity|LogSecurityEvent|StructuredSecurityLog|RedactUUID|RedactSessionID)" -coverprofile=utils_coverage.out -covermode=atomic > /dev/null 2>&1
+go test ./utils -coverprofile=utils_coverage.out -covermode=atomic
 
 echo "Security Logger Coverage:"
 go tool cover -func=utils_coverage.out 2>/dev/null | grep "security_logger" | awk '$3 != "100.0%" {printf "  %-50s %s\n", $2, $3}'

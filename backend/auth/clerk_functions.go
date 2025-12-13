@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -229,7 +230,7 @@ func (h *Handler) RevokeClerkSession(c *fiber.Ctx) error {
 	}
 
 	// Secure logging
-	utils.NewSecurityLogger().LogAuthEvent("session_revoked", uuid.MustParse(clerkUserID), true, map[string]interface{}{
+	utils.NewSecurityLogger(log.Writer()).LogAuthEvent("session_revoked", uuid.MustParse(clerkUserID), true, map[string]interface{}{
 		"session_id": sessionID,
 	})
 
@@ -321,7 +322,7 @@ func (h *Handler) CreateClerkOrganization(c *fiber.Ctx) error {
 	}
 
 	// Secure logging
-	utils.NewSecurityLogger().LogAuthEvent("organization_created", uuid.MustParse(clerkUserID), true, map[string]interface{}{
+	utils.NewSecurityLogger(log.Writer()).LogAuthEvent("organization_created", uuid.MustParse(clerkUserID), true, map[string]interface{}{
 		"organization_id":   orgID,
 		"organization_name": req.Name,
 	})
@@ -435,7 +436,7 @@ func (h *Handler) UpdateClerkOrganization(c *fiber.Ctx) error {
 	}
 
 	// Secure logging
-	utils.NewSecurityLogger().LogAuthEvent("organization_updated", uuid.MustParse(clerkUserID), true, map[string]interface{}{
+	utils.NewSecurityLogger(log.Writer()).LogAuthEvent("organization_updated", uuid.MustParse(clerkUserID), true, map[string]interface{}{
 		"organization_id":   orgID,
 		"organization_name": req.Name,
 	})

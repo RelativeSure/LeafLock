@@ -3,6 +3,8 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"strings"
 	"time"
 
@@ -16,9 +18,9 @@ type ClerkErrorHandler struct {
 }
 
 // NewClerkErrorHandler creates a new error handler
-func NewClerkErrorHandler() *ClerkErrorHandler {
+func NewClerkErrorHandler(writer io.Writer) *ClerkErrorHandler {
 	return &ClerkErrorHandler{
-		logger: utils.NewSecurityLogger(),
+		logger: utils.NewSecurityLogger(writer),
 	}
 }
 
@@ -107,6 +109,9 @@ func ValidateClerkConfiguration(clerkSecretKey string) error {
 	weakPatterns := []string{"test", "example", "123456", "password", "secret"}
 	for _, pattern := range weakPatterns {
 		if strings.Contains(strings.ToLower(clerkSecretKey), pattern) {
+			if pattern == "test" && strings.HasPrefix(clerkSecretKey, "sk_test_") {
+				continue
+			}
 			return fmt.Errorf("CLERK_SECRET_KEY contains weak pattern: %s", pattern)
 		}
 	}
@@ -264,7 +269,7 @@ func CreateSecureError(operation string, originalError error, context map[string
 
 // LogSecurityIncident logs security incidents securely
 func LogSecurityIncident(operation string, incidentType string, details map[string]interface{}) {
-	logger := utils.NewSecurityLogger()
+	logger := utils.NewSecurityLogger(log.Writer())
 
 	// Sanitize details
 	safeDetails := make(map[string]interface{})

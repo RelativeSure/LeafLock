@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"io"
 	"log"
 
 	"github.com/google/uuid"
@@ -12,9 +13,9 @@ type SecurityLogger struct {
 }
 
 // NewSecurityLogger creates a new security logger
-func NewSecurityLogger() *SecurityLogger {
+func NewSecurityLogger(writer io.Writer) *SecurityLogger {
 	return &SecurityLogger{
-		logger: log.New(log.Writer(), "[SECURITY] ", log.LstdFlags|log.Lshortfile),
+		logger: log.New(writer, "[SECURITY] ", log.LstdFlags|log.Lshortfile),
 	}
 }
 
@@ -76,7 +77,7 @@ func (sl *SecurityLogger) LogSessionEvent(event string, sessionID string, userID
 
 // StructuredSecurityLog creates structured security log entry
 func StructuredSecurityLog(event string, severity string, userID uuid.UUID, details map[string]interface{}) {
-	logger := NewSecurityLogger()
+	logger := NewSecurityLogger(log.Writer())
 	logger.LogSecurityEvent(event, severity, map[string]interface{}{
 		"user_id": redactUUID(userID),
 		"details": SanitizeValue(details),
