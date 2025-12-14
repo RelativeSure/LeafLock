@@ -349,7 +349,7 @@ func TestValidateClerkConfiguration(t *testing.T) {
 		},
 		{
 			name:        "ContainsExamplePattern",
-			secretKey:   "sk_live_mock_keyxample_abcdef12345678901234567890",
+			secretKey:   "sk_live_mock_example_abcdef12345678901234567890",
 			expectError: true,
 			errorMsg:    "CLERK_SECRET_KEY contains weak pattern: example",
 		},

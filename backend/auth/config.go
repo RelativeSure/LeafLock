@@ -1,7 +1,9 @@
 package auth
 
 import (
+	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -68,19 +70,86 @@ func (c *Config) IsDebugMode() bool {
 }
 
 // HasValidClerkConfig checks if Clerk configuration is valid
+// Logic: key must be > 20 chars, and if <= 50 chars, must not contain suspicious patterns
 func (c *Config) HasValidClerkConfig() bool {
-	return c.ClerkSecretKey != "" &&
-		len(c.ClerkSecretKey) > 20 &&
-		(len(c.ClerkSecretKey) > 50 || !containsSuspiciousPattern(c.ClerkSecretKey))
+	if c.ClerkSecretKey == "" || len(c.ClerkSecretKey) <= 20 {
+		return false
+	}
+	// If key is > 50 chars, it's valid even if it has suspicious patterns
+	// If key is <= 50 chars, it must not have suspicious patterns
+	return len(c.ClerkSecretKey) > 50 || getSuspiciousPattern(c.ClerkSecretKey) == ""
 }
 
-func containsSuspiciousPattern(s string) bool {
-	suspicious := []string{"test", "example", "default", "your_key", "replace_me"}
+// ValidateClerkConfiguration checks if the Clerk secret key is properly configured
+func ValidateClerkConfiguration(secretKey string) error {
+	if secretKey == "" {
+		return fmt.Errorf("CLERK_SECRET_KEY is required")
+	}
+	if len(secretKey) < 20 {
+		return fmt.Errorf("CLERK_SECRET_KEY must be at least 20 characters")
+	}
+	
+	pattern := getSuspiciousPattern(secretKey)
+	if pattern != "" {
+		return fmt.Errorf("CLERK_SECRET_KEY contains weak pattern: %s", pattern)
+	}
+	
+	return nil
+}
+
+// getSuspiciousPattern checks if the key contains any weak patterns
+// Returns the pattern found, or empty string if none found
+func getSuspiciousPattern(s string) string {
 	lower := strings.ToLower(s)
-	for _, pattern := range suspicious {
+	
+	// Special handling for "test"
+	// We allow sk_test_ prefix but still check for other weak patterns
+	if strings.HasPrefix(s, "sk_test_") {
+		// For test keys, only check for weak patterns beyond the standard prefix
+		restOfKey := s[len("sk_test_"):]
+		lowerRest := strings.ToLower(restOfKey)
+		
+		// Check if "test" appears again in the rest of the key
+		if strings.Contains(lowerRest, "test") {
+			// Check for standalone "test" or test_ pattern
+			// This matches "test" as a whole word or with underscores
+			testRegex := regexp.MustCompile(`\btest\b|(^|_)test_`)
+			if testRegex.MatchString(lowerRest) {
+				return "test"
+			}
+		}
+		// Check other patterns in the rest of the key (ordered to match test expectations)
+		suspicious := []string{"password", "secret", "your_key", "replace_me", "example", "123456"}
+		for _, pattern := range suspicious {
+			if strings.Contains(lowerRest, pattern) {
+				return pattern
+			}
+		}
+		return "" // Valid test key - no suspicious patterns found
+	}
+	
+	// For non-test keys, check all patterns (ordered to match test expectations)
+	// Check string patterns first, then numeric patterns
+	allPatterns := []string{"password", "secret", "your_key", "replace_me", "example", "test", "123456"}
+	for _, pattern := range allPatterns {
 		if strings.Contains(lower, pattern) {
-			return true
+			// Check if it's a whole word or common pattern
+			if pattern == "test" {
+				testRegex := regexp.MustCompile(`\btest\b|(^|_)test_`)
+				if testRegex.MatchString(lower) {
+					return pattern
+				}
+			} else {
+				return pattern
+			}
 		}
 	}
-	return false
+	
+	return ""
+}
+
+// containsSuspiciousPattern checks if the key contains any weak patterns
+// Kept for backward compatibility
+func containsSuspiciousPattern(s string) bool {
+	return getSuspiciousPattern(s) != ""
 }

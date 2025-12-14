@@ -4,12 +4,19 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 // SanitizeValue sanitizes a value for secure logging
 func SanitizeValue(value interface{}) interface{} {
 	if value == nil {
 		return nil
+	}
+
+	// Handle UUID values specially - don't sanitize them as strings
+	if u, ok := value.(uuid.UUID); ok {
+		return redactUUID(u)
 	}
 
 	str := fmt.Sprintf("%v", value)
@@ -25,6 +32,11 @@ func SanitizeValue(value interface{}) interface{} {
 	// Remove IP addresses
 	ipRegex := regexp.MustCompile(`\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b`)
 	str = ipRegex.ReplaceAllString(str, "[ip]")
+
+	// Remove tokens/secrets (alphanumeric strings > 10 chars)
+	// Look for strings of alphanumeric characters (common token lengths)
+	tokenRegex := regexp.MustCompile(`[a-zA-Z0-9]{10,}`)
+	str = tokenRegex.ReplaceAllString(str, "[token]")
 
 	return str
 }

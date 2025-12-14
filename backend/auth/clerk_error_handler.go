@@ -77,7 +77,7 @@ func (h *ClerkErrorHandler) categorizeClerkError(err error) (errorType string, s
 	case strings.Contains(errMsg, "network") || strings.Contains(errMsg, "connection"):
 		return "network_error", "error", "Network error. Please try again."
 
-	case strings.Contains(errMsg, "timeout"):
+	case strings.Contains(errMsg, "timeout") || strings.Contains(errMsg, "timed out"):
 		return "timeout", "error", "Request timed out. Please try again."
 
 	default:
@@ -95,29 +95,7 @@ func SecureClerkError(err error, operation string) error {
 	return fmt.Errorf("%s: authentication failed", operation)
 }
 
-// ValidateClerkConfiguration validates Clerk configuration
-func ValidateClerkConfiguration(clerkSecretKey string) error {
-	if clerkSecretKey == "" {
-		return errors.New("CLERK_SECRET_KEY is required")
-	}
 
-	if len(clerkSecretKey) < 20 {
-		return errors.New("CLERK_SECRET_KEY must be at least 20 characters")
-	}
-
-	// Check for common weak patterns
-	weakPatterns := []string{"test", "example", "123456", "password", "secret"}
-	for _, pattern := range weakPatterns {
-		if strings.Contains(strings.ToLower(clerkSecretKey), pattern) {
-			if pattern == "test" && strings.HasPrefix(clerkSecretKey, "sk_test_") {
-				continue
-			}
-			return fmt.Errorf("CLERK_SECRET_KEY contains weak pattern: %s", pattern)
-		}
-	}
-
-	return nil
-}
 
 // SanitizeClerkError sanitizes Clerk error messages for logging
 func SanitizeClerkError(err error) string {
