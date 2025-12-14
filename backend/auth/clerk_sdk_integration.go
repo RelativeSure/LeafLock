@@ -40,7 +40,7 @@ func clerkVerifyToken(ctx context.Context, token string) (*clerk.SessionClaims, 
 	
 	// For demonstration purposes, return a mock claim
 	return &clerk.SessionClaims{
-		Subject: user_123",
+		Subject: "user_123",
 		Expiry:  jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
 		Claims:  map[string]interface{}{},
 	}, nil
