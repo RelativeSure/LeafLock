@@ -47,7 +47,15 @@ echo "  - common.go (isTokenExpired, etc)"
 echo "  - security_logger.go"
 echo ""
 echo "Test files created:"
-ls -1 auth/*test.go | grep -E "(clerk_middleware_enhanced|clerk_error_handler|config|handlers_additional)" | sed 's/^/  - /'
-ls -1 utils/*test.go | grep security_logger | sed 's/^/  - /'
+for file in auth/*test.go; do
+    if [[ "$file" =~ (clerk_middleware_enhanced|clerk_error_handler|config|handlers_additional) ]]; then
+        echo "  - $file"
+    fi
+done
+for file in utils/*test.go; do
+    if [[ "$file" =~ security_logger ]]; then
+        echo "  - $file"
+    fi
+done
 echo ""
 echo "Lines of test code added: ~2,469 lines"

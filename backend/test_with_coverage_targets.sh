@@ -2,7 +2,7 @@
 # Test script with realistic coverage targets
 # Usage: ./test_with_coverage_targets.sh [target-percentage]
 
-cd $(dirname $0)
+cd "$(dirname "$0")"
 TARGET=${1:-75}  # Default to 75%, but allow override
 
 echo "=========================================="
