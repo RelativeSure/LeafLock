@@ -651,7 +651,7 @@ func TestPenetrationTesting(t *testing.T) {
 		bypassAttempts := []map[string]string{
 			{"Authorization": "Bearer fake-token"},
 			{"Authorization": "Basic YWRtaW46YWRtaW4="}, // admin:admin
-			{"Authorization": "Bearer"}, // Malformed token (no actual token)
+			{"Authorization": "Bearer"},                 // Malformed token (no actual token)
 			{"Authorization": "Bearer null"},
 			{"Authorization": "Bearer undefined"},
 			{"X-Auth-Token": "bypass-token"},
@@ -667,13 +667,13 @@ func TestPenetrationTesting(t *testing.T) {
 			authHeader := c.Get("Authorization")
 			xAuthToken := c.Get("X-Auth-Token")
 			cookie := c.Get("Cookie")
-			
+
 			// Check if ANY authentication header has a non-empty value
 			// Empty Authorization string is treated as "not set"
 			hasAuth := authHeader != ""
 			hasXAuth := xAuthToken != ""
 			hasCookie := cookie != ""
-			
+
 			// If ANY authentication attempt is detected, reject it
 			if hasAuth || hasXAuth || hasCookie {
 				return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})

@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"io"
 	"errors"
+	"io"
 	"testing"
 	"time"
 
@@ -113,13 +113,13 @@ func TestSecureTokenValidation(t *testing.T) {
 
 	// Test with a mock Clerk token (or skip if no proper token available)
 	// In a real environment with Clerk, this would validate actual Clerk tokens
-	
+
 	// Since we don't have a real Clerk token in tests, we expect this to fail
 	// but the test validates that the function handles tokens without panicking
 	testToken := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzEyMyIsImlhdCI6MTYwOTQ1OTIwMCwiZXhwIjoxNjA5NDYyODAwfQ.test"
-	
+
 	_, err := handler.SecureTokenValidation(testToken)
-	
+
 	// The token validation should either succeed (if properly mocked) or fail gracefully
 	// We're mainly testing that the function doesn't panic and handles errors
 	if err != nil {

@@ -20,12 +20,12 @@ func TestLoadConfig(t *testing.T) {
 	}()
 
 	tests := []struct {
-		name                string
-		setupEnv            func()
-		expectedDebug       bool
+		name                   string
+		setupEnv               func()
+		expectedDebug          bool
 		expectedDebugEndpoints bool
-		expectedThreshold   int
-		expectedRateLimit   bool
+		expectedThreshold      int
+		expectedRateLimit      bool
 	}{
 		{
 			name: "DefaultValues",
@@ -34,10 +34,10 @@ func TestLoadConfig(t *testing.T) {
 				os.Unsetenv("AUTH_FAILURE_THRESHOLD")
 				os.Setenv("RATE_LIMIT_AUTH", "true")
 			},
-			expectedDebug:       false,
+			expectedDebug:          false,
 			expectedDebugEndpoints: false,
-			expectedThreshold:   5,
-			expectedRateLimit:   true,
+			expectedThreshold:      5,
+			expectedRateLimit:      true,
 		},
 		{
 			name: "DebugEnabled",
@@ -46,10 +46,10 @@ func TestLoadConfig(t *testing.T) {
 				os.Setenv("AUTH_FAILURE_THRESHOLD", "10")
 				os.Setenv("RATE_LIMIT_AUTH", "false")
 			},
-			expectedDebug:       true,
+			expectedDebug:          true,
 			expectedDebugEndpoints: true,
-			expectedThreshold:   10,
-			expectedRateLimit:   false,
+			expectedThreshold:      10,
+			expectedRateLimit:      false,
 		},
 		{
 			name: "CustomThreshold",
@@ -57,10 +57,10 @@ func TestLoadConfig(t *testing.T) {
 				os.Setenv("CLERK_DEBUG", "false")
 				os.Setenv("AUTH_FAILURE_THRESHOLD", "3")
 			},
-			expectedDebug:       false,
+			expectedDebug:          false,
 			expectedDebugEndpoints: false,
-			expectedThreshold:   3,
-			expectedRateLimit:   true, // default
+			expectedThreshold:      3,
+			expectedRateLimit:      true, // default
 		},
 		{
 			name: "InvalidBoolValue",
@@ -68,30 +68,30 @@ func TestLoadConfig(t *testing.T) {
 				os.Setenv("CLERK_DEBUG", "not_a_bool")
 				os.Setenv("RATE_LIMIT_AUTH", "also_not_bool")
 			},
-			expectedDebug:       false,
+			expectedDebug:          false,
 			expectedDebugEndpoints: false,
-			expectedThreshold:   5, // default
-			expectedRateLimit:   true, // default
+			expectedThreshold:      5,    // default
+			expectedRateLimit:      true, // default
 		},
 		{
 			name: "InvalidIntValue",
 			setupEnv: func() {
 				os.Setenv("AUTH_FAILURE_THRESHOLD", "not_a_number")
 			},
-			expectedDebug:       false,
+			expectedDebug:          false,
 			expectedDebugEndpoints: false,
-			expectedThreshold:   5, // default
-			expectedRateLimit:   true,
+			expectedThreshold:      5, // default
+			expectedRateLimit:      true,
 		},
 		{
 			name: "RateLimitDisabled",
 			setupEnv: func() {
 				os.Setenv("RATE_LIMIT_AUTH", "false")
 			},
-			expectedDebug:       false,
+			expectedDebug:          false,
 			expectedDebugEndpoints: false,
-			expectedThreshold:   5, // default
-			expectedRateLimit:   false,
+			expectedThreshold:      5, // default
+			expectedRateLimit:      false,
 		},
 	}
 
@@ -101,7 +101,7 @@ func TestLoadConfig(t *testing.T) {
 			os.Unsetenv("CLERK_DEBUG")
 			os.Unsetenv("AUTH_FAILURE_THRESHOLD")
 			os.Unsetenv("RATE_LIMIT_AUTH")
-			
+
 			// Setup test environment
 			tt.setupEnv()
 
@@ -146,7 +146,7 @@ func TestGetEnvAsBool(t *testing.T) {
 		{"FalseLower", true, "false", true, false},
 		{"FalseUpper", true, "FALSE", true, false},
 		{"Invalid", true, "invalid", true, true}, // returns default
-		{"Empty", true, "", true, true},           // returns default
+		{"Empty", true, "", true, true},          // returns default
 		{"NotSet", false, "", false, false},      // returns default
 		{"One", true, "1", false, true},
 		{"Zero", true, "0", true, false},
@@ -227,14 +227,14 @@ func TestConfig_IsDebugMode(t *testing.T) {
 // TestConfig_HasValidClerkConfig tests Clerk configuration validation
 func TestConfig_HasValidClerkConfig(t *testing.T) {
 	tests := []struct {
-		name        string
-		secretKey   string
-		expected    bool
+		name      string
+		secretKey string
+		expected  bool
 	}{
 		{"EmptySecret", "", false},
 		{"TooShort", "sk_test_PLACEHOLDER_123", false},
 		{"TestKeyWithSuspiciousPattern", "sk_test_PLACEHOLDER_SHORT_FOR_SUSPICIOUS_TEST", false}, // Contains "test" and <= 50 chars
-		{"TestKeyButLongEnough", "sk_test_PLACEHOLDER_LONG_ENOUGH_FOR_VALIDATION_TEST", true}, // > 50 chars despite "test"
+		{"TestKeyButLongEnough", "sk_test_PLACEHOLDER_LONG_ENOUGH_FOR_VALIDATION_TEST", true},    // > 50 chars despite "test"
 		{"ValidLiveKey", "sk_live_PLACEHOLDER_FOR_VALID_LIVE_TEST", true},
 		{"SuspiciousPattern", "sk_test_your_key_here_PLACEHOLDER_SUSPICIOUS", false},
 	}

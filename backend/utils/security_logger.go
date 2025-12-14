@@ -74,7 +74,6 @@ func (sl *SecurityLogger) LogSessionEvent(event string, sessionID string, userID
 		event, redactedSessionID, redactedUserID)
 }
 
-
 // StructuredSecurityLog creates structured security log entry
 func StructuredSecurityLog(event string, severity string, userID uuid.UUID, details map[string]interface{}) {
 	logger := NewSecurityLogger(log.Writer())
@@ -99,4 +98,3 @@ func redactSessionID(sessionID string) string {
 	}
 	return "[session:" + sessionID[:8] + "...]"
 }
-

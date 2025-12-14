@@ -88,12 +88,12 @@ func ValidateClerkConfiguration(secretKey string) error {
 	if len(secretKey) < 20 {
 		return fmt.Errorf("CLERK_SECRET_KEY must be at least 20 characters")
 	}
-	
+
 	pattern := getSuspiciousPattern(secretKey)
 	if pattern != "" {
 		return fmt.Errorf("CLERK_SECRET_KEY contains weak pattern: %s", pattern)
 	}
-	
+
 	return nil
 }
 
@@ -101,14 +101,14 @@ func ValidateClerkConfiguration(secretKey string) error {
 // Returns the pattern found, or empty string if none found
 func getSuspiciousPattern(s string) string {
 	lower := strings.ToLower(s)
-	
+
 	// Special handling for "test"
 	// We allow sk_test_ prefix but still check for other weak patterns
 	if strings.HasPrefix(s, "sk_test_") {
 		// For test keys, only check for weak patterns beyond the standard prefix
 		restOfKey := s[len("sk_test_"):]
 		lowerRest := strings.ToLower(restOfKey)
-		
+
 		// Check if "test" appears again in the rest of the key
 		if strings.Contains(lowerRest, "test") {
 			// Check for standalone "test" or test_ pattern
@@ -127,7 +127,7 @@ func getSuspiciousPattern(s string) string {
 		}
 		return "" // Valid test key - no suspicious patterns found
 	}
-	
+
 	// For non-test keys, check all patterns (ordered to match test expectations)
 	// Check string patterns first, then numeric patterns
 	allPatterns := []string{"password", "secret", "your_key", "replace_me", "example", "test", "123456"}
@@ -144,7 +144,7 @@ func getSuspiciousPattern(s string) string {
 			}
 		}
 	}
-	
+
 	return ""
 }
 

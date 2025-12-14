@@ -167,7 +167,6 @@ func TestSessionManager_HashToken(t *testing.T) {
 	}
 }
 
-
 // Note: These are basic unit tests. For comprehensive testing, you would need:
 // 1. Integration tests with real database and Redis
 // 2. Testcontainers for isolated test environments
