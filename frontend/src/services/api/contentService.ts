@@ -1,7 +1,7 @@
-import { ApiClient } from './apiClient'
+import { ClerkApiClient } from './clerkApiClient'
 import { Note, Folder, Template, NoteVersion, normalizeNoteResponse } from './types'
 
-class ContentService extends ApiClient {
+class ContentService extends ClerkApiClient {
   // Notes methods
   async getNotes(): Promise<Note[]> {
     const response = await this.request<{ notes: any[] }>('/notes')
@@ -359,4 +359,4 @@ class ContentService extends ApiClient {
   }
 }
 
-export const contentService = new ContentService()
+export const contentService = new ContentService(import.meta.env.VITE_API_URL || '')
