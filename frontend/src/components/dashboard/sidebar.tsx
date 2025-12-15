@@ -144,11 +144,11 @@ export function Sidebar() {
                   <div className="flex gap-2">
                     {['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'].map(
                       (color) => (
-                        <button
+                        <Button
                           key={color}
                           type="button"
                           onClick={() => setNewFolderColor(color)}
-                          className={`w-8 h-8 rounded-full border-2 transition-bounce hover:scale-110 ${
+                          className={`w-8 h-8 rounded-full p-0 border-2 transition-bounce hover:scale-110 ${
                             newFolderColor === color
                               ? 'border-foreground scale-110'
                               : 'border-transparent'

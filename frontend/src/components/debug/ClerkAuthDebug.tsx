@@ -1,5 +1,6 @@
 import React from 'react'
 import { useAuth, useUser, useSession } from '@clerk/clerk-react'
+import { Button } from '@/components/ui/button'
 
 export const ClerkAuthDebug: React.FC = () => {
   const { isSignedIn, isLoaded, sessionId, userId } = useAuth()
@@ -56,12 +57,14 @@ export const ClerkAuthDebug: React.FC = () => {
     <div className="fixed bottom-4 right-4 z-50 max-w-md bg-black bg-opacity-80 text-white p-4 rounded-lg text-xs font-mono overflow-auto max-h-96">
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-sm font-bold text-yellow-300">🔍 Auth Debug</h3>
-        <button
-          onClick={copyToClipboard}
+        <Button
+          variant="default"
+          size="sm"
           className="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-xs"
+          onClick={copyToClipboard}
         >
           Copy
-        </button>
+        </Button>
       </div>
 
       {/* Simple status indicators */}

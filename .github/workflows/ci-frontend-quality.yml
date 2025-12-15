@@ -50,6 +50,18 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
+      - name: 🚨 Check for .jsx files (FORBIDDEN)
+        working-directory: frontend
+        run: sh scripts/check-no-jsx.sh
+
+      - name: 🚨 Check shadcn/ui compliance (MANDATORY)
+        working-directory: frontend
+        run: sh scripts/check-shadcn-compliance.sh
+
+      - name: 🚨 Check documentation policy
+        working-directory: frontend
+        run: sh scripts/check-frontend-docs.sh
+
       - name: 🔍 Run ESLint
         working-directory: frontend
         run: pnpm run lint

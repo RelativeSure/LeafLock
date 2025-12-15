@@ -15,9 +15,9 @@ export interface Config {
  */
 function isRailwayEnvironment(): boolean {
   return !!(
-    process.env.RAILWAY_ENVIRONMENT ||
-    process.env.RAILWAY_PROJECT_ID ||
-    process.env.RAILWAY_SERVICE_NAME ||
+    import.meta.env.RAILWAY_ENVIRONMENT ||
+    import.meta.env.RAILWAY_PROJECT_ID ||
+    import.meta.env.RAILWAY_SERVICE_NAME ||
     // Check for Railway-specific environment variables
     (typeof window !== 'undefined' && window.location.hostname.includes('railway.app'))
   )
@@ -29,19 +29,21 @@ function isRailwayEnvironment(): boolean {
 function getRailwayServiceUrl(serviceName: string): string | null {
   // Railway service references (recommended approach)
   // These are automatically set when you reference other services
-  const serviceUrl = process.env[`${serviceName.toUpperCase()}_URL`]
+  const envVarName = `${serviceName.toUpperCase()}_URL`
+  const serviceUrl = import.meta.env[envVarName as keyof ImportMetaEnv]
   if (serviceUrl) {
-    return serviceUrl
+    return serviceUrl as string
   }
 
   // Railway provides these environment variables
-  const railwayUrl = process.env[`RAILWAY_${serviceName.toUpperCase()}_URL`]
+  const railwayVarName = `RAILWAY_${serviceName.toUpperCase()}_URL`
+  const railwayUrl = import.meta.env[railwayVarName as keyof ImportMetaEnv]
   if (railwayUrl) {
-    return railwayUrl
+    return railwayUrl as string
   }
 
   // Fallback: construct from Railway's internal networking
-  const railwayInternalHost = process.env.RAILWAY_INTERNAL_HOST
+  const railwayInternalHost = import.meta.env.RAILWAY_INTERNAL_HOST
   if (railwayInternalHost) {
     return `https://${railwayInternalHost}`
   }
@@ -54,28 +56,29 @@ function getRailwayServiceUrl(serviceName: string): string | null {
  */
 function resolveApiUrl(): string {
   // 1. Explicit override (highest priority)
-  if (process.env.VITE_API_URL) {
-    return process.env.VITE_API_URL
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL
   }
 
   // 2. Railway service discovery (automatic - no manual config needed!)
   if (isRailwayEnvironment()) {
     // Try Railway's automatic service variables first (most reliable)
-    const automaticBackendUrl =
-      process.env.BACKEND_URL || process.env.API_URL || process.env.SERVER_URL
+    const automaticBackendUrl = (import.meta.env.BACKEND_URL ||
+      import.meta.env.API_URL ||
+      import.meta.env.SERVER_URL) as string | undefined
 
     if (automaticBackendUrl) {
       return `${automaticBackendUrl}/api/v1`
     }
 
     // Try Railway's private/internal networking (preferred for internal communication)
-    const railwayInternalHost = process.env.RAILWAY_INTERNAL_HOST
+    const railwayInternalHost = import.meta.env.RAILWAY_INTERNAL_HOST
     if (railwayInternalHost) {
       return `https://${railwayInternalHost}/api/v1`
     }
 
     // Try Railway's private domain pattern
-    const railwayPrivateDomain = process.env.RAILWAY_PRIVATE_DOMAIN
+    const railwayPrivateDomain = import.meta.env.RAILWAY_PRIVATE_DOMAIN
     if (railwayPrivateDomain) {
       return `https://${railwayPrivateDomain}/api/v1`
     }
@@ -91,22 +94,22 @@ function resolveApiUrl(): string {
     }
 
     // Try Railway's public domain pattern (fallback)
-    const railwayPublicDomain = process.env.RAILWAY_PUBLIC_DOMAIN
+    const railwayPublicDomain = import.meta.env.RAILWAY_PUBLIC_DOMAIN
     if (railwayPublicDomain) {
       return `https://${railwayPublicDomain}/api/v1`
     }
   }
 
   // 3. Development proxy target
-  if (process.env.VITE_DEV_PROXY_TARGET) {
-    return `${process.env.VITE_DEV_PROXY_TARGET}/api/v1`
+  if (import.meta.env.VITE_DEV_PROXY_TARGET) {
+    return `${import.meta.env.VITE_DEV_PROXY_TARGET as string}/api/v1`
   }
 
   // 4. Granular dev settings
-  if (process.env.VITE_DEV_BACKEND_PROTOCOL) {
-    const protocol = process.env.VITE_DEV_BACKEND_PROTOCOL
-    const host = process.env.VITE_DEV_BACKEND_HOST || 'localhost'
-    const port = process.env.VITE_DEV_BACKEND_PORT || '8080'
+  if (import.meta.env.VITE_DEV_BACKEND_PROTOCOL) {
+    const protocol = import.meta.env.VITE_DEV_BACKEND_PROTOCOL as string
+    const host = (import.meta.env.VITE_DEV_BACKEND_HOST as string) || 'localhost'
+    const port = (import.meta.env.VITE_DEV_BACKEND_PORT as string) || '8080'
     return `${protocol}://${host}:${port}/api/v1`
   }
 
@@ -123,18 +126,20 @@ function resolveApiUrl(): string {
  * Get service name from Railway environment
  */
 function getServiceName(): string | undefined {
-  return process.env.RAILWAY_SERVICE_NAME || process.env.VITE_SERVICE_NAME
+  return (import.meta.env.RAILWAY_SERVICE_NAME || import.meta.env.VITE_SERVICE_NAME) as
+    | string
+    | undefined
 }
 
 /**
  * Determine environment type
  */
 function getEnvironment(): 'development' | 'production' | 'preview' {
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.MODE === 'development') {
     return 'development'
   }
 
-  if (process.env.RAILWAY_ENVIRONMENT === 'preview') {
+  if (import.meta.env.RAILWAY_ENVIRONMENT === 'preview') {
     return 'preview'
   }
 
@@ -165,18 +170,20 @@ export function getConfig(overrides?: Partial<Config>): Config {
  * Log configuration for debugging
  */
 export function logConfig(): void {
-  console.log('LeafLock Configuration:', {
-    apiUrl: config.apiUrl,
-    environment: config.environment,
-    isRailway: config.isRailway,
-    serviceName: config.serviceName,
-    envVars: {
-      VITE_API_URL: process.env.VITE_API_URL,
-      RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT,
-      RAILWAY_SERVICE_NAME: process.env.RAILWAY_SERVICE_NAME,
-      RAILWAY_INTERNAL_HOST: process.env.RAILWAY_INTERNAL_HOST,
-    },
-  })
+  if (import.meta.env.DEV) {
+    console.log('LeafLock Configuration:', {
+      apiUrl: config.apiUrl,
+      environment: config.environment,
+      isRailway: config.isRailway,
+      serviceName: config.serviceName,
+      envVars: {
+        VITE_API_URL: import.meta.env.VITE_API_URL,
+        RAILWAY_ENVIRONMENT: import.meta.env.RAILWAY_ENVIRONMENT,
+        RAILWAY_SERVICE_NAME: import.meta.env.RAILWAY_SERVICE_NAME,
+        RAILWAY_INTERNAL_HOST: import.meta.env.RAILWAY_INTERNAL_HOST,
+      },
+    })
+  }
 }
 
 export default config

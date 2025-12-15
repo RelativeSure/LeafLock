@@ -116,10 +116,11 @@ export function SearchBar() {
                   const content = decrypted?.content || ''
 
                   return (
-                    <button
+                    <Button
                       key={note.id}
+                      variant="ghost"
+                      className="w-full text-left p-3 rounded-lg hover:bg-accent transition-smooth border border-border justify-start h-auto font-normal"
                       onClick={() => handleSelectNote(note.id)}
-                      className="w-full text-left p-3 rounded-lg hover:bg-accent transition-smooth border border-border"
                     >
                       <h3 className="font-medium mb-1 line-clamp-1">{title}</h3>
                       <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
@@ -148,7 +149,7 @@ export function SearchBar() {
                             : 'Unknown'}
                         </span>
                       </div>
-                    </button>
+                    </Button>
                   )
                 })}
               </div>

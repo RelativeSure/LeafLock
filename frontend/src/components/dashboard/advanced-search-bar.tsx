@@ -320,12 +320,14 @@ export function AdvancedSearchBar() {
                           {filters.tags.map((tag) => (
                             <Badge key={tag} variant="secondary" className="gap-1">
                               {tag}
-                              <button
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 w-5 p-0 ml-1 hover:text-destructive"
                                 onClick={() => removeTagFilter(tag)}
-                                className="ml-1 hover:text-destructive"
                               >
                                 <X className="h-3 w-3" />
-                              </button>
+                              </Button>
                             </Badge>
                           ))}
                           <Select onValueChange={(value) => addTagFilter(value)} value="">
@@ -486,10 +488,11 @@ export function AdvancedSearchBar() {
                               const content = decrypted?.content || ''
 
                               return (
-                                <button
+                                <Button
                                   key={note.id}
+                                  variant="ghost"
+                                  className="w-full text-left p-3 rounded-lg hover:bg-accent transition-smooth border border-border justify-start h-auto font-normal"
                                   onClick={() => handleSelectNote(note.id)}
-                                  className="w-full text-left p-3 rounded-lg hover:bg-accent transition-smooth border border-border"
                                 >
                                   <div className="flex items-start justify-between gap-2 mb-1">
                                     <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -541,7 +544,7 @@ export function AdvancedSearchBar() {
                                       })()}
                                     </span>
                                   </div>
-                                </button>
+                                </Button>
                               )
                             })}
                           </div>

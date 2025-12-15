@@ -14,6 +14,7 @@
 
 import * as React from 'react'
 import { SignUp } from '@clerk/clerk-react'
+import { Button } from '@/components/ui/button'
 
 export function RegisterForm({
   onToggleMode,
@@ -98,12 +99,13 @@ export function RegisterForm({
       <div className="mt-6 text-center">
         <p className="text-sm text-muted-foreground">
           Already have an account?{' '}
-          <button
+          <Button
+            variant="link"
             onClick={onToggleMode}
-            className="text-primary hover:text-primary/90 font-medium underline-offset-4 hover:underline transition-all"
+            className="text-primary hover:text-primary/90 font-medium underline-offset-4 hover:underline transition-all p-0 h-auto"
           >
             Sign in
-          </button>
+          </Button>
         </p>
       </div>
     </div>

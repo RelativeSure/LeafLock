@@ -79,12 +79,13 @@ export function TagsPage() {
                   <div className="flex gap-2">
                     {['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'].map(
                       (color) => (
-                        <button
+                        <Button
                           key={color}
-                          type="button"
-                          onClick={() => setNewTagColor(color)}
-                          className="w-8 h-8 rounded-full border-2 border-border hover:border-primary transition-colors"
+                          variant="ghost"
+                          size="sm"
+                          className="w-8 h-8 rounded-full p-0 border-2 border-border hover:border-primary transition-colors"
                           style={{ backgroundColor: color }}
+                          onClick={() => setNewTagColor(color)}
                         />
                       )
                     )}

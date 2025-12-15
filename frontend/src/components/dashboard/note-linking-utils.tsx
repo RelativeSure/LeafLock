@@ -390,10 +390,11 @@ export function BacklinksSection({ currentNoteId, onNoteSelect }: BacklinksSecti
       </h3>
       <div className="space-y-2">
         {backlinks.map((note) => (
-          <button
+          <Button
             key={note.id}
+            variant="ghost"
+            className="w-full text-left p-2 rounded-md hover:bg-accent transition-colors justify-start h-auto font-normal"
             onClick={() => onNoteSelect(note.id)}
-            className="w-full text-left p-2 rounded-md hover:bg-accent transition-colors"
           >
             <div className="flex items-center gap-2">
               <FileText className="h-3 w-3 text-muted-foreground" />
@@ -413,7 +414,7 @@ export function BacklinksSection({ currentNoteId, onNoteSelect }: BacklinksSecti
                   })()
                 : 'Unknown'}
             </div>
-          </button>
+          </Button>
         ))}
       </div>
     </div>

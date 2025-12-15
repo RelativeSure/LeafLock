@@ -31,7 +31,7 @@ import { useClerkApiClient } from './services/api/clerkApiClient'
 import { useEnhancedClerk } from './hooks/useEnhancedClerk'
 import { getClerkPublishableKey, debugRuntimeConfig } from './lib/runtime-config'
 import './styles/clerk-auth.css'
-// import { ConfigDebug } from './components/debug/ConfigDebug'
+
 // Temporarily remove wrappers to isolate update loop
 
 // Lazy load router to prevent circular dependency

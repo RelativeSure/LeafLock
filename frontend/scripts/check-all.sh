@@ -10,22 +10,37 @@ echo "=================================="
 START_TIME=$(date +%s)
 
 echo ""
-echo "1️⃣  Running TypeScript type check..."
+echo "1️⃣  Checking for prohibited .jsx files..."
+sh scripts/check-no-jsx.sh
+echo "✅ No .jsx files found"
+
+echo ""
+echo "2️⃣  Checking shadcn/ui compliance..."
+sh scripts/check-shadcn-compliance.sh
+echo "✅ shadcn/ui compliance verified"
+
+echo ""
+echo "3️⃣  Checking documentation policy..."
+sh scripts/check-frontend-docs.sh
+echo "✅ Documentation policy compliance verified"
+
+echo ""
+echo "4️⃣  Running TypeScript type check..."
 pnpm run type-check
 echo "✅ Type check passed"
 
 echo ""
-echo "2️⃣  Running ESLint..."
+echo "5️⃣  Running ESLint..."
 pnpm run lint
 echo "✅ Linting passed"
 
 echo ""
-echo "3️⃣  Running Prettier format check..."
+echo "6️⃣  Running Prettier format check..."
 pnpm run format:check
 echo "✅ Format check passed"
 
 echo ""
-echo "4️⃣  Running tests..."
+echo "7️⃣  Running tests..."
 echo "   Note: Tests take ~90-160 seconds to complete. Please be patient..."
 pnpm run test
 echo "✅ All tests passed"

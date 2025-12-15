@@ -82,9 +82,6 @@ import { ShareNoteDialog } from './share-note-dialog'
 // Temporarily disable collaboration bar to isolate post-login crash
 import { EncryptionUnlockDialog } from './encryption-unlock-dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-// import { NoteStats } from './note-stats'
-// Temporarily disable keyboard shortcuts dialog to isolate React ref error after login
-// import { BacklinksSection } from './note-linking-utils'
 // Temporarily disable version history dialog to isolate post-login crash
 import { RichTextEditor } from './rich-text-editor'
 
@@ -564,9 +561,14 @@ export function NoteEditor() {
               <Badge key={tag} variant="secondary" className="gap-1">
                 <TagIcon className="h-3 w-3" />
                 {tag}
-                <button onClick={() => handleRemoveTag(tag)} className="ml-1 hover:text-danger">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 w-5 p-0 ml-1 hover:text-danger"
+                  onClick={() => handleRemoveTag(tag)}
+                >
                   <X className="h-3 w-3" />
-                </button>
+                </Button>
               </Badge>
             ))}
           </div>
