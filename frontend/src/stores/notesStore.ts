@@ -64,7 +64,7 @@ import {
   type Tag,
   type NoteVersion,
 } from '@/services/api'
-import { ENCRYPTION_VERSION, encryptTextWithStoredKey } from '@/lib/encryption-utils'
+import { ENCRYPTION_VERSION, encryptTextWithStoredKey, getStoredKey } from '@/lib/encryption-utils'
 
 interface NotesState {
   /**
@@ -671,8 +671,26 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     const { selectedFolder } = get()
     const folderId = note.folderId ?? selectedFolder ?? null
 
-    const titlePayload = await encryptTextWithStoredKey(note.title ?? '')
-    const contentPayload = await encryptTextWithStoredKey(note.content ?? '')
+    // Check if encryption key is available
+    const encryptionKeyAvailable = getStoredKey() !== null
+    let titlePayload = note.title ?? ''
+    let contentPayload = note.content ?? ''
+    let shouldEncrypt = false
+
+    if (encryptionKeyAvailable) {
+      try {
+        titlePayload = await encryptTextWithStoredKey(note.title ?? '')
+        contentPayload = await encryptTextWithStoredKey(note.content ?? '')
+        shouldEncrypt = true
+      } catch (error) {
+        // If encryption fails, store as plaintext
+        console.warn('Encryption failed, storing note as plaintext:', error)
+        shouldEncrypt = false
+      }
+    } else {
+      // No encryption key available, store as plaintext
+      shouldEncrypt = false
+    }
 
     const createdNote = await contentService.createNote({
       title: titlePayload,
@@ -680,8 +698,8 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       folderId,
       tags: note.tags ?? [],
       pinned: note.pinned ?? false,
-      encrypted: true,
-      encryptionVersion: ENCRYPTION_VERSION,
+      encrypted: shouldEncrypt,
+      encryptionVersion: shouldEncrypt ? ENCRYPTION_VERSION : undefined,
       userId: user.id,
     })
 

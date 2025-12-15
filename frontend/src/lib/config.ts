@@ -55,6 +55,15 @@ function getRailwayServiceUrl(serviceName: string): string | null {
  * Resolve API URL based on environment and service discovery
  */
 function resolveApiUrl(): string {
+  // Special case: Railway preview deployments should use same-origin
+  // This avoids CORS issues and ensures preview uses its own backend
+  if (isRailwayEnvironment() && import.meta.env.RAILWAY_ENVIRONMENT === 'preview') {
+    if (typeof window !== 'undefined') {
+      console.log('🔧 Railway preview detected: using same-origin API URL')
+      return `${window.location.origin}/api/v1`
+    }
+  }
+
   // 1. Explicit override (highest priority)
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL
