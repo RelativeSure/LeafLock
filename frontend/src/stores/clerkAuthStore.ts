@@ -48,7 +48,16 @@ export const useClerkAuthStore = create<AuthState>((set) => ({
   isLoading: true,
   isAdmin: false,
 
-  setUser: (user) => set({ user, isAuthenticated: !!user, isAdmin: user?.isAdmin || false }),
+  setUser: (user) => {
+    set({ user, isAuthenticated: !!user, isAdmin: user?.isAdmin || false })
+    
+    // Sync user data to localStorage for backward compatibility
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user))
+    } else {
+      localStorage.removeItem('user')
+    }
+  },
 
   setLoading: (loading) => set({ isLoading: loading }),
 

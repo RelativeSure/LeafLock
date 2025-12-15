@@ -266,6 +266,23 @@ export function NoteEditor() {
     }
   }, [selectedNote?.id, isUnlocked])
 
+  // Set default title with timestamp if title is empty and content exists
+  useEffect(() => {
+    if (selectedNote && !title.trim() && displayContent.trim()) {
+      const now = new Date()
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+      const timestamp = now.toLocaleString('en-US', {
+        timeZone,
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+      setTitle(timestamp)
+    }
+  }, [displayContent, selectedNote, title])
+
   useEffect(() => {
     if (selectedNote && displayContent !== undefined) {
       if (saveTimeoutRef.current) {
@@ -302,15 +319,30 @@ export function NoteEditor() {
           const trimmedContent = displayContent.trim()
 
           if (!trimmedTitle && !trimmedContent) {
-            // Don't save empty notes - show info toast
-            toast.info('Empty notes are not saved automatically', { duration: 2000 })
+            // Don't save empty notes - just return silently
             return
+          }
+          
+          // Auto-generate title from timestamp if title is empty but content exists
+          let finalTitle = trimmedTitle
+          if (!finalTitle && trimmedContent) {
+            const now = new Date()
+            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+            finalTitle = now.toLocaleString('en-US', {
+              timeZone,
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+            setTitle(finalTitle)
           }
 
           // Skip if unchanged vs last saved snapshot (by plaintext)
           const tagsKey = (noteTags || []).slice().sort().join('|')
           if (
-            lastSavedRef.current.title === trimmedTitle &&
+            lastSavedRef.current.title === finalTitle &&
             lastSavedRef.current.content === trimmedContent &&
             lastSavedRef.current.tagsKey === tagsKey
           ) {
@@ -319,7 +351,7 @@ export function NoteEditor() {
 
           // Always encrypt title and content before saving
           if (isUnlocked) {
-            const encryptedTitle = await encryptText(title)
+            const encryptedTitle = await encryptText(finalTitle)
             const encryptedContent = await encryptText(displayContent)
             console.log('[Editor] autosave -> updateNote', selectedNote.id)
 
@@ -337,7 +369,7 @@ export function NoteEditor() {
             console.log('[Editor] autosave complete', selectedNote.id)
 
             // Update last saved snapshot
-            lastSavedRef.current.title = trimmedTitle
+            lastSavedRef.current.title = finalTitle
             lastSavedRef.current.content = trimmedContent
             lastSavedRef.current.tagsKey = tagsKey
           } else {

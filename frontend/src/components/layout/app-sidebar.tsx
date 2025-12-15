@@ -134,10 +134,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 onClick={() => {
                   // Placeholder for trash
                 }}
-                className="group-data-[collapsible=icon]:justify-center"
+                className="justify-center"
               >
                 <Trash2 />
-                <span className="group-data-[collapsible=icon]:hidden">Trash</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -285,30 +284,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </Collapsible>
 
         <SidebarGroup className="mt-auto">
-          <SidebarGroupLabel>Settings</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                tooltip="Settings"
-                className="group-data-[collapsible=icon]:justify-center"
-              >
+              <SidebarMenuButton asChild tooltip="Settings" className="justify-center">
                 <Link to="/settings">
                   <Settings />
-                  <span className="group-data-[collapsible=icon]:hidden">Settings</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             {user?.isAdmin && (
               <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  tooltip="Admin Console"
-                  className="group-data-[collapsible=icon]:justify-center"
-                >
+                <SidebarMenuButton asChild tooltip="Admin Console" className="justify-center">
                   <Link to="/admin">
                     <Shield />
-                    <span className="group-data-[collapsible=icon]:hidden">Admin Console</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
