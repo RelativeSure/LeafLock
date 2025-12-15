@@ -7,6 +7,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Helper functions to handle environment variables with error checking
+func mustSetenv(t *testing.T, key, value string) {
+	t.Helper()
+	if err := os.Setenv(key, value); err != nil {
+		t.Fatalf("Failed to set env %s: %v", key, err)
+	}
+}
+
+func mustUnsetenv(t *testing.T, key string) {
+	t.Helper()
+	if err := os.Unsetenv(key); err != nil {
+		t.Fatalf("Failed to unset env %s: %v", key, err)
+	}
+}
+
 // TestLoadConfig tests loading configuration from environment
 func TestLoadConfig(t *testing.T) {
 	// Save original values
@@ -14,6 +29,7 @@ func TestLoadConfig(t *testing.T) {
 	originalAuthThreshold := os.Getenv("AUTH_FAILURE_THRESHOLD")
 	originalRateLimit := os.Getenv("RATE_LIMIT_AUTH")
 	defer func() {
+		// nolint:errcheck // Best effort cleanup in tests
 		os.Setenv("CLERK_DEBUG", originalClerkDebug)
 		os.Setenv("AUTH_FAILURE_THRESHOLD", originalAuthThreshold)
 		os.Setenv("RATE_LIMIT_AUTH", originalRateLimit)
@@ -30,9 +46,9 @@ func TestLoadConfig(t *testing.T) {
 		{
 			name: "DefaultValues",
 			setupEnv: func() {
-				os.Unsetenv("CLERK_DEBUG")
-				os.Unsetenv("AUTH_FAILURE_THRESHOLD")
-				os.Setenv("RATE_LIMIT_AUTH", "true")
+				mustUnsetenv(t, "CLERK_DEBUG")
+				mustUnsetenv(t, "AUTH_FAILURE_THRESHOLD")
+				mustSetenv(t, "RATE_LIMIT_AUTH", "true")
 			},
 			expectedDebug:          false,
 			expectedDebugEndpoints: false,
@@ -42,9 +58,9 @@ func TestLoadConfig(t *testing.T) {
 		{
 			name: "DebugEnabled",
 			setupEnv: func() {
-				os.Setenv("CLERK_DEBUG", "true")
-				os.Setenv("AUTH_FAILURE_THRESHOLD", "10")
-				os.Setenv("RATE_LIMIT_AUTH", "false")
+				mustSetenv(t, "CLERK_DEBUG", "true")
+				mustSetenv(t, "AUTH_FAILURE_THRESHOLD", "10")
+				mustSetenv(t, "RATE_LIMIT_AUTH", "false")
 			},
 			expectedDebug:          true,
 			expectedDebugEndpoints: true,
@@ -54,8 +70,8 @@ func TestLoadConfig(t *testing.T) {
 		{
 			name: "CustomThreshold",
 			setupEnv: func() {
-				os.Setenv("CLERK_DEBUG", "false")
-				os.Setenv("AUTH_FAILURE_THRESHOLD", "3")
+				mustSetenv(t, "CLERK_DEBUG", "false")
+				mustSetenv(t, "AUTH_FAILURE_THRESHOLD", "3")
 			},
 			expectedDebug:          false,
 			expectedDebugEndpoints: false,
@@ -65,8 +81,8 @@ func TestLoadConfig(t *testing.T) {
 		{
 			name: "InvalidBoolValue",
 			setupEnv: func() {
-				os.Setenv("CLERK_DEBUG", "not_a_bool")
-				os.Setenv("RATE_LIMIT_AUTH", "also_not_bool")
+				mustSetenv(t, "CLERK_DEBUG", "not_a_bool")
+				mustSetenv(t, "RATE_LIMIT_AUTH", "also_not_bool")
 			},
 			expectedDebug:          false,
 			expectedDebugEndpoints: false,
@@ -76,7 +92,7 @@ func TestLoadConfig(t *testing.T) {
 		{
 			name: "InvalidIntValue",
 			setupEnv: func() {
-				os.Setenv("AUTH_FAILURE_THRESHOLD", "not_a_number")
+				mustSetenv(t, "AUTH_FAILURE_THRESHOLD", "not_a_number")
 			},
 			expectedDebug:          false,
 			expectedDebugEndpoints: false,
@@ -86,7 +102,7 @@ func TestLoadConfig(t *testing.T) {
 		{
 			name: "RateLimitDisabled",
 			setupEnv: func() {
-				os.Setenv("RATE_LIMIT_AUTH", "false")
+				mustSetenv(t, "RATE_LIMIT_AUTH", "false")
 			},
 			expectedDebug:          false,
 			expectedDebugEndpoints: false,
@@ -98,9 +114,9 @@ func TestLoadConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clear environment
-			os.Unsetenv("CLERK_DEBUG")
-			os.Unsetenv("AUTH_FAILURE_THRESHOLD")
-			os.Unsetenv("RATE_LIMIT_AUTH")
+			mustUnsetenv(t, "CLERK_DEBUG")
+			mustUnsetenv(t, "AUTH_FAILURE_THRESHOLD")
+			mustUnsetenv(t, "RATE_LIMIT_AUTH")
 
 			// Setup test environment
 			tt.setupEnv()
@@ -120,13 +136,14 @@ func TestLoadConfig(t *testing.T) {
 // TestLoadConfig_SecretKey tests that secret key is loaded from env
 func TestLoadConfig_SecretKey(t *testing.T) {
 	originalSecretKey := os.Getenv("CLERK_SECRET_KEY")
-	defer os.Setenv("CLERK_SECRET_KEY", originalSecretKey)
+	// nolint:errcheck // Cleanup in test; failures are not critical
+		defer os.Setenv("CLERK_SECRET_KEY", originalSecretKey)
 
-	os.Setenv("CLERK_SECRET_KEY", "sk_test_PLACEHOLDER_FOR_TESTING_ONLY")
+	mustSetenv(t, "CLERK_SECRET_KEY", "sk_test_PLACEHOLDER_FOR_TESTING_ONLY")
 	config := LoadConfig()
 	assert.Equal(t, "sk_test_PLACEHOLDER_FOR_TESTING_ONLY", config.ClerkSecretKey)
 
-	os.Unsetenv("CLERK_SECRET_KEY")
+	mustUnsetenv(t, "CLERK_SECRET_KEY")
 	config = LoadConfig()
 	assert.Equal(t, "", config.ClerkSecretKey)
 }
@@ -155,15 +172,15 @@ func TestGetEnvAsBool(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.setEnv {
-				os.Setenv("TEST_BOOL", tt.value)
+				mustSetenv(t, "TEST_BOOL", tt.value)
 			} else {
-				os.Unsetenv("TEST_BOOL")
+				mustUnsetenv(t, "TEST_BOOL")
 			}
 
 			result := getEnvAsBool("TEST_BOOL", tt.defaultValue)
 			assert.Equal(t, tt.expected, result)
 
-			os.Unsetenv("TEST_BOOL")
+			mustUnsetenv(t, "TEST_BOOL")
 		})
 	}
 }
@@ -190,15 +207,15 @@ func TestGetEnvAsInt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.setEnv {
-				os.Setenv("TEST_INT", tt.value)
+				mustSetenv(t, "TEST_INT", tt.value)
 			} else {
-				os.Unsetenv("TEST_INT")
+				mustUnsetenv(t, "TEST_INT")
 			}
 
 			result := getEnvAsInt("TEST_INT", tt.defaultValue)
 			assert.Equal(t, tt.expected, result)
 
-			os.Unsetenv("TEST_INT")
+			mustUnsetenv(t, "TEST_INT")
 		})
 	}
 }
@@ -282,9 +299,10 @@ func TestContainsSuspiciousPattern(t *testing.T) {
 // TestConfig_LoadClerkSecretKey tests loading Clerk secret key
 func TestConfig_LoadClerkSecretKey(t *testing.T) {
 	originalKey := os.Getenv("CLERK_SECRET_KEY")
-	defer os.Setenv("CLERK_SECRET_KEY", originalKey)
+	// nolint:errcheck // Cleanup in test; failures are not critical
+		defer os.Setenv("CLERK_SECRET_KEY", originalKey)
 
-	os.Setenv("CLERK_SECRET_KEY", "sk_test_PLACEHOLDER_FOR_LOAD_CONFIG_TEST_abcdefghijklmnopqrstuvwxyz")
+	mustSetenv(t, "CLERK_SECRET_KEY", "sk_test_PLACEHOLDER_FOR_LOAD_CONFIG_TEST_abcdefghijklmnopqrstuvwxyz")
 	config := LoadConfig()
 
 	assert.Equal(t, "sk_test_PLACEHOLDER_FOR_LOAD_CONFIG_TEST_abcdefghijklmnopqrstuvwxyz", config.ClerkSecretKey)
@@ -295,9 +313,10 @@ func TestConfig_LoadClerkSecretKey(t *testing.T) {
 // TestConfig_DebugEndpointsEnabledWithDebug tests debug endpoints auto-enable
 func TestConfig_DebugEndpointsEnabledWithDebug(t *testing.T) {
 	originalDebug := os.Getenv("CLERK_DEBUG")
-	defer os.Setenv("CLERK_DEBUG", originalDebug)
+	// nolint:errcheck // Cleanup in test; failures are not critical
+		defer os.Setenv("CLERK_DEBUG", originalDebug)
 
-	os.Setenv("CLERK_DEBUG", "true")
+	mustSetenv(t, "CLERK_DEBUG", "true")
 	config := LoadConfig()
 
 	assert.True(t, config.EnableDebugLogging)
