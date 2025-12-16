@@ -132,6 +132,8 @@ vi.mock('@/components/ui/dropdown-menu', () => ({
     }
     return <button data-testid="dropdown-trigger">{children}</button>
   },
+  DropdownMenuLabel: ({ children }: any) => <div data-testid="dropdown-menu-label">{children}</div>,
+  DropdownMenuSeparator: () => <hr data-testid="dropdown-menu-separator" />,
 }))
 
 vi.mock('@/components/ui/dialog', () => ({
@@ -184,6 +186,14 @@ vi.mock('@/components/ui/user-avatar', () => ({
   ),
 }))
 
+vi.mock('./account-sidebar', () => ({
+  AccountSidebar: ({ onClose }: any) => (
+    <div data-testid="account-sidebar">
+      <button onClick={onClose}>Close Account Sidebar</button>
+    </div>
+  ),
+}))
+
 vi.mock('../sidebar-note-list', () => ({
   SidebarNoteList: () => <div data-testid="sidebar-note-list">Note List</div>,
 }))
@@ -198,6 +208,15 @@ vi.mock('lucide-react', () => ({
   Leaf: () => <span data-testid="icon-leaf">leaf</span>,
   ChevronRight: () => <span data-testid="icon-chevron">chevron</span>,
   Trash2: () => <span data-testid="icon-trash">trash</span>,
+  FileText: () => <span data-testid="icon-file-text">file-text</span>,
+  MoreHorizontal: () => <span data-testid="icon-more-horizontal">more-horizontal</span>,
+  User: () => <span data-testid="icon-user">user</span>,
+  Search: () => <span data-testid="icon-search">search</span>,
+  Globe: () => <span data-testid="icon-globe">globe</span>,
+  Download: () => <span data-testid="icon-download">download</span>,
+  Lock: () => <span data-testid="icon-lock">lock</span>,
+  Bell: () => <span data-testid="icon-bell">bell</span>,
+  ArrowLeft: () => <span data-testid="icon-arrow-left">arrow-left</span>,
 }))
 
 const mockUser = {
@@ -227,11 +246,6 @@ const mockFolders = [
     createdAt: '2024-01-01',
     updatedAt: '2024-01-01',
   },
-]
-
-const mockTags = [
-  { id: 'tag-1', name: 'important', createdAt: '2024-01-01', updatedAt: '2024-01-01' },
-  { id: 'tag-2', name: 'todo', createdAt: '2024-01-01', updatedAt: '2024-01-01' },
 ]
 
 describe('AppSidebar', () => {
@@ -282,14 +296,14 @@ describe('AppSidebar', () => {
       expect(screen.getByText('Secure Notes')).toBeInTheDocument()
     })
 
-    it('should render All Notes button', () => {
+    it('should render New Note button', () => {
       render(<AppSidebar />)
-      expect(screen.getByText('All Notes')).toBeInTheDocument()
+      expect(screen.getByText('New Note')).toBeInTheDocument()
     })
 
-    it('should render Trash button', () => {
+    it('should render More Actions dropdown', () => {
       render(<AppSidebar />)
-      expect(screen.getByText('Trash')).toBeInTheDocument()
+      expect(screen.getByLabelText('More Actions')).toBeInTheDocument()
     })
 
     it('should render the note list component', () => {
@@ -330,7 +344,9 @@ describe('AppSidebar', () => {
       } as any)
 
       render(<AppSidebar />)
-      expect(screen.getByText('Admin Console')).toBeInTheDocument()
+      // Admin Console is now in the account settings sidebar, so it won't be visible in the main sidebar
+      // Just verify the component renders without error for admin users
+      expect(screen.getByTestId('sidebar')).toBeInTheDocument()
     })
   })
 
@@ -390,65 +406,34 @@ describe('AppSidebar', () => {
   })
 
   describe('Tags', () => {
-    it('should render Tags section', () => {
+    it('should render Tags in dropdown menu', () => {
       render(<AppSidebar />)
-      expect(screen.getByText('Tags')).toBeInTheDocument()
+      const moreActionsButton = screen.getByLabelText('More Actions')
+      fireEvent.click(moreActionsButton)
+      const tagsButtons = screen.getAllByText('Tags')
+      expect(tagsButtons.length).toBeGreaterThan(0)
     })
 
-    it('should show "No tags" when tags list is empty', () => {
+    it('should navigate to manage page when clicking Tags', () => {
       render(<AppSidebar />)
-      expect(screen.getByText('No tags')).toBeInTheDocument()
-    })
+      const moreActionsButton = screen.getByLabelText('More Actions')
+      fireEvent.click(moreActionsButton)
+      const tagsButtons = screen.getAllByText('Tags')
+      // Click the first Tags button (the one in the dropdown menu)
+      fireEvent.click(tagsButtons[0])
 
-    it('should render tag list when tags exist', () => {
-      vi.mocked(useNotesStore).mockReturnValue({
-        notes: [],
-        folders: [],
-        tags: mockTags,
-        selectedNote: null,
-        selectedFolder: null,
-        selectNote: selectNoteMock,
-        selectFolder: selectFolderMock,
-        selectTag: selectTagMock,
-        createNote: createNoteMock,
-        createFolder: createFolderMock,
-        isLoading: false,
-      } as any)
-
-      render(<AppSidebar />)
-      expect(screen.getByText('important')).toBeInTheDocument()
-      expect(screen.getByText('todo')).toBeInTheDocument()
-    })
-
-    it('should call selectTag when clicking a tag', () => {
-      vi.mocked(useNotesStore).mockReturnValue({
-        notes: [],
-        folders: [],
-        tags: mockTags,
-        selectedNote: null,
-        selectedFolder: null,
-        selectNote: selectNoteMock,
-        selectFolder: selectFolderMock,
-        selectTag: selectTagMock,
-        createNote: createNoteMock,
-        createFolder: createFolderMock,
-        isLoading: false,
-      } as any)
-
-      render(<AppSidebar />)
-      const importantButton = screen.getByText('important').closest('button')
-      fireEvent.click(importantButton!)
-
-      expect(selectTagMock).toHaveBeenCalledWith('important')
-      expect(mockNavigate).toHaveBeenCalledWith({ to: '/' })
+      // The navigation happens through the Link component, not directly
+      expect(tagsButtons[0].closest('a')).toHaveAttribute('href', '/manage')
     })
   })
 
   describe('Navigation', () => {
-    it('should navigate to home when clicking All Notes', () => {
+    it('should navigate to home when clicking All Notes in dropdown', () => {
       render(<AppSidebar />)
-      const allNotesButton = screen.getByText('All Notes').closest('button')
-      fireEvent.click(allNotesButton!)
+      const moreActionsButton = screen.getByLabelText('More Actions')
+      fireEvent.click(moreActionsButton)
+      const allNotesButton = screen.getByText('All Notes')
+      fireEvent.click(allNotesButton)
 
       expect(selectFolderMock).toHaveBeenCalledWith(null)
       expect(mockNavigate).toHaveBeenCalledWith({ to: '/' })
@@ -458,9 +443,8 @@ describe('AppSidebar', () => {
   describe('Create Note', () => {
     it('should call createNote when clicking new note button', async () => {
       render(<AppSidebar />)
-      const newNoteButtons = screen.getAllByTestId('sidebar-group-action')
-      const newNoteButton = newNoteButtons.find((btn) => btn.getAttribute('title') === 'New Note')
-      fireEvent.click(newNoteButton!)
+      const newNoteButton = screen.getByText('New Note')
+      fireEvent.click(newNoteButton)
 
       await waitFor(() => {
         expect(createNoteMock).toHaveBeenCalledWith({})
@@ -469,9 +453,8 @@ describe('AppSidebar', () => {
 
     it('should navigate after creating note', async () => {
       render(<AppSidebar />)
-      const newNoteButtons = screen.getAllByTestId('sidebar-group-action')
-      const newNoteButton = newNoteButtons.find((btn) => btn.getAttribute('title') === 'New Note')
-      fireEvent.click(newNoteButton!)
+      const newNoteButton = screen.getByText('New Note')
+      fireEvent.click(newNoteButton)
 
       await waitFor(() => {
         expect(mockNavigate).toHaveBeenCalledWith({ to: '/' })
@@ -482,9 +465,8 @@ describe('AppSidebar', () => {
       createNoteMock.mockRejectedValue(new Error('Failed to create'))
 
       render(<AppSidebar />)
-      const newNoteButtons = screen.getAllByTestId('sidebar-group-action')
-      const newNoteButton = newNoteButtons.find((btn) => btn.getAttribute('title') === 'New Note')
-      fireEvent.click(newNoteButton!)
+      const newNoteButton = screen.getByText('New Note')
+      fireEvent.click(newNoteButton)
 
       await waitFor(() => {
         expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to create note:', expect.any(Error))
@@ -507,8 +489,7 @@ describe('AppSidebar', () => {
       } as any)
 
       render(<AppSidebar />)
-      const newNoteButtons = screen.getAllByTestId('sidebar-group-action')
-      const newNoteButton = newNoteButtons.find((btn) => btn.getAttribute('title') === 'New Note')
+      const newNoteButton = screen.getByText('New Note').closest('button')
       expect(newNoteButton).toHaveAttribute('disabled')
     })
   })
@@ -516,7 +497,8 @@ describe('AppSidebar', () => {
   describe('Create Folder Dialog', () => {
     it('should render create folder dialog', () => {
       render(<AppSidebar />)
-      expect(screen.getByTestId('dialog')).toBeInTheDocument()
+      const dialogs = screen.getAllByTestId('dialog')
+      expect(dialogs.length).toBeGreaterThan(0)
     })
 
     it('should have folder name input', () => {
@@ -617,8 +599,14 @@ describe('AppSidebar', () => {
   describe('Dropdown menu', () => {
     it('should navigate to settings from dropdown', () => {
       render(<AppSidebar />)
-      const accountButton = screen.getByText('Account').closest('button')
-      fireEvent.click(accountButton!)
+      // Open the user dropdown menu - get the first Test User element
+      const userElements = screen.getAllByText('Test User')
+      const userButton = userElements[0].closest('button')
+      fireEvent.click(userButton!)
+
+      // Click the Settings option
+      const settingsButton = screen.getByText('Settings')
+      fireEvent.click(settingsButton)
 
       expect(mockNavigate).toHaveBeenCalledWith({ to: '/settings' })
     })

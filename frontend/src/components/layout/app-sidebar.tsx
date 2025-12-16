@@ -1,5 +1,18 @@
 import * as React from 'react'
-import { Home, Settings, Shield, Tag, Plus, LogOut, Leaf, ChevronRight, Trash2, FileText } from 'lucide-react'
+import {
+  Home,
+  Settings,
+  Shield,
+  Tag,
+  Plus,
+  LogOut,
+  Leaf,
+  ChevronRight,
+  Trash2,
+  FileText,
+  MoreHorizontal,
+  User,
+} from 'lucide-react'
 import { Link, useNavigate, useLocation } from '@tanstack/react-router'
 import { useClerk } from '@clerk/clerk-react'
 
@@ -25,6 +38,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu'
 import {
   Dialog,
@@ -39,6 +54,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/components/ui/user-avatar'
+import { AccountSidebar } from './account-sidebar'
 
 import { useClerkAuthStore } from '@/stores/clerkAuthStore'
 import { useNotesStore } from '@/stores/notesStore'
@@ -63,6 +79,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [newFolderName, setNewFolderName] = React.useState('')
   const [newFolderColor, setNewFolderColor] = React.useState('#3b82f6')
   const [isTemplatesDialogOpen, setIsTemplatesDialogOpen] = React.useState(false)
+  const [isAccountSidebarOpen, setIsAccountSidebarOpen] = React.useState(false)
 
   const handleCreateFolder = async () => {
     if (newFolderName.trim()) {
@@ -91,309 +108,322 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <>
+      {/* Account Settings Sidebar Overlay */}
+      {isAccountSidebarOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          <AccountSidebar
+            onClose={() => setIsAccountSidebarOpen(false)}
+            className="w-64 border-r"
+          />
+          <div
+            className="flex-1 bg-background/80 backdrop-blur-sm"
+            onClick={() => setIsAccountSidebarOpen(false)}
+          />
+        </div>
+      )}
+
       <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader className="group-data-[collapsible=icon]:px-1">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              asChild
-              className="group-data-[collapsible=icon]:!p-2 group-data-[collapsible=icon]:justify-center"
-            >
-              <Link to="/">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <Leaf className="size-4" />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                  <span className="truncate font-semibold">LeafLock</span>
-                  <span className="truncate text-xs">Secure Notes</span>
-                </div>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-      <SidebarContent>
-        {/* Quick Actions Group - First item in sidebar */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Quick Actions</SidebarGroupLabel>
+        <SidebarHeader className="group-data-[collapsible=icon]:px-1">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                tooltip="Templates"
-                onClick={() => setIsTemplatesDialogOpen(true)}
-                className="justify-center w-10 h-10 p-0 hover:bg-accent hover:text-accent-foreground transition-colors"
-                aria-label="Templates"
-              >
-                <FileText className="w-5 h-5" />
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
+                size="lg"
                 asChild
-                tooltip="Tags"
-                className="justify-center w-10 h-10 p-0 hover:bg-accent hover:text-accent-foreground transition-colors"
-                aria-label="Tags"
+                className="group-data-[collapsible=icon]:!p-2 group-data-[collapsible=icon]:justify-center"
               >
-                <Link to="/manage">
-                  <Tag className="w-5 h-5" />
+                <Link to="/">
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                    <Leaf className="size-4" />
+                  </div>
+                  <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                    <span className="truncate font-semibold">LeafLock</span>
+                    <span className="truncate text-xs">Secure Notes</span>
+                  </div>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+          </SidebarMenu>
+          {/* New Note Button - Horizontal at top */}
+          <SidebarMenu className="mt-2">
             <SidebarMenuItem>
-              <SidebarGroupAction
-                title="New Note"
+              <Button
                 onClick={handleCreateNote}
                 disabled={isLoading}
-                className="w-10 h-10 p-0"
+                className="w-full justify-start gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2"
+                size="sm"
               >
-                <Plus className="w-5 h-5" />
-              </SidebarGroupAction>
+                <Plus className="w-4 h-4" />
+                <span className="group-data-[collapsible=icon]:hidden">New Note</span>
+              </Button>
             </SidebarMenuItem>
           </SidebarMenu>
-        </SidebarGroup>
+        </SidebarHeader>
+        <SidebarContent>
+          {/* Combined Actions Dropdown - Replaces Quick Actions and Platform */}
+          <SidebarGroup>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <SidebarMenuButton
+                      tooltip="More Actions"
+                      className="justify-center w-10 h-10 p-0 hover:bg-accent hover:text-accent-foreground transition-colors group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:px-2"
+                      aria-label="More Actions"
+                    >
+                      <MoreHorizontal className="w-5 h-5" />
+                      <span className="hidden group-data-[collapsible=icon]:block group-data-[collapsible=icon]:ml-2">
+                        More
+                      </span>
+                    </SidebarMenuButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent side="right" align="start" sideOffset={8} className="w-48">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setIsTemplatesDialogOpen(true)}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Templates
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/manage" className="cursor-pointer">
+                        <Tag className="mr-2 h-4 w-4" />
+                        Tags
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => console.log('Trash clicked')}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Trash
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => {
+                        selectFolder(null)
+                        navigate({ to: '/' })
+                      }}
+                      className={
+                        location.pathname === '/' && selectedFolder === null ? 'bg-accent' : ''
+                      }
+                    >
+                      <Home className="mr-2 h-4 w-4" />
+                      All Notes
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
 
-        <SidebarSeparator />
+          <SidebarSeparator />
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Platform</SidebarGroupLabel>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                tooltip="All Notes"
-                isActive={location.pathname === '/' && selectedFolder === null}
-                onClick={() => {
-                  selectFolder(null)
-                  navigate({ to: '/' })
-                }}
-                className="group-data-[collapsible=icon]:justify-center w-10 h-10 p-0 hover:bg-accent hover:text-accent-foreground transition-colors"
-                aria-label="All Notes"
-              >
-                <Home className="w-5 h-5" />
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                tooltip="Trash"
-                onClick={() => {
-                  // Placeholder for trash
-                  console.log('Trash clicked')
-                }}
-                className="justify-center w-10 h-10 p-0 hover:bg-accent hover:text-accent-foreground transition-colors"
-                aria-label="Trash"
-              >
-                <Trash2 className="w-5 h-5" />
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
+          <SidebarGroup>
+            <SidebarGroupLabel>Notes</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarNoteList />
+            </SidebarGroupContent>
+          </SidebarGroup>
 
-        <SidebarSeparator />
+          <SidebarSeparator />
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Notes</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarNoteList />
-          </SidebarGroupContent>
-        </SidebarGroup>
+          <Collapsible defaultOpen className="group/collapsible">
+            <SidebarGroup className="group-data-[collapsible=icon]:px-1">
+              <SidebarGroupLabel asChild>
+                <CollapsibleTrigger className="group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
+                  <span className="group-data-[collapsible=icon]:hidden">Folders</span>
+                  <span className="hidden group-data-[collapsible=icon]:block text-xs">F</span>
+                  <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden" />
+                </CollapsibleTrigger>
+              </SidebarGroupLabel>
 
-        <SidebarSeparator />
-
-        <Collapsible defaultOpen className="group/collapsible">
-          <SidebarGroup className="group-data-[collapsible=icon]:px-1">
-            <SidebarGroupLabel asChild>
-              <CollapsibleTrigger className="group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
-                <span className="group-data-[collapsible=icon]:hidden">Folders</span>
-                <span className="hidden group-data-[collapsible=icon]:block text-xs">F</span>
-                <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden" />
-              </CollapsibleTrigger>
-            </SidebarGroupLabel>
-
-            <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
-              <DialogTrigger asChild>
-                <SidebarGroupAction title="Add Folder">
-                  <Plus /> <span className="sr-only">Add Folder</span>
-                </SidebarGroupAction>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create Folder</DialogTitle>
-                  <DialogDescription>Organize your notes into folders.</DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="folder-name">Name</Label>
-                    <Input
-                      id="folder-name"
-                      value={newFolderName}
-                      onChange={(e) => setNewFolderName(e.target.value)}
-                      placeholder="Project X"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Color</Label>
-                    <div className="flex gap-2">
-                      {['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'].map(
-                        (color) => (
-                          <button
-                            key={color}
-                            type="button"
-                            onClick={() => setNewFolderColor(color)}
-                            className={`w-6 h-6 rounded-full border-2 transition-all ${
-                              newFolderColor === color
-                                ? 'border-primary scale-110'
-                                : 'border-transparent'
-                            }`}
-                            style={{ backgroundColor: color }}
-                          />
-                        )
-                      )}
+              <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
+                <DialogTrigger asChild>
+                  <SidebarGroupAction title="Add Folder">
+                    <Plus /> <span className="sr-only">Add Folder</span>
+                  </SidebarGroupAction>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create Folder</DialogTitle>
+                    <DialogDescription>Organize your notes into folders.</DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="folder-name">Name</Label>
+                      <Input
+                        id="folder-name"
+                        value={newFolderName}
+                        onChange={(e) => setNewFolderName(e.target.value)}
+                        placeholder="Project X"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Color</Label>
+                      <div className="flex gap-2">
+                        {['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'].map(
+                          (color) => (
+                            <button
+                              key={color}
+                              type="button"
+                              onClick={() => setNewFolderColor(color)}
+                              className={`w-6 h-6 rounded-full border-2 transition-all ${
+                                newFolderColor === color
+                                  ? 'border-primary scale-110'
+                                  : 'border-transparent'
+                              }`}
+                              style={{ backgroundColor: color }}
+                            />
+                          )
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <DialogFooter>
-                  <Button onClick={handleCreateFolder}>Create Folder</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                  <DialogFooter>
+                    <Button onClick={handleCreateFolder}>Create Folder</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
 
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {folders.map((folder) => (
-                    <SidebarMenuItem key={folder.id}>
-                      <SidebarMenuButton
-                        onClick={() => {
-                          selectFolder(folder.id)
-                          navigate({ to: '/' })
-                        }}
-                        isActive={selectedFolder === folder.id}
-                        className="group-data-[collapsible=icon]:justify-center"
-                      >
-                        <div
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: folder.color }}
-                        />
-                        <span className="group-data-[collapsible=icon]:hidden">{folder.name}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                  {folders.length === 0 && (
-                    <SidebarMenuItem>
-                      <span className="px-2 text-xs text-muted-foreground">No folders</span>
-                    </SidebarMenuItem>
-                  )}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </SidebarGroup>
-        </Collapsible>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {folders.map((folder) => (
+                      <SidebarMenuItem key={folder.id}>
+                        <SidebarMenuButton
+                          onClick={() => {
+                            selectFolder(folder.id)
+                            navigate({ to: '/' })
+                          }}
+                          isActive={selectedFolder === folder.id}
+                          className="group-data-[collapsible=icon]:justify-center"
+                        >
+                          <div
+                            className="h-2 w-2 rounded-full"
+                            style={{ backgroundColor: folder.color }}
+                          />
+                          <span className="group-data-[collapsible=icon]:hidden">
+                            {folder.name}
+                          </span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                    {folders.length === 0 && (
+                      <SidebarMenuItem>
+                        <span className="px-2 text-xs text-muted-foreground">No folders</span>
+                      </SidebarMenuItem>
+                    )}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </SidebarGroup>
+          </Collapsible>
 
-        <Collapsible defaultOpen className="group/collapsible">
-          <SidebarGroup className="group-data-[collapsible=icon]:px-1">
-            <SidebarGroupLabel asChild>
-              <CollapsibleTrigger className="group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
-                <span className="group-data-[collapsible=icon]:hidden">Tags</span>
-                <span className="hidden group-data-[collapsible=icon]:block text-xs">T</span>
-                <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden" />
-              </CollapsibleTrigger>
-            </SidebarGroupLabel>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {tags.map((tag) => (
-                    <SidebarMenuItem key={tag.id}>
-                      <SidebarMenuButton
-                        tooltip={tag.name}
-                        onClick={() => {
-                          selectTag(tag.name)
-                          navigate({ to: '/' })
-                        }}
-                        className="group-data-[collapsible=icon]:justify-center w-10 h-10 p-0 hover:bg-accent hover:text-accent-foreground transition-colors"
-                        aria-label={`Filter by tag: ${tag.name}`}
-                      >
-                        <Tag className="w-5 h-5" />
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                  {tags.length === 0 && (
-                    <SidebarMenuItem>
-                      <span className="px-2 text-xs text-muted-foreground">No tags</span>
-                    </SidebarMenuItem>
-                  )}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </SidebarGroup>
-        </Collapsible>
+          <Collapsible defaultOpen className="group/collapsible">
+            <SidebarGroup className="group-data-[collapsible=icon]:px-1">
+              <SidebarGroupLabel asChild>
+                <CollapsibleTrigger className="group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
+                  <span className="group-data-[collapsible=icon]:hidden">Tags</span>
+                  <span className="hidden group-data-[collapsible=icon]:block text-xs">T</span>
+                  <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden" />
+                </CollapsibleTrigger>
+              </SidebarGroupLabel>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {tags.map((tag) => (
+                      <SidebarMenuItem key={tag.id}>
+                        <SidebarMenuButton
+                          tooltip={tag.name}
+                          onClick={() => {
+                            selectTag(tag.name)
+                            navigate({ to: '/' })
+                          }}
+                          className="group-data-[collapsible=icon]:justify-center w-10 h-10 p-0 hover:bg-accent hover:text-accent-foreground transition-colors"
+                          aria-label={`Filter by tag: ${tag.name}`}
+                        >
+                          <Tag className="w-5 h-5" />
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                    {tags.length === 0 && (
+                      <SidebarMenuItem>
+                        <span className="px-2 text-xs text-muted-foreground">No tags</span>
+                      </SidebarMenuItem>
+                    )}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </SidebarGroup>
+          </Collapsible>
 
-        <SidebarGroup className="mt-auto">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                tooltip="Settings"
-                className="justify-center w-10 h-10 p-0 hover:bg-accent hover:text-accent-foreground transition-colors"
-                aria-label="Settings"
-              >
-                <Link to="/settings">
-                  <Settings className="w-5 h-5" />
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            {user?.isAdmin && (
+          <SidebarGroup className="mt-auto">
+            <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Admin Console" className="justify-center">
-                  <Link to="/admin">
-                    <Shield />
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Settings"
+                  className="justify-center w-10 h-10 p-0 hover:bg-accent hover:text-accent-foreground transition-colors"
+                  aria-label="Settings"
+                >
+                  <Link to="/settings">
+                    <Settings className="w-5 h-5" />
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            )}
-          </SidebarMenu>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter className="group-data-[collapsible=icon]:px-1">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  size="lg"
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:!p-2 group-data-[collapsible=icon]:justify-center"
+              {user?.isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Admin Console" className="justify-center">
+                    <Link to="/admin">
+                      <Shield />
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+            </SidebarMenu>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter className="group-data-[collapsible=icon]:px-1 border-0">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    size="lg"
+                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:!p-2 group-data-[collapsible=icon]:justify-center"
+                  >
+                    <UserAvatar user={user} size={32} />
+                    <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                      <span className="truncate font-semibold">{user?.name || 'User'}</span>
+                      <span className="truncate text-xs">{user?.email || ''}</span>
+                    </div>
+                    <ChevronRight className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                  side="bottom"
+                  align="end"
+                  sideOffset={4}
                 >
-                  <UserAvatar user={user} size={32} />
-                  <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                    <span className="truncate font-semibold">{user?.name || 'User'}</span>
-                    <span className="truncate text-xs">{user?.email || ''}</span>
-                  </div>
-                  <ChevronRight className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-                side="bottom"
-                align="end"
-                sideOffset={4}
-              >
-                <DropdownMenuItem onClick={() => navigate({ to: '/settings' })}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Account
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
+                  <DropdownMenuItem onClick={() => setIsAccountSidebarOpen(true)}>
+                    <User className="mr-2 h-4 w-4" />
+                    Account
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate({ to: '/settings' })}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
 
-    {/* Templates Dialog for Quick Actions */}
-    <TemplatesDialog open={isTemplatesDialogOpen} onOpenChange={setIsTemplatesDialogOpen} />
-  </>
-)
+      {/* Templates Dialog for Quick Actions */}
+      <TemplatesDialog open={isTemplatesDialogOpen} onOpenChange={setIsTemplatesDialogOpen} />
+    </>
+  )
 }
