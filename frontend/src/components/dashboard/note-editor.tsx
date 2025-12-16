@@ -82,9 +82,6 @@ import { ShareNoteDialog } from './share-note-dialog'
 // Temporarily disable collaboration bar to isolate post-login crash
 import { EncryptionUnlockDialog } from './encryption-unlock-dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-// import { NoteStats } from './note-stats'
-// Temporarily disable keyboard shortcuts dialog to isolate React ref error after login
-// import { BacklinksSection } from './note-linking-utils'
 // Temporarily disable version history dialog to isolate post-login crash
 import { RichTextEditor } from './rich-text-editor'
 
@@ -269,6 +266,23 @@ export function NoteEditor() {
     }
   }, [selectedNote?.id, isUnlocked])
 
+  // Set default title with timestamp if title is empty and content exists
+  useEffect(() => {
+    if (selectedNote && !title.trim() && displayContent.trim()) {
+      const now = new Date()
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+      const timestamp = now.toLocaleString('en-US', {
+        timeZone,
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+      setTitle(timestamp)
+    }
+  }, [displayContent, selectedNote, title])
+
   useEffect(() => {
     if (selectedNote && displayContent !== undefined) {
       if (saveTimeoutRef.current) {
@@ -305,15 +319,30 @@ export function NoteEditor() {
           const trimmedContent = displayContent.trim()
 
           if (!trimmedTitle && !trimmedContent) {
-            // Don't save empty notes - show info toast
-            toast.info('Empty notes are not saved automatically', { duration: 2000 })
+            // Don't save empty notes - just return silently
             return
+          }
+          
+          // Auto-generate title from timestamp if title is empty but content exists
+          let finalTitle = trimmedTitle
+          if (!finalTitle && trimmedContent) {
+            const now = new Date()
+            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+            finalTitle = now.toLocaleString('en-US', {
+              timeZone,
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+            setTitle(finalTitle)
           }
 
           // Skip if unchanged vs last saved snapshot (by plaintext)
           const tagsKey = (noteTags || []).slice().sort().join('|')
           if (
-            lastSavedRef.current.title === trimmedTitle &&
+            lastSavedRef.current.title === finalTitle &&
             lastSavedRef.current.content === trimmedContent &&
             lastSavedRef.current.tagsKey === tagsKey
           ) {
@@ -322,7 +351,7 @@ export function NoteEditor() {
 
           // Always encrypt title and content before saving
           if (isUnlocked) {
-            const encryptedTitle = await encryptText(title)
+            const encryptedTitle = await encryptText(finalTitle)
             const encryptedContent = await encryptText(displayContent)
             console.log('[Editor] autosave -> updateNote', selectedNote.id)
 
@@ -340,7 +369,7 @@ export function NoteEditor() {
             console.log('[Editor] autosave complete', selectedNote.id)
 
             // Update last saved snapshot
-            lastSavedRef.current.title = trimmedTitle
+            lastSavedRef.current.title = finalTitle
             lastSavedRef.current.content = trimmedContent
             lastSavedRef.current.tagsKey = tagsKey
           } else {
@@ -564,9 +593,14 @@ export function NoteEditor() {
               <Badge key={tag} variant="secondary" className="gap-1">
                 <TagIcon className="h-3 w-3" />
                 {tag}
-                <button onClick={() => handleRemoveTag(tag)} className="ml-1 hover:text-danger">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 w-5 p-0 ml-1 hover:text-danger"
+                  onClick={() => handleRemoveTag(tag)}
+                >
                   <X className="h-3 w-3" />
-                </button>
+                </Button>
               </Badge>
             ))}
           </div>

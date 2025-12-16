@@ -95,7 +95,7 @@ export function EncryptionProvider({ children }: { children: React.ReactNode }) 
       throw new Error('Encryption salt not found. Please log in again.')
     }
 
-    if (process.env.NODE_ENV !== 'production') {
+    if (import.meta.env.DEV) {
       console.log('[Encryption] Unlock attempt with stored salt', {
         len: salt.length,
         prefix: salt.slice(0, 12),

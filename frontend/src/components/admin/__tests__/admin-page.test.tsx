@@ -734,38 +734,77 @@ describe('AdminPage', () => {
       expect(screen.getByText('John Doe')).toBeInTheDocument()
     })
 
-    it('should handle user deletion successfully', async () => {
-      // Admin page now uses mock data instead of API calls
+    it('should render delete buttons for users', async () => {
       render(<AdminPage />)
-      await waitFor(() => expect(screen.getByText('John Doe')).toBeInTheDocument(), {
-        timeout: 2000,
+
+      // Wait for loading to complete
+      await waitFor(() => expect(screen.queryByText('loading-spinner')).not.toBeInTheDocument(), {
+        timeout: 5000,
       })
 
-      const trashButtons = screen.getAllByText('trash-icon')
-      if (trashButtons.length > 0) {
-        fireEvent.click(trashButtons[0].closest('button')!)
-      }
+      // Wait for admin dashboard to load
+      await waitFor(() => expect(screen.getByText('Admin Dashboard')).toBeInTheDocument(), {
+        timeout: 5000,
+      })
 
-      // Since admin page uses mock data, no API call is made
-      // Just verify the component renders without errors
-      expect(screen.getByText('John Doe')).toBeInTheDocument()
+      // Wait for tabs
+      await waitFor(() => expect(screen.getByTestId('tabs')).toBeInTheDocument(), {
+        timeout: 5000,
+      })
+
+      // Wait for users table to populate (check for multiple users)
+      await waitFor(
+        () => {
+          const userElements = screen.getAllByText((content) => {
+            return content.includes('John') || content.includes('Jane') || content.includes('Bob')
+          })
+          expect(userElements.length).toBeGreaterThan(0)
+        },
+        { timeout: 5000 }
+      )
+
+      // Verify trash icons are present (delete buttons)
+      const trashIcons = screen.getAllByText('trash-icon')
+      expect(trashIcons.length).toBeGreaterThan(0)
+
+      // Verify they're inside buttons
+      trashIcons.forEach((icon) => {
+        const button = icon.closest('button')
+        expect(button).toBeInTheDocument()
+      })
     })
 
-    it('should handle user deletion error', async () => {
-      // Admin page now uses mock data instead of API calls
+    it('should handle delete button click without errors', async () => {
       render(<AdminPage />)
-      await waitFor(() => expect(screen.getByText('John Doe')).toBeInTheDocument(), {
-        timeout: 2000,
+
+      // Wait for loading to complete
+      await waitFor(() => expect(screen.queryByText('loading-spinner')).not.toBeInTheDocument(), {
+        timeout: 5000,
       })
 
-      const trashButtons = screen.getAllByText('trash-icon')
-      if (trashButtons.length > 0) {
-        fireEvent.click(trashButtons[0].closest('button')!)
-      }
+      // Wait for tabs and content
+      await waitFor(() => expect(screen.getByTestId('tabs')).toBeInTheDocument(), {
+        timeout: 5000,
+      })
 
-      // Since admin page uses mock data, no API call is made
-      // Just verify the component renders without errors
-      expect(screen.getByText('John Doe')).toBeInTheDocument()
+      // Wait for users table to populate
+      await waitFor(() => expect(screen.getByText('John Doe')).toBeInTheDocument(), {
+        timeout: 5000,
+      })
+
+      // Verify trash icons exist
+      const trashIcons = screen.getAllByText('trash-icon')
+      expect(trashIcons.length).toBeGreaterThan(0)
+
+      // Verify buttons exist
+      const deleteButton = trashIcons[0].closest('button')
+      expect(deleteButton).toBeInTheDocument()
+
+      // Click delete - should not throw errors
+      expect(() => fireEvent.click(deleteButton!)).not.toThrow()
+
+      // Component should still be functional - check for admin dashboard header
+      expect(screen.getByText('Admin Dashboard')).toBeInTheDocument()
     })
 
     it('should open user details dialog when eye icon clicked', async () => {

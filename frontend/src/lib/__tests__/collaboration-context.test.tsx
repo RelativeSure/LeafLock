@@ -5,11 +5,13 @@ import { useCollaboration } from '../collaboration-context'
 // Mock the social service
 const mockGetCollaborators = vi.fn()
 const mockShareNote = vi.fn()
+const mockRemoveCollaborator = vi.fn()
 
 vi.mock('@/services/api', () => ({
   socialService: {
     getCollaborators: (...args: any[]) => mockGetCollaborators(...args),
     shareNote: (...args: any[]) => mockShareNote(...args),
+    removeCollaborator: (...args: any[]) => mockRemoveCollaborator(...args),
   },
 }))
 
@@ -18,6 +20,10 @@ describe('CollaborationContext', () => {
     vi.clearAllMocks()
     localStorage.clear()
     global.fetch = vi.fn()
+    // Setup default successful mocks
+    mockGetCollaborators.mockResolvedValue([])
+    mockShareNote.mockResolvedValue(undefined)
+    mockRemoveCollaborator.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -203,9 +209,7 @@ describe('CollaborationContext', () => {
   })
 
   it('should call DELETE API when unsharing note', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: true })
-    global.fetch = mockFetch
-    localStorage.setItem('token', 'test-token')
+    mockRemoveCollaborator.mockResolvedValue(undefined)
     mockGetCollaborators.mockResolvedValue([])
 
     const { result } = renderHook(() => useCollaboration())
@@ -214,13 +218,7 @@ describe('CollaborationContext', () => {
       await result.current.unshareNote('note-123', 'user-456')
     })
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/v1/notes/note-123/share/user-456'),
-      expect.objectContaining({
-        method: 'DELETE',
-        headers: { Authorization: 'Bearer test-token' },
-      })
-    )
+    expect(mockRemoveCollaborator).toHaveBeenCalledWith('note-123', 'user-456')
   })
 
   it('should reload shared users after unsharing note', async () => {
@@ -258,9 +256,10 @@ describe('CollaborationContext', () => {
       result.current.joinSession('note-1')
     })
 
-    await waitFor(() => {
-      expect(consoleErrorSpy).toHaveBeenCalled()
-    })
+    // Wait a bit for the error to be logged
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to load collaborators:', expect.any(Error))
 
     consoleErrorSpy.mockRestore()
   })

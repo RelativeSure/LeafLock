@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"io"
+	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -19,10 +21,10 @@ type ClerkWebhookHandler struct {
 }
 
 // NewClerkWebhookHandler creates a new webhook handler
-func NewClerkWebhookHandler(webhookSecret string) *ClerkWebhookHandler {
+func NewClerkWebhookHandler(webhookSecret string, writer io.Writer) *ClerkWebhookHandler {
 	return &ClerkWebhookHandler{
 		webhookSecret: webhookSecret,
-		logger:        utils.NewSecurityLogger(),
+		logger:        utils.NewSecurityLogger(writer),
 	}
 }
 
@@ -301,7 +303,7 @@ func (h *ClerkWebhookHandler) handleEmailDeleted(c *fiber.Ctx, payload map[strin
 
 // SetupClerkWebhookRoutes sets up the webhook routes
 func SetupClerkWebhookRoutes(app *fiber.App, webhookSecret string) {
-	handler := NewClerkWebhookHandler(webhookSecret)
+	handler := NewClerkWebhookHandler(webhookSecret, log.Writer())
 
 	// Webhook endpoint with security headers
 	app.Post("/api/webhooks/clerk", func(c *fiber.Ctx) error {

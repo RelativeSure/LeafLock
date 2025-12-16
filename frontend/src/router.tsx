@@ -34,12 +34,7 @@
  * - Automatic redirects for unauthorized access via Clerk
  */
 import React from 'react'
-import {
-  Outlet,
-  createRoute,
-  createRouter,
-  createRootRoute,
-} from '@tanstack/react-router'
+import { Outlet, createRoute, createRouter, createRootRoute } from '@tanstack/react-router'
 import { useAuth, useUser, SignIn, SignUp } from '@clerk/clerk-react'
 
 import { ThemeProvider } from './context/ThemeContext'
@@ -89,9 +84,7 @@ const rootRoute = createRootRoute({
 const ClerkAuthLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="clerk-auth-modern">
     <InteractiveGridPattern width={50} height={50} className="absolute inset-0 opacity-30" />
-    <div className="clerk-card-enhanced animate-fade-in-zoom">
-      {children}
-    </div>
+    <div className="clerk-card-enhanced animate-fade-in-zoom">{children}</div>
   </div>
 )
 
@@ -110,49 +103,50 @@ const loginRoute = createRoute({
               // Root container
               rootBox: 'w-full',
               card: 'w-full bg-transparent border-0 shadow-none p-0 space-y-6',
-              
+
               // Header
               headerTitle: 'clerk-title-enhanced',
               headerSubtitle: 'clerk-subtitle-enhanced',
-              
+
               // Form fields
               formFieldLabel: 'clerk-label-enhanced',
               formFieldInput: 'clerk-input-enhanced',
               formFieldInput__emailAddress: 'clerk-input-enhanced',
               formFieldInput__password: 'clerk-input-enhanced',
               formFieldInput__code: 'clerk-code-input-enhanced', // 2FA code input
-              formFieldInputShowPasswordButton: 'text-muted-foreground hover:text-foreground hover:scale-110 transition-all',
+              formFieldInputShowPasswordButton:
+                'text-muted-foreground hover:text-foreground hover:scale-110 transition-all',
               formFieldErrorText: 'clerk-message-error-enhanced',
               formFieldSuccessText: 'clerk-message-success-enhanced',
               formFieldHintText: 'text-muted-foreground text-xs mt-2',
-              
+
               // Buttons
               formButtonPrimary: 'clerk-button-primary-enhanced',
               formButtonReset: 'clerk-button-secondary-enhanced',
-              
+
               // Social auth
               socialButtonsBlockButton: 'clerk-social-button-enhanced',
               socialButtonsBlockButtonText: 'font-medium',
               socialButtonsProviderIcon: 'clerk-social-icon-enhanced',
-              
+
               // Footer
               footerActionText: 'clerk-footer-text-enhanced',
               footerActionLink: 'clerk-footer-link-enhanced',
               footer: 'clerk-footer-enhanced',
-              
+
               // Divider
               dividerLine: 'clerk-divider-enhanced',
               dividerText: 'clerk-divider-text-enhanced',
-              
+
               // Alternative methods
               alternativeMethods: 'mt-8 pt-6 border-t border-border/30',
               alternativeMethodsBlockButton: 'clerk-button-secondary-enhanced',
-              
+
               // Identity preview
               identityPreview: 'clerk-identity-enhanced',
               identityPreviewText: 'clerk-identity-text-enhanced',
               identityPreviewEditButton: 'clerk-identity-edit-enhanced',
-              
+
               // Loading
               spinner: 'clerk-spinner-enhanced',
             },
@@ -162,7 +156,8 @@ const loginRoute = createRoute({
               colorText: '#f8fafc',
               colorInputBackground: 'rgba(30, 41, 59, 0.8)',
               colorInputText: '#f8fafc',
-              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontFamily:
+                'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
               fontSize: '16px',
               borderRadius: '12px',
               spacingUnit: '6px',
@@ -195,11 +190,11 @@ const registerRoute = createRoute({
               // Root container
               rootBox: 'w-full',
               card: 'w-full bg-transparent border-0 shadow-none p-0 space-y-6',
-              
+
               // Header
               headerTitle: 'clerk-title-enhanced',
               headerSubtitle: 'clerk-subtitle-enhanced',
-              
+
               // Form fields
               formFieldLabel: 'clerk-label-enhanced',
               formFieldLabel__emailAddress: 'clerk-label-enhanced',
@@ -213,40 +208,41 @@ const registerRoute = createRoute({
               formFieldInput__confirmPassword: 'clerk-input-enhanced',
               formFieldInput__firstName: 'clerk-input-enhanced',
               formFieldInput__lastName: 'clerk-input-enhanced',
-              formFieldInputShowPasswordButton: 'text-muted-foreground hover:text-foreground hover:scale-110 transition-all',
+              formFieldInputShowPasswordButton:
+                'text-muted-foreground hover:text-foreground hover:scale-110 transition-all',
               formFieldErrorText: 'clerk-message-error-enhanced',
               formFieldSuccessText: 'clerk-message-success-enhanced',
               formFieldHintText: 'text-muted-foreground text-xs mt-2',
               formFieldHintText__password: 'text-muted-foreground text-xs mt-2',
               formFieldHintText__confirmPassword: 'text-muted-foreground text-xs mt-2',
-              
+
               // Buttons
               formButtonPrimary: 'clerk-button-primary-enhanced',
               formButtonReset: 'clerk-button-secondary-enhanced',
-              
+
               // Social auth
               socialButtonsBlockButton: 'clerk-social-button-enhanced',
               socialButtonsBlockButtonText: 'font-medium',
               socialButtonsProviderIcon: 'clerk-social-icon-enhanced',
-              
+
               // Footer
               footerActionText: 'clerk-footer-text-enhanced',
               footerActionLink: 'clerk-footer-link-enhanced',
               footer: 'clerk-footer-enhanced',
-              
+
               // Divider
               dividerLine: 'clerk-divider-enhanced',
               dividerText: 'clerk-divider-text-enhanced',
-              
+
               // Alternative methods
               alternativeMethods: 'mt-8 pt-6 border-t border-border/30',
               alternativeMethodsBlockButton: 'clerk-button-secondary-enhanced',
-              
+
               // Identity preview
               identityPreview: 'clerk-identity-enhanced',
               identityPreviewText: 'clerk-identity-text-enhanced',
               identityPreviewEditButton: 'clerk-identity-edit-enhanced',
-              
+
               // Loading
               spinner: 'clerk-spinner-enhanced',
             },
@@ -256,7 +252,8 @@ const registerRoute = createRoute({
               colorText: '#f8fafc',
               colorInputBackground: 'rgba(30, 41, 59, 0.8)',
               colorInputText: '#f8fafc',
-              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontFamily:
+                'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
               fontSize: '16px',
               borderRadius: '12px',
               spacingUnit: '6px',

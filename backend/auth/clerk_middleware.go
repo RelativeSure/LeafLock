@@ -177,7 +177,7 @@ func (h *Handler) extractAdminStatusFromClerkClaims(claims *clerk.SessionClaims)
 // InitializeClerk initializes the Clerk SDK with the secret key
 func InitializeClerk(secretKey string) error {
 	if secretKey == "" {
-		return fmt.Errorf("Clerk secret key is required")
+		return fmt.Errorf("clerk secret key is required")
 	}
 
 	// Initialize Clerk client

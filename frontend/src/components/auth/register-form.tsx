@@ -14,6 +14,7 @@
 
 import * as React from 'react'
 import { SignUp } from '@clerk/clerk-react'
+import { Button } from '@/components/ui/button'
 
 export function RegisterForm({
   onToggleMode,
@@ -22,16 +23,10 @@ export function RegisterForm({
   onToggleMode: () => void
   animatedTitle?: React.ReactNode
 }) {
-
-
   return (
     <div className="w-full max-w-md mx-auto">
-      {animatedTitle && (
-        <div className="mb-8 text-center">
-          {animatedTitle}
-        </div>
-      )}
-      
+      {animatedTitle && <div className="mb-8 text-center">{animatedTitle}</div>}
+
       <SignUp
         routing="path"
         path="/register"
@@ -42,11 +37,11 @@ export function RegisterForm({
             // Root container
             rootBox: 'w-full',
             card: 'w-full bg-transparent border-0 shadow-none p-0 space-y-6',
-            
+
             // Header
             headerTitle: 'clerk-title-enhanced',
             headerSubtitle: 'clerk-subtitle-enhanced',
-            
+
             // Form fields
             formFieldLabel: 'clerk-label-enhanced',
             formFieldInput: 'clerk-input-enhanced',
@@ -54,29 +49,30 @@ export function RegisterForm({
             formFieldInput__password: 'clerk-input-enhanced',
             formFieldInput__firstName: 'clerk-input-enhanced',
             formFieldInput__lastName: 'clerk-input-enhanced',
-            formFieldInputShowPasswordButton: 'text-muted-foreground hover:text-foreground hover:scale-110 transition-all',
+            formFieldInputShowPasswordButton:
+              'text-muted-foreground hover:text-foreground hover:scale-110 transition-all',
             formFieldErrorText: 'clerk-message-error-enhanced',
             formFieldSuccessText: 'clerk-message-success-enhanced',
             formFieldHintText: 'text-muted-foreground text-xs mt-2',
-            
+
             // Primary action buttons
             formButtonPrimary: 'clerk-button-primary-enhanced',
             formButtonReset: 'clerk-button-secondary-enhanced',
-            
+
             // Social auth buttons
             socialButtonsBlockButton: 'clerk-social-button-enhanced',
             socialButtonsBlockButtonText: 'font-medium',
             socialButtonsProviderIcon: 'clerk-social-icon-enhanced',
-            
+
             // Footer and links
             footerActionText: 'clerk-footer-text-enhanced',
             footerActionLink: 'clerk-footer-link-enhanced',
             footer: 'clerk-footer-enhanced',
-            
+
             // Divider
             dividerLine: 'clerk-divider-enhanced',
             dividerText: 'clerk-divider-text-enhanced',
-            
+
             // Loading and spinners
             spinner: 'clerk-spinner-enhanced',
           },
@@ -98,18 +94,18 @@ export function RegisterForm({
             showOptionalFields: true,
           },
         }}
-
       />
-      
+
       <div className="mt-6 text-center">
         <p className="text-sm text-muted-foreground">
           Already have an account?{' '}
-          <button
+          <Button
+            variant="link"
             onClick={onToggleMode}
-            className="text-primary hover:text-primary/90 font-medium underline-offset-4 hover:underline transition-all"
+            className="text-primary hover:text-primary/90 font-medium underline-offset-4 hover:underline transition-all p-0 h-auto"
           >
             Sign in
-          </button>
+          </Button>
         </p>
       </div>
     </div>

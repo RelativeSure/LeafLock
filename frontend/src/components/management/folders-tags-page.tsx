@@ -158,16 +158,17 @@ export function FoldersTagsPage() {
                       <Label>Color</Label>
                       <div className="flex gap-2 flex-wrap">
                         {colorOptions.map((color, index) => (
-                          <button
+                          <Button
                             key={`${color}-${index}`}
-                            type="button"
-                            onClick={() => setNewFolderColor(color)}
-                            className={`w-8 h-8 rounded-full border-2 transition-all ${
+                            variant="ghost"
+                            size="sm"
+                            className={`w-8 h-8 rounded-full p-0 border-2 transition-all ${
                               newFolderColor === color
                                 ? 'border-foreground scale-110'
                                 : 'border-transparent hover:scale-105'
                             }`}
                             style={{ backgroundColor: color }}
+                            onClick={() => setNewFolderColor(color)}
                           />
                         ))}
                       </div>
@@ -276,11 +277,11 @@ export function FoldersTagsPage() {
                       <Label>Color</Label>
                       <div className="flex gap-2 flex-wrap">
                         {colorOptions.map((color, index) => (
-                          <button
+                          <Button
                             key={`${color}-${index}`}
-                            type="button"
-                            onClick={() => setNewTagColor(color)}
-                            className={`w-8 h-8 rounded-full border-2 transition-all ${
+                            variant="ghost"
+                            size="sm"
+                            className={`w-8 h-8 rounded-full p-0 border-2 transition-all ${
                               newTagColor === color
                                 ? 'border-foreground scale-110'
                                 : 'border-transparent hover:scale-105'

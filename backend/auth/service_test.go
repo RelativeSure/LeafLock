@@ -1,11 +1,9 @@
 package auth
 
 import (
-	"context"
 	"crypto/rand"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -167,35 +165,6 @@ func TestSessionManager_HashToken(t *testing.T) {
 	if hash1 == hash3 {
 		t.Error("Different tokens should produce different hashes")
 	}
-}
-
-type logoutSessionStub struct {
-	deleteErr     error
-	deletedTokens []string
-}
-
-func (s *logoutSessionStub) CreateSession(ctx context.Context, userID uuid.UUID, ipAddress, userAgent string, mfaVerified bool) (*Session, string, error) {
-	return &Session{}, "session-token", nil
-}
-
-func (s *logoutSessionStub) CreateMFASession(ctx context.Context, userID uuid.UUID, email, ipAddress, userAgent string, mfaEnabled bool) (string, error) {
-	return "mfa-token", nil
-}
-
-func (s *logoutSessionStub) GetMFASession(ctx context.Context, token string) (*MFASession, error) {
-	return &MFASession{}, nil
-}
-
-func (s *logoutSessionStub) DeleteMFASession(ctx context.Context, token string) error {
-	return nil
-}
-
-func (s *logoutSessionStub) DeleteSession(ctx context.Context, token string) error {
-	s.deletedTokens = append(s.deletedTokens, token)
-	if s.deleteErr != nil {
-		return s.deleteErr
-	}
-	return nil
 }
 
 // Note: These are basic unit tests. For comprehensive testing, you would need:

@@ -76,8 +76,6 @@ func LoadConfig() *Config {
 		logLevel = "info"
 	}
 
-	// JWT_SECRET removed - Clerk-only authentication
-
 	// SERVER_ENCRYPTION_KEY removed - zero-knowledge architecture
 	// Emails stored in plaintext, sensitive data encrypted with password-derived keys only
 

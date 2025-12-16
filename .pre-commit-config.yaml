@@ -88,6 +88,20 @@ repos:
         files: \.(jsx|tsx)$
         pass_filenames: false
 
+      - id: check-shadcn-compliance
+        name: check-shadcn-ui-compliance
+        entry: bash -c 'cd frontend && scripts/check-shadcn-compliance.sh'
+        language: system
+        files: \.(tsx|ts)$
+        pass_filenames: false
+
+      - id: check-frontend-docs
+        name: check-frontend-documentation-policy
+        entry: bash -c 'cd frontend && scripts/check-frontend-docs.sh'
+        language: system
+        files: \.md$
+        pass_filenames: false
+
       - id: pnpm-lint
         name: pnpm-lint
         entry: bash -c 'cd frontend && pnpm run lint'

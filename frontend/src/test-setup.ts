@@ -1,11 +1,60 @@
 import '@testing-library/jest-dom'
 import { server } from './mocks/server'
-import { beforeAll, afterEach, afterAll } from 'vitest'
+import { beforeAll, afterEach, afterAll, vi } from 'vitest'
+import React from 'react'
 
 // Setup MSW server
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }))
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
+
+// Mock Clerk for all tests
+vi.mock('@clerk/clerk-react', () => {
+  const mockClerk = {
+    signOut: vi.fn().mockResolvedValue(undefined),
+    openSignIn: vi.fn(),
+    openSignUp: vi.fn(),
+    openUserProfile: vi.fn(),
+    session: {
+      id: 'sess_test',
+      user: {
+        id: 'user_test',
+        fullName: 'Test User',
+        email: 'test@example.com',
+        imageUrl: 'https://example.com/avatar.jpg',
+      },
+      getToken: vi.fn().mockResolvedValue('mock-token'),
+    },
+    user: {
+      id: 'user_test',
+      fullName: 'Test User',
+      email: 'test@example.com',
+      imageUrl: 'https://example.com/avatar.jpg',
+    },
+  }
+
+  return {
+    ClerkProvider: ({ children }: { children: React.ReactNode }) =>
+      React.createElement(React.Fragment, {}, children),
+    SignIn: () => React.createElement('div', { 'data-testid': 'sign-in' }, 'Sign In'),
+    SignUp: () => React.createElement('div', { 'data-testid': 'sign-up' }, 'Sign Up'),
+    useClerk: () => mockClerk,
+    useAuth: () => ({
+      isSignedIn: true,
+      isLoaded: true,
+      userId: 'user_test',
+    }),
+    useUser: () => ({
+      user: mockClerk.user,
+      isLoaded: true,
+    }),
+    useSession: () => ({
+      session: mockClerk.session,
+      isLoaded: true,
+      getToken: mockClerk.session.getToken,
+    }),
+  }
+})
 
 const prototype = Element.prototype as Element & {
   setPointerCapture?: (pointerId: number) => void

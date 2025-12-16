@@ -21,11 +21,11 @@ type ClerkMiddlewareConfig struct {
 // EnhancedClerkMiddleware validates Clerk session tokens with enhanced debugging and error handling
 func (h *Handler) EnhancedClerkMiddleware(c *fiber.Ctx) error {
 	ctx := c.Context()
-	
+
 	// Debug logging
 	if h.config.EnableDebugLogging {
 		log.Printf("🔍 EnhancedClerkMiddleware: Processing %s %s", c.Method(), c.Path())
-		log.Printf("🔍 Headers: Authorization=%s", c.Get("Authorization") != "")
+		log.Printf("🔍 Headers: Authorization present=%t", c.Get("Authorization") != "")
 		log.Printf("🔍 Origin: %s", c.Get("Origin"))
 		log.Printf("🔍 Content-Type: %s", c.Get("Content-Type"))
 	}
@@ -51,7 +51,7 @@ func (h *Handler) EnhancedClerkMiddleware(c *fiber.Ctx) error {
 	}
 
 	token := parts[1]
-	
+
 	if h.config.EnableDebugLogging {
 		log.Printf("🔍 Token received: %s...", token[:min(20, len(token))])
 	}
@@ -60,7 +60,7 @@ func (h *Handler) EnhancedClerkMiddleware(c *fiber.Ctx) error {
 	claims, err := h.validateClerkTokenEnhancedWithDebug(ctx, token)
 	if err != nil {
 		log.Printf("❌ Token validation failed: %v", err)
-		
+
 		// Check if it's a token expiration issue
 		if isTokenExpired(err) {
 			return c.Status(fiber.StatusUnauthorized).JSON(ErrorResponse{
@@ -79,7 +79,7 @@ func (h *Handler) EnhancedClerkMiddleware(c *fiber.Ctx) error {
 
 	if h.config.EnableDebugLogging {
 		log.Printf("✅ Token validated successfully for user: %s", claims.Subject)
-		log.Printf("✅ Token issued at: %v, expires at: %v", 
+		log.Printf("✅ Token issued at: %v, expires at: %v",
 			claims.IssuedAt, claims.Expiry)
 	}
 
@@ -103,7 +103,7 @@ func (h *Handler) EnhancedClerkMiddleware(c *fiber.Ctx) error {
 	c.Locals("auth_type", "clerk")
 	c.Locals("token", token)
 	c.Locals("clerk_claims", claims)
-	
+
 	if h.config.EnableDebugLogging {
 		log.Printf("✅ User authenticated: %s (admin: %v)", userID, isAdmin)
 	}
@@ -123,7 +123,7 @@ func (h *Handler) validateClerkTokenEnhancedWithDebug(ctx context.Context, token
 
 	// Check if Clerk SDK is initialized
 	if !h.isClerkInitialized() {
-		return nil, fmt.Errorf("Clerk SDK not initialized. Check CLERK_SECRET_KEY configuration")
+		return nil, fmt.Errorf("clerk SDK not initialized. Check CLERK_SECRET_KEY configuration")
 	}
 
 	// Use Clerk SDK to verify the session token
@@ -171,10 +171,10 @@ func (h *Handler) getDebugInfo(err error, token string) map[string]interface{} {
 	hasValidStructure := len(tokenParts) == 3
 
 	return map[string]interface{}{
-		"error":           err.Error(),
-		"token_structure": hasValidStructure,
-		"token_length":    len(token),
-		"timestamp":       time.Now().Unix(),
+		"error":            err.Error(),
+		"token_structure":  hasValidStructure,
+		"token_length":     len(token),
+		"timestamp":        time.Now().Unix(),
 		"clerk_configured": h.isClerkInitialized(),
 	}
 }
@@ -206,21 +206,21 @@ func (h *Handler) isRedirectLoopDetected(c *fiber.Ctx) bool {
 	// This is a simplified implementation - in production, use Redis or similar
 	clientIP := c.IP()
 	userAgent := c.Get("User-Agent")
-	
+
 	// Store attempt count in context (in production, store in Redis with TTL)
 	attemptKey := fmt.Sprintf("auth_attempt_%s_%s", clientIP, userAgent)
 	attempts := c.Locals(attemptKey)
-	
+
 	if attempts == nil {
 		c.Locals(attemptKey, 1)
 		return false
 	}
-	
+
 	count := attempts.(int)
 	if count > 5 { // More than 5 attempts in one request cycle
 		return true
 	}
-	
+
 	c.Locals(attemptKey, count+1)
 	return false
 }

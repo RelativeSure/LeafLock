@@ -316,7 +316,6 @@ func TestIsSupportedLogLevel(t *testing.T) {
 }
 
 func TestLoadConfigUsesDefaults(t *testing.T) {
-	// JWT_SECRET removed - Clerk-only authentication
 	// Zero-knowledge: SERVER_ENCRYPTION_KEY no longer used
 	t.Setenv("DEFAULT_ADMIN_PASSWORD", "StrongestAdminPass2024!")
 	t.Setenv("DATABASE_URL", "postgres://user:StrongPass321!@localhost:5432/leaflock?sslmode=require") // secretlint-disable-line
@@ -388,7 +387,6 @@ func TestLoadConfigUsesDefaults(t *testing.T) {
 }
 
 func TestLoadConfigBuildsDatabaseURLFromEnv(t *testing.T) {
-	// JWT_SECRET removed - Clerk-only authentication
 	// Zero-knowledge: SERVER_ENCRYPTION_KEY no longer used
 	t.Setenv("DEFAULT_ADMIN_PASSWORD", "ExtremelySecureAdminPass456!")
 	t.Setenv("DATABASE_URL", "")

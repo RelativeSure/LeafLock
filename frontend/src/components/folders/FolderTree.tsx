@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChevronRight, ChevronDown, Folder, FolderOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import type { Folder as FolderType } from '@/services/api'
 
 interface FolderTreeProps {
@@ -102,13 +103,13 @@ function FolderNode({
         style={{ paddingLeft: `${level * 1.5}rem` }}
       >
         {hasChildren && (
-          <button onClick={handleToggle} className="p-0.5 hover:bg-accent-foreground/10 rounded">
+          <Button onClick={handleToggle} variant="ghost" size="sm" className="p-0.5 h-auto">
             {isExpanded ? (
               <ChevronDown className="h-4 w-4" />
             ) : (
               <ChevronRight className="h-4 w-4" />
             )}
-          </button>
+          </Button>
         )}
         {!hasChildren && <div className="w-5" />}
 

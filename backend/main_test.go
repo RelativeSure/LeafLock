@@ -341,24 +341,20 @@ func TestPasswordHashing(t *testing.T) {
 // Configuration Tests
 func TestConfig(t *testing.T) {
 	// Store original environment
-	// JWT_SECRET removed - Clerk-only authentication
 	originalDBURL := os.Getenv("DATABASE_URL")
 
 	defer func() {
 		// Restore environment
-		// JWT_SECRET removed - Clerk-only authentication
 		_ = os.Setenv("DATABASE_URL", originalDBURL) // Test cleanup
 	}()
 
 	t.Run("LoadConfigWithDefaults", func(t *testing.T) {
 		// Clear environment variables
-		// JWT_SECRET removed - Clerk-only authentication
 		_ = os.Unsetenv("DATABASE_URL") // Test setup
 
 		config := LoadConfig()
 
 		// Zero-knowledge: No global EncryptionKey, only JWT secret
-		// JWTSecret removed - Clerk-only authentication
 		assert.Equal(t, "postgres://postgres:postgres@localhost:5432/leaflock?sslmode=prefer", config.DatabaseURL) // secretlint-disable-line
 		assert.Equal(t, "8080", config.Port)
 		assert.Equal(t, 5, config.MaxLoginAttempts)
@@ -366,15 +362,13 @@ func TestConfig(t *testing.T) {
 	})
 
 	t.Run("LoadConfigWithEnvironment", func(t *testing.T) {
-		testJWT := "unit-test-jwt-secret-key-with-sufficient-length-1234567890"
 		testDBURL := "postgres://test:test@localhost:5432/testdb" // secretlint-disable-line
 
-		// JWT_SECRET removed - Clerk-only authentication
 		_ = os.Setenv("DATABASE_URL", testDBURL) // Test setup
 
 		config := LoadConfig()
 
-		// JWTSecret removed - Clerk-only authentication
+		assert.Equal(t, testDBURL, config.DatabaseURL)
 		assert.Equal(t, testDBURL, config.DatabaseURL)
 	})
 }
@@ -454,7 +448,7 @@ func (suite *AuthHandlerTestSuite) SetupTest() {
 	suite.crypto = appcrypto.NewCryptoService(key)
 
 	suite.config = &appconfig.Config{
-		JWTSecret: []byte("test-jwt-secret-key-for-testing-purposes-with-sufficient-length"),
+		ClerkSecretKey: "test-jwt-secret-key-for-testing-purposes-with-sufficient-length",
 		// Zero-knowledge: No global EncryptionKey needed
 		MaxLoginAttempts: 5,
 		LockoutDuration:  15 * time.Minute,
@@ -874,7 +868,6 @@ func (suite *LockoutTestSuite) SetupTest() {
 	suite.T().Skip("Skipping LockoutTestSuite - incompatible with new auth system that requires real database connections")
 	// Test config
 	suite.config = &appconfig.Config{
-		// JWTSecret removed - Clerk-only authentication
 		// Zero-knowledge: No global EncryptionKey - derive from Clerk secret
 		MaxLoginAttempts:     3,
 		MaxIPLoginAttempts:   5,

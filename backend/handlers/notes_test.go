@@ -777,7 +777,7 @@ func TestNotesHandler_BulkDeleteNotes(t *testing.T) {
 		return handler.BulkDeleteNotes(c)
 	})
 
-	body := map[string][]string{"note_ids": []string{note1.String(), "invalid", note2.String()}}
+	body := map[string][]string{"note_ids": {note1.String(), "invalid", note2.String()}}
 	data, _ := json.Marshal(body)
 	req := httptest.NewRequest("POST", "/notes/bulk/delete", bytes.NewReader(data))
 	req.Header.Set("Content-Type", "application/json")
@@ -829,7 +829,7 @@ func TestNotesHandler_BulkRestoreNotes(t *testing.T) {
 		return handler.BulkRestoreNotes(c)
 	})
 
-	body := map[string][]string{"note_ids": []string{note1.String(), note2.String()}}
+	body := map[string][]string{"note_ids": {note1.String(), note2.String()}}
 	data, _ := json.Marshal(body)
 	req := httptest.NewRequest("POST", "/notes/bulk/restore", bytes.NewReader(data))
 	req.Header.Set("Content-Type", "application/json")
@@ -857,7 +857,7 @@ func TestNotesHandler_BulkPermanentlyDeleteNotes(t *testing.T) {
 		return handler.BulkPermanentlyDeleteNotes(c)
 	})
 
-	body := map[string][]string{"note_ids": []string{note1.String(), note2.String()}}
+	body := map[string][]string{"note_ids": {note1.String(), note2.String()}}
 	data, _ := json.Marshal(body)
 	req := httptest.NewRequest("POST", "/notes/bulk/permanent-delete", bytes.NewReader(data))
 	req.Header.Set("Content-Type", "application/json")

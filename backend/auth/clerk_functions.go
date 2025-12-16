@@ -230,7 +230,7 @@ func (h *Handler) RevokeClerkSession(c *fiber.Ctx) error {
 	}
 
 	// Secure logging
-	utils.NewSecurityLogger().LogAuthEvent("session_revoked", uuid.MustParse(clerkUserID), true, map[string]interface{}{
+	utils.NewSecurityLogger(log.Writer()).LogAuthEvent("session_revoked", uuid.MustParse(clerkUserID), true, map[string]interface{}{
 		"session_id": sessionID,
 	})
 
@@ -322,7 +322,7 @@ func (h *Handler) CreateClerkOrganization(c *fiber.Ctx) error {
 	}
 
 	// Secure logging
-	utils.NewSecurityLogger().LogAuthEvent("organization_created", uuid.MustParse(clerkUserID), true, map[string]interface{}{
+	utils.NewSecurityLogger(log.Writer()).LogAuthEvent("organization_created", uuid.MustParse(clerkUserID), true, map[string]interface{}{
 		"organization_id":   orgID,
 		"organization_name": req.Name,
 	})
@@ -436,7 +436,7 @@ func (h *Handler) UpdateClerkOrganization(c *fiber.Ctx) error {
 	}
 
 	// Secure logging
-	utils.NewSecurityLogger().LogAuthEvent("organization_updated", uuid.MustParse(clerkUserID), true, map[string]interface{}{
+	utils.NewSecurityLogger(log.Writer()).LogAuthEvent("organization_updated", uuid.MustParse(clerkUserID), true, map[string]interface{}{
 		"organization_id":   orgID,
 		"organization_name": req.Name,
 	})
@@ -489,10 +489,6 @@ type ClerkOrganizationInfo struct {
 }
 
 // logSecurityEvent logs security events with proper formatting
-func logSecurityEvent(ctx context.Context, event string, details map[string]interface{}) {
-	// Implementation would log to security audit system
-	log.Printf("SECURITY_EVENT: %s %v", event, details)
-}
 
 // getClerkSessionsFromAPI retrieves sessions from Clerk API
 func (h *Handler) getClerkSessionsFromAPI(ctx context.Context, clerkUserID string) ([]*ClerkSessionInfo, error) {

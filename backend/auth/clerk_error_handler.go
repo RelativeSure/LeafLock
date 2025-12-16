@@ -3,6 +3,8 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"strings"
 	"time"
 
@@ -16,9 +18,9 @@ type ClerkErrorHandler struct {
 }
 
 // NewClerkErrorHandler creates a new error handler
-func NewClerkErrorHandler() *ClerkErrorHandler {
+func NewClerkErrorHandler(writer io.Writer) *ClerkErrorHandler {
 	return &ClerkErrorHandler{
-		logger: utils.NewSecurityLogger(),
+		logger: utils.NewSecurityLogger(writer),
 	}
 }
 
@@ -75,7 +77,7 @@ func (h *ClerkErrorHandler) categorizeClerkError(err error) (errorType string, s
 	case strings.Contains(errMsg, "network") || strings.Contains(errMsg, "connection"):
 		return "network_error", "error", "Network error. Please try again."
 
-	case strings.Contains(errMsg, "timeout"):
+	case strings.Contains(errMsg, "timeout") || strings.Contains(errMsg, "timed out"):
 		return "timeout", "error", "Request timed out. Please try again."
 
 	default:
@@ -91,27 +93,6 @@ func SecureClerkError(err error, operation string) error {
 
 	// Never expose internal error details
 	return fmt.Errorf("%s: authentication failed", operation)
-}
-
-// ValidateClerkConfiguration validates Clerk configuration
-func ValidateClerkConfiguration(clerkSecretKey string) error {
-	if clerkSecretKey == "" {
-		return errors.New("CLERK_SECRET_KEY is required")
-	}
-
-	if len(clerkSecretKey) < 20 {
-		return errors.New("CLERK_SECRET_KEY must be at least 20 characters")
-	}
-
-	// Check for common weak patterns
-	weakPatterns := []string{"test", "example", "123456", "password", "secret"}
-	for _, pattern := range weakPatterns {
-		if strings.Contains(strings.ToLower(clerkSecretKey), pattern) {
-			return fmt.Errorf("CLERK_SECRET_KEY contains weak pattern: %s", pattern)
-		}
-	}
-
-	return nil
 }
 
 // SanitizeClerkError sanitizes Clerk error messages for logging
@@ -142,11 +123,49 @@ func SanitizeClerkError(err error) string {
 
 // removeEmails removes email addresses from strings
 func removeEmails(s string) string {
-	// Simple email removal - in production, use proper regex
-	parts := strings.Split(s, "@")
-	if len(parts) == 2 {
-		return "[email]"
+	// Simple email removal - replace email with [email]
+	// Look for common email pattern and replace
+	// This is a simplified version - in production, use proper regex
+
+	// Find positions of @ symbol
+	atIndex := strings.Index(s, "@")
+	if atIndex == -1 {
+		return s
 	}
+
+	// Find email start (word boundary or beginning of string, skip spaces)
+	emailStart := atIndex
+	for i := atIndex - 1; i >= 0; i-- {
+		if s[i] == ' ' || i == 0 {
+			// Found space, email starts after it unless it's the beginning
+			if i == 0 {
+				emailStart = 0
+			} else {
+				emailStart = i + 1 // Start after the space
+			}
+			break
+		}
+	}
+
+	// Find email end - continue through domain (letters, numbers, hyphens, dots)
+	emailEnd := atIndex + 1
+	for i := atIndex + 1; i < len(s); i++ {
+		// Continue if it's part of domain name (letter, number, hyphen, dot)
+		if (s[i] >= 'a' && s[i] <= 'z') || (s[i] >= 'A' && s[i] <= 'Z') ||
+			(s[i] >= '0' && s[i] <= '9') || s[i] == '-' || s[i] == '.' {
+			continue
+		}
+		// Stop at space, punctuation (except dot which is handled above)
+		// End before this character
+		emailEnd = i
+		break
+	}
+
+	// Replace the email with [email]
+	if emailStart < emailEnd {
+		return s[:emailStart] + "[email]" + s[emailEnd:]
+	}
+
 	return s
 }
 
@@ -170,11 +189,29 @@ func removeTokens(s string) string {
 
 // removePhoneNumbers removes phone numbers from strings
 func removePhoneNumbers(s string) string {
-	// Simple phone number removal
-	if strings.ContainsAny(s, "0123456789") && len(s) >= 10 {
-		return "[phone]"
+	// Simple phone number removal - looks for patterns like +1234567890
+	// This is a simplified version - in production, use proper regex
+
+	result := s
+	words := strings.Fields(s)
+
+	for _, word := range words {
+		// Check if this word looks like a phone number
+		// Contains digits and at least 10 characters (for 10-digit numbers)
+		digitCount := 0
+		for _, ch := range word {
+			if ch >= '0' && ch <= '9' {
+				digitCount++
+			}
+		}
+
+		// If it has 8+ digits, treat it as a phone number
+		if digitCount >= 8 {
+			result = strings.Replace(result, word, "[phone]", 1)
+		}
 	}
-	return s
+
+	return result
 }
 
 // removeIPAddresses removes IP addresses from strings
@@ -188,6 +225,11 @@ func removeIPAddresses(s string) string {
 
 // CreateSecureError creates a secure error for logging
 func CreateSecureError(operation string, originalError error, context map[string]interface{}) error {
+	// If no error, return nil
+	if originalError == nil {
+		return nil
+	}
+
 	// Sanitize the original error
 	sanitizedError := SanitizeClerkError(originalError)
 
@@ -203,7 +245,7 @@ func CreateSecureError(operation string, originalError error, context map[string
 
 // LogSecurityIncident logs security incidents securely
 func LogSecurityIncident(operation string, incidentType string, details map[string]interface{}) {
-	logger := utils.NewSecurityLogger()
+	logger := utils.NewSecurityLogger(log.Writer())
 
 	// Sanitize details
 	safeDetails := make(map[string]interface{})

@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -44,7 +45,7 @@ func DefaultSecurityConfig() SecurityConfig {
 
 // SetupDatabaseSecurity configures database security features
 func SetupDatabaseSecurity(ctx context.Context, pool *pgxpool.Pool, config SecurityConfig) error {
-	logger := utils.NewSecurityLogger()
+	logger := utils.NewSecurityLogger(log.Writer())
 
 	logger.LogSecurityEvent("database_security_setup", "info", map[string]interface{}{
 		"encryption_at_rest": config.EncryptionAtRest,
@@ -95,7 +96,7 @@ func enableEncryptionAtRest(ctx context.Context, pool *pgxpool.Pool) error {
 	for _, query := range queries {
 		if _, err := pool.Exec(ctx, query); err != nil {
 			// Log but don't fail - these might already be set
-			utils.NewSecurityLogger().LogError("encryption_setup", err, map[string]interface{}{
+			utils.NewSecurityLogger(log.Writer()).LogError("encryption_setup", err, map[string]interface{}{
 				"query": query,
 			})
 		}
@@ -119,7 +120,7 @@ func enableAuditLogging(ctx context.Context, pool *pgxpool.Pool) error {
 	for _, query := range queries {
 		if _, err := pool.Exec(ctx, query); err != nil {
 			// Log but don't fail - these might already be set
-			utils.NewSecurityLogger().LogError("audit_setup", err, map[string]interface{}{
+			utils.NewSecurityLogger(log.Writer()).LogError("audit_setup", err, map[string]interface{}{
 				"query": query,
 			})
 		}
@@ -194,7 +195,7 @@ func setupConnectionSecurity(ctx context.Context, pool *pgxpool.Pool, config Sec
 	for key, value := range params {
 		query := fmt.Sprintf("SET %s = '%s'", key, value)
 		if _, err := pool.Exec(ctx, query); err != nil {
-			utils.NewSecurityLogger().LogError("connection_security_setup", err, map[string]interface{}{
+			utils.NewSecurityLogger(log.Writer()).LogError("connection_security_setup", err, map[string]interface{}{
 				"param": key,
 				"value": value,
 			})
@@ -206,7 +207,7 @@ func setupConnectionSecurity(ctx context.Context, pool *pgxpool.Pool, config Sec
 
 // ValidateDatabaseSecurity validates database security configuration
 func ValidateDatabaseSecurity(ctx context.Context, pool *pgxpool.Pool) error {
-	logger := utils.NewSecurityLogger()
+	logger := utils.NewSecurityLogger(log.Writer())
 
 	// Check for weak passwords
 	var weakPasswords int

@@ -6,20 +6,36 @@ import { useNotesStore } from '@/stores/notesStore'
 import { useClerkAuthStore } from '@/stores/clerkAuthStore'
 
 const mockNavigate = vi.fn()
-const mockLogout = vi.fn()
 const createNoteMock = vi.fn()
 const createFolderMock = vi.fn()
 const selectFolderMock = vi.fn()
 const selectTagMock = vi.fn()
 const selectNoteMock = vi.fn()
+const mockClerkSignOut = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('@/stores/notesStore', () => ({
   useNotesStore: vi.fn(),
 }))
 
-vi.mock('@/stores/authStore', () => ({
+vi.mock('@/stores/clerkAuthStore', () => ({
   useClerkAuthStore: vi.fn(),
 }))
+
+// Mock Clerk
+vi.mock('@clerk/clerk-react', async () => {
+  const actual = await vi.importActual('@clerk/clerk-react')
+  return {
+    ...actual,
+    useClerk: () => ({
+      signOut: mockClerkSignOut,
+      user: {
+        id: 'user_1',
+        fullName: 'Test User',
+        email: 'test@example.com',
+      },
+    }),
+  }
+})
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children, to, ...props }: any) => (
@@ -242,7 +258,7 @@ describe('AppSidebar', () => {
 
     vi.mocked(useClerkAuthStore).mockReturnValue({
       user: mockUser,
-      logout: mockLogout,
+      logout: vi.fn(),
       isAuthenticated: true,
     } as any)
 
@@ -309,7 +325,7 @@ describe('AppSidebar', () => {
     it('should show Admin Console for admin users', () => {
       vi.mocked(useClerkAuthStore).mockReturnValue({
         user: mockAdminUser,
-        logout: mockLogout,
+        logout: vi.fn(),
         isAuthenticated: true,
       } as any)
 
@@ -586,12 +602,14 @@ describe('AppSidebar', () => {
       expect(screen.getByText('Log out')).toBeInTheDocument()
     })
 
-    it('should call logout and navigate on logout click', () => {
+    it('should call clerk signOut and navigate on logout click', async () => {
       render(<AppSidebar />)
       const logoutButton = screen.getByText('Log out').closest('button')
       fireEvent.click(logoutButton!)
 
-      expect(mockLogout).toHaveBeenCalled()
+      await waitFor(() => {
+        expect(mockClerkSignOut).toHaveBeenCalled()
+      })
       expect(mockNavigate).toHaveBeenCalledWith({ to: '/login' })
     })
   })

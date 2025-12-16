@@ -40,7 +40,6 @@ services:
       PORT: 8080
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-leaflock}?sslmode=disable
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      # JWT_SECRET removed - Clerk-only authentication
       ENABLE_DEFAULT_ADMIN: ${ENABLE_DEFAULT_ADMIN:-true}
       DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL:-REDACTED_EMAIL}
       DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-REDACTED_PASSWORD}

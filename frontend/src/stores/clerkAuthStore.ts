@@ -48,7 +48,16 @@ export const useClerkAuthStore = create<AuthState>((set) => ({
   isLoading: true,
   isAdmin: false,
 
-  setUser: (user) => set({ user, isAuthenticated: !!user, isAdmin: user?.isAdmin || false }),
+  setUser: (user) => {
+    set({ user, isAuthenticated: !!user, isAdmin: user?.isAdmin || false })
+    
+    // Sync user data to localStorage for backward compatibility
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user))
+    } else {
+      localStorage.removeItem('user')
+    }
+  },
 
   setLoading: (loading) => set({ isLoading: loading }),
 
@@ -68,11 +77,16 @@ export const useClerkAuthStore = create<AuthState>((set) => ({
     // The encryption key should be derived from the user's password or a separate encryption secret
     return null // Will be implemented based on encryption requirements
   },
+
+  getClerkToken: async () => {
+    // This is a placeholder - the actual implementation will be in the hook
+    return null
+  },
 }))
 
 // Hook to sync Clerk auth state with our store with enhanced session management
-export const useSyncClerkAuth = () => {
-  const { isSignedIn, isLoaded } = useAuth()
+export const useSyncClerkAuth = (): { getClerkToken: () => Promise<string | null> } => {
+  const { isSignedIn, isLoaded, getToken } = useAuth()
   const { user: clerkUser } = useUser()
   const { session } = useSession()
 
@@ -124,7 +138,27 @@ export const useSyncClerkAuth = () => {
       }
     }
   }, [session, isSignedIn])
+
+  // Provide getClerkToken function
+  return {
+    getClerkToken: getToken,
+  }
 }
 
 // Export clerk hooks for direct usage
 export { useAuth, useUser, useSession } from '@clerk/clerk-react'
+
+// Standalone token getter for non-React contexts
+export async function getClerkToken(): Promise<string | null> {
+  try {
+    // Dynamic import to avoid circular dependencies
+    const clerk = await import('@clerk/clerk-react')
+    const auth = clerk.useAuth()
+    if (auth.isSignedIn) {
+      return await auth.getToken()
+    }
+  } catch (error) {
+    console.warn('Failed to get Clerk token:', error)
+  }
+  return null
+}

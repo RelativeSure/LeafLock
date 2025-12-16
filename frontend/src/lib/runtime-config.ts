@@ -57,13 +57,10 @@ export interface RuntimeConfig {
  */
 export function getRuntimeConfig(): RuntimeConfig {
   // Try runtime-injected values first (from meta tags)
-  const runtimeClerkKey = typeof window !== 'undefined'
-    ? window.__ENV__?.VITE_CLERK_PUBLISHABLE_KEY
-    : undefined
+  const runtimeClerkKey =
+    typeof window !== 'undefined' ? window.__ENV__?.VITE_CLERK_PUBLISHABLE_KEY : undefined
 
-  const runtimeApiUrl = typeof window !== 'undefined'
-    ? window.__ENV__?.VITE_API_URL
-    : undefined
+  const runtimeApiUrl = typeof window !== 'undefined' ? window.__ENV__?.VITE_API_URL : undefined
 
   // Fall back to build-time values
   const buildTimeClerkKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
@@ -103,10 +100,10 @@ export function getClerkPublishableKey(): string | undefined {
   if (!config.clerkPublishableKey) {
     console.error(
       '🚨 VITE_CLERK_PUBLISHABLE_KEY is not configured!\n' +
-      'This should be set either:\n' +
-      '1. As a build-time variable in Railway\n' +
-      '2. As a runtime variable (injected via meta tags)\n' +
-      'Check Railway environment variables and Dockerfile configuration.'
+        'This should be set either:\n' +
+        '1. As a build-time variable in Railway\n' +
+        '2. As a runtime variable (injected via meta tags)\n' +
+        'Check Railway environment variables and Dockerfile configuration.'
     )
   }
 

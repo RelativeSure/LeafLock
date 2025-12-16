@@ -461,8 +461,8 @@ func (s *Service) createAuthResponse(ctx context.Context, userID uuid.UUID, isAd
 		response.WorkspaceID = workspaceID.String()
 	}
 
-	// Store token in session for logout
-	_ = sessionToken // Session token is managed internally
+	// Store token in response
+	response.Token = sessionToken
 
 	var saltBytes []byte
 	if err := s.db.QueryRow(ctx, `SELECT salt FROM users WHERE id = $1`, userID).Scan(&saltBytes); err == nil {

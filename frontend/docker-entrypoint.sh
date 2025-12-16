@@ -216,7 +216,8 @@ if [ -f "$INDEX_HTML" ]; then
 
   if [ -n "${VITE_CLERK_PUBLISHABLE_KEY:-}" ]; then
     META_TAGS="${META_TAGS}<meta name=\"clerk-publishable-key\" content=\"${VITE_CLERK_PUBLISHABLE_KEY}\">"
-    log "✅ Injected VITE_CLERK_PUBLISHABLE_KEY (${VITE_CLERK_PUBLISHABLE_KEY:0:20}...)"
+    key_preview=$(printf '%s' "$VITE_CLERK_PUBLISHABLE_KEY" | cut -c1-20)
+    log "✅ Injected VITE_CLERK_PUBLISHABLE_KEY (${key_preview}...)"
   else
     log "⚠️  VITE_CLERK_PUBLISHABLE_KEY not found in environment"
   fi

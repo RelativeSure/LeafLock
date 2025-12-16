@@ -51,7 +51,7 @@ func TestCollaborationFeatures(t *testing.T) {
 		Addr: mr.Addr(),
 	})
 
-	authService := auth.NewService(dbPool, rdb, string(cfg.JWTSecret))
+	authService := auth.NewService(dbPool, rdb, string(cfg.ClerkSecretKey))
 
 	// Create collaboration handler
 	handler := &CollaborationHandler{

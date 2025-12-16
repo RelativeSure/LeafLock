@@ -72,9 +72,14 @@ export function SaveTemplateDialog({ open, onOpenChange, content, tags }: SaveTe
                   <Badge key={tag} variant="secondary" className="gap-1">
                     <TagIcon className="h-3 w-3" />
                     {tag}
-                    <button onClick={() => handleRemoveTag(tag)} className="ml-1 hover:text-danger">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0 ml-1 hover:text-danger"
+                      onClick={() => handleRemoveTag(tag)}
+                    >
                       <X className="h-3 w-3" />
-                    </button>
+                    </Button>
                   </Badge>
                 ))}
               </div>
