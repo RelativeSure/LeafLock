@@ -24,10 +24,11 @@
  */
 import React from 'react'
 import { RouterProvider } from '@tanstack/react-router'
-import { ClerkProvider } from '@clerk/clerk-react'
+import { ClerkProvider, useSession } from '@clerk/clerk-react'
 import { ThemeProvider } from './context/ThemeContext'
 import { EncryptionProvider } from './lib/encryption-context'
-import { useClerkApiClient } from './services/api/clerkApiClient'
+import { clerkApiClient } from './services/api/clerkApiClient'
+import { contentService } from './services/api/contentService'
 import { useEnhancedClerk } from './hooks/useEnhancedClerk'
 import { getClerkPublishableKey, debugRuntimeConfig } from './lib/runtime-config'
 import './styles/clerk-auth.css'
@@ -46,9 +47,14 @@ let routerInstance: any = null
  */
 const AppContent: React.FC = () => {
   const [router, setRouter] = React.useState<any>(null)
+  const { session, isLoaded } = useSession()
 
-  // Initialize Clerk API client with session (now inside ClerkProvider)
-  useClerkApiClient()
+  // Initialize API clients with Clerk session (now inside ClerkProvider)
+  React.useEffect(() => {
+    if (!isLoaded || !session) return
+    clerkApiClient.setSession({ session })
+    contentService.setSession({ session })
+  }, [isLoaded, session])
 
   // Use enhanced Clerk functionality (now inside ClerkProvider)
   const { isExpiringSoon, timeUntilExpiry } = useEnhancedClerk()

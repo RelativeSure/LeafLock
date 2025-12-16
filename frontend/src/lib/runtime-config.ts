@@ -25,6 +25,7 @@ declare global {
     __ENV__?: {
       VITE_CLERK_PUBLISHABLE_KEY?: string
       VITE_API_URL?: string
+      VITE_CLERK_JWT_TEMPLATE?: string
       [key: string]: string | undefined
     }
   }
@@ -33,6 +34,7 @@ declare global {
 export interface RuntimeConfig {
   clerkPublishableKey: string | undefined
   apiUrl: string | undefined
+  clerkJwtTemplate: string | undefined
   isDevelopment: boolean
   isProduction: boolean
 }
@@ -61,17 +63,22 @@ export function getRuntimeConfig(): RuntimeConfig {
     typeof window !== 'undefined' ? window.__ENV__?.VITE_CLERK_PUBLISHABLE_KEY : undefined
 
   const runtimeApiUrl = typeof window !== 'undefined' ? window.__ENV__?.VITE_API_URL : undefined
+  const runtimeJwtTemplate =
+    typeof window !== 'undefined' ? window.__ENV__?.VITE_CLERK_JWT_TEMPLATE : undefined
 
   // Fall back to build-time values
   const buildTimeClerkKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
   const buildTimeApiUrl = import.meta.env.VITE_API_URL
+  const buildTimeJwtTemplate = import.meta.env.VITE_CLERK_JWT_TEMPLATE
 
   const clerkPublishableKey = runtimeClerkKey || buildTimeClerkKey
   const apiUrl = runtimeApiUrl || buildTimeApiUrl
+  const clerkJwtTemplate = runtimeJwtTemplate || buildTimeJwtTemplate
 
   return {
     clerkPublishableKey,
     apiUrl,
+    clerkJwtTemplate,
     isDevelopment: import.meta.env.DEV,
     isProduction: import.meta.env.PROD,
   }
@@ -195,6 +202,7 @@ export function debugRuntimeConfig(): void {
     console.group('🔧 Runtime Configuration Debug')
     console.log('Clerk Key:', config.clerkPublishableKey ? '✅ Set' : '❌ Missing')
     console.log('API URL:', config.apiUrl || '❌ Not set (will use default)')
+    console.log('JWT Template:', config.clerkJwtTemplate || '❌ Not set')
     console.log('Environment:', config.isDevelopment ? 'Development' : 'Production')
 
     if (typeof window !== 'undefined' && window.__ENV__) {

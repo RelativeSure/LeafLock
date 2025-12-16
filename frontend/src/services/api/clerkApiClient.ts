@@ -15,6 +15,7 @@
 
 import React from 'react'
 import { useSession } from '@clerk/clerk-react'
+import { getRuntimeConfig } from '@/lib/runtime-config'
 
 // Enhanced error types for better debugging
 export class ClerkApiError extends Error {
@@ -90,6 +91,7 @@ export class ClerkApiClient {
     this.debug(`Making ${options.method || 'GET'} request to: ${url} (attempt ${attempt})`)
 
     let token: string | null = null
+    const jwtTemplate = getRuntimeConfig().clerkJwtTemplate || undefined
 
     // Get Clerk session token
     try {
@@ -99,7 +101,13 @@ export class ClerkApiClient {
         this.session.session &&
         'getToken' in this.session.session
       ) {
-        token = await this.session.session.getToken()
+        // Prefer configured JWT template, but fall back to default session token if unavailable
+        if (jwtTemplate) {
+          token = await this.session.session.getToken({ template: jwtTemplate })
+        }
+        if (!token) {
+          token = await this.session.session.getToken()
+        }
         this.debug(`Token acquired: ${token ? `${token.substring(0, 20)}...` : 'null'}`)
       }
     } catch (error) {

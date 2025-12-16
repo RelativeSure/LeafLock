@@ -15,6 +15,7 @@
 import { useClerkApiClient } from './clerkApiClient'
 import { ClerkUser, RegisterResponse, MFAStatusResponse } from './types'
 import { useAuth, useUser, useSession } from '@clerk/clerk-react'
+import { getRuntimeConfig } from '@/lib/runtime-config'
 
 import React from 'react'
 
@@ -153,12 +154,20 @@ class ClerkAuthService {
   // Get Clerk session token for API calls
   async getSessionToken(): Promise<string | null> {
     const session = this.session
+    const jwtTemplate = getRuntimeConfig().clerkJwtTemplate || undefined
     if (!session || !('session' in session) || !session.session) {
       return null
     }
     try {
       if ('getToken' in session.session) {
-        return await session.session.getToken()
+        let token: string | null = null
+        if (jwtTemplate) {
+          token = await session.session.getToken({ template: jwtTemplate })
+        }
+        if (!token) {
+          token = await session.session.getToken()
+        }
+        return token
       }
       return null
     } catch {

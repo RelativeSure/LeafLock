@@ -21,8 +21,13 @@
   }
 
   const apiUrlMeta = document.querySelector('meta[name="api-url"]')
+  const jwtTemplateMeta = document.querySelector('meta[name="clerk-jwt-template"]')
   if (apiUrlMeta && apiUrlMeta.content) {
     window.__ENV__.VITE_API_URL = apiUrlMeta.content
+  }
+
+  if (jwtTemplateMeta && jwtTemplateMeta.content) {
+    window.__ENV__.VITE_CLERK_JWT_TEMPLATE = jwtTemplateMeta.content
   }
 
   // Fallback to build-time environment variables (embedded by Vite)
@@ -41,6 +46,13 @@
       typeof window !== 'undefined' && window.VITE_API_URL ? window.VITE_API_URL : undefined
   }
 
+  if (!window.__ENV__.VITE_CLERK_JWT_TEMPLATE) {
+    window.__ENV__.VITE_CLERK_JWT_TEMPLATE =
+      typeof window !== 'undefined' && window.VITE_CLERK_JWT_TEMPLATE
+        ? window.VITE_CLERK_JWT_TEMPLATE
+        : undefined
+  }
+
   // Log configuration status (only in development)
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     console.log('🔧 Runtime Config Loaded:', {
@@ -49,6 +61,7 @@
         ? window.__ENV__.VITE_CLERK_PUBLISHABLE_KEY.substring(0, 10) + '...'
         : 'NOT SET',
       apiUrl: window.__ENV__.VITE_API_URL || 'NOT SET',
+      jwtTemplate: window.__ENV__.VITE_CLERK_JWT_TEMPLATE || 'NOT SET',
     })
   }
 

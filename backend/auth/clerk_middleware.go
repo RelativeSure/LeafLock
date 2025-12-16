@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/clerk/clerk-sdk-go/v2"
@@ -139,15 +140,25 @@ func (h *Handler) extractUserIDFromClerkClaims(claims *clerk.SessionClaims) (uui
 	// For now, we'll use the Clerk user ID directly
 	// In a full migration, you might want to map Clerk user IDs to internal user IDs
 	// This would require a database table to maintain the mapping
-
-	// Convert Clerk user ID string to UUID
-	// Clerk user IDs are already in UUID format
+	//
+	// Convert Clerk user ID string to UUID. Some Clerk instances use non-UUID
+	// identifiers (e.g., "user_abc123"). For those, derive a deterministic UUID
+	// so downstream code keeps using UUID types without rejecting valid Clerk IDs.
 	userID, err := uuid.Parse(clerkUserID)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("invalid user ID format: %w", err)
+	if err == nil {
+		return userID, nil
 	}
 
-	return userID, nil
+	// Optional fallback: allow mapping all non-UUID Clerk users to a configured local user
+	if fallbackID := os.Getenv("CLERK_FALLBACK_USER_ID"); fallbackID != "" {
+		if parsed, err := uuid.Parse(fallbackID); err == nil {
+			return parsed, nil
+		}
+	}
+
+	// Derive deterministic UUID from Clerk subject for non-UUID ids (dev convenience)
+	derived := uuid.NewSHA1(uuid.NameSpaceURL, []byte(clerkUserID))
+	return derived, nil
 }
 
 // extractAdminStatusFromClerkClaims determines if user is admin from Clerk claims

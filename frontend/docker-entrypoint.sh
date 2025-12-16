@@ -227,6 +227,11 @@ if [ -f "$INDEX_HTML" ]; then
     log "✅ Injected VITE_API_URL (${VITE_API_URL})"
   fi
 
+  if [ -n "${VITE_CLERK_JWT_TEMPLATE:-}" ]; then
+    META_TAGS="${META_TAGS}<meta name=\"clerk-jwt-template\" content=\"${VITE_CLERK_JWT_TEMPLATE}\">"
+    log "✅ Injected VITE_CLERK_JWT_TEMPLATE (${VITE_CLERK_JWT_TEMPLATE})"
+  fi
+
   # Inject meta tags before </head> if any exist
   if [ -n "$META_TAGS" ]; then
     # Create a temporary file with injected meta tags

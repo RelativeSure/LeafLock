@@ -16,6 +16,7 @@
 import React from 'react'
 import { create } from 'zustand'
 import { useAuth, useUser, useSession } from '@clerk/clerk-react'
+import { getRuntimeConfig } from '@/lib/runtime-config'
 
 export interface User {
   id: string
@@ -89,6 +90,7 @@ export const useSyncClerkAuth = (): { getClerkToken: () => Promise<string | null
   const { isSignedIn, isLoaded, getToken } = useAuth()
   const { user: clerkUser } = useUser()
   const { session } = useSession()
+  const jwtTemplate = getRuntimeConfig().clerkJwtTemplate || undefined
 
   const { setUser, setLoading } = useClerkAuthStore()
 
@@ -141,7 +143,16 @@ export const useSyncClerkAuth = (): { getClerkToken: () => Promise<string | null
 
   // Provide getClerkToken function
   return {
-    getClerkToken: getToken,
+    getClerkToken: async () => {
+      let token: string | null = null
+      if (jwtTemplate) {
+        token = await getToken({ template: jwtTemplate })
+      }
+      if (!token) {
+        token = await getToken()
+      }
+      return token
+    },
   }
 }
 
@@ -154,8 +165,16 @@ export async function getClerkToken(): Promise<string | null> {
     // Dynamic import to avoid circular dependencies
     const clerk = await import('@clerk/clerk-react')
     const auth = clerk.useAuth()
+    const jwtTemplate = getRuntimeConfig().clerkJwtTemplate || undefined
     if (auth.isSignedIn) {
-      return await auth.getToken()
+      let token: string | null = null
+      if (jwtTemplate) {
+        token = await auth.getToken({ template: jwtTemplate })
+      }
+      if (!token) {
+        token = await auth.getToken()
+      }
+      return token
     }
   } catch (error) {
     console.warn('Failed to get Clerk token:', error)
