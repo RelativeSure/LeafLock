@@ -239,9 +239,6 @@ jobs:
           VITE_ENABLE_REGISTRATION: true
           # Application environment
           APP_ENV: test
-          ENABLE_DEFAULT_ADMIN: true
-          DEFAULT_ADMIN_EMAIL: test-admin@leaflock.test
-          DEFAULT_ADMIN_PASSWORD: TestAdmin#P@ssw0rd&123!
           # CORS configuration for test
           CORS_ORIGINS: http://localhost:3000
           # Frontend configuration

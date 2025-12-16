@@ -93,33 +93,6 @@ description: Complete reference for all LeafLock environment variables
 
 ### Admin User Configuration
 
-#### ENABLE_DEFAULT_ADMIN
-**Required**: No
-**Type**: Boolean (`true` or `false`)
-**Default**: `false`
-**Example**: `true`
-**Description**: Enable automatic creation of default admin user on first startup.
-
----
-
-#### DEFAULT_ADMIN_EMAIL
-**Required**: Only if `ENABLE_DEFAULT_ADMIN=true`
-**Type**: Email address
-**Default**: `admin@leaflock.app`
-**Example**: `admin@mycompany.com`
-**Description**: Email address for the default admin account.
-
----
-
-#### DEFAULT_ADMIN_PASSWORD
-**Required**: Only if `ENABLE_DEFAULT_ADMIN=true`
-**Type**: String (minimum 12 characters)
-**Example**: `#wmR8xWxZ&#JHZPd8HTYmafctWSe0N*jgPG%bYS@`
-**Description**: Password for default admin account. Supports all special characters.
-**Validation**: Must contain uppercase, lowercase, digit, and special character.
-
----
-
 ### Registration & Rate Limiting
 
 #### ENABLE_REGISTRATION
@@ -326,11 +299,6 @@ SERVER_ENCRYPTION_KEY=c9f7IloUZlY6qSdB5KTNLJHdKEJaDbOt
 # CORS
 CORS_ORIGINS=http://localhost:3000
 
-# Admin user (optional)
-ENABLE_DEFAULT_ADMIN=true
-DEFAULT_ADMIN_EMAIL=admin@leaflock.local
-DEFAULT_ADMIN_PASSWORD=ChangeThisAdminPassword123!
-
 # Registration
 ENABLE_REGISTRATION=true
 
@@ -369,11 +337,6 @@ SERVER_ENCRYPTION_KEY=$(openssl rand -base64 24)
 
 # CORS (your production domain)
 CORS_ORIGINS=https://leaflock.yourdomain.com,https://www.leaflock.yourdomain.com
-
-# Admin user
-ENABLE_DEFAULT_ADMIN=true
-DEFAULT_ADMIN_EMAIL=admin@yourdomain.com
-DEFAULT_ADMIN_PASSWORD=CHANGE_ME_SECURE_PASSWORD
 
 # Registration (disable for invite-only)
 ENABLE_REGISTRATION=false

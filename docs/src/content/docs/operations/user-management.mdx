@@ -7,36 +7,26 @@ sidebar:
 
 import { Aside, Card, CardGrid, Code } from '@astrojs/starlight/components';
 
-## Bootstrap an Admin
+## Manage Admin Users
 
-<CardGrid columns={3}>
-  <Card title="Identify User" icon="search">
-    Decode the JWT stored by the frontend to retrieve the user UUID:
+<CardGrid columns={2}>
+  <Card title="Clerk Dashboard" icon="shield">
+    Use the Clerk dashboard to manage user roles:
+    
+    1. Go to your Clerk dashboard
+    2. Find the user you want to promote
+    3. Add `isAdmin: true` to their public metadata
+    4. The change takes effect immediately
+  </Card>
+  <Card title="Clerk API" icon="code">
+    Programmatically update user metadata:
 
     <Code
-      code={`const token = localStorage.getItem('secure_token');
-const payload = JSON.parse(atob(token.split('.')[1]));
-console.log(payload.user_id);`}
+      code={`// Using Clerk Backend API
+const user = await clerkClient.users.updateUser(userId, {
+  publicMetadata: { isAdmin: true }
+});`}
       language="javascript"
-    />
-
-    Alternatively read `current_user_id` from Local Storage.
-  </Card>
-  <Card title="Allowlist UUID" icon="shield">
-    Provide the UUID via environment variable and restart the backend:
-
-    <Code code={`ADMIN_USER_IDS=1c0fe4f0-9d41-41cc-8806-b5e8f6a2ad71`} language="env" />
-
-    Comma-separate multiple bootstrap admins.
-  </Card>
-  <Card title="Persist Role" icon="approve-check">
-    Promote permanently with SQL or the admin API:
-
-    <Code
-      code={`UPDATE users
-SET is_admin = true
-WHERE id = '1c0fe4f0-9d41-41cc-8806-b5e8f6a2ad71';`}
-      language="sql"
     />
   </Card>
 </CardGrid>
@@ -47,14 +37,14 @@ Admins never receive decryption keys. They operate on metadata only—note conte
 
 ## Admin Panel
 
-- Enable UI: set `VITE_ENABLE_ADMIN_PANEL=true` before building the frontend.
+The admin panel is available to users with admin privileges set through Clerk:
 - Actions map directly to backend handlers (`handlers/account.go`, `handlers/settings.go`):
   - Toggle `is_admin`, assign RBAC roles (`moderator`, `auditor`).
   - Unlock accounts (`failed_attempts`, `locked_until`).
   - Adjust registration (`app_settings.registration_enabled`).
   - Inspect login telemetry and MFA adoption.
 
-JWT + `is_admin` column gate every request—front-end toggles do not bypass auth.
+JWT + `is_admin` column gate every request—Clerk authentication required.
 
 ## SQL Reference
 

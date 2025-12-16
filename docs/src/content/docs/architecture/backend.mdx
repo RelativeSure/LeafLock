@@ -64,7 +64,7 @@ All middleware relies on `config.Config` values produced by `config.LoadConfig()
 
 `server/health.go` maintains a `ReadyState` guard:
 
-- Flags flip when admin bootstrapping, template seeding, allowlist import, and Redis readiness complete.
+- Flags flip when template seeding, authentication setup, and Redis readiness complete.
 - `/api/v1/health/live`: always available for load balancers.
 - `/api/v1/health/ready`: blocks until `ReadyState.IsFullyReady()` and verifies quick `users` count + Redis ping.
 
@@ -109,7 +109,7 @@ All handlers receive pgx pools directly—no ORM—so transactional logic lives 
 
 ## Background Services
 
-- `services/admin.go`: seeds the default admin account if `ENABLE_DEFAULT_ADMIN=true`.
+- `services/clerk.go`: manages Clerk authentication integration and user sessions.
 - `services/templates.go`: imports bundled templates from `backend/templates/` into the `templates` table.
 - `services/cleanup.go`: runs `cleanup_old_deleted_notes()` nightly and clears expired share links.
 - `services/share_links.go`: rotates tokens beyond `max_uses` and expires stale connections.

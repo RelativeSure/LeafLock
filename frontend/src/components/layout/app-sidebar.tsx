@@ -2,7 +2,6 @@ import * as React from 'react'
 import {
   Home,
   Settings,
-  Shield,
   Tag,
   Plus,
   LogOut,
@@ -54,7 +53,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/components/ui/user-avatar'
-import { AccountSidebar } from './account-sidebar'
 
 import { useClerkAuthStore } from '@/stores/clerkAuthStore'
 import { useNotesStore } from '@/stores/notesStore'
@@ -79,7 +77,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [newFolderName, setNewFolderName] = React.useState('')
   const [newFolderColor, setNewFolderColor] = React.useState('#3b82f6')
   const [isTemplatesDialogOpen, setIsTemplatesDialogOpen] = React.useState(false)
-  const [isAccountSidebarOpen, setIsAccountSidebarOpen] = React.useState(false)
 
   const handleCreateFolder = async () => {
     if (newFolderName.trim()) {
@@ -108,20 +105,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <>
-      {/* Account Settings Sidebar Overlay */}
-      {isAccountSidebarOpen && (
-        <div className="fixed inset-0 z-50 flex">
-          <AccountSidebar
-            onClose={() => setIsAccountSidebarOpen(false)}
-            className="w-64 border-r"
-          />
-          <div
-            className="flex-1 bg-background/80 backdrop-blur-sm"
-            onClick={() => setIsAccountSidebarOpen(false)}
-          />
-        </div>
-      )}
-
       <Sidebar collapsible="icon" {...props}>
         <SidebarHeader className="group-data-[collapsible=icon]:px-1">
           <SidebarMenu>
@@ -357,24 +340,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  tooltip="Settings"
+                  tooltip="Account"
                   className="justify-center w-10 h-10 p-0 hover:bg-accent hover:text-accent-foreground transition-colors"
-                  aria-label="Settings"
+                  aria-label="Account"
                 >
-                  <Link to="/settings">
+                  <Link to="/account">
                     <Settings className="w-5 h-5" />
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              {user?.isAdmin && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild tooltip="Admin Console" className="justify-center">
-                    <Link to="/admin">
-                      <Shield />
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>
@@ -401,7 +375,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   align="end"
                   sideOffset={4}
                 >
-                  <DropdownMenuItem onClick={() => setIsAccountSidebarOpen(true)}>
+                  <DropdownMenuItem onClick={() => navigate({ to: '/account' })}>
                     <User className="mr-2 h-4 w-4" />
                     Account
                   </DropdownMenuItem>

@@ -52,9 +52,6 @@ VITE_API_URL=https://leaflock.example.com/api/v1
 # App behaviour
 APP_ENV=production
 ENABLE_REGISTRATION=false
-ENABLE_DEFAULT_ADMIN=true
-DEFAULT_ADMIN_EMAIL=admin@leaflock.example.com
-DEFAULT_ADMIN_PASSWORD=$(openssl rand -base64 24)LeafLock!
 ```
 
 Add any optional flags (metrics, additional admins, etc.) exactly as you would for other deployments. Keeping everything in Coolify’s environment editor makes redeploys painless.

@@ -27,13 +27,12 @@ Set strong values before first deploy. Railway injects them at build and runtime
 <Code
   code={`openssl rand -base64 64  # JWT_SECRET
 openssl rand -base64 32  # SERVER_ENCRYPTION_KEY
-openssl rand -base64 32  # DEFAULT_ADMIN_PASSWORD
 
 # Railway UI → Backend → Variables
 JWT_SECRET=<value>
 SERVER_ENCRYPTION_KEY=<value>
-DEFAULT_ADMIN_EMAIL=ops@yourdomain.com
-DEFAULT_ADMIN_PASSWORD=<value>
+CLERK_PUBLISHABLE_KEY=<your_clerk_publishable_key>
+CLERK_SECRET_KEY=<your_clerk_secret_key>
 ENABLE_REGISTRATION=false`}
   language="bash"
 />
@@ -58,7 +57,8 @@ SERVER_ENCRYPTION_KEY=<from secrets>
 APP_ENV=production
 CORS_ORIGINS=https://leaflock-frontend-production.up.railway.app
 ENABLE_METRICS=true
-ENABLE_DEFAULT_ADMIN=true`}
+CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
+CLERK_SECRET_KEY=sk_test_your_secret_key_here`}
   language="bash"
 />
 

@@ -36,10 +36,7 @@ type Config struct {
 	TrustProxyHeaders   bool
 	RateLimitMode       string
 	LogLevel            string
-	// Default admin settings
-	DefaultAdminEnabled  bool
-	DefaultAdminEmail    string
-	DefaultAdminPassword string
+
 	// Email/SMTP configuration
 	SMTPEnabled  bool
 	SMTPHost     string
@@ -87,22 +84,6 @@ func LoadConfig() *Config {
 		} else {
 			// Safe local default for dev
 			dbURL = "postgres://postgres:postgres@localhost:5432/leaflock?sslmode=prefer" // secretlint-disable-line
-		}
-	}
-
-	// Validate admin password security
-	adminPassword := GetEnvOrDefault("DEFAULT_ADMIN_PASSWORD", "ChangeThisAdminPassword123!")
-	if GetEnvAsBool("ENABLE_DEFAULT_ADMIN", true) {
-		// Check for weak admin passwords
-		if len(adminPassword) < 12 {
-			log.Fatalf("💥 [FATAL] DEFAULT_ADMIN_PASSWORD must be at least 12 characters long for security")
-		}
-		adminLower := strings.ToLower(adminPassword)
-		weakAdminPasswords := []string{"adminpass123!", "admin123", "password", "123456", "admin", "your_", "change_me", "default"}
-		for _, weak := range weakAdminPasswords {
-			if strings.HasPrefix(adminLower, strings.ToLower(weak)) || strings.EqualFold(adminPassword, weak) {
-				log.Fatalf("💥 [FATAL] DEFAULT_ADMIN_PASSWORD cannot be a weak/default value: '%s'", weak)
-			}
 		}
 	}
 
@@ -161,10 +142,6 @@ func LoadConfig() *Config {
 		TrustProxyHeaders:  GetEnvAsBool("TRUST_PROXY_HEADERS", false),
 		RateLimitMode:      GetEnvOrDefault("RATE_LIMIT_MODE", "progressive"),
 		LogLevel:           logLevel,
-		// Default admin configuration
-		DefaultAdminEnabled:  GetEnvAsBool("ENABLE_DEFAULT_ADMIN", true),
-		DefaultAdminEmail:    GetEnvOrDefault("DEFAULT_ADMIN_EMAIL", "admin@leaflock.app"),
-		DefaultAdminPassword: adminPassword,
 		// SMTP configuration
 		SMTPEnabled:  GetEnvAsBool("SMTP_ENABLED", false),
 		SMTPHost:     GetEnvOrDefault("SMTP_HOST", "localhost"),

@@ -389,8 +389,8 @@ ENABLE_REGISTRATION=true
 
     # Important
     CORS_ORIGINS
-    DEFAULT_ADMIN_EMAIL
-    DEFAULT_ADMIN_PASSWORD
+    CLERK_PUBLISHABLE_KEY
+    CLERK_SECRET_KEY
 
     # Optional (have good defaults)
     PORT=8080
@@ -550,8 +550,8 @@ REDIS_URL=${{Redis.REDIS_URL}}
 JWT_SECRET=<64-char-secret>
 SERVER_ENCRYPTION_KEY=<32-char-key>
 CORS_ORIGINS=https://leaflock-frontend-production.up.railway.app
-DEFAULT_ADMIN_EMAIL=admin@example.com
-DEFAULT_ADMIN_PASSWORD=<secure-password>
+CLERK_PUBLISHABLE_KEY=pk_live_your_clerk_publishable_key
+CLERK_SECRET_KEY=sk_live_your_clerk_secret_key
 ENABLE_REGISTRATION=false
 TRUST_PROXY_HEADERS=true
 APP_ENV=production

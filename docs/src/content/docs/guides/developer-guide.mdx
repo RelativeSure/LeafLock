@@ -24,8 +24,8 @@ All endpoints are documented in `backend/docs/openapi.json`.
 
 ### Testing Locally
 
-- Bootstrap by setting `ADMIN_USER_IDS=<your-user-id>` and restart backend
-- Open the UI and try the admin endpoints
+- Admin access is managed through Clerk user metadata
+- Open the UI and try the admin endpoints (requires Clerk authentication)
 
 <Aside type="tip" title="Contributing to the API Spec">
   Update `backend/docs/openapi.json` and include:
@@ -60,8 +60,8 @@ All admin endpoints require JWT and `admin` role.
 
 ### Local Bootstrap
 
-- Temporary allowlist via env var: `ADMIN_USER_IDS=uuid1,uuid2`
-- Use it to grant first admin, then set `is_admin` via API
+- Admin access is managed through Clerk user metadata
+- Set `is_admin: true` in Clerk user metadata via API or dashboard
 
 ## Rate Limiting
 

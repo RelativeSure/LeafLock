@@ -10,7 +10,7 @@
 //   - Automated cleanup of expired data and system maintenance
 //   - Default template seeding for new user onboarding
 //   - Share link management and validation
-//   - Allowlist management for access control
+//   - Access control integration with Clerk authentication
 //
 // # Key Abstractions and Patterns
 //
@@ -39,7 +39,7 @@
 //   - SMTP connections support TLS with configurable security levels
 //   - Share links use cryptographically secure random generation
 //   - Cleanup operations use parameterized queries to prevent SQL injection
-//   - Allowlist validation prevents unauthorized access attempts
+//   - Clerk integration provides secure user authentication
 //
 // # Architectural Decisions
 //

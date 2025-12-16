@@ -162,15 +162,12 @@ These commands MUST be allowed to complete:
 
 ## Default Admin Account
 
-### First-Time Login Credentials
-**ALWAYS change these immediately after first login:**
-- Email: `admin@leaflock.app`
-- Password: `AdminPass123!`
+### Authentication Setup
+LeafLock uses Clerk for modern authentication. Configure these environment variables:
+- `CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
 
-These are configurable via environment variables:
-- `DEFAULT_ADMIN_EMAIL`
-- `DEFAULT_ADMIN_PASSWORD`
-- `ENABLE_DEFAULT_ADMIN=true`
+Users can register through the normal registration process or be invited by existing admins.
 
 ## Key Validation Workflows
 

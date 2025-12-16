@@ -43,8 +43,7 @@
 'use client'
 
 import * as React from 'react'
-import { useClerkAuthStore } from '../../stores/clerkAuthStore'
-import { FileText, Tag, Settings, ShieldCheck, BookOpen, Github, ChevronDown } from 'lucide-react'
+import { FileText, Tag, Settings, BookOpen, Github, ChevronDown } from 'lucide-react'
 
 import {
   NavigationMenu,
@@ -76,20 +75,6 @@ const components: { title: string; href: string; description: string; icon: Reac
   },
 ]
 
-const adminComponents: {
-  title: string
-  href: string
-  description: string
-  icon: React.ReactNode
-}[] = [
-  {
-    title: 'Admin Dashboard',
-    href: '/admin',
-    description: 'Manage users, system settings, and administrative functions.',
-    icon: <ShieldCheck className="h-4 w-4" />,
-  },
-]
-
 const externalLinks: { title: string; href: string; description: string; icon: React.ReactNode }[] =
   [
     {
@@ -107,9 +92,6 @@ const externalLinks: { title: string; href: string; description: string; icon: R
   ]
 
 export function MainNavigation() {
-  const { user } = useClerkAuthStore()
-  const isAdmin = user?.isAdmin || false
-
   return (
     <NavigationMenu>
       <NavigationMenuList>
@@ -134,30 +116,6 @@ export function MainNavigation() {
             </ul>
           </NavigationMenuContent>
         </NavigationMenuItem>
-
-        {isAdmin && (
-          <NavigationMenuItem>
-            <NavigationMenuTrigger className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4" />
-              Admin
-              <ChevronDown className="h-3 w-3" />
-            </NavigationMenuTrigger>
-            <NavigationMenuContent>
-              <ul className="grid gap-2 sm:w-[400px] md:w-[500px] md:grid-cols-2 lg:w-[600px]">
-                {adminComponents.map((component) => (
-                  <ListItem
-                    key={component.title}
-                    title={component.title}
-                    href={component.href}
-                    icon={component.icon}
-                  >
-                    {component.description}
-                  </ListItem>
-                ))}
-              </ul>
-            </NavigationMenuContent>
-          </NavigationMenuItem>
-        )}
 
         <NavigationMenuItem>
           <NavigationMenuTrigger className="flex items-center gap-2">

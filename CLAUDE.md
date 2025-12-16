@@ -306,7 +306,7 @@ git commit --no-verify -m "message"
 - `session.go` - Redis-backed session management (encrypted)
 - `password.go` - Argon2id hashing, password reset flow
 - `mfa.go` - TOTP + backup codes implementation
-- `admin.go` - Default admin user provisioning (idempotent)
+- `clerk_*.go` - Clerk authentication integration
 - `service.go` - Coordinating service layer
 - `handlers.go` - HTTP API (13 endpoints)
 - `middleware.go` - JWT validation, auth guards
@@ -321,16 +321,11 @@ git commit --no-verify -m "message"
 - Session management (24-hour duration)
 - Encrypted sessions (XChaCha20-Poly1305)
 
-**Default Admin User**:
-- Automatically provisioned from environment variables on startup
-- Configuration: `ENABLE_DEFAULT_ADMIN`, `DEFAULT_ADMIN_EMAIL`, `DEFAULT_ADMIN_PASSWORD`
-- Implementation: `backend/auth/admin.go` - `EnsureDefaultAdminFromEnv()`
-- **Idempotent**: Safe to run on every startup
-- **Updates**: Can promote existing users to admin or change password if env vars change
-- **Security**: Password strength validation enforced (12+ chars, complexity requirements)
-- **Warning**: Changing password invalidates old encrypted notes (new master key generated)
-- Default email: `admin@leaflock.local` (configurable)
-- To disable: Set `ENABLE_DEFAULT_ADMIN=false`
+**Clerk Authentication**:
+- Modern authentication using Clerk service
+- Handles user registration, login, MFA, and session management
+- No default admin accounts - all users managed through Clerk
+- Enhanced security with Clerk's infrastructure
 
 ### IPv4/IPv6 Support
 - Backend auto-binds to `[::]:{PORT}` (dual-stack) with IPv4 fallback

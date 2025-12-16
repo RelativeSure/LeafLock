@@ -2,43 +2,20 @@ package main
 
 import (
 	"embed"
-	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"html/template"
-	"os"
-	"strings"
 )
 
 //go:embed docs/openapi.json
 var openAPIFS embed.FS
 
-// AdminOnlyFromEnv allows access only if the authenticated user ID is listed in ADMIN_USER_IDS (comma-separated UUIDs)
+// AdminOnlyFromEnv has been removed - admin access is now managed through Clerk
+// This function returns a handler that denies all access for backward compatibility
 func AdminOnlyFromEnv() fiber.Handler {
-	admins := strings.Split(os.Getenv("ADMIN_USER_IDS"), ",")
-	for i := range admins {
-		admins[i] = strings.TrimSpace(admins[i])
-	}
-
 	return func(c *fiber.Ctx) error {
-		uidVal := c.Locals("user_id")
-		if uidVal == nil {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
-		}
-		uid := ""
-		switch v := uidVal.(type) {
-		case string:
-			uid = v
-		case interface{ String() string }:
-			uid = v.String()
-		default:
-			uid = strings.TrimSpace(fmt.Sprint(v))
-		}
-		for _, a := range admins {
-			if a != "" && a == uid {
-				return c.Next()
-			}
-		}
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Admins only"})
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "Bootstrap admin access removed - use Clerk authentication",
+		})
 	}
 }
 

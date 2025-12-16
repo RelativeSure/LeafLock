@@ -95,7 +95,7 @@ Options:
 - ✅ Special character handling in Docker
 
 **Key Fixes Validated**:
-- ✅ `DEFAULT_ADMIN_PASSWORD` is properly configured
+- ✅ Authentication is handled by Clerk (no default admin)
 - ✅ Strong, secure passwords are used
 - ✅ No default placeholder values remain
 
@@ -164,16 +164,9 @@ services:
       DATABASE_URL: postgres://...
 ```
 
-### 2. Missing Admin Configuration
-**Problem**: `.env` file was missing `DEFAULT_ADMIN_PASSWORD` and related configuration.
-**Solution**: Added complete admin user configuration to `.env` with secure defaults.
-
-**Added Configuration**:
-```bash
-ENABLE_DEFAULT_ADMIN=true
-DEFAULT_ADMIN_EMAIL=admin@leaflock.app
-DEFAULT_ADMIN_PASSWORD=AdminPass123!
-```
+### 2. Authentication Configuration
+**Problem**: Application needed proper authentication setup.
+**Solution**: Clerk authentication is now the primary method - no default admin configuration needed.
 
 ### 3. Coolify Deployment Compatibility
 **Problem**: Docker Compose wasn't optimized for Coolify platform.
@@ -204,13 +197,12 @@ DEFAULT_ADMIN_PASSWORD=AdminPass123!
 - `REDIS_PASSWORD` - Redis password (32+ chars, strong)
 - `JWT_SECRET` - JWT signing key (64+ chars, random)
 - `SERVER_ENCRYPTION_KEY` - Encryption key (32 chars or base64)
-- `DEFAULT_ADMIN_PASSWORD` - Admin password (strong with special chars)
+- `CLERK_SECRET_KEY` - Clerk authentication secret key
 
 ### Recommended Variables
 - `CORS_ORIGINS` - Allowed domains for CORS
 - `VITE_API_URL` - Frontend API URL
-- `DEFAULT_ADMIN_EMAIL` - Admin email address
-- `ENABLE_DEFAULT_ADMIN` - Enable/disable default admin creation
+- `CLERK_PUBLISHABLE_KEY` - Clerk authentication publishable key
 
 ## Deployment Workflows
 

@@ -134,7 +134,7 @@ Key changes in the override:
 ## Security Checklist
 
 - [ ] Rotate `JWT_SECRET`, `SERVER_ENCRYPTION_KEY`, `POSTGRES_PASSWORD`, and `REDIS_PASSWORD` before first deploy.
-- [ ] Set `ENABLE_DEFAULT_ADMIN=false` or change the default admin password post-boot.
+- [ ] Configure Clerk authentication keys (`CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`).
 - [ ] Configure trusted CORS origins (`CORS_ORIGINS=https://app.leaflock.example`).
 - [ ] Enforce TLS termination in front of the frontend container.
 - [ ] Schedule database and volume backups (see `/operations/backups` once created).

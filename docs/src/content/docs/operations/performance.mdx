@@ -11,7 +11,7 @@ import { Aside, Code } from '@astrojs/starlight/components';
 
 1. Fiber server binds and exposes `/api/v1/health/live`.
 2. Database migrations run while pgx + Redis pools warm (`MaxConns=15`, `MinConns=2`).
-3. Default admin allowlist, templates, and share-link caches load asynchronously.
+3. Clerk authentication, templates, and share-link caches load asynchronously.
 4. WebSocket hub spins up Redis pub/sub channels.
 
 Key toggles (defaults shown):

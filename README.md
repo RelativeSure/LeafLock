@@ -84,34 +84,7 @@ LeafLock is a privacy-first notes application with end-to-end encryption, real-t
    - Visit `/login` to access Clerk's authentication components
    - Create your first account or sign in
 
-   **Note**: The default admin account is still available for initial setup, but Clerk handles all authentication.
-
-## Default Admin Account
-
-When starting LeafLock for the first time, a default admin user is automatically created if no users exist in the database:
-
-- **Email**: `admin@leaflock.app` (default)
-- **Password**: `AdminPass123!` (default)
-- **Admin privileges**: Yes
-
-### Configuration
-
-You can customize the default admin account using environment variables:
-
-```bash
-# Enable/disable default admin creation
-ENABLE_DEFAULT_ADMIN=true
-
-# Customize admin credentials
-DEFAULT_ADMIN_EMAIL=your-admin@domain.com
-DEFAULT_ADMIN_PASSWORD=YourSecurePassword123!
-```
-
-To disable automatic admin creation entirely, set `ENABLE_DEFAULT_ADMIN=false` in your `.env` file.
-
-⚠️ **SECURITY WARNING**: Change the default password immediately after your first login! These credentials are publicly documented and should never be used in production.
-
-For user management instructions, see [docs/development/user-management.md](./docs/src/content/docs/development/user-management.md).
+   **Note**: Clerk handles all authentication - no default admin account is created.
 
 ## Project Structure
 

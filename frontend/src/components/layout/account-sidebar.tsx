@@ -138,8 +138,8 @@ export function AccountSidebar({ onClose, ...props }: AccountSidebarProps) {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <Button onClick={() => handleNavigation('/settings?tab=profile')} className="w-full">
-              Manage Account
+            <Button onClick={() => handleNavigation('/settings')} className="w-full">
+              All Settings
             </Button>
           </SidebarMenuItem>
         </SidebarMenu>

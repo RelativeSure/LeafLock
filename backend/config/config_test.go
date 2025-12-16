@@ -205,7 +205,7 @@ func TestBuildDatabaseURLFromEnv(t *testing.T) {
 			} else {
 				_ = os.Unsetenv(env.key)
 			}
-		}
+			}
 	}()
 
 	t.Run("returns empty when required vars missing", func(t *testing.T) {
@@ -317,7 +317,6 @@ func TestIsSupportedLogLevel(t *testing.T) {
 
 func TestLoadConfigUsesDefaults(t *testing.T) {
 	// Zero-knowledge: SERVER_ENCRYPTION_KEY no longer used
-	t.Setenv("DEFAULT_ADMIN_PASSWORD", "StrongestAdminPass2024!")
 	t.Setenv("DATABASE_URL", "postgres://user:StrongPass321!@localhost:5432/leaflock?sslmode=require") // secretlint-disable-line
 	t.Setenv("LOG_LEVEL", "")
 	t.Setenv("LOGLEVEL", "")
@@ -336,8 +335,6 @@ func TestLoadConfigUsesDefaults(t *testing.T) {
 	t.Setenv("IP_LOCKOUT_MINUTES", "")
 	t.Setenv("TRUST_PROXY_HEADERS", "")
 	t.Setenv("RATE_LIMIT_MODE", "")
-	t.Setenv("ENABLE_DEFAULT_ADMIN", "")
-	t.Setenv("DEFAULT_ADMIN_EMAIL", "")
 	t.Setenv("REDIS_URL", "")
 	t.Setenv("REDIS_PASSWORD", "")
 	t.Setenv("APP_ENV", "")
@@ -381,14 +378,10 @@ func TestLoadConfigUsesDefaults(t *testing.T) {
 	if cfg.RateLimitMode != "progressive" {
 		t.Fatalf("expected default rate limit mode progressive, got %s", cfg.RateLimitMode)
 	}
-	if cfg.DefaultAdminEmail != "admin@leaflock.app" {
-		t.Fatalf("expected default admin email, got %s", cfg.DefaultAdminEmail)
-	}
 }
 
 func TestLoadConfigBuildsDatabaseURLFromEnv(t *testing.T) {
 	// Zero-knowledge: SERVER_ENCRYPTION_KEY no longer used
-	t.Setenv("DEFAULT_ADMIN_PASSWORD", "ExtremelySecureAdminPass456!")
 	t.Setenv("DATABASE_URL", "")
 	t.Setenv("POSTGRESQL_HOST", "db.internal.local")
 	t.Setenv("POSTGRESQL_USER", "appuser")
@@ -405,8 +398,6 @@ func TestLoadConfigBuildsDatabaseURLFromEnv(t *testing.T) {
 	t.Setenv("IP_LOCKOUT_MINUTES", "60")
 	t.Setenv("TRUST_PROXY_HEADERS", "true")
 	t.Setenv("RATE_LIMIT_MODE", "strict")
-	t.Setenv("ENABLE_DEFAULT_ADMIN", "false")
-	t.Setenv("DEFAULT_ADMIN_EMAIL", "ops@example.com")
 	t.Setenv("REDIS_URL", "redis://:password@redis.internal:6380/0")
 	t.Setenv("REDIS_PASSWORD", "ExplicitRedisPass!")
 	t.Setenv("SMTP_ENABLED", "true")
@@ -463,12 +454,6 @@ func TestLoadConfigBuildsDatabaseURLFromEnv(t *testing.T) {
 	}
 	if cfg.IPLockoutDuration != 60*time.Minute {
 		t.Fatalf("expected IP lockout duration 60m, got %s", cfg.IPLockoutDuration)
-	}
-	if cfg.DefaultAdminEnabled {
-		t.Error("expected default admin to be disabled")
-	}
-	if cfg.DefaultAdminEmail != "ops@example.com" {
-		t.Fatalf("expected custom admin email, got %s", cfg.DefaultAdminEmail)
 	}
 	if !cfg.SMTPEnabled {
 		t.Error("expected SMTP enabled")

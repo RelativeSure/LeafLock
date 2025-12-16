@@ -874,9 +874,6 @@ func (suite *LockoutTestSuite) SetupTest() {
 		IPLockoutDuration:    3 * time.Second, // Short duration for testing
 		LockoutDuration:      3 * time.Second, // Short duration for testing
 		SessionDuration:      1 * time.Hour,
-		DefaultAdminEmail:    "admin@test.com",
-		DefaultAdminPassword: "password",
-		DefaultAdminEnabled:  true,
 	}
 
 	// Test DB and Redis

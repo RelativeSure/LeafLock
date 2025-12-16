@@ -160,15 +160,7 @@ func main() {
 	// Begin async initialization of non-critical components
 	initStart := time.Now()
 
-	// Ensure default admin user from environment variables (idempotent)
-	adminStart := time.Now()
-	authService := auth.NewService(db, rdb, config.ClerkSecretKey)
-	if err := authService.EnsureDefaultAdminFromEnv(context.Background()); err != nil {
-		log.Printf("⚠️  Failed to ensure default admin user: %v", err)
-	} else {
-		log.Printf("⏱️  Admin initialization completed in %v", time.Since(adminStart))
-	}
-	readyState.MarkAdminReady()
+	// Initialize auth service (no default admin needed with Clerk)
 
 	// Initialize templates
 	templateStart := time.Now()
@@ -178,9 +170,8 @@ func main() {
 	log.Printf("⏱️  Template seeding completed in %v", time.Since(templateStart))
 	readyState.MarkTemplatesReady()
 
-	// Start admin allowlist refresher
-	services.StartAdminAllowlistRefresher()
-	log.Printf("✅ Admin allowlist refresher started")
+	// Admin access is now managed exclusively through Clerk
+	// No allowlist functionality needed
 	readyState.MarkAllowlistReady()
 
 	// Pre-warm Redis connection pool in background

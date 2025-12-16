@@ -9,7 +9,6 @@
  * - Root layout provides ClerkProvider, ThemeProvider and EncryptionProvider to all routes
  * - Auth routes use Clerk's pre-built components for login, registration, and password recovery
  * - Protected routes require authentication via Clerk's useAuth hook
- * - Admin route requires admin role from Clerk's user metadata
  * - Lazy loading reduces initial bundle size and improves performance
  *
  * @route-structure
@@ -20,8 +19,8 @@
  * └── / (protected layout) - Requires authentication
  *     ├── / - Dashboard view (default route)
  *     ├── /settings - User settings page
- *     ├── /manage - Folder and tag management
- *     └── /admin - Admin panel (requires admin role)
+ *     ├── /account - Account management page
+ *     └── /manage - Folder and tag management
  *
  * @performance-features
  * - Component lazy loading with React.Suspense fallback
@@ -35,7 +34,7 @@
  */
 import React from 'react'
 import { Outlet, createRoute, createRouter, createRootRoute } from '@tanstack/react-router'
-import { useAuth, useUser, SignIn, SignUp } from '@clerk/clerk-react'
+import { SignIn, SignUp } from '@clerk/clerk-react'
 
 import { ThemeProvider } from './context/ThemeContext'
 import { EncryptionProvider } from './lib/encryption-context'
@@ -56,10 +55,10 @@ import { ClerkAuthWithErrorBoundary } from './components/auth/clerk-error-bounda
 // New Layouts & Views
 import { ProtectedLayout } from './components/layout/protected-layout'
 import { DashboardView } from './components/dashboard/dashboard-view'
-import { SettingsPage } from './components/settings/settings-page'
+import { SettingsPage } from './components/settings/settings-page-new'
 import { FoldersTagsPage } from './components/management/folders-tags-page'
-import { AdminPage } from './components/admin/admin-page'
-import { ProtectedRoute } from './components/common/ProtectedRoute'
+
+import { AccountPage } from './components/account/account-page'
 import { InteractiveGridPattern } from './components/ui/interactive-grid-pattern'
 
 const RootLayout: React.FC = () => {
@@ -294,50 +293,16 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 })
 
+const accountRoute = createRoute({
+  getParentRoute: () => protectedLayoutRoute,
+  path: 'account',
+  component: AccountPage,
+})
+
 const manageRoute = createRoute({
   getParentRoute: () => protectedLayoutRoute,
   path: 'manage',
   component: FoldersTagsPage,
-})
-
-const AdminPageComponent = () => {
-  const { user, isLoaded } = useUser()
-  const { isSignedIn } = useAuth()
-
-  if (!isLoaded) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    )
-  }
-
-  if (!isSignedIn) {
-    return null // Will be handled by route protection
-  }
-
-  // Check if user has admin role from Clerk metadata
-  const isAdmin = user?.publicMetadata?.isAdmin === true || user?.publicMetadata?.role === 'admin'
-
-  const clerkUser = user
-    ? {
-        id: user.id,
-        email: user.primaryEmailAddress?.emailAddress || '',
-        isAdmin,
-      }
-    : null
-
-  return (
-    <ProtectedRoute requiredRole="admin" isLoading={!isLoaded} user={clerkUser}>
-      <AdminPage />
-    </ProtectedRoute>
-  )
-}
-
-const adminRoute = createRoute({
-  getParentRoute: () => protectedLayoutRoute,
-  path: 'admin',
-  component: AdminPageComponent,
 })
 
 // Create router
@@ -345,7 +310,7 @@ export const router = createRouter({
   routeTree: rootRoute.addChildren([
     loginRoute,
     registerRoute,
-    protectedLayoutRoute.addChildren([dashboardRoute, settingsRoute, manageRoute, adminRoute]),
+    protectedLayoutRoute.addChildren([dashboardRoute, settingsRoute, accountRoute, manageRoute]),
   ]),
   // Note: forgotRoute removed - handled by Clerk's built-in password recovery
 })

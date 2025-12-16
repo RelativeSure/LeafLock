@@ -157,7 +157,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	shareLinksHandler := handlers.NewShareLinksHandler(db, handlerCrypto, rdb)
 	announcementsHandler := handlers.NewAnnouncementsHandler(db)
 	noteLinksHandler := handlers.NewNoteLinksHandler(db)
-	adminHandler := handlers.NewAdminHandler(db)
+
 	auditLogHandler := handlers.NewAuditLogHandler(db)
 	profileHandler := handlers.NewProfileHandler(db)
 	analyticsHandler := handlers.NewAnalyticsHandler(db)
@@ -187,9 +187,8 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	// Enable when CLERK_DEBUG=true (merged from ENABLE_DEBUG_ENDPOINTS)
 	if config.Environment != "production" && authConfig.EnableDebugEndpoints {
 		api.Post("/auth/debug-login", authHandler.DebugLogin)
-		api.Get("/auth/debug-admin", authHandler.DebugAdminInfo)
+
 		api.Get("/auth/debug-encryption", authHandler.DebugEncryptionKey)
-		api.Post("/auth/reset-admin", authHandler.ResetAdminUser)
 		api.Get("/auth/debug-state", authHandler.EnhancedClerkMiddleware, authHandler.DebugAuthState)
 	}
 
@@ -349,28 +348,7 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
 	clerkEnhanced.Get("/organizations/:orgId", rateLimits.LightweightLimiter, authHandler.GetClerkOrganization)
 	clerkEnhanced.Put("/organizations/:orgId", rateLimits.StandardCRUDLimiter, authHandler.UpdateClerkOrganization)
 
-	// Admin routes - Tier 4: Standard CRUD (admin only)
-	admin := protected.Group("/admin", authHandler.RequireAdminMiddleware)
-	// Announcements
-	admin.Get("/announcements", rateLimits.StandardCRUDLimiter, announcementsHandler.GetAllAnnouncements)
-	admin.Post("/announcements", rateLimits.StandardCRUDLimiter, announcementsHandler.CreateAnnouncement)
-	admin.Put("/announcements/:id", rateLimits.StandardCRUDLimiter, announcementsHandler.UpdateAnnouncement)
-	admin.Delete("/announcements/:id", rateLimits.StandardCRUDLimiter, announcementsHandler.DeleteAnnouncement)
-	// User management
-	admin.Get("/stats", rateLimits.StandardCRUDLimiter, adminHandler.GetSystemStats)
-	admin.Get("/users", rateLimits.StandardCRUDLimiter, adminHandler.GetAllUsers)
-	admin.Patch("/users/:id/role", rateLimits.StandardCRUDLimiter, adminHandler.UpdateUserRole)
-	admin.Delete("/users/:id", rateLimits.StandardCRUDLimiter, adminHandler.DeleteUser)
-	admin.Post("/users/:id/unlock", rateLimits.StandardCRUDLimiter, adminHandler.UnlockUser)
-	// Admin settings
-	admin.Get("/settings", rateLimits.StandardCRUDLimiter, adminHandler.GetAllSettings)
-	admin.Put("/settings", rateLimits.StandardCRUDLimiter, adminHandler.UpdateSetting)
-	admin.Get("/settings/registration", rateLimits.StandardCRUDLimiter, adminHandler.GetRegistrationSetting)
-	admin.Put("/settings/registration", rateLimits.StandardCRUDLimiter, adminHandler.UpdateRegistrationSetting)
-	// Audit logs (admin view - all users)
-	admin.Get("/audit-logs", rateLimits.StandardCRUDLimiter, auditLogHandler.GetAuditLogs)
-	// Analytics (admin view - system-wide stats)
-	admin.Get("/analytics", rateLimits.StandardCRUDLimiter, analyticsHandler.GetAdminAnalytics)
+
 
 	// WebSocket endpoint
 	app.Use("/ws", func(c *fiber.Ctx) error {
