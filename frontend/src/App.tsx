@@ -47,14 +47,13 @@ let routerInstance: any = null
  */
 const AppContent: React.FC = () => {
   const [router, setRouter] = React.useState<any>(null)
-  const { session, isLoaded } = useSession()
-
   // Initialize API clients with Clerk session (now inside ClerkProvider)
+  const sessionData = useSession()
   React.useEffect(() => {
-    if (!isLoaded || !session) return
-    clerkApiClient.setSession({ session })
-    contentService.setSession({ session })
-  }, [isLoaded, session])
+    if (!sessionData.isLoaded || !sessionData.session) return
+    clerkApiClient.setSession(sessionData)
+    contentService.setSession(sessionData)
+  }, [sessionData])
 
   // Use enhanced Clerk functionality (now inside ClerkProvider)
   const { isExpiringSoon, timeUntilExpiry } = useEnhancedClerk()

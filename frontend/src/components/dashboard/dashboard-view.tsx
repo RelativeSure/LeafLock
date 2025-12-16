@@ -14,8 +14,8 @@ export function DashboardView() {
       // Only create a new note if no note is currently selected and we don't have a last seen note
       if (!selectedNote) {
         const lastSeenNoteId = localStorage.getItem('lastSeenNoteId')
-        const hasLastSeenNote = lastSeenNoteId && notes.some(note => note.id === lastSeenNoteId)
-        
+        const hasLastSeenNote = lastSeenNoteId && notes.some((note) => note.id === lastSeenNoteId)
+
         if (!hasLastSeenNote) {
           try {
             // Create a new empty note - it won't be saved until user writes something

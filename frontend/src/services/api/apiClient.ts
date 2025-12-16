@@ -1,4 +1,9 @@
-import { ClerkApiClient, ClerkApiError, isAuthLoopError, shouldRedirectToLogin } from './clerkApiClient'
+import {
+  ClerkApiClient,
+  ClerkApiError,
+  isAuthLoopError,
+  shouldRedirectToLogin,
+} from './clerkApiClient'
 import { safeRedirectToLogin } from '@/lib/navigation'
 import { API_BASE_URL } from './types'
 
@@ -21,7 +26,7 @@ export class ApiClient extends ClerkApiClient {
         console.warn('Authentication required - redirecting to login')
         setTimeout(() => safeRedirectToLogin(), 50)
       }
-      
+
       // Re-throw for backward compatibility
       throw error
     }

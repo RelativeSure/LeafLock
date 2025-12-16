@@ -322,7 +322,7 @@ export function NoteEditor() {
             // Don't save empty notes - just return silently
             return
           }
-          
+
           // Auto-generate title from timestamp if title is empty but content exists
           let finalTitle = trimmedTitle
           if (!finalTitle && trimmedContent) {
