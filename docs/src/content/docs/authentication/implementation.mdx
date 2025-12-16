@@ -354,6 +354,17 @@ func setupRoutes(app *fiber.App, db *pgxpool.Pool, rdb *redis.Client, config *ap
     // ... rest of route setup
 }
 ```
+
+### User Creation and Mapping
+
+```go title="backend/services/auth.go"
+func (h *AuthHandler) getOrCreateUser(ctx context.Context, clerkUserID, email string, isAdmin bool) (uuid.UUID, error) {
+    // Check if user mapping exists
+    var userID uuid.UUID
+    err := h.db.QueryRow(ctx, `
+        SELECT user_id FROM user_clerk_mappings 
+        WHERE clerk_user_id = $1
+    `, clerkUserID).Scan(&userID)
     
     if err == nil {
         return userID, nil
