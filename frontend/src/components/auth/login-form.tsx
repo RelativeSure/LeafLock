@@ -47,6 +47,7 @@ export function LoginForm({
             formFieldInput: 'clerk-input-enhanced',
             formFieldInput__emailAddress: 'clerk-input-enhanced',
             formFieldInput__password: 'clerk-input-enhanced',
+            formFieldInput__code: 'clerk-code-input-enhanced', // 2FA code input - matches email format
             formFieldInputShowPasswordButton:
               'text-muted-foreground hover:text-foreground hover:scale-110 transition-all',
             formFieldErrorText: 'clerk-message-error-enhanced',

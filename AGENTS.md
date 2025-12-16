@@ -11,7 +11,7 @@
 - `cd backend && make test` — format, vet, and execute the Go unit suite; `make test-coverage-check` enforces the 72% coverage floor.
 - `cd frontend && pnpm install` (first run) then `pnpm dev` for Vite dev server.
 - `cd frontend && pnpm check-all` — type-check, lint, format-check, and run Vitest.
-- After each run, confirm `pnpm lint` (ESLint) and `pre-commit run --all-files` both pass.
+- After each run, confirm `pnpm lint` (ESLint), pnpm check-all and `pre-commit run --all-files` both pass.
 
 ## Coding Style & Naming Conventions
 - Run `make fmt` or `gofmt` before committing Go changes; exported identifiers use CamelCase, private helpers stay lowercase, and interfaces follow `SomethingService`.
@@ -75,7 +75,7 @@ The following checks **WILL FAIL** your commit if violated:
 - All components must have proper TypeScript props interfaces
 
 ### **DOCUMENTATION POLICY ENFORCEMENT**
-- **NEVER create standalone `.md` files** in `/frontend/src` or component directories
+- **NEVER create standalone `.md` files** in any directories or in root. NOWHERE.
 - **DO NOT** create `COMPONENT_README.md`, `API.md`, or feature-specific docs
 - **ONLY** update: `CLAUDE.md` (automation), `README.md` (project overview), `docs/src/content/docs/` (AstroJS docs)
 - **DELETE** any existing standalone docs that violate this policy

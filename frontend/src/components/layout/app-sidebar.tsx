@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Home, Settings, Shield, Tag, Plus, LogOut, Leaf, ChevronRight, Trash2 } from 'lucide-react'
+import { Home, Settings, Shield, Tag, Plus, LogOut, Leaf, ChevronRight, Trash2, FileText } from 'lucide-react'
 import { Link, useNavigate, useLocation } from '@tanstack/react-router'
 import { useClerk } from '@clerk/clerk-react'
 
@@ -42,6 +42,7 @@ import { UserAvatar } from '@/components/ui/user-avatar'
 
 import { useClerkAuthStore } from '@/stores/clerkAuthStore'
 import { useNotesStore } from '@/stores/notesStore'
+import { TemplatesDialog } from '../dashboard/templates-dialog'
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const navigate = useNavigate()
@@ -61,6 +62,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [isCreateFolderOpen, setIsCreateFolderOpen] = React.useState(false)
   const [newFolderName, setNewFolderName] = React.useState('')
   const [newFolderColor, setNewFolderColor] = React.useState('#3b82f6')
+  const [isTemplatesDialogOpen, setIsTemplatesDialogOpen] = React.useState(false)
 
   const handleCreateFolder = async () => {
     if (newFolderName.trim()) {
@@ -88,7 +90,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <>
+      <Sidebar collapsible="icon" {...props}>
       <SidebarHeader className="group-data-[collapsible=icon]:px-1">
         <SidebarMenu>
           <SidebarMenuItem>
@@ -111,6 +114,47 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
+        {/* Quick Actions Group - First item in sidebar */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Quick Actions</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                tooltip="Templates"
+                onClick={() => setIsTemplatesDialogOpen(true)}
+                className="justify-center w-10 h-10 p-0 hover:bg-accent hover:text-accent-foreground transition-colors"
+                aria-label="Templates"
+              >
+                <FileText className="w-5 h-5" />
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                tooltip="Tags"
+                className="justify-center w-10 h-10 p-0 hover:bg-accent hover:text-accent-foreground transition-colors"
+                aria-label="Tags"
+              >
+                <Link to="/manage">
+                  <Tag className="w-5 h-5" />
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarGroupAction
+                title="New Note"
+                onClick={handleCreateNote}
+                disabled={isLoading}
+                className="w-10 h-10 p-0"
+              >
+                <Plus className="w-5 h-5" />
+              </SidebarGroupAction>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
         <SidebarGroup>
           <SidebarGroupLabel>Platform</SidebarGroupLabel>
           <SidebarMenu>
@@ -122,10 +166,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   selectFolder(null)
                   navigate({ to: '/' })
                 }}
-                className="group-data-[collapsible=icon]:justify-center"
+                className="group-data-[collapsible=icon]:justify-center w-10 h-10 p-0 hover:bg-accent hover:text-accent-foreground transition-colors"
+                aria-label="All Notes"
               >
-                <Home />
-                <span className="group-data-[collapsible=icon]:hidden">All Notes</span>
+                <Home className="w-5 h-5" />
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
@@ -133,10 +177,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 tooltip="Trash"
                 onClick={() => {
                   // Placeholder for trash
+                  console.log('Trash clicked')
                 }}
-                className="justify-center"
+                className="justify-center w-10 h-10 p-0 hover:bg-accent hover:text-accent-foreground transition-colors"
+                aria-label="Trash"
               >
-                <Trash2 />
+                <Trash2 className="w-5 h-5" />
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -146,9 +192,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
         <SidebarGroup>
           <SidebarGroupLabel>Notes</SidebarGroupLabel>
-          <SidebarGroupAction title="New Note" onClick={handleCreateNote} disabled={isLoading}>
-            <Plus /> <span className="sr-only">New Note</span>
-          </SidebarGroupAction>
           <SidebarGroupContent>
             <SidebarNoteList />
           </SidebarGroupContent>
@@ -261,14 +304,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   {tags.map((tag) => (
                     <SidebarMenuItem key={tag.id}>
                       <SidebarMenuButton
+                        tooltip={tag.name}
                         onClick={() => {
                           selectTag(tag.name)
                           navigate({ to: '/' })
                         }}
-                        className="group-data-[collapsible=icon]:justify-center"
+                        className="group-data-[collapsible=icon]:justify-center w-10 h-10 p-0 hover:bg-accent hover:text-accent-foreground transition-colors"
+                        aria-label={`Filter by tag: ${tag.name}`}
                       >
-                        <Tag />
-                        <span className="group-data-[collapsible=icon]:hidden">{tag.name}</span>
+                        <Tag className="w-5 h-5" />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
@@ -286,9 +330,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarGroup className="mt-auto">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Settings" className="justify-center">
+              <SidebarMenuButton
+                asChild
+                tooltip="Settings"
+                className="justify-center w-10 h-10 p-0 hover:bg-accent hover:text-accent-foreground transition-colors"
+                aria-label="Settings"
+              >
                 <Link to="/settings">
-                  <Settings />
+                  <Settings className="w-5 h-5" />
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -342,5 +391,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+
+    {/* Templates Dialog for Quick Actions */}
+    <TemplatesDialog open={isTemplatesDialogOpen} onOpenChange={setIsTemplatesDialogOpen} />
+  </>
+)
 }
