@@ -27,14 +27,18 @@ func withDebugEnv(t *testing.T, token string, fn func()) {
 		_ = os.Unsetenv(key)
 	}
 	if token != "" {
-		_ = os.Setenv("DEBUG_TOKEN", token)
+		if err := os.Setenv("DEBUG_TOKEN", token); err != nil {
+			t.Fatalf("Failed to set DEBUG_TOKEN: %v", err)
+		}
 	}
 	defer func() {
 		for key, val := range original {
 			if val == "" {
 				_ = os.Unsetenv(key)
 			} else {
-				_ = os.Setenv(key, val)
+				if err := os.Setenv(key, val); err != nil {
+				t.Logf("Warning: failed to restore env %s: %v", key, err)
+			}
 			}
 		}
 	}()

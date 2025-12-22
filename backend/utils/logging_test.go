@@ -87,14 +87,18 @@ func TestParseLogLevelFallback(t *testing.T) {
 		t.Fatalf("expected default LevelInfo, got %v err=%v", level, err)
 	}
 
-	_ = os.Setenv("LOG_LEVEL", "debug")
+	if err := os.Setenv("LOG_LEVEL", "debug"); err != nil {
+		t.Fatalf("Failed to set LOG_LEVEL: %v", err)
+	}
 	defer func() { _ = os.Unsetenv("LOG_LEVEL") }()
 	level, err = parseConfiguredLogLevel()
 	if err != nil || level != LevelDebug {
 		t.Fatalf("expected LevelDebug, got %v err=%v", level, err)
 	}
 
-	_ = os.Setenv("LOG_LEVEL", "invalid")
+	if err := os.Setenv("LOG_LEVEL", "invalid"); err != nil {
+		t.Fatalf("Failed to set LOG_LEVEL: %v", err)
+	}
 	level, err = parseConfiguredLogLevel()
 	if err == nil || level != LevelInfo {
 		t.Fatalf("expected fallback LevelInfo with error, got level=%v err=%v", level, err)

@@ -7,6 +7,14 @@ import (
 	"time"
 )
 
+// Helper function to set environment variables with error checking
+func mustSetenv(t *testing.T, key, value string) {
+	t.Helper()
+	if err := os.Setenv(key, value); err != nil {
+		t.Fatalf("Failed to set env %s: %v", key, err)
+	}
+}
+
 func TestGetEnvOrDefault(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -201,7 +209,9 @@ func TestBuildDatabaseURLFromEnv(t *testing.T) {
 	defer func() {
 		for _, env := range originalEnvs {
 			if env.value != "" {
-				_ = os.Setenv(env.key, env.value)
+				if err := os.Setenv(env.key, env.value); err != nil {
+					t.Logf("Warning: failed to restore env %s: %v", env.key, err)
+				}
 			} else {
 				_ = os.Unsetenv(env.key)
 			}
@@ -219,10 +229,10 @@ func TestBuildDatabaseURLFromEnv(t *testing.T) {
 	})
 
 	t.Run("builds URL with required vars", func(t *testing.T) {
-		_ = os.Setenv("POSTGRESQL_HOST", "testhost")
-		_ = os.Setenv("POSTGRESQL_USER", "testuser")
-		_ = os.Setenv("POSTGRESQL_PASSWORD", "testpass123")
-		_ = os.Setenv("POSTGRESQL_DATABASE", "testdb")
+		mustSetenv(t, "POSTGRESQL_HOST", "testhost")
+		mustSetenv(t, "POSTGRESQL_USER", "testuser")
+		mustSetenv(t, "POSTGRESQL_PASSWORD", "testpass123")
+		mustSetenv(t, "POSTGRESQL_DATABASE", "testdb")
 		_ = os.Unsetenv("POSTGRESQL_PORT")
 		_ = os.Unsetenv("POSTGRESQL_SSLMODE")
 
@@ -242,12 +252,12 @@ func TestBuildDatabaseURLFromEnv(t *testing.T) {
 	})
 
 	t.Run("uses custom port and sslmode", func(t *testing.T) {
-		_ = os.Setenv("POSTGRESQL_HOST", "custom")
-		_ = os.Setenv("POSTGRESQL_USER", "user")
-		_ = os.Setenv("POSTGRESQL_PASSWORD", "pass")
-		_ = os.Setenv("POSTGRESQL_DATABASE", "db")
-		_ = os.Setenv("POSTGRESQL_PORT", "5433")
-		_ = os.Setenv("POSTGRESQL_SSLMODE", "disable")
+		mustSetenv(t, "POSTGRESQL_HOST", "custom")
+		mustSetenv(t, "POSTGRESQL_USER", "user")
+		mustSetenv(t, "POSTGRESQL_PASSWORD", "pass")
+		mustSetenv(t, "POSTGRESQL_DATABASE", "db")
+		mustSetenv(t, "POSTGRESQL_PORT", "5433")
+		mustSetenv(t, "POSTGRESQL_SSLMODE", "disable")
 
 		result := buildDatabaseURLFromEnv()
 		if !contains(result, "5433") {

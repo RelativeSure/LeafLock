@@ -29,10 +29,10 @@ func TestLoadConfig(t *testing.T) {
 	originalAuthThreshold := os.Getenv("AUTH_FAILURE_THRESHOLD")
 	originalRateLimit := os.Getenv("RATE_LIMIT_AUTH")
 	defer func() {
-		// nolint:errcheck // Best effort cleanup in tests
-		os.Setenv("CLERK_DEBUG", originalClerkDebug)
-		os.Setenv("AUTH_FAILURE_THRESHOLD", originalAuthThreshold)
-		os.Setenv("RATE_LIMIT_AUTH", originalRateLimit)
+		// Restore original values, using helper functions for error handling
+		mustSetenv(t, "CLERK_DEBUG", originalClerkDebug)
+		mustSetenv(t, "AUTH_FAILURE_THRESHOLD", originalAuthThreshold)
+		mustSetenv(t, "RATE_LIMIT_AUTH", originalRateLimit)
 	}()
 
 	tests := []struct {
@@ -136,8 +136,10 @@ func TestLoadConfig(t *testing.T) {
 // TestLoadConfig_SecretKey tests that secret key is loaded from env
 func TestLoadConfig_SecretKey(t *testing.T) {
 	originalSecretKey := os.Getenv("CLERK_SECRET_KEY")
-	// nolint:errcheck // Cleanup in test; failures are not critical
-		defer os.Setenv("CLERK_SECRET_KEY", originalSecretKey)
+	defer func() {
+		// Restore original secret key
+		mustSetenv(t, "CLERK_SECRET_KEY", originalSecretKey)
+	}()
 
 	mustSetenv(t, "CLERK_SECRET_KEY", "sk_test_PLACEHOLDER_FOR_TESTING_ONLY")
 	config := LoadConfig()
@@ -299,8 +301,10 @@ func TestContainsSuspiciousPattern(t *testing.T) {
 // TestConfig_LoadClerkSecretKey tests loading Clerk secret key
 func TestConfig_LoadClerkSecretKey(t *testing.T) {
 	originalKey := os.Getenv("CLERK_SECRET_KEY")
-	// nolint:errcheck // Cleanup in test; failures are not critical
-		defer os.Setenv("CLERK_SECRET_KEY", originalKey)
+	defer func() {
+		// Restore original secret key
+		mustSetenv(t, "CLERK_SECRET_KEY", originalKey)
+	}()
 
 	mustSetenv(t, "CLERK_SECRET_KEY", "sk_test_PLACEHOLDER_FOR_LOAD_CONFIG_TEST_abcdefghijklmnopqrstuvwxyz")
 	config := LoadConfig()
@@ -313,8 +317,10 @@ func TestConfig_LoadClerkSecretKey(t *testing.T) {
 // TestConfig_DebugEndpointsEnabledWithDebug tests debug endpoints auto-enable
 func TestConfig_DebugEndpointsEnabledWithDebug(t *testing.T) {
 	originalDebug := os.Getenv("CLERK_DEBUG")
-	// nolint:errcheck // Cleanup in test; failures are not critical
-		defer os.Setenv("CLERK_DEBUG", originalDebug)
+	defer func() {
+		// Restore original debug setting
+		mustSetenv(t, "CLERK_DEBUG", originalDebug)
+	}()
 
 	mustSetenv(t, "CLERK_DEBUG", "true")
 	config := LoadConfig()

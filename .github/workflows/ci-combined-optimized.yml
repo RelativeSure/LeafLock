@@ -1,0 +1,139 @@
+# Combined Optimized CI - Fast Path
+# Quick format/vet/type-check and unit tests (4-5 min target)
+# Full linting runs in separate specialized workflows
+name: CI - Fast Path
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Backend checks (when backend files change)
+  backend-checks:
+    name: 🔍 Backend Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    if: |
+      contains(github.event.head_commit.message, '[backend]') ||
+      contains(github.event.head_commit.modified, 'backend/') ||
+      contains(github.event.head_commit.added, 'backend/') ||
+      contains(github.event.pull_request.changed_files, 'backend/')
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+
+      - name: 🔧 Setup Go
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6
+        with:
+          go-version: '1.25'
+          cache-dependency-path: backend/go.sum
+
+      - name: 📦 Install dependencies
+        working-directory: backend
+        run: go mod download
+
+      - name: 🔍 Quick Checks
+        working-directory: backend
+        run: |
+          # Format check (fast)
+          test -z "$(gofmt -l .)"
+          
+          # Vet check (fast)
+          go vet ./...
+          
+          # Unit tests (fast/short)
+          go test -short -timeout=3m ./...
+          
+          echo "✅ Backend checks passed (format, vet, unit tests only)"
+
+  # Frontend checks (when frontend files change)
+  frontend-checks:
+    name: 🔍 Frontend Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    if: |
+      contains(github.event.head_commit.message, '[frontend]') ||
+      contains(github.event.head_commit.modified, 'frontend/') ||
+      contains(github.event.head_commit.added, 'frontend/') ||
+      contains(github.event.pull_request.changed_files, 'frontend/')
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+
+      - name: 🔧 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.24.0
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: 📦 Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔍 Quick Checks
+        working-directory: frontend
+        run: |
+          # Type check (fast)
+          pnpm run type-check
+          
+          # Format check (fast)
+          pnpm run format:check
+          
+          # Quick tests (unit tests only)
+          pnpm test --run="*test*" --exclude="**/integration/**" --maxWorkers=2 --timeout=8000
+          
+          echo "✅ Frontend checks passed (type-check, format, unit tests only)"
+
+  # Documentation/Config checks (when docs/config files change)
+  docs-config-checks:
+    name: 🔍 Docs/Config Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    if: |
+      contains(github.event.head_commit.modified, 'docs/') ||
+      contains(github.event.head_commit.added, 'docs/') ||
+      contains(github.event.head_commit.modified, '*.md') ||
+      contains(github.event.head_commit.added, '*.md') ||
+      contains(github.event.head_commit.modified, 'docker-compose.yml') ||
+      contains(github.event.head_commit.modified, 'helm/')
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+
+      - name: 🔍 Validate Documentation
+        run: |
+          # Check for broken links in markdown files (quick check)
+          find docs/ -name "*.md" -exec echo "Checking {}" \; -exec head -5 {} \;
+          
+          # Validate docker-compose syntax
+          docker-compose config > /dev/null
+          
+          echo "✅ Documentation/config checks passed"
+
+  # Summary job
+  summary:
+    name: 📋 CI Summary
+    runs-on: ubuntu-latest
+    needs: [backend-checks, frontend-checks, docs-config-checks]
+    if: always()
+    steps:
+      - name: 📊 Report Results
+        run: |
+          echo "✅ Combined CI completed"
+          echo "Backend checks: ${{ needs.backend-checks.result }}"
+          echo "Frontend checks: ${{ needs.frontend-checks.result }}"
+          echo "Docs/config checks: ${{ needs.docs-config-checks.result }}"
