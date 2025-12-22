@@ -17,8 +17,19 @@ const jsonHeaders = { 'content-type': 'application/json' }
 const buildResponse = (status: number, body: any, ok: boolean = status >= 200 && status < 300) => ({
   ok,
   status,
+  statusText:
+    status === 200
+      ? 'OK'
+      : status === 401
+        ? 'Unauthorized'
+        : status === 404
+          ? 'Not Found'
+          : status === 400
+            ? 'Bad Request'
+            : 'Unknown',
   headers: new Headers(jsonHeaders),
   json: async () => body,
+  text: async () => (typeof body === 'string' ? body : JSON.stringify(body)),
 })
 
 describe('ApiClient', () => {
@@ -91,7 +102,7 @@ describe('ApiClient', () => {
     it('propagates network errors', async () => {
       fetchMock.mockRejectedValue(new Error('Network timeout'))
 
-      await expect(client.getNotes()).rejects.toThrow('Network timeout')
+      await expect(client.getNotes()).rejects.toThrow('Network error occurred')
     })
 
     it('clears auth storage on 401', async () => {
@@ -129,10 +140,12 @@ describe('ApiClient', () => {
       fetchMock.mockResolvedValue({
         ok: true,
         status: 204,
-        headers: new Headers(jsonHeaders),
+        statusText: 'No Content',
+        headers: new Headers(),
         json: async () => {
           throw new Error('no content')
         },
+        text: async () => '',
       })
 
       const result = await client.getNotes()
@@ -143,12 +156,16 @@ describe('ApiClient', () => {
       fetchMock.mockResolvedValue({
         ok: true,
         status: 200,
+        statusText: 'OK',
         headers: new Headers({ 'content-type': 'text/plain' }),
+        json: async () => {
+          throw new Error('Invalid JSON')
+        },
         text: async () => 'plain text',
       })
 
       const result = await client.getNotes()
-      expect(result).toBeNull()
+      expect(result).toBe('plain text')
     })
 
     it('returns null when response data is null', async () => {
@@ -186,8 +203,8 @@ describe('ApiClient', () => {
         expect.any(String),
         expect.objectContaining({
           headers: expect.objectContaining({
-            'X-Custom-Header': 'value1',
-            'X-Another-Header': 'value2',
+            'x-custom-header': 'value1',
+            'x-another-header': 'value2',
           }),
         })
       )

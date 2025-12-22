@@ -85,6 +85,30 @@ export class ClerkApiClient {
     return requestPromise
   }
 
+  private normalizeHeaders(headers?: HeadersInit): Record<string, string> {
+    const normalized: Record<string, string> = {}
+
+    if (!headers) {
+      return normalized
+    }
+
+    if (headers instanceof Headers) {
+      headers.forEach((value, key) => {
+        normalized[key.toLowerCase()] = value
+      })
+    } else if (Array.isArray(headers)) {
+      headers.forEach(([key, value]) => {
+        normalized[key.toLowerCase()] = value
+      })
+    } else if (typeof headers === 'object') {
+      Object.entries(headers).forEach(([key, value]) => {
+        normalized[key.toLowerCase()] = value
+      })
+    }
+
+    return normalized
+  }
+
   private async executeRequest<T>(endpoint: string, options: RequestInit, attempt = 1): Promise<T> {
     const url = `${this.baseURL}${endpoint}`
 
@@ -129,9 +153,10 @@ export class ClerkApiClient {
     }
 
     // Prepare headers
+    const customHeaders = this.normalizeHeaders(options.headers)
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...((options.headers as Record<string, string>) || {}),
+      ...customHeaders,
     }
 
     // Add authorization header if we have a token
@@ -160,6 +185,11 @@ export class ClerkApiClient {
       this.authFailureCount = 0
 
       // Parse response
+      // Return null for 204 No Content responses
+      if (response.status === 204) {
+        return null as T
+      }
+
       const contentType = response.headers.get('content-type')
       if (contentType && contentType.includes('application/json')) {
         return await response.json()

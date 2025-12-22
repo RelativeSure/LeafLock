@@ -22,6 +22,7 @@ vi.mock('@/services/api', () => ({
 vi.mock('@/lib/encryption-utils', () => ({
   ENCRYPTION_VERSION: 'v1',
   encryptTextWithStoredKey: vi.fn().mockResolvedValue('encrypted'),
+  getStoredKey: vi.fn().mockReturnValue(null),
 }))
 
 // Import mocked services after mocks are declared

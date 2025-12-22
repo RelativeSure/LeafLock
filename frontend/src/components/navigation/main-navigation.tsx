@@ -43,7 +43,7 @@
 'use client'
 
 import * as React from 'react'
-import { FileText, Tag, Settings, BookOpen, Github, ChevronDown } from 'lucide-react'
+import { FileText, Tag, Settings, BookOpen, Github, ChevronDown, ShieldCheck } from 'lucide-react'
 
 import {
   NavigationMenu,
@@ -53,6 +53,7 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from '@/components/ui/navigation-menu'
+import { useClerkAuthStore } from '@/stores/clerkAuthStore'
 
 const components: { title: string; href: string; description: string; icon: React.ReactNode }[] = [
   {
@@ -92,6 +93,9 @@ const externalLinks: { title: string; href: string; description: string; icon: R
   ]
 
 export function MainNavigation() {
+  const { user } = useClerkAuthStore()
+  const isAdmin = user?.isAdmin === true
+
   return (
     <NavigationMenu>
       <NavigationMenuList>
@@ -139,6 +143,27 @@ export function MainNavigation() {
             </ul>
           </NavigationMenuContent>
         </NavigationMenuItem>
+
+        {isAdmin && (
+          <NavigationMenuItem>
+            <NavigationMenuTrigger className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4" />
+              Admin
+              <ChevronDown className="h-3 w-3" />
+            </NavigationMenuTrigger>
+            <NavigationMenuContent>
+              <ul className="grid gap-2 sm:w-[400px] md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+                <ListItem
+                  title="Admin Dashboard"
+                  href="/admin"
+                  icon={<ShieldCheck className="h-4 w-4" />}
+                >
+                  Manage users, system settings, and administrative tasks.
+                </ListItem>
+              </ul>
+            </NavigationMenuContent>
+          </NavigationMenuItem>
+        )}
       </NavigationMenuList>
     </NavigationMenu>
   )

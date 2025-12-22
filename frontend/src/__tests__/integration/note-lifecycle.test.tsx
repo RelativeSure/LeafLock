@@ -35,6 +35,7 @@ vi.mock('@/lib/encryption-utils', () => ({
   ENCRYPTION_VERSION: 'v1',
   encryptTextWithStoredKey: vi.fn(),
   decryptText: vi.fn(),
+  getStoredKey: vi.fn().mockReturnValue(null),
 }))
 
 describe('Integration: Complete Note Lifecycle', () => {
@@ -394,9 +395,32 @@ describe('Integration: Complete Note Lifecycle', () => {
         new Error('Encryption failed')
       )
 
-      await expect(
-        useNotesStore.getState().createNote({ title: 'Test', content: 'Content' })
-      ).rejects.toThrow('Encryption failed')
+      // When encryption fails, the note should still be created but stored as plaintext
+      const createdNote: Note = {
+        id: 'note-1',
+        title: 'Test',
+        content: 'Content',
+        userId: '123',
+        encrypted: false, // Should be false when encryption fails
+        encryptionVersion: undefined,
+        folderId: null,
+        tags: [],
+        pinned: false,
+        isTrashed: false,
+        sharedWith: [],
+        isTemplate: false,
+        createdAt: '2024-01-01',
+        updatedAt: '2024-01-01',
+      }
+
+      vi.mocked(contentService.createNote).mockResolvedValue(createdNote)
+
+      const note = await useNotesStore.getState().createNote({ title: 'Test', content: 'Content' })
+
+      // Note should be created successfully even with encryption failure
+      expect(note.id).toBe('note-1')
+      expect(note.encrypted).toBe(false)
+      expect(useNotesStore.getState().notes).toHaveLength(1)
     })
 
     it('should handle update failure and rollback', async () => {

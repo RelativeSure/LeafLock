@@ -11,13 +11,28 @@ export interface Config {
 }
 
 /**
+ * Get environment variable from either import.meta.env or process.env
+ */
+function getEnvVar(key: string): string | undefined {
+  // In browser/Vite environment
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    return import.meta.env[key as keyof ImportMetaEnv] as string | undefined
+  }
+  // In Node.js/test environment
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env[key]
+  }
+  return undefined
+}
+
+/**
  * Detect if running on Railway
  */
 function isRailwayEnvironment(): boolean {
   return !!(
-    import.meta.env.RAILWAY_ENVIRONMENT ||
-    import.meta.env.RAILWAY_PROJECT_ID ||
-    import.meta.env.RAILWAY_SERVICE_NAME ||
+    getEnvVar('RAILWAY_ENVIRONMENT') ||
+    getEnvVar('RAILWAY_PROJECT_ID') ||
+    getEnvVar('RAILWAY_SERVICE_NAME') ||
     // Check for Railway-specific environment variables
     (typeof window !== 'undefined' && window.location.hostname.includes('railway.app'))
   )
@@ -30,20 +45,20 @@ function getRailwayServiceUrl(serviceName: string): string | null {
   // Railway service references (recommended approach)
   // These are automatically set when you reference other services
   const envVarName = `${serviceName.toUpperCase()}_URL`
-  const serviceUrl = import.meta.env[envVarName as keyof ImportMetaEnv]
+  const serviceUrl = getEnvVar(envVarName)
   if (serviceUrl) {
-    return serviceUrl as string
+    return serviceUrl
   }
 
   // Railway provides these environment variables
   const railwayVarName = `RAILWAY_${serviceName.toUpperCase()}_URL`
-  const railwayUrl = import.meta.env[railwayVarName as keyof ImportMetaEnv]
+  const railwayUrl = getEnvVar(railwayVarName)
   if (railwayUrl) {
-    return railwayUrl as string
+    return railwayUrl
   }
 
   // Fallback: construct from Railway's internal networking
-  const railwayInternalHost = import.meta.env.RAILWAY_INTERNAL_HOST
+  const railwayInternalHost = getEnvVar('RAILWAY_INTERNAL_HOST')
   if (railwayInternalHost) {
     return `https://${railwayInternalHost}`
   }
@@ -57,7 +72,12 @@ function getRailwayServiceUrl(serviceName: string): string | null {
 function resolveApiUrl(): string {
   // Special case: Railway preview deployments should use same-origin
   // This avoids CORS issues and ensures preview uses its own backend
-  if (isRailwayEnvironment() && import.meta.env.RAILWAY_ENVIRONMENT === 'preview') {
+  // Skip this in test environment to avoid console.log interference
+  if (
+    isRailwayEnvironment() &&
+    getEnvVar('RAILWAY_ENVIRONMENT') === 'preview' &&
+    !getEnvVar('VITEST')
+  ) {
     if (typeof window !== 'undefined') {
       console.log('🔧 Railway preview detected: using same-origin API URL')
       return `${window.location.origin}/api/v1`
@@ -65,29 +85,29 @@ function resolveApiUrl(): string {
   }
 
   // 1. Explicit override (highest priority)
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL
+  const viteApiUrl = getEnvVar('VITE_API_URL')
+  if (viteApiUrl) {
+    return viteApiUrl
   }
 
   // 2. Railway service discovery (automatic - no manual config needed!)
   if (isRailwayEnvironment()) {
     // Try Railway's automatic service variables first (most reliable)
-    const automaticBackendUrl = (import.meta.env.BACKEND_URL ||
-      import.meta.env.API_URL ||
-      import.meta.env.SERVER_URL) as string | undefined
+    const automaticBackendUrl =
+      getEnvVar('BACKEND_URL') || getEnvVar('API_URL') || getEnvVar('SERVER_URL')
 
     if (automaticBackendUrl) {
       return `${automaticBackendUrl}/api/v1`
     }
 
     // Try Railway's private/internal networking (preferred for internal communication)
-    const railwayInternalHost = import.meta.env.RAILWAY_INTERNAL_HOST
+    const railwayInternalHost = getEnvVar('RAILWAY_INTERNAL_HOST')
     if (railwayInternalHost) {
       return `https://${railwayInternalHost}/api/v1`
     }
 
     // Try Railway's private domain pattern
-    const railwayPrivateDomain = import.meta.env.RAILWAY_PRIVATE_DOMAIN
+    const railwayPrivateDomain = getEnvVar('RAILWAY_PRIVATE_DOMAIN')
     if (railwayPrivateDomain) {
       return `https://${railwayPrivateDomain}/api/v1`
     }
@@ -103,22 +123,24 @@ function resolveApiUrl(): string {
     }
 
     // Try Railway's public domain pattern (fallback)
-    const railwayPublicDomain = import.meta.env.RAILWAY_PUBLIC_DOMAIN
+    const railwayPublicDomain = getEnvVar('RAILWAY_PUBLIC_DOMAIN')
     if (railwayPublicDomain) {
       return `https://${railwayPublicDomain}/api/v1`
     }
   }
 
   // 3. Development proxy target
-  if (import.meta.env.VITE_DEV_PROXY_TARGET) {
-    return `${import.meta.env.VITE_DEV_PROXY_TARGET as string}/api/v1`
+  const devProxyTarget = getEnvVar('VITE_DEV_PROXY_TARGET')
+  if (devProxyTarget) {
+    return `${devProxyTarget}/api/v1`
   }
 
   // 4. Granular dev settings
-  if (import.meta.env.VITE_DEV_BACKEND_PROTOCOL) {
-    const protocol = import.meta.env.VITE_DEV_BACKEND_PROTOCOL as string
-    const host = (import.meta.env.VITE_DEV_BACKEND_HOST as string) || 'localhost'
-    const port = (import.meta.env.VITE_DEV_BACKEND_PORT as string) || '8080'
+  const devBackendProtocol = getEnvVar('VITE_DEV_BACKEND_PROTOCOL')
+  if (devBackendProtocol) {
+    const protocol = devBackendProtocol
+    const host = getEnvVar('VITE_DEV_BACKEND_HOST') || 'localhost'
+    const port = getEnvVar('VITE_DEV_BACKEND_PORT') || '8080'
     return `${protocol}://${host}:${port}/api/v1`
   }
 
@@ -135,20 +157,22 @@ function resolveApiUrl(): string {
  * Get service name from Railway environment
  */
 function getServiceName(): string | undefined {
-  return (import.meta.env.RAILWAY_SERVICE_NAME || import.meta.env.VITE_SERVICE_NAME) as
-    | string
-    | undefined
+  return getEnvVar('RAILWAY_SERVICE_NAME') || getEnvVar('VITE_SERVICE_NAME')
 }
 
 /**
  * Determine environment type
  */
 function getEnvironment(): 'development' | 'production' | 'preview' {
-  if (import.meta.env.MODE === 'development') {
+  if (getEnvVar('NODE_ENV') === 'development') {
     return 'development'
   }
 
-  if (import.meta.env.RAILWAY_ENVIRONMENT === 'preview') {
+  if (getEnvVar('MODE') === 'development') {
+    return 'development'
+  }
+
+  if (getEnvVar('RAILWAY_ENVIRONMENT') === 'preview') {
     return 'preview'
   }
 
@@ -179,17 +203,20 @@ export function getConfig(overrides?: Partial<Config>): Config {
  * Log configuration for debugging
  */
 export function logConfig(): void {
-  if (import.meta.env.DEV) {
+  const isDev = getEnvVar('DEV') === 'true' || getEnvVar('NODE_ENV') === 'development'
+  // Always log in test environment or when explicitly requested
+  const shouldLog = isDev || getEnvVar('VITE_API_URL') || getEnvVar('RAILWAY_ENVIRONMENT')
+  if (shouldLog) {
     console.log('LeafLock Configuration:', {
       apiUrl: config.apiUrl,
       environment: config.environment,
       isRailway: config.isRailway,
       serviceName: config.serviceName,
       envVars: {
-        VITE_API_URL: import.meta.env.VITE_API_URL,
-        RAILWAY_ENVIRONMENT: import.meta.env.RAILWAY_ENVIRONMENT,
-        RAILWAY_SERVICE_NAME: import.meta.env.RAILWAY_SERVICE_NAME,
-        RAILWAY_INTERNAL_HOST: import.meta.env.RAILWAY_INTERNAL_HOST,
+        VITE_API_URL: getEnvVar('VITE_API_URL'),
+        RAILWAY_ENVIRONMENT: getEnvVar('RAILWAY_ENVIRONMENT'),
+        RAILWAY_SERVICE_NAME: getEnvVar('RAILWAY_SERVICE_NAME'),
+        RAILWAY_INTERNAL_HOST: getEnvVar('RAILWAY_INTERNAL_HOST'),
       },
     })
   }

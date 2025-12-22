@@ -45,9 +45,10 @@ vi.mock('@/services/api', () => ({
 }))
 
 vi.mock('@/lib/encryption-utils', () => ({
-  ENCRYPTION_VERSION: 'v1',
+  ENCRYPTION_VERSION: 1,
   encryptTextWithStoredKey: vi.fn(),
   decryptText: vi.fn(),
+  getStoredKey: vi.fn(() => 'mock-encryption-key'),
 }))
 
 describe('notesStore', () => {
@@ -237,7 +238,7 @@ describe('notesStore', () => {
         tags: ['tag1'],
         pinned: false,
         encrypted: true,
-        encryptionVersion: encryptionUtils.ENCRYPTION_VERSION,
+        encryptionVersion: 1,
         userId: '123',
       })
       expect(createdNote).toEqual(mockNote)
@@ -349,7 +350,7 @@ describe('notesStore', () => {
         folderId: mockNote.folderId,
         pinned: true,
         encrypted: true,
-        encryptionVersion: mockNote.encryptionVersion,
+        encryptionVersion: 1,
       })
       expect(result).toEqual(updatedNote)
       expect(useNotesStore.getState().notes[0]).toEqual(updatedNote)
