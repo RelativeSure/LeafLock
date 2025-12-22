@@ -85,7 +85,7 @@ export const useEnhancedSession = (): {
   )
 
   return {
-    session,
+    session: session ?? null,
     isLoaded,
     isExpiringSoon,
     timeUntilExpiry,

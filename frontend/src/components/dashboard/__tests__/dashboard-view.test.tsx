@@ -1,6 +1,11 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { DashboardView } from '../dashboard-view'
+
+// Mock user for localStorage
+beforeEach(() => {
+  localStorage.setItem('user', JSON.stringify({ id: 'test-user' }))
+})
 
 vi.mock('../note-editor', () => ({
   NoteEditor: () => <div data-testid="note-editor">Note Editor</div>,
