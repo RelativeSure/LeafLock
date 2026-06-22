@@ -25,7 +25,7 @@ RUN go build \
       -o entrypoint ./cmd/entrypoint && \
     chmod +x /app/entrypoint
 
-FROM alpine:3.23@sha256:51183f2cfa6320055da30872f211093f9ff1d3cf06f39a0bdb212314c5dc7375
+FROM alpine:3.23@sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40
 
 RUN apk --no-cache add ca-certificates tzdata
 
